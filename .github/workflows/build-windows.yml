@@ -44,10 +44,16 @@ jobs:
         shell: pwsh
         run: |
           $setup = Get-ChildItem dist/MoorMe-Setup-*.exe | Select-Object -First 1
-          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/S' -PassThru
+          $dir = "$env:RUNNER_TEMP\MoorMeApp"
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/S', "/D=$dir" -PassThru
           $p.WaitForExit(300000) | Out-Null
-          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter MoorMe.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          $app = $null
+          for ($i = 0; $i -lt 120 -and -not $app; $i++) {
+            $app = Get-ChildItem $dir -Filter MoorMe.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $app) { Start-Sleep -Seconds 2 }
+          }
           if (-not $app) { throw "Instalacja nie powiodła się – brak MoorMe.exe" }
+          Start-Sleep -Seconds 5
           Write-Host "Zainstalowano: $($app.FullName)"
           $env:MOORME_SMOKE_OUT = "$PWD\smoke.png"
           $run = Start-Process -FilePath $app.FullName -PassThru
