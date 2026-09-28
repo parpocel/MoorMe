@@ -11,10 +11,9 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   const spec = BOATS.C46, equip = { ...defaultEquipment(BOATS.C46), bowThruster: 'onoff' };
   const H = generateHarbor({ quay: 'concrete', method: 'longside', side: 'port', boatSpec: spec, seed: 3 });
   const w = new World({ spec, equip, harbor: H, weather: { windKn: 6, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
-  run(w, 1);
   check(w.crew.ashore, 'załoga na kei na starcie');
-  w.crewAboard();
-  check(!w.crew.ashore, 'załoga weszła na pokład');
+  run(w, 3);
+  check(!w.crew.ashore, 'załoga sama wróciła na pokład (liny na biegowo – nic do roboty na lądzie)');
   for (const l of w.lines) w.release(l);
   run(w, 20);
   check(w.lines.every((l) => l.state === 'ready'), 'liny biegowe wybrane na pokład: ' + w.lines.map((l) => l.state).join(','));
@@ -30,7 +29,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   check(w.stats.hullHits === 0, 'bez uderzeń kadłubem (' + w.stats.hullHits + ')');
   check(w.result && w.result.ok, 'odcumowano: ' + JSON.stringify(w.result && w.result.score));
 }
-// 2) Oko na stałe bez załogi na lądzie – nie da się zdjąć
+// 2) Oko na stałe, załoga na pokładzie – zejdzie sama i zdejmie oko
 {
   const spec = BOATS.C34, equip = defaultEquipment(spec);
   const H = generateHarbor({ quay: 'pontoon', method: 'mooringStern', side: 'port', boatSpec: spec, seed: 3 });
@@ -40,9 +39,11 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   w.crewAboard();
   let msg = '';
   w.onEvent = (e) => (msg = e.msg);
-  // rufa blisko kei (<1.3 m) – można zdjąć ręką, więc odsuń: sprawdź komunikat albo powodzenie
   w.release(sl);
-  check(sl.state === 'attached' || sl.state === 'retrieving', 'oko na stałe: ' + msg);
+  run(w, 15);
+  check(sl.state === 'ready', 'oko na stałe zdjęte przez załogę (stan: ' + sl.state + ', ' + msg + ')');
+  run(w, 5);
+  check(!w.crew.ashore, 'załoga wróciła na pokład po zdjęciu oka');
   // muring: oddaj i daj wsteczny... powinien wkręcić się w śrubę gdy jedziemy nad nim
   const mur = w.lines.find((l) => l.isMooring);
   w.release(mur);
@@ -56,7 +57,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   const spec = BOATS.C34, equip = defaultEquipment(spec);
   const H = generateHarbor({ quay: 'concrete', method: 'longside', side: 'port', boatSpec: spec, seed: 3 });
   const w = new World({ spec, equip, harbor: H, weather: { windKn: 0, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
-  for (const l of w.lines) if (l.role !== 'bow') { w.crewAboard(); l.state = 'ready'; l.target = null; }
+  for (const l of w.lines) if (l.role !== 'bow') { l.state = 'ready'; l.target = null; }
   w.boat.throttle = -1;
   run(w, 30);
   const bow = w.lines.find((l) => l.role === 'bow');

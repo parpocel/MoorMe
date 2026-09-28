@@ -142,6 +142,50 @@ export class World {
     this.lines.push(line);
     return line;
   }
+  // Rola liny z geometrii: skąd (knaga) i dokąd (poler) prowadzi
+  inferRole(cleat, bollard) {
+    const b = this.boat, L = this.spec.loa;
+    const loc = worldToLocal(b.x, b.z, b.th, bollard.x, bollard.z);
+    const dx = loc.x - cleat.x, dy = loc.y - cleat.y;
+    const ang = Math.atan2(Math.abs(dy), dx) / DEG; // 0 = do przodu, 90 = w bok, 180 = do tyłu
+    const zone = cleat.x > 0.2 * L ? 'bow' : cleat.x < -0.2 * L ? 'stern' : 'mid';
+    if (ang > 62 && ang < 118) return zone === 'bow' ? 'breastFwd' : zone === 'stern' ? 'breastAft' : 'side';
+    if (zone === 'bow') return ang <= 62 ? 'bow' : 'springFwd';
+    if (zone === 'stern') return ang >= 118 ? 'stern' : 'springAft';
+    return ang >= 118 ? 'springFwd' : 'springAft';
+  }
+
+  /**
+   * Lina wskazana myszą: knaga -> (opcjonalnie kluza/półkluza) -> poler.
+   * fairleadId: id, null (prosto z knagi) lub undefined (automatycznie).
+   * Jeśli poler jest w zasięgu – zakładanie od razu, inaczej lina czeka przygotowana z zaplanowanym celem.
+   */
+  rigLine(cleatId, fairleadId, bollard, mode = 'fixed') {
+    const cleat = this.deckItem(cleatId);
+    const role = this.inferRole(cleat, bollard);
+    const tmp = { cleatId, fairleadId: fairleadId === undefined ? (this.autoFairlead(cleat)?.id ?? null) : fairleadId, jumped: false };
+    const lead = this.leadWorld(tmp);
+    const t = this.targetPoint({}, bollard);
+    const d = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z);
+    const parts = mode === 'slip' ? 2 : 1;
+    const length = Math.min(40, Math.max(8, Math.ceil(d * parts * 1.25 + 4)));
+    const fl = tmp.fairleadId ? this.deckItem(tmp.fairleadId) : null;
+    const line = this.addLine({
+      role,
+      name: `${ROLE_NAMES[role]} ${cleat.y < 0 ? 'L' : 'P'}`,
+      cleatId,
+      fairleadId: tmp.fairleadId,
+      length,
+      mode,
+      winch: role === 'springFwd' || role === 'springAft'
+    });
+    line.plannedTarget = bollard;
+    line.routeLabel = `${cleat.label}${fl ? ' → ' + fl.label : ''} → ${bollard.label}`;
+    // w zasięgu – od razu; inaczej załoga zrobi to sama, gdy jacht podejdzie
+    this.attach(line, bollard);
+    return line;
+  }
+
   removeLine(line) {
     if (line.state === 'attached' || line.state === 'pending') return false;
     this.lines = this.lines.filter((l) => l !== line);
@@ -275,11 +319,10 @@ export class World {
       const need = d3 * parts + 0.2;
       if (need > line.length) why = `za krótka lina (${line.length} m)`;
       else if (d3 <= this.lineReach(line, b)) ok = true;
-      else if (this.crew.ashore && b.kind !== 'pile' && !(b.kind === 'ring' && b.z > 1 && this.H.quay.id !== 'yboom')) {
-        const walk = Math.hypot(b.x - this.crew.x, b.z - this.crew.z);
-        const throwD = Math.hypot(lead.x - this.crew.x, lead.z - this.crew.z);
-        if (throwD > 9) why = 'załoga na lądzie za daleko, by złapać linę';
-        else if (walk > 60) why = 'za daleko dla załogi';
+      else if (this.crew.ashore && this.onFoot(b)) {
+        // załoga podchodzi do krawędzi kei naprzeciw jachtu, łapie linę i zanosi ją na poler
+        const c = this.catchPoint(lead);
+        if (!c || c.d > 7) why = 'jacht za daleko od kei, by podać linę na ląd';
         else { ok = true; via = 'crew'; }
       } else why = this.crew.ashore ? 'poza zasięgiem' : `poza zasięgiem z pokładu (${this.lineReach(line, b).toFixed(1)} m)`;
       res.push({ bollard: b, ok, why, via, dist: d3 });
@@ -288,17 +331,83 @@ export class World {
     return res;
   }
 
-  attach(line, bollard) {
-    if (line.state !== 'ready') return this.log(`${line.name}: lina nie jest gotowa`, 'warn');
-    const opt = this.attachOptions(line).find((o) => o.bollard === bollard);
-    if (!opt || !opt.ok) return this.log(`${line.name}: nie można założyć – ${opt ? opt.why : 'brak celu'}`, 'warn');
+  // Czy do polera da się dojść pieszo (keja, pomost, Y-bom) – dalby są tylko z wody
+  onFoot(b) {
+    return b.kind !== 'pile' && !(b.kind === 'ring' && b.z > 1 && this.H.quay.id !== 'yboom');
+  }
+
+  // Najbliższy punkt krawędzi kei/pomostu/Y-bomu (lekko w głąb), d – odległość od punktu
+  catchPoint(p) {
+    let best = null;
+    for (const o of this.obstacles) {
+      if (!o.walk && o.kind !== 'boom') continue;
+      if (p.x < o.box.minX - 30 || p.x > o.box.maxX + 30 || p.z < o.box.minZ - 30 || p.z > o.box.maxZ + 30) continue;
+      const r = distToPoly(o.poly, p.x, p.z);
+      if (!best || r.dist < best.d) {
+        const inset = o.kind === 'boom' ? 0.05 : 0.5;
+        best = { x: p.x - r.nx * (r.dist + inset), z: p.z - r.nz * (r.dist + inset), d: Math.max(0, r.dist), kind: o.kind };
+      }
+    }
+    return best;
+  }
+
+  // Punkt zejścia na ląd: najbliższa kei część burty
+  shoreSpot() {
+    const b = this.boat;
+    let best = null;
+    for (const [lx, ly] of b.outline) {
+      const p = localToWorld(b.x, b.z, b.th, lx, ly);
+      const c = this.catchPoint(p);
+      if (c && (!best || c.d < best.d)) best = c;
+    }
+    return best;
+  }
+
+  canStepAshore() {
+    const s = this.shoreSpot();
+    const maxD = this.H.method === 'longside' ? 1.0 : 1.3;
+    return !!s && s.d <= maxD && this.boat.speed <= 0.7;
+  }
+
+  crewWalk(points, extra = {}) {
+    this.crew.task = { type: 'walk', path: points.map((p) => ({ x: p.x, z: p.z })), ...extra };
+  }
+
+  attach(line, bollard, quiet = false) {
+    if (line.state !== 'ready' && line.state !== 'queued') return this.log(`${line.name}: lina nie jest gotowa`, 'warn');
+    let opt = this.attachOptions(line).find((o) => o.bollard === bollard);
+    // za krótka – załoga bierze dłuższą linę (do 40 m)
+    if (opt && !opt.ok && opt.why.startsWith('za krótka')) {
+      const need = opt.dist * (line.mode === 'slip' ? 2 : 1) + 2;
+      if (need <= 40) {
+        line.length = Math.ceil(need);
+        line.rest = line.length;
+        this.log(`${line.name}: wydłużona do ${line.length} m`);
+        opt = this.attachOptions(line).find((o) => o.bollard === bollard);
+      }
+    }
+    if (!opt) return this.log(`${line.name}: brak celu`, 'warn');
+    if (!opt.ok) {
+      // nie teraz – załoga zrobi to sama, gdy tylko będzie w zasięgu (zejdzie na ląd, jeśli trzeba)
+      if (line.state !== 'queued') {
+        line.state = 'queued';
+        line.queuedTarget = bollard;
+        line.queueTimer = 0;
+        if (!quiet) this.log(`${line.name}: załoga założy na ${bollard.label.toLowerCase()}, gdy tylko będzie w zasięgu (${opt.why})`);
+      }
+      return;
+    }
+    line.queuedTarget = null;
     line.pendingTarget = bollard;
     line.state = 'pending';
     if (opt.via === 'crew') {
-      const walk = Math.hypot(bollard.x - this.crew.x, bollard.z - this.crew.z);
-      line.timer = 2.0 + walk / 1.4 + 1.5;
+      const lead = this.leadWorld(line);
+      const c = this.catchPoint(lead);
+      const dest = this.bollardApproach(bollard);
+      const walk = Math.hypot(c.x - this.crew.x, c.z - this.crew.z) + Math.hypot(dest.x - c.x, dest.z - c.z);
+      line.timer = 2.5 + walk / 1.4 + 1.5;
       line.pendingVia = 'crew';
-      this.crew.task = { type: 'walk', x: bollard.x, z: bollard.z - 0.6 };
+      this.crewWalk([c, dest]);
       this.log(`${line.name}: podana na ląd – załoga zakłada na ${bollard.label.toLowerCase()}`);
     } else {
       line.pendingVia = 'deck';
@@ -309,8 +418,9 @@ export class World {
     }
   }
 
-  pickupMooring(line) {
+  pickupMooring(line, quiet = false) {
     if (!line.isMooring || line.state !== 'onQuay') return;
+    if (!quiet) line.mooringQueued = true; // załoga podejmie muring sama, gdy jacht podejdzie
     const mur = line.muring;
     // koniec jachtu przy kei musi być blisko linki pilotowej
     const b = this.boat;
@@ -318,7 +428,11 @@ export class World {
     const e = localToWorld(b.x, b.z, b.th, endX, 0);
     let d = Math.hypot(e.x - mur.pickup.x, e.z - mur.pickup.z);
     if (this.crew.ashore) d = Math.min(d, Math.hypot(this.crew.x - mur.pickup.x, this.crew.z - mur.pickup.z) + Math.max(0, Math.hypot(e.x - this.crew.x, e.z - this.crew.z) - 4));
-    if (d > 3.5) return this.log(`Muring: linka pilotowa za daleko (${d.toFixed(1)} m) – podejdź bliżej kei`, 'warn');
+    if (d > 3.5) {
+      if (!quiet) this.log(`Muring: linka pilotowa ${d.toFixed(1)} m od jachtu – załoga podejmie ją, gdy podejdziesz na ~3 m`);
+      return;
+    }
+    line.mooringQueued = false;
     line.state = 'pending';
     line.pendingVia = 'mooring';
     line.pendingTarget = mur;
@@ -327,7 +441,15 @@ export class World {
   }
 
   release(line) {
+    if (line.state === 'queued') {
+      line.state = 'ready';
+      line.queuedTarget = null;
+      this.log(`${line.name}: anulowano zakładanie`);
+      return;
+    }
+    if (line.state === 'onQuay') { line.mooringQueued = false; return; }
     if (line.state === 'pending') {
+      line.mooringQueued = false;
       line.state = line.isMooring ? 'onQuay' : 'ready';
       this.log(`${line.name}: przerwano zakładanie`);
       return;
@@ -361,12 +483,23 @@ export class World {
       return;
     }
     if (!this.crew.ashore) {
-      return this.log(`${line.name}: oko jest na polerze – z pokładu nie zdejmiesz. Zejdź na ląd lub przełóż cumę na biegowo.`, 'warn');
+      if (this.canStepAshore()) this.crewAshore(true);
+      else {
+        line.releaseQueued = true;
+        this.log(`${line.name}: oko jest na polerze – załoga zejdzie i je zdejmie, gdy jacht będzie przy kei`);
+        return;
+      }
     }
+    line.releaseQueued = false;
     line.state = 'waitingCrew';
     line.timer = 0;
-    this.crew.task = { type: 'walk', x: line.target.x, z: line.target.z - 0.6, line };
+    this.crewWalk([this.bollardApproach(line.target)], { line });
     this.log(`${line.name}: załoga idzie zdjąć oko z polera`);
+  }
+
+  bollardApproach(b) {
+    if (b.z > 1) return { x: b.x, z: b.z }; // pierścień na Y-bomie
+    return { x: b.x, z: b.z - 0.6 };
   }
 
   // Przełożenie liny na biegowo / na stałe (tylko gdy przygotowana)
@@ -377,6 +510,7 @@ export class World {
       line.rest = line.length;
       return;
     }
+    if (line.state === 'attached' && !this.crew.ashore && this.canStepAshore()) this.crewAshore(true);
     if (line.state === 'attached' && this.crew.ashore) {
       // załoga przekłada cumę
       line.mode = line.mode === 'slip' ? 'fixed' : 'slip';
@@ -398,28 +532,28 @@ export class World {
     line.tending = mode;
   }
 
-  crewAshore() {
+  crewAshore(auto = false) {
     if (this.crew.ashore) return this.log('Załoga już jest na lądzie');
     const b = this.boat;
     if (b.speed > 0.7) return this.log('Za szybko, by bezpiecznie zejść na ląd (max ~1.3 kn)', 'warn');
-    // najbliższy punkt obrysu do krawędzi pomostu/kei
-    let best = null, bd = Infinity;
-    const outline = b.outline;
-    for (const [lx, ly] of outline) {
-      const p = localToWorld(b.x, b.z, b.th, lx, ly);
-      for (const o of this.obstacles) {
-        if (!o.walk && o.kind !== 'boom') continue;
-        if (p.x < o.box.minX - 3 || p.x > o.box.maxX + 3 || p.z < o.box.minZ - 3 || p.z > o.box.maxZ + 3) continue;
-        const r = distToPoly(o.poly, p.x, p.z);
-        if (r.dist < bd) { bd = r.dist; best = { x: p.x - r.nx * (r.dist + 0.5), z: p.z - r.nz * (r.dist + 0.5), kind: o.kind }; }
-      }
-    }
+    const best = this.shoreSpot();
     const maxD = this.H.method === 'longside' ? 1.0 : 1.3;
-    if (!best || bd > maxD) return this.log(`Za daleko do kei, by zejść (${bd === Infinity ? '—' : bd.toFixed(1)} m, max ${maxD} m)`, 'warn');
+    if (!best || best.d > maxD) return this.log(`Za daleko do kei, by zejść (${best ? best.d.toFixed(1) : '—'} m, max ${maxD} m)`, 'warn');
     this.crew.ashore = true;
     this.crew.x = best.x; this.crew.z = best.z;
     this.crew.task = null;
-    this.log(best.kind === 'boom' ? 'Załoga zeszła na Y-bom' : 'Załoga zeszła na ląd');
+    this.crew.boardWarned = false;
+    this.crew.manual = !auto; // zejście na polecenie gracza – bez automatycznego powrotu
+    this.log(`${best.kind === 'boom' ? 'Załoga zeszła na Y-bom' : 'Załoga zeszła na ląd'}${auto ? ' (sama – do obsługi lin)' : ''}`);
+  }
+
+  // Czy załoga na lądzie ma jeszcze coś do zrobienia przy linach
+  crewNeededAshore() {
+    return this.lines.some((l) =>
+      l.state === 'waitingCrew' || l.releaseQueued ||
+      (l.state === 'pending' && l.pendingVia === 'crew') ||
+      (l.state === 'queued' && l.queuedTarget && this.onFoot(l.queuedTarget)) ||
+      (l.state === 'attached' && l.mode === 'fixed' && !l.isMooring && this.cfg.scenario === 'unmoor'));
   }
 
   crewAboard() {
@@ -432,6 +566,7 @@ export class World {
     if (this.lines.some((l) => l.state === 'waitingCrew' || (l.state === 'pending' && l.pendingVia === 'crew'))) return this.log('Załoga jest zajęta liną', 'warn');
     this.crew.ashore = false;
     this.crew.task = null;
+    this.crew.manual = false;
     this.log('Załoga na pokładzie');
   }
 
@@ -593,6 +728,7 @@ export class World {
     }
     // załoga
     this.stepCrew(dt);
+    if (this.autoCrew !== false) this.stepAutoCrew(dt);
     // ocena
     this.evaluate(dt);
   }
@@ -616,9 +752,12 @@ export class World {
           // rzut okiem liny – może chybić
           const p = 1 - 0.55 * Math.pow(clamp(line.lassoDist / 3.4, 0, 1), 3);
           if (this.random() > p) {
-            line.state = 'ready';
+            // załoga zbiera linę i rzuca ponownie
+            line.state = 'queued';
+            line.queuedTarget = line.pendingTarget;
+            line.queueTimer = -1.5;
             this.stats.lassoMiss++;
-            this.log(`${line.name}: chybiony rzut – spróbuj ponownie`, 'warn');
+            this.log(`${line.name}: chybiony rzut – załoga zbiera linę i rzuca jeszcze raz`, 'warn');
             return;
           }
         }
@@ -697,21 +836,67 @@ export class World {
     }
   }
 
+  // Załoga działa sama: ponawia zaplanowane liny, schodzi na ląd i wraca na pokład, gdy trzeba
+  stepAutoCrew(dt) {
+    this.autoTimer = (this.autoTimer || 0) + dt;
+    if (this.autoTimer < 0.25) return;
+    const tick = this.autoTimer;
+    this.autoTimer = 0;
+    const c = this.crew;
+    // 1) liny czekające na zasięg
+    for (const line of this.lines) {
+      if (line.state === 'queued') {
+        line.queueTimer = (line.queueTimer || 0) + tick;
+        if (line.queueTimer < 0) continue;
+        this.attach(line, line.queuedTarget, true);
+        if (line.state === 'queued' && !c.ashore && this.onFoot(line.queuedTarget) && this.canStepAshore()) {
+          this.crewAshore(true);
+          this.attach(line, line.queuedTarget, true);
+        }
+      } else if (line.state === 'onQuay' && line.mooringQueued) {
+        this.pickupMooring(line, true);
+      } else if (line.state === 'attached' && line.releaseQueued) {
+        if (c.ashore || this.canStepAshore()) this.release(line);
+      }
+    }
+    // 2) powrót na pokład, gdy na lądzie nic już nie trzeba robić
+    if (c.ashore && !c.manual && !c.task && !this.crewNeededAshore()) {
+      const s = this.shoreSpot();
+      if (s && Math.hypot(s.x - c.x, s.z - c.z) > 0.3) this.crewWalk([s], { board: true });
+      else if (s && s.d <= 1.6 && this.boat.speed < 0.8) {
+        c.ashore = false;
+        c.task = null;
+        this.log('Załoga wróciła na pokład');
+      } else if (!c.boardWarned && s && s.d > 1.6) {
+        c.boardWarned = true;
+        this.log(`Załoga czeka na kei na powrót jachtu (${s.d.toFixed(1)} m od burty)`, 'warn');
+      }
+    }
+  }
+
   stepCrew(dt) {
     const c = this.crew;
     if (!c.ashore) return;
     const task = c.task;
     if (!task) { c.walking = false; return; }
     if (task.type === 'walk') {
-      const dx = task.x - c.x, dz = task.z - c.z;
+      const wp = task.path[0];
+      const dx = wp.x - c.x, dz = wp.z - c.z;
       const d = Math.hypot(dx, dz);
       if (d > 0.1) {
         const s = Math.min(d, 1.4 * dt);
         c.x += (dx / d) * s; c.z += (dz / d) * s;
         c.walking = true;
         c.heading = Math.atan2(dz, dx);
+      } else if (task.path.length > 1) {
+        task.path.shift();
       } else {
         c.walking = false;
+        if (task.board) {
+          // punkt zejścia mógł się przesunąć razem z jachtem – nowa trasa w następnym kroku
+          c.task = null;
+          return;
+        }
         if (task.line && task.line.state === 'waitingCrew') {
           const line = task.line;
           line.timer += dt;
@@ -758,7 +943,7 @@ export class World {
     } else {
       const t = this.H.berth;
       const d = Math.hypot(b.x - t.x, b.z - t.z);
-      const anyAttached = this.lines.some((l) => ['attached', 'pending', 'waitingCrew', 'retrieving'].includes(l.state));
+      const anyAttached = this.lines.some((l) => ['attached', 'pending', 'waitingCrew', 'retrieving', 'queued'].includes(l.state));
       this.poseOk = d > this.spec.loa * 2.2;
       this.linesOk = !anyAttached && !this.crew.ashore;
       if (this.poseOk && this.linesOk && !this.hullContact) {

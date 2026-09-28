@@ -6,7 +6,7 @@ import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
 import { BOATS } from '../data/boats.js';
 import { generateHarbor, ROLE_NAMES, METHODS } from '../data/harbors.js';
-import { DEG, KN, clamp, thetaToCompass, wrapPi } from '../math.js';
+import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld } from '../math.js';
 
 export class SimScreen {
   constructor(root, config, callbacks) {
@@ -34,8 +34,8 @@ export class SimScreen {
     this.world.onEvent = (e) => this.pushLog(e);
     this.world.onImpact = (s, kind) => this.sound.bump(s, kind);
     this.world.onFinish = (r) => setTimeout(() => this.showResult(r), 600);
-    this.view.onClick = (b) => this.onBollardClick(b);
-    this.view.onHover = (b) => this.onBollardHover(b);
+    this.view.onClick = (p) => this.onViewClick(p);
+    this.view.onHover = (p) => this.onViewHover(p);
     this.last = performance.now();
     this.running = true;
     this.frame = this.frame.bind(this);
@@ -102,7 +102,10 @@ export class SimScreen {
 
     // --- Liny ---
     const lines = h('div.hud.glass', { id: 'hud-lines' });
-    lines.appendChild(h('div.head', {}, h('h3', { style: { fontSize: '15px' } }, 'Cumy i liny'), h('div', {}, h('button.btn.sm', { onclick: () => this.showPrepareLine() }, '+ Przygotuj linę'))));
+    lines.appendChild(h('div.head', {}, h('h3', { style: { fontSize: '15px' } }, 'Cumy i liny'),
+      h('div', { style: { display: 'flex', gap: '6px' } },
+        h('button.btn.sm.on', { onclick: () => this.startRig(), title: 'Kliknij knagę, (kluzę/półkluzę) i poler w widoku 3D (K)' }, '🖱 Knaga → poler'),
+        h('button.btn.sm', { onclick: () => this.showPrepareLine() }, '+ Z listy'))));
     this.linesList = h('div', { id: 'lines-list' });
     lines.appendChild(this.linesList);
     sim.appendChild(lines);
@@ -232,7 +235,7 @@ export class SimScreen {
 
   // ---------- Liny ----------
   lineSignature() {
-    return this.world.lines.map((l) => `${l.id}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}`).join('|') + `|${this.world.crew.ashore}`;
+    return this.world.lines.map((l) => `${l.id}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}:${l.plannedTarget ? l.plannedTarget.id : ''}:${l.mooringQueued}:${l.releaseQueued}`).join('|') + `|${this.world.crew.ashore}`;
   }
 
   renderLines(force) {
@@ -251,8 +254,12 @@ export class SimScreen {
       const modeTxt = line.isMooring ? 'muring' : line.mode === 'slip' ? 'na biegowo' : 'na stałe';
       card.appendChild(h('div.top', {},
         h('div', {}, h('span.nm', {}, `${idx + 1}. ${line.name}`), h('div.st', { class: stCls }, `${LINE_STATE_LABEL[line.state] || line.state}${line.state === 'attached' ? ' · ' + TENDING_LABEL[line.tending] : ''}${line.target && line.state === 'attached' && !line.isMooring ? ' · ' + line.target.label : ''}`)),
-        h('div.small.muted', { style: { textAlign: 'right' } }, `${cleat ? cleat.label : '?'}${fl ? ' → ' + fl.label.split(' ')[0].toLowerCase() : ''}${line.jumped ? ' (wyskoczyła!)' : ''}`, h('br'), `${modeTxt} · ${line.length} m${line.winch ? ' · winch' : ''}`)
+        h('div.small.muted', { style: { textAlign: 'right' } }, `${modeTxt} · ${line.length} m${line.winch ? ' · winch' : ''}`, line.jumped ? h('div', { style: { color: '#ffb347' } }, 'wyskoczyła z półkluzy!') : null)
       ));
+      if (!line.isMooring) {
+        const tgt = line.state === 'attached' || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.state === 'pending' ? line.pendingTarget : line.plannedTarget;
+        card.appendChild(h('div.route', {}, h('span.chip', {}, cleat ? cleat.label : '?'), fl ? ['→', h('span.chip.fl', {}, fl.label)] : null, '→', h('span.chip', { class: tgt ? 'tg' : 'none' }, tgt ? tgt.label : 'poler nie wskazany')));
+      }
       const tval = h('div.small', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '3px' } });
       const tbar = h('div.tbar', {}, h('div'));
       if (line.state === 'attached') card.append(tval, tbar);
@@ -269,8 +276,9 @@ export class SimScreen {
       };
       switch (line.state) {
         case 'ready':
+          if (line.plannedTarget) acts.append(btn(`⚓ Załóż na ${line.plannedTarget.label}`, () => this.attachOrPick(line), 'on', 'Załóż na wskazany poler (B)'));
           acts.append(
-            btn('⚓ Załóż…', () => this.startPick(line), 'on', 'Wybierz poler / knagę / dalbę (B)'),
+            btn(line.plannedTarget ? 'Inny poler…' : '⚓ Załóż…', () => this.startPick(line), line.plannedTarget ? '' : 'on', 'Wybierz poler / knagę / dalbę'),
             btn(line.mode === 'slip' ? '⇄ na stałe' : '⇄ na biegowo', () => w.toggleMode(line), '', 'Zmień sposób mocowania'),
             btn(line.winch ? 'Winch: tak' : 'Winch: nie', () => { line.winch = !line.winch; }, '', 'Obsługa na kabestanie/winchu'),
             btn('−2 m', () => { line.length = Math.max(4, line.length - 2); line.rest = line.length; }),
@@ -279,7 +287,12 @@ export class SimScreen {
           );
           break;
         case 'onQuay':
-          acts.append(btn('⚓ Podejmij muring', () => w.pickupMooring(line), 'on', 'Załoga podejmuje linkę pilotową z kei (B)'), btn(line.winch ? 'Winch: tak' : 'Winch: nie', () => { line.winch = !line.winch; }));
+          if (line.mooringQueued) acts.append(h('span.small', { style: { color: '#ffd166' } }, 'Załoga podejmie muring przy kei'), btn('Anuluj', () => w.release(line)));
+          else acts.append(btn('⚓ Podejmij muring', () => w.pickupMooring(line), 'on', 'Załoga podejmuje linkę pilotową z kei (B)'));
+          acts.append(btn(line.winch ? 'Winch: tak' : 'Winch: nie', () => { line.winch = !line.winch; }));
+          break;
+        case 'queued':
+          acts.append(btn('Anuluj', () => w.release(line)), btn('Inny poler…', () => { w.release(line); this.startPick(line); }));
           break;
         case 'pending':
           acts.append(btn('Przerwij', () => w.release(line)));
@@ -325,9 +338,20 @@ export class SimScreen {
     this.renderLines(true);
   }
 
+  attachOrPick(line) {
+    const w = this.world;
+    if (line.plannedTarget) {
+      w.attach(line, line.plannedTarget); // w zasięgu – od razu, inaczej załoga czeka i założy sama
+      this.renderLines(true);
+      return;
+    }
+    this.startPick(line);
+  }
+
   startPick(line) {
     const w = this.world;
     if (line.isMooring) { w.pickupMooring(line); return; }
+    if (this.rig) this.cancelRig();
     this.pickLine = line;
     this.selectedLine = line;
     const opts = w.attachOptions(line);
@@ -353,25 +377,113 @@ export class SimScreen {
     this.renderLines(true);
   }
 
-  onBollardClick(b) {
-    if (!this.pickLine || !b) return;
-    const o = this.world.attachOptions(this.pickLine).find((x) => x.bollard === b);
-    if (o && o.ok) { this.world.attach(this.pickLine, b); this.cancelPick(); }
-    else if (o) this.pushLog({ msg: `Nie można: ${o.why}`, type: 'warn' });
+  // ---------- Wskazywanie liny myszą: knaga -> (kluza/półkluza) -> poler ----------
+  startRig() {
+    if (this.pickLine) this.cancelPick();
+    this.rig = { stage: 'cleat', mode: this.rigMode || 'fixed' };
+    this.updateRig();
   }
 
-  onBollardHover(b) {
-    if (!b) { this.tooltip.style.display = 'none'; return; }
-    const p = this.view.project(b.x, b.h + 0.8, b.z);
-    let txt = b.label;
+  rigTempLine() {
+    const r = this.rig;
+    return { cleatId: r.cleat.id, fairleadId: r.fairlead === undefined ? (this.world.autoFairlead(r.cleat)?.id ?? null) : r.fairlead ? r.fairlead.id : null, mode: r.mode, length: 40, jumped: false, isMooring: false };
+  }
+
+  updateRig() {
+    const r = this.rig, w = this.world;
+    if (!r) return;
+    this.pickBanner.style.display = 'block';
+    this.pickBanner.innerHTML = '';
+    const head = h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+      h('b', {}, r.stage === 'cleat' ? 'Nowa lina: wskaż knagę na jachcie' : `Nowa lina z: ${r.cleat.label}`),
+      h('button.btn.xs', { onclick: () => this.cancelRig() }, 'Anuluj (Esc)'));
+    this.pickBanner.appendChild(head);
+    if (r.stage === 'cleat') {
+      this.pickBanner.appendChild(h('div.small.muted', { style: { marginTop: '4px' } }, 'Kliknij podświetloną knagę (żółte pierścienie na pokładzie).'));
+      this.view.highlightDeck((it) => (it.kind === 'cleat' ? 0xffd166 : null));
+      this.view.highlightBollards(null);
+      return;
+    }
+    const fl = r.fairlead === undefined ? w.autoFairlead(r.cleat) : r.fairlead;
+    this.pickBanner.appendChild(h('div.small', { style: { margin: '4px 0' } },
+      'Prowadzenie: ', h('b', {}, fl ? fl.label : 'prosto z knagi'), r.fairlead === undefined && fl ? h('span.muted', {}, ' (auto)') : null));
+    this.pickBanner.appendChild(h('div.small.muted', { style: { marginBottom: '6px' } }, 'Opcjonalnie kliknij kluzę / półkluzę (niebieskie), potem poler na kei (zielony = w zasięgu).'));
+    const modeSeg = h('div.seg', { style: { marginBottom: '4px' } });
+    for (const [v, l] of [['fixed', 'Na stałe (oko)'], ['slip', 'Na biegowo']]) modeSeg.appendChild(h('button', { class: r.mode === v ? 'on' : '', onclick: () => { r.mode = v; this.rigMode = v; this.updateRig(); } }, l));
+    modeSeg.appendChild(h('button', { class: r.fairlead === null ? 'on' : '', onclick: () => { r.fairlead = r.fairlead === null ? undefined : null; this.updateRig(); } }, 'Bez kluzy'));
+    this.pickBanner.appendChild(modeSeg);
+    this.view.highlightDeck((it) => (it === r.cleat ? 0xffd166 : it.kind !== 'cleat' ? (it === fl ? 0x5ec8ff : 0x2a6f97) : null));
+    const opts = w.attachOptions(this.rigTempLine());
+    this.view.highlightBollards(opts.slice(0, 40));
+  }
+
+  cancelRig() {
+    this.rig = null;
+    this.view.highlightDeck(null);
+    this.view.highlightBollards(null);
+    this.pickBanner.style.display = 'none';
+  }
+
+  onViewClick(p) {
+    const w = this.world;
+    if (!p) return;
     if (this.pickLine) {
-      const o = this.world.attachOptions(this.pickLine).find((x) => x.bollard === b);
+      if (!p.bollard) return;
+      const o = w.attachOptions(this.pickLine).find((x) => x.bollard === p.bollard);
+      if (o && o.ok) { w.attach(this.pickLine, p.bollard); this.cancelPick(); }
+      else if (o) this.pushLog({ msg: `Nie można: ${o.why}`, type: 'warn' });
+      return;
+    }
+    if (p.deckItem) {
+      const it = p.deckItem;
+      if (it.kind === 'cleat') {
+        if (!this.rig) this.rig = { mode: this.rigMode || 'fixed' };
+        this.rig.stage = 'route';
+        this.rig.cleat = it;
+        this.rig.fairlead = undefined;
+      } else if (this.rig && this.rig.cleat) {
+        this.rig.fairlead = it;
+      } else {
+        this.pushLog({ msg: 'Najpierw wskaż knagę, potem kluzę/półkluzę i poler', type: 'warn' });
+        return;
+      }
+      this.updateRig();
+      return;
+    }
+    if (p.bollard && this.rig && this.rig.cleat) {
+      const r = this.rig;
+      const line = w.rigLine(r.cleat.id, r.fairlead === undefined ? undefined : r.fairlead ? r.fairlead.id : null, p.bollard, r.mode);
+      this.selectedLine = line;
+      this.cancelRig();
+      this.renderLines(true);
+    }
+  }
+
+  onViewHover(p) {
+    if (!p) { this.tooltip.style.display = 'none'; return; }
+    if (p.deckItem) {
+      const it = p.deckItem, b = this.world.boat;
+      const wp = localToWorld(b.x, b.z, b.th, it.x, it.y);
+      const s = this.view.project(wp.x, this.world.deckHeight(it.x) + 0.5, wp.z);
+      this.tooltip.textContent = `${it.label}${it.kind === 'cleat' ? (this.rig && this.rig.cleat ? '' : ' · kliknij, by poprowadzić linę') : this.rig && this.rig.cleat ? ' · kliknij, by prowadzić przez' : ''}`;
+      this.tooltip.style.display = 'block';
+      this.tooltip.style.left = `${s.x + 12}px`;
+      this.tooltip.style.top = `${s.y - 10}px`;
+      return;
+    }
+    const b = p.bollard;
+    if (!b) { this.tooltip.style.display = 'none'; return; }
+    const pp = this.view.project(b.x, b.h + 0.8, b.z);
+    let txt = b.label;
+    const probe = this.pickLine || (this.rig && this.rig.cleat ? this.rigTempLine() : null);
+    if (probe) {
+      const o = this.world.attachOptions(probe).find((x) => x.bollard === b);
       if (o) txt += ` · ${o.dist.toFixed(1)} m · ${o.ok ? 'OK' : o.why}`;
     }
     this.tooltip.textContent = txt;
     this.tooltip.style.display = 'block';
-    this.tooltip.style.left = `${p.x + 12}px`;
-    this.tooltip.style.top = `${p.y - 10}px`;
+    this.tooltip.style.left = `${pp.x + 12}px`;
+    this.tooltip.style.top = `${pp.y - 10}px`;
   }
 
   showPrepareLine() {
@@ -442,9 +554,10 @@ export class SimScreen {
       case 'KeyV': { const v = ['iso', 'close', 'top', 'helm']; this._vi = ((this._vi || 0) + 1) % v.length; this.view.setView(v[this._vi]); break; }
       case 'KeyM': this.sound.enabled = !this.sound.enabled; break;
       case 'KeyL': w.crew.ashore ? w.crewAboard() : w.crewAshore(); break;
-      case 'Escape': if (this.pickLine) this.cancelPick(); break;
+      case 'Escape': if (this.pickLine) this.cancelPick(); if (this.rig) this.cancelRig(); break;
+      case 'KeyK': this.startRig(); break;
       case 'F1': case 'KeyH': this.showHelp(); e.preventDefault(); break;
-      case 'KeyB': if (line) { if (line.state === 'ready') this.startPick(line); else if (line.state === 'onQuay') w.pickupMooring(line); } break;
+      case 'KeyB': if (line) { if (line.state === 'ready') this.attachOrPick(line); else if (line.state === 'onQuay') w.pickupMooring(line); } break;
       case 'KeyN': if (line) w.release(line); break;
       case 'KeyY': if (line) w.setTending(line, 'hold'); break;
       case 'KeyT': if (line && line.state === 'attached') w.setTending(line, 'haul'); break;
@@ -634,7 +747,7 @@ export class SimScreen {
     const rows = [
       ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo'], ['R', 'Ster na zero'],
       ['Q / E', 'Ster strumieniowy dziobowy: dziób w lewo / w prawo'], ['Z / C', 'Ster strumieniowy rufowy: rufa w lewo / w prawo'],
-      ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
+      ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
       ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok'],
       ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
     ];

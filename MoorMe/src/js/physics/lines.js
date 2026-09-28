@@ -8,6 +8,7 @@ let LINE_ID = 1;
 export const LINE_STATE_LABEL = {
   ready: 'Przygotowana',
   pending: 'Zakładanie…',
+  queued: 'Czeka na zasięg – załoga założy sama',
   attached: 'Założona',
   retrieving: 'Wybieranie na pokład…',
   onQuay: 'Linka pilotowa przy kei',

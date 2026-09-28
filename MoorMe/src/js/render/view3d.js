@@ -62,6 +62,23 @@ export class View3D {
     this.boat.userData.heel.add(buildDeckGear(spec, world.equip.deck));
     scene.add(this.boat);
 
+    // klikalne knagi / kluzy / półkluzy na pokładzie
+    this.deckHits = [];
+    for (const it of world.equip.deck) {
+      const y = sheerHeight(spec, it.x) + 0.1;
+      const hit = new THREE.Mesh(new THREE.SphereGeometry(it.kind === 'cleat' ? 0.6 : 0.45, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set(it.x, y, it.y);
+      hit.userData.deckItem = it;
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(it.kind === 'cleat' ? 0.34 : 0.26, 0.045, 6, 20), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.95, depthTest: false }));
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(it.x, y + 0.02, it.y);
+      ring.renderOrder = 10;
+      ring.visible = false;
+      it._ring = ring;
+      this.boat.userData.heel.add(hit, ring);
+      this.deckHits.push(hit);
+    }
+
     // pierścień zaznaczenia własnego jachtu (jak w grach RTS)
     {
       const out = hullOutline(spec, 16);
@@ -205,7 +222,7 @@ export class View3D {
     });
     el.addEventListener('pointermove', (e) => {
       this.updateMouse(e);
-      if (!drag) { if (this.onHover) this.onHover(this.pickBollard()); return; }
+      if (!drag) { if (this.onHover) this.onHover(this.pick()); return; }
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
       drag.x = e.clientX; drag.y = e.clientY;
@@ -225,7 +242,7 @@ export class View3D {
     el.addEventListener('pointerup', (e) => {
       if (drag && !drag.moved && drag.button === 0 && this.onClick) {
         this.updateMouse(e);
-        this.onClick(this.pickBollard());
+        this.onClick(this.pick());
       }
       drag = null;
     });
@@ -242,9 +259,26 @@ export class View3D {
   }
 
   pickBollard() {
+    const p = this.pick();
+    return p && p.bollard ? p.bollard : null;
+  }
+
+  // Zwraca { deckItem } albo { bollard } pod kursorem (pokład ma pierwszeństwo)
+  pick() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
+    const d = this.raycaster.intersectObjects(this.deckHits, false);
+    if (d.length) return { deckItem: d[0].object.userData.deckItem };
     const hits = this.raycaster.intersectObjects(this.harbor.bollardMeshes, false);
-    return hits.length ? hits[0].object.userData.bollard : null;
+    return hits.length ? { bollard: hits[0].object.userData.bollard } : null;
+  }
+
+  // Podświetlenie elementów pokładu: filter(item) -> kolor (hex) albo null
+  highlightDeck(filter) {
+    for (const it of this.world.equip.deck) {
+      const c = filter ? filter(it) : null;
+      it._ring.visible = c != null;
+      if (c != null) it._ring.material.color.setHex(c);
+    }
   }
 
   setView(kind) {
@@ -336,10 +370,10 @@ export class View3D {
         if (!underwater) y = Math.max(y, 0.02);
         pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t, y, a.z + (b.z - a.z) * t));
       }
-      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N, line.isMooring ? 0.05 : 0.065, 5, false);
+      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N * 2, line.isMooring ? 0.05 : 0.06, 12, false);
       let mesh = this.ropeMeshes.get(line.id);
       if (!mesh) {
-        mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true }));
+        mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: false }));
         mesh.castShadow = true;
         this.scene.add(mesh);
         this.ropeMeshes.set(line.id, mesh);
@@ -356,7 +390,7 @@ export class View3D {
     // zwoje przygotowanych lin na pokładzie
     const coilAlive = new Set();
     for (const line of w.lines) {
-      if (line.state !== 'ready') continue;
+      if (line.state !== 'ready' && line.state !== 'queued') continue;
       coilAlive.add(line.id);
       let c = this.coilMeshes.get(line.id);
       if (!c) {

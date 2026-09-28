@@ -201,6 +201,12 @@ function lamp(x, z, y) {
   return g;
 }
 
+const ropeMats = new Map();
+function ropeMat(color) {
+  if (!ropeMats.has(color)) ropeMats.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.7 }));
+  return ropeMats.get(color);
+}
+
 // Proste liny sąsiadów (statyczne, z ugięciem)
 function sagLine(a, b, sag, color = 0xf0ede4) {
   const pts = [];
@@ -208,8 +214,9 @@ function sagLine(a, b, sag, color = 0xf0ede4) {
     const t = i / 10;
     pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t - Math.sin(Math.PI * t) * sag, a.z + (b.z - a.z) * t));
   }
-  const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 10, 0.025, 4, false);
-  const m = new THREE.Mesh(geo, mat(color));
+  const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, 0.03, 8, false);
+  const m = new THREE.Mesh(geo, ropeMat(color));
+  m.userData.keep = true; // bez scalania – zachowuje gładkie normalne
   return m;
 }
 
@@ -436,18 +443,19 @@ export function buildHarbor(H, scene) {
 // Woda – animowana siatka low-poly
 export class Water {
   constructor(scene) {
-    const size = 520, seg = 130;
+    const size = 520, seg = 90;
     const geo = new THREE.PlaneGeometry(size, size, seg, seg);
     geo.rotateX(-Math.PI / 2);
     geo.translate(0, 0, 100);
     this.geo = geo;
     this.base = geo.attributes.position.array.slice();
-    const matW = new THREE.MeshPhongMaterial({ color: 0x2a7f9e, specular: 0x9fd8ff, shininess: 60, flatShading: true, transparent: true, opacity: 0.82 });
+    // matowa woda (bez odbłysków) – spokojniejszy wygląd, łagodne cieniowanie fasetek
+    const matW = new THREE.MeshLambertMaterial({ color: 0x2b86a6, flatShading: true, transparent: true, opacity: 0.9 });
     this.mesh = new THREE.Mesh(geo, matW);
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
     // otwarte morze poza portem
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshPhongMaterial({ color: 0x236f8c, flatShading: true }));
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshLambertMaterial({ color: 0x2a7b98 }));
     far.rotation.x = -Math.PI / 2;
     far.position.y = -0.08;
     scene.add(far);
@@ -456,20 +464,20 @@ export class Water {
   update(dt, windKn, windDir) {
     this.t += dt;
     const p = this.geo.attributes.position.array;
-    const a = 0.03 + Math.min(windKn, 35) * 0.0045;
+    const a = 0.015 + Math.min(windKn, 35) * 0.0022;
     const kx = Math.sin(windDir), kz = -Math.cos(windDir);
     const t = this.t;
     for (let i = 0; i < p.length; i += 3) {
       const x = this.base[i], z = this.base[i + 2];
-      const ph = (x * kx + z * kz) * 0.55 - t * 1.6;
-      p[i + 1] = a * Math.sin(ph) + a * 0.6 * Math.sin(x * 0.31 + z * 0.23 + t * 1.1) + a * 0.3 * Math.sin(-x * 0.71 + z * 0.53 - t * 2.3);
+      const ph = (x * kx + z * kz) * 0.35 - t * 1.3;
+      p[i + 1] = a * Math.sin(ph) + a * 0.5 * Math.sin(x * 0.21 + z * 0.17 + t * 0.9);
     }
     this.geo.attributes.position.needsUpdate = true;
   }
   heightAt(x, z, windKn, windDir) {
-    const a = 0.03 + Math.min(windKn, 35) * 0.0045;
+    const a = 0.03 + Math.min(windKn, 35) * 0.0045; // kołysanie jachtu nieco silniejsze niż rysowana fala
     const kx = Math.sin(windDir), kz = -Math.cos(windDir);
-    const ph = (x * kx + z * kz) * 0.55 - this.t * 1.6;
-    return a * Math.sin(ph) + a * 0.6 * Math.sin(x * 0.31 + z * 0.23 + this.t * 1.1);
+    const ph = (x * kx + z * kz) * 0.35 - this.t * 1.3;
+    return a * Math.sin(ph) + a * 0.5 * Math.sin(x * 0.21 + z * 0.17 + this.t * 0.9);
   }
 }

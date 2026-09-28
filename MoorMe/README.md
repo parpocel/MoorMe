@@ -39,7 +39,8 @@ Program prowadzi przez cztery kroki:
 - **Odbijacze**: wystawiasz je lub chowasz osobno na lewej burcie, prawej burcie i rufie.
 - **Załoga**: osoba może zejść na ląd, gdy burta jest blisko kei i jacht płynie wolno. Wraca na pokład w ten sam sposób.
 - **Cumy i liny**:
-  - przygotowujesz linę: rola (cuma, szpring, brest, boczna), knaga, prowadzenie przez kluzę, długość, sposób założenia (na stałe albo na biegowo) i obsługa na winchu;
+  - najszybciej myszą: kliknij knagę na pokładzie, opcjonalnie kluzę lub półkluzę, którą ma iść lina, a na końcu poler. Rolę liny (cuma, szpring, brest) program rozpozna sam z kierunku. Jeśli poler jest w zasięgu, załoga od razu zakłada linę; jeśli nie, lina czeka przygotowana z zapamiętanym polerem i zakładasz ją przyciskiem „Załóż na …” (B), gdy podejdziesz bliżej. Linie są w panelu w lewym dolnym rogu;
+  - albo przygotowujesz linę z listy: rola (cuma, szpring, brest, boczna), knaga, prowadzenie przez kluzę, długość, sposób założenia (na stałe albo na biegowo) i obsługa na winchu;
   - „Załóż…” podświetla polery w zasięgu. Klikasz poler w widoku 3D albo wybierasz go z listy;
   - oko **na stałe** rzucasz z pokładu na poler z odległości do ok. 3,4 m i możesz chybić. Zdjąć je może tylko osoba na lądzie, i tylko gdy lina nie jest napięta;
   - linę **na biegowo** zakładasz z bliska (ok. 1,5 m), ale oddajesz ją z pokładu;
@@ -75,6 +76,7 @@ Dane jachtów są orientacyjne i służą ćwiczeniu. To nie jest dokumentacja p
 | R | ster na zero |
 | Q / E | ster strumieniowy dziobowy: dziób w lewo / w prawo |
 | Z / C | ster strumieniowy rufowy: rufa w lewo / w prawo |
+| K / klik na knagę | nowa lina myszą: knaga → (kluza/półkluza) → poler |
 | 1–9 | wybór liny |
 | B | załóż wybraną linę / podejmij muring |
 | T / G (przytrzymaj) | wybieraj / luzuj wybraną linę |
