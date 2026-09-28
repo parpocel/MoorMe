@@ -239,6 +239,8 @@ export class SimScreen {
   }
 
   renderLines(force) {
+    if (this.selectedLine && !this.world.lines.includes(this.selectedLine)) this.selectedLine = null;
+    if (this.pickLine && !this.world.lines.includes(this.pickLine)) this.cancelPick();
     const sig = this.lineSignature();
     if (!force && sig === this._lineSig) { this.updateLineBars(); return; }
     this._lineSig = sig;
@@ -317,7 +319,7 @@ export class SimScreen {
       card.appendChild(acts);
       this.linesList.appendChild(card);
     });
-    if (!w.lines.length) this.linesList.appendChild(h('div.small.muted', { style: { padding: '10px' } }, 'Brak lin – użyj „Przygotuj linę”.'));
+    if (!w.lines.length) this.linesList.appendChild(h('div.small.muted', { style: { padding: '10px' } }, 'Brak aktywnych lin. Kliknij knagę na jachcie, a potem poler (albo „🖱 Knaga → poler”).'));
     this.updateLineBars();
   }
 

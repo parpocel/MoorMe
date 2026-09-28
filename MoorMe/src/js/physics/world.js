@@ -249,6 +249,8 @@ export class World {
       }
     }
     for (const p of plan) {
+      // przy cumowaniu lista zawiera tylko aktywne liny – cumy tworzysz sam (knaga → poler); muring czeka przy kei
+      if (this.cfg.scenario === 'moor' && p.role !== 'mooring') continue;
       let side = p.side;
       if (p.pileSide !== undefined || p.role === 'side') {
         // dobierz burtę jachtu najbliższą celowi
@@ -717,6 +719,8 @@ export class World {
 
     // liny
     for (const line of this.lines) this.stepLine(line, dt);
+    // liny oddane (wybrane na pokład), zatopiony muring i zerwane znikają z listy
+    if (this.lines.some((l) => l.done)) this.lines = this.lines.filter((l) => !l.done);
     // kontakty
     this.computeContacts(dt);
     // jacht
@@ -777,7 +781,7 @@ export class World {
     }
     if (line.state === 'retrieving') {
       line.timer -= dt;
-      if (line.timer <= 0) { line.state = 'ready'; line.target = null; line.rest = line.length; line.tension = 0; this.log(`${line.name}: na pokładzie`); }
+      if (line.timer <= 0) { line.state = 'ready'; line.target = null; line.rest = line.length; line.tension = 0; line.done = true; this.log(`${line.name}: na pokładzie`); }
       return;
     }
     if (line.state === 'sinking') {
@@ -796,8 +800,12 @@ export class World {
           this.log('Muring wkręcony w śrubę! Silnik zgasł.', 'bad');
         }
       }
-      if (line.timer <= 0) { line.state = 'onQuay'; line.target = null; }
+      if (line.timer <= 0) { line.state = 'onQuay'; line.target = null; line.done = true; }
       return;
+    }
+    if (line.state === 'broken') {
+      line.timer -= dt;
+      if (line.timer <= 0) line.done = true;
     }
     if (line.state !== 'attached') { line.tension = 0; return; }
 
@@ -829,6 +837,7 @@ export class World {
 
     if (f.T > this.lineParams.breakLoad) {
       line.state = 'broken';
+      line.timer = 4; // widoczna chwilę na liście, potem znika
       line.tension = 0;
       this.stats.breaks++;
       this.log(`${line.name} ZERWANA! (${(f.T / 1000).toFixed(1)} kN)`, 'bad');

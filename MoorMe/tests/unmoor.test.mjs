@@ -16,7 +16,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   check(!w.crew.ashore, 'załoga sama wróciła na pokład (liny na biegowo – nic do roboty na lądzie)');
   for (const l of w.lines) w.release(l);
   run(w, 20);
-  check(w.lines.every((l) => l.state === 'ready'), 'liny biegowe wybrane na pokład: ' + w.lines.map((l) => l.state).join(','));
+  check(w.lines.length === 0, 'liny biegowe wybrane na pokład i usunięte z listy (zostało: ' + w.lines.map((l) => l.state).join(',') + ')');
   // odejście: dziób od kei sterem strumieniowym, potem naprzód
   w.boat.bowCmd = 1;
   run(w, 14);
@@ -41,7 +41,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   w.onEvent = (e) => (msg = e.msg);
   w.release(sl);
   run(w, 15);
-  check(sl.state === 'ready', 'oko na stałe zdjęte przez załogę (stan: ' + sl.state + ', ' + msg + ')');
+  check(!w.lines.includes(sl), 'oko na stałe zdjęte przez załogę i lina znikła z listy (stan: ' + sl.state + ', ' + msg + ')');
   run(w, 5);
   check(!w.crew.ashore, 'załoga wróciła na pokład po zdjęciu oka');
   // muring: oddaj i daj wsteczny... powinien wkręcić się w śrubę gdy jedziemy nad nim

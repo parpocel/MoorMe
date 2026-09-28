@@ -10,17 +10,19 @@ w.onEvent = (e) => console.log(`[${e.t.toFixed(1)}] ${e.msg}`);
 w.boat.reset(H.berth.x, H.berth.z + 0.4, H.berth.th);
 const run = (s) => { for (let i = 0; i < s * 240; i++) w.step(1 / 240); };
 run(1);
-for (const l of w.lines.filter((l) => l.role === 'stern')) {
-  const opts = w.attachOptions(l).filter((o) => o.ok);
-  console.log(l.name, 'options', opts.slice(0, 3).map((o) => `${o.bollard.label} ${o.dist.toFixed(1)}`).join('; '));
-  w.attach(l, (l.suggestedTarget && opts.find(o=>o.bollard===l.suggestedTarget)) ? l.suggestedTarget : opts[0].bollard);
+// na starcie cumowania lista zawiera tylko muring (cumy tworzy gracz)
+if (w.lines.length !== 1 || !w.lines[0].isMooring) { console.log('FAIL: oczekiwano tylko muringu na liście'); process.exit(1); }
+// cumy rufowe wskazane jak myszą: knaga rufowa -> poler najbliżej rufy po tej samej stronie
+for (const side of [-1, 1]) {
+  const c = w.findCleat('stern', side);
+  const lead = w.leadWorld({ cleatId: c.id, fairleadId: w.autoFairlead(c)?.id ?? null, jumped: false });
+  const b = w.nearestBollard(lead.x, lead.z, (q) => q.z < 0.1 && q.kind !== 'ring');
+  const l = w.rigLine(c.id, undefined, b, 'fixed');
+  console.log(l.name, '->', b.label, l.state);
 }
 const mur = w.lines.find((l) => l.isMooring);
 w.pickupMooring(mur);
-run(4);
-// chybione rzuty – ponawiaj
-for (let k = 0; k < 5; k++) for (const l of w.lines.filter((l) => l.role === 'stern' && l.state === 'ready')) { w.attach(l, w.attachOptions(l).find((o) => o.ok).bollard); run(4); }
-run(16);
+run(20); // chybione rzuty załoga ponawia sama
 console.log('states', w.lines.map((l) => l.state + ':' + (l.tension|0)).join(', '));
 mur.tending = 'haul';
 run(25);
