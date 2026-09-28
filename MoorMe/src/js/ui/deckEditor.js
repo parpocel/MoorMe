@@ -148,7 +148,7 @@ export function createDeckEditor(spec, equip, onChange) {
     ctx.fillText('RUFA', cx + xs * scale - 50, cy + 5);
     drawBoatTop(ctx, spec, cx, cy, scale, 0, { deck: equip.deck, fenders: equip.fenders, fenderRadius: equip.fenderRadius, selected: selected && selected.id, bowThruster: equip.bowThruster, sternThruster: equip.sternThruster });
     // podpisy
-    ctx.font = '11px Segoe UI';
+    ctx.font = '13px Segoe UI';
     ctx.fillStyle = '#d7e6f2';
     for (const it of equip.deck) {
       const px = cx + it.x * scale, py = cy + it.y * scale;

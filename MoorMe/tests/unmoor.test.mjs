@@ -1,6 +1,7 @@
 import { BOATS, defaultEquipment } from '../src/js/data/boats.js';
 import { generateHarbor } from '../src/js/data/harbors.js';
 import { World } from '../src/js/physics/world.js';
+import { rng } from '../src/js/math.js';
 let fails = 0;
 const check = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fails++; };
 const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 240); w.step(1 / 240); } };
@@ -9,7 +10,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
 {
   const spec = BOATS.C46, equip = { ...defaultEquipment(BOATS.C46), bowThruster: 'onoff' };
   const H = generateHarbor({ quay: 'concrete', method: 'longside', side: 'port', boatSpec: spec, seed: 3 });
-  const w = new World({ spec, equip, harbor: H, weather: { windKn: 6, windFrom: 180, gust: 0 }, scenario: 'unmoor' });
+  const w = new World({ spec, equip, harbor: H, weather: { windKn: 6, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
   run(w, 1);
   check(w.crew.ashore, 'załoga na kei na starcie');
   w.crewAboard();
@@ -33,7 +34,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
 {
   const spec = BOATS.C34, equip = defaultEquipment(spec);
   const H = generateHarbor({ quay: 'pontoon', method: 'mooringStern', side: 'port', boatSpec: spec, seed: 3 });
-  const w = new World({ spec, equip, harbor: H, weather: { windKn: 5, windFrom: 180, gust: 0 }, scenario: 'unmoor' });
+  const w = new World({ spec, equip, harbor: H, weather: { windKn: 5, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
   const sl = w.lines.find((l) => l.role === 'stern');
   sl.mode = 'fixed';
   w.crewAboard();
@@ -54,7 +55,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
 {
   const spec = BOATS.C34, equip = defaultEquipment(spec);
   const H = generateHarbor({ quay: 'concrete', method: 'longside', side: 'port', boatSpec: spec, seed: 3 });
-  const w = new World({ spec, equip, harbor: H, weather: { windKn: 0, windFrom: 180, gust: 0 }, scenario: 'unmoor' });
+  const w = new World({ spec, equip, harbor: H, weather: { windKn: 0, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
   for (const l of w.lines) if (l.role !== 'bow') { w.crewAboard(); l.state = 'ready'; l.target = null; }
   w.boat.throttle = -1;
   run(w, 30);

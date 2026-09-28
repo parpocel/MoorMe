@@ -210,6 +210,7 @@ export class View3D {
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
       drag.x = e.clientX; drag.y = e.clientY;
       if (drag.button === 2 || (drag.button === 0 && e.shiftKey)) {
+        this.cam.mode = 'free';
         this.cam.az -= dx * 0.006;
         this.cam.el = clamp(this.cam.el + dy * 0.004, 12 * DEG, 88 * DEG);
       } else if (drag.button === 0 || drag.button === 1) {
@@ -248,9 +249,10 @@ export class View3D {
 
   setView(kind) {
     const L = this.world.spec.loa;
+    this.cam.mode = kind;
     if (kind === 'top') { this.cam.el = 86 * DEG; this.cam.dist = 60 + L * 2; }
     else if (kind === 'iso') { this.cam.el = 52 * DEG; this.cam.dist = 55 + L * 1.5; }
-    else if (kind === 'helm') { this.cam.el = 24 * DEG; this.cam.dist = 22 + L; this.cam.az = -this.world.boat.th + Math.PI / 2 + Math.PI; }
+    else if (kind === 'helm') { this.cam.el = 24 * DEG; this.cam.dist = 22 + L; this.cam.az = 1.5 * Math.PI - this.world.boat.th; }
     else if (kind === 'close') { this.cam.el = 40 * DEG; this.cam.dist = 26 + L; }
     this.cam.follow = true;
   }
@@ -506,6 +508,12 @@ export class View3D {
 
     // kamera
     const cam = this.cam;
+    if (cam.mode === 'helm' && cam.follow) {
+      const want = 1.5 * Math.PI - b.th;
+      let d = want - cam.az;
+      d = Math.atan2(Math.sin(d), Math.cos(d));
+      cam.az += d * clamp(dt * 1.5, 0, 1);
+    }
     if (cam.follow) {
       cam.tx += (b.x - cam.tx) * clamp(dt * 3, 0, 1);
       cam.tz += (b.z - cam.tz) * clamp(dt * 3, 0, 1);

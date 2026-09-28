@@ -51,7 +51,17 @@ export class SimScreen {
     const view = h('div', { id: 'view' });
     sim.appendChild(view);
     r.appendChild(sim);
-    this.view = new View3D(view, this.world);
+    try {
+      this.view = new View3D(view, this.world);
+    } catch (err) {
+      console.error(err);
+      sim.appendChild(h('div.modal-back', {}, h('div.modal.glass', {},
+        h('h2', {}, 'Brak obsługi grafiki 3D'),
+        h('p', {}, 'Nie udało się uruchomić WebGL. Zaktualizuj sterowniki karty graficznej i spróbuj ponownie.'),
+        h('p.small.muted', {}, String(err && err.message)),
+        h('button.btn.primary', { onclick: () => this.cb.exit(this.config) }, 'Wróć'))));
+      throw err;
+    }
 
     // --- Info ---
     this.info = h('div.hud.glass', { id: 'hud-info' });

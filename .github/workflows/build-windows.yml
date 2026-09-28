@@ -1,0 +1,71 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: MoorMe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: MoorMe/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests
+        run: npm test
+
+      - name: Build installer (NSIS)
+        run: npm run dist
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoorMe-Setup
+          path: MoorMe/dist/MoorMe-Setup-*.exe
+          if-no-files-found: error
+
+      - name: Install silently and run smoke test
+        shell: pwsh
+        run: |
+          $setup = Get-ChildItem dist/MoorMe-Setup-*.exe | Select-Object -First 1
+          $p = Start-Process -FilePath $setup.FullName -ArgumentList '/S' -PassThru
+          $p.WaitForExit(300000) | Out-Null
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter MoorMe.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $app) { throw "Instalacja nie powiodła się – brak MoorMe.exe" }
+          Write-Host "Zainstalowano: $($app.FullName)"
+          $env:MOORME_SMOKE_OUT = "$PWD\smoke.png"
+          $run = Start-Process -FilePath $app.FullName -PassThru
+          if (-not $run.WaitForExit(120000)) { $run.Kill(); throw "Aplikacja nie zakończyła testu w czasie" }
+          if (-not (Test-Path smoke.png)) { throw "Brak zrzutu ekranu z testu" }
+          Write-Host "Kod wyjścia: $($run.ExitCode)"
+          if ($run.ExitCode -ne 0) { throw "Test dymny zgłosił błędy" }
+
+      - name: Upload smoke screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-screenshot
+          path: MoorMe/smoke.png
+          if-no-files-found: ignore
+
+      - name: Publish release (tags v*)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MoorMe/dist/MoorMe-Setup-*.exe

@@ -25,6 +25,7 @@ export class World {
     this.equip = cfg.equip;
     this.H = cfg.harbor;
     this.env = new Environment(cfg.weather);
+    this.random = cfg.random || Math.random;
     this.boat = new BoatPhysics(cfg.spec, cfg.equip);
     this.time = 0;
     this.acc = 0;
@@ -614,7 +615,7 @@ export class World {
         if (line.pendingVia === 'deck' && line.mode === 'fixed' && line.pendingTarget.kind !== 'ring') {
           // rzut okiem liny – może chybić
           const p = 1 - 0.55 * Math.pow(clamp(line.lassoDist / 3.4, 0, 1), 3);
-          if (Math.random() > p) {
+          if (this.random() > p) {
             line.state = 'ready';
             this.stats.lassoMiss++;
             this.log(`${line.name}: chybiony rzut – spróbuj ponownie`, 'warn');

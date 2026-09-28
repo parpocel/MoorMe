@@ -9,8 +9,8 @@
   "scripts": {
     "start": "electron .",
     "test": "node tests/run.mjs",
-    "dist": "electron-builder --win nsis --x64",
-    "dist:dir": "electron-builder --win dir --x64"
+    "dist": "electron-builder --win nsis --x64 --publish never",
+    "dist:dir": "electron-builder --win dir --x64 --publish never"
   },
   "dependencies": {
     "three": "^0.170.0"
@@ -23,10 +23,26 @@
     "appId": "pl.moorme.simulator",
     "productName": "MoorMe",
     "copyright": "MoorMe",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["main.js", "src/**/*", "node_modules/three/build/three.module.js", "package.json"],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "package.json",
+      "!node_modules/three/{src,examples}/**",
+      "!node_modules/three/build/three.{cjs,module.min.js,webgpu.js,webgpu.min.js,webgpu.nodes.js,webgpu.nodes.min.js}"
+    ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
       "icon": "build/icon.png",
       "artifactName": "MoorMe-Setup-${version}.exe"
     },
@@ -38,6 +54,11 @@
       "createStartMenuShortcut": true,
       "shortcutName": "MoorMe",
       "language": "1045"
-    }
+    },
+    "publish": null
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parpocel/MoorMe.git"
   }
 }
