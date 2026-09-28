@@ -14,7 +14,7 @@ export function mergeByMaterial(root, { castShadow = true, receiveShadow = true 
       const m = new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld);
       g.applyMatrix4(m);
       buckets.get(key).parts.push(g);
-    } else if ((o.isLine || o.isLineSegments || o.isPoints || (o.isMesh && (o.userData.keep || o.material.visible === false))) && o !== root) {
+    } else if ((o.isLine || o.isLineSegments || o.isPoints || o.isSprite || (o.isMesh && (o.userData.keep || o.material.visible === false))) && o !== root) {
       others.push(o);
     }
   });

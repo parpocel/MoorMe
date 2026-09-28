@@ -575,7 +575,8 @@ export function buildHarbor(H, scene) {
     group.add(house(r, x, baseZ - 22 - r() * 4, landY, 0));
     if (r() < 0.6) group.add(tree(r, x + 7, baseZ - 13 - r() * 2, landY));
   }
-  for (let x = -135; x < 135; x += 9) group.add(lamp(x, baseZ - 5, landY));
+  const lamps = [];
+  for (let x = -135; x < 135; x += 9) { group.add(lamp(x, baseZ - 5, landY)); lamps.push({ x, y: landY + 4.1, z: baseZ - 5 }); }
   addQuayDetails(group, H, r, landY, baseZ);
   // bosmanat z szyldem i masztem flagowym
   const bos = house(rng(3), 55, baseZ - 13, landY, 0);
@@ -669,7 +670,8 @@ export function buildHarbor(H, scene) {
   const merged = mergeByMaterial(group);
   scene.add(merged);
   scene.add(dyn);
-  return { group: merged, dyn, bollardMeshes };
+  const lighthouses = H.deco.filter((d) => d.type === 'lighthouse').map((d) => ({ x: d.x, y: 2.2 + 8.6, z: d.z, color: d.color }));
+  return { group: merged, dyn, bollardMeshes, lamps, lighthouses };
 }
 
 // Stonowana tekstura wody: plamy głębi + delikatne jaśniejsze zmarszczki (kafelkowalna)

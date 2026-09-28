@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { buildBoat, buildDeckGear, buildFender, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
+import { Atmosphere } from './atmosphere.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
 import { localToWorld, DEG, clamp } from '../math.js';
 
@@ -30,6 +31,7 @@ export class View3D {
     // mniej światła rozproszonego = wyraźniejsze cienie
     const hemi = new THREE.HemisphereLight(0xdff2ff, 0x4a5a44, 0.8);
     scene.add(hemi);
+    this.hemi = hemi;
     const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
     sun.castShadow = true;
     const maxTex = renderer.capabilities.maxTextureSize || 4096;
@@ -56,6 +58,7 @@ export class View3D {
     skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
     const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false }));
     scene.add(sky);
+    this.sky = sky;
 
     this.water = new Water(scene);
     const hb = buildHarbor(world.H, scene);
@@ -138,6 +141,8 @@ export class View3D {
 
     // życie w porcie: mewy, spacerowicze, motorówka
     this.life = new HarbourLife(this);
+    // pora dnia i pogoda
+    this.atmo = new Atmosphere(this, world.cfg.weather || {});
 
     // wskaźnik kursu (strzałka na wodzie)
     this.raycaster = new THREE.Raycaster();
@@ -264,6 +269,34 @@ export class View3D {
     const r = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
     this.mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+    this.mousePx = { x: e.clientX - r.left, y: e.clientY - r.top, cx: e.clientX, cy: e.clientY };
+  }
+
+  // Lina najbliżej kursora (odległość na ekranie od łamanej liny), maks. 14 px
+  pickRope() {
+    if (!this.mousePx || !this.ropePts) return null;
+    const m = this.mousePx;
+    let best = null, bd = 14;
+    const v = new THREE.Vector3();
+    const r = this.renderer.domElement;
+    for (const [id, pts] of this.ropePts) {
+      let prev = null;
+      for (const p of pts) {
+        v.copy(p).project(this.camera);
+        if (v.z > 1) { prev = null; continue; }
+        const q = { x: (v.x * 0.5 + 0.5) * r.clientWidth, y: (-v.y * 0.5 + 0.5) * r.clientHeight };
+        if (prev) {
+          const ex = q.x - prev.x, ey = q.y - prev.y, l2 = ex * ex + ey * ey || 1;
+          const t = clamp(((m.x - prev.x) * ex + (m.y - prev.y) * ey) / l2, 0, 1);
+          const d = Math.hypot(m.x - (prev.x + ex * t), m.y - (prev.y + ey * t));
+          if (d < bd) { bd = d; best = id; }
+        }
+        prev = q;
+      }
+    }
+    if (best == null) return null;
+    const line = this.world.lines.find((l) => l.id === best);
+    return line ? { line } : null;
   }
 
   pickBollard() {
@@ -276,6 +309,8 @@ export class View3D {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const d = this.raycaster.intersectObjects(this.deckHits, false);
     if (d.length) return { deckItem: d[0].object.userData.deckItem };
+    const rope = this.pickRope();
+    if (rope) return rope;
     const hits = this.raycaster.intersectObjects(this.harbor.bollardMeshes, false);
     return hits.length ? { bollard: hits[0].object.userData.bollard } : null;
   }
@@ -390,6 +425,8 @@ export class View3D {
         if (!underwater) y = Math.max(y, 0.02);
         pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t, y, a.z + (b.z - a.z) * t));
       }
+      if (!this.ropePts) this.ropePts = new Map();
+      this.ropePts.set(line.id, pts);
       const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
       const geo = new THREE.TubeGeometry(curve, pts.length * 2, line.isMooring ? 0.05 : 0.06, 12, false);
       let mesh = this.ropeMeshes.get(line.id);
@@ -406,7 +443,7 @@ export class View3D {
       if (line.selected) mesh.material.emissive.setHex(0x224466); else mesh.material.emissive.setHex(0x000000);
     }
     for (const [id, mesh] of this.ropeMeshes) {
-      if (!alive.has(id)) { this.scene.remove(mesh); mesh.geometry.dispose(); this.ropeMeshes.delete(id); }
+      if (!alive.has(id)) { this.scene.remove(mesh); mesh.geometry.dispose(); this.ropeMeshes.delete(id); this.ropePts.delete(id); }
     }
     // zwoje przygotowanych lin na pokładzie
     const coilAlive = new Set();
@@ -580,10 +617,8 @@ export class View3D {
     const cy = Math.sin(cam.el) * cam.dist + (cam.ty || 0);
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(cam.tx, cam.ty || 0, cam.tz);
-    // słońce podąża za kamerą (cienie)
-    // słońce ze wschodu, ok. 40° nad horyzontem – cienie padają w bok, dobrze widoczne z kamery
-    this.sun.position.set(cam.tx + 95, 85, cam.tz + 25);
-    this.sun.target.position.set(cam.tx, 0, cam.tz);
+    // pora dnia, pogoda, światła (słońce/księżyc podąża za kamerą – cienie)
+    this.atmo.update(dt, camDt);
     const sh = clamp(cam.dist * 0.7, 30, 120);
     const sc = this.sun.shadow.camera;
     if (Math.abs(sc.right - sh) > 5) { sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.updateProjectionMatrix(); }

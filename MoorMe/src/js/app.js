@@ -275,6 +275,13 @@ function stepWeather() {
   const curDirOut = h('b', {}, `${w.currentTo}°`);
   curDir.addEventListener('input', () => { w.currentTo = +curDir.value; curDirOut.textContent = `${w.currentTo}°`; drawMap(); });
 
+  // pora dnia (godzina) – zmienna też w trakcie symulacji
+  if (typeof w.hour !== 'number') w.hour = 14;
+  const fmtH = (hh) => `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.round((hh % 1) * 60)).padStart(2, '0')}${hh < 5 || hh > 21 ? ' (noc)' : hh < 7.5 ? ' (świt)' : hh > 18.5 ? ' (zmierzch)' : ''}`;
+  const hourOut = h('b', {}, fmtH(w.hour));
+  const hourInp = h('input', { type: 'range', min: 0, max: 23.75, step: 0.25, value: w.hour });
+  hourInp.addEventListener('input', () => { w.hour = +hourInp.value; hourOut.textContent = fmtH(w.hour); });
+
   // mapa startu
   const mapCv = h('canvas', { width: 1000, height: 820, style: { width: '100%', borderRadius: '12px', cursor: 'crosshair' } });
   const T = mapTransform(mapCv, { minX: -150, maxX: 150, minZ: -30, maxZ: 225 });
@@ -327,6 +334,8 @@ function stepWeather() {
     h('div.field', {}, h('label', {}, 'Porywistość i skręty'), h('div.row', {}, gustInp, gustOut)),
     h('div.field', {}, h('label', {}, 'Prąd (np. wypływ rzeki)'), h('div.row', {}, curInp, curOut)),
     h('div.field', {}, h('label', {}, 'Kierunek prądu (dokąd płynie)'), h('div.row', {}, curDir, curDirOut)),
+    h('div.field', {}, h('label', {}, 'Pora dnia'), h('div.row', {}, hourInp, hourOut)),
+    h('div.field', {}, h('label', {}, 'Niebo'), seg([{ value: 'clear', label: '☀ Słonecznie' }, { value: 'cloudy', label: '☁ Pochmurno' }, { value: 'rain', label: '🌧 Deszcz' }, { value: 'fog', label: '🌫 Mgła' }], w.sky || 'clear', (v) => { w.sky = v; })),
     config.scenario === 'moor' ? h('div', {},
       h('h3', {}, 'Miejsce startu'),
       presetSeg,

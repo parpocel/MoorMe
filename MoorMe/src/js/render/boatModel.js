@@ -12,6 +12,11 @@ export function mat(color, opts = {}) {
   return matCache.get(key);
 }
 
+// Wszystkie materiały z pamięci podręcznej (np. do podświetlenia okien nocą)
+export function cachedMaterials() {
+  return [...matCache.values()];
+}
+
 const COL = {
   deck: 0xd9d6cf,
   teak: 0xa87a4f,

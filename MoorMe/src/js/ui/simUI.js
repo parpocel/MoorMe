@@ -87,6 +87,7 @@ export class SimScreen {
     for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
+    top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));
     top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Menu'));
@@ -432,9 +433,110 @@ export class SimScreen {
     this.pickBanner.style.display = 'none';
   }
 
+  // ---------- Pogoda i pora dnia w trakcie symulacji ----------
+  toggleWeather() {
+    if (this.weatherPanel) { this.weatherPanel.remove(); this.weatherPanel = null; return; }
+    const atmo = this.view.atmo, env = this.world.env;
+    const fmtH = (hh) => `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.floor((hh % 1) * 60)).padStart(2, '0')}`;
+    const row = (label, inp, out) => h('div.field', {}, h('label', {}, label), h('div.row', {}, inp, out));
+    const range = (min, max, step, val, on) => { const i = h('input', { type: 'range', min, max, step, value: val }); i.addEventListener('input', () => on(+i.value)); return i; };
+    const hourOut = h('b', {}, fmtH(atmo.hour));
+    const hourInp = range(0, 23.75, 0.25, atmo.hour, (v) => { atmo.setHour(v); hourOut.textContent = fmtH(v); });
+    const flow = h('input', { type: 'checkbox' });
+    flow.checked = atmo.timeFlows;
+    flow.addEventListener('change', () => { atmo.timeFlows = flow.checked; });
+    const skySeg = h('div.seg');
+    const drawSky = () => {
+      skySeg.innerHTML = '';
+      for (const [k, name] of [['clear', '☀ Słonecznie'], ['cloudy', '☁ Pochmurno'], ['rain', '🌧 Deszcz'], ['fog', '🌫 Mgła']]) {
+        skySeg.appendChild(h('button', { class: atmo.sky === k ? 'on' : '', onclick: () => { atmo.setSky(k); drawSky(); } }, name));
+      }
+    };
+    drawSky();
+    const presets = h('div.seg', {}, [['Świt', 5.5], ['Dzień', 13], ['Zachód', 19.2], ['Noc', 23]].map(([n, v]) => h('button', { onclick: () => { atmo.setHour(v); hourInp.value = v; hourOut.textContent = fmtH(v); } }, n)));
+    const windOut = h('b', {}, `${env.w.windKn} kn`);
+    const windInp = range(0, 35, 1, env.w.windKn, (v) => { env.w.windKn = v; windOut.textContent = `${v} kn`; });
+    const dirOut = h('b', {}, `${env.w.windFrom}°`);
+    const dirInp = range(0, 355, 5, env.w.windFrom, (v) => { env.w.windFrom = v; dirOut.textContent = `${v}°`; });
+    const gustOut = h('b', {}, `${Math.round(env.w.gust * 100)}%`);
+    const gustInp = range(0, 1, 0.05, env.w.gust, (v) => { env.w.gust = v; gustOut.textContent = `${Math.round(v * 100)}%`; });
+    const panel = h('div.hud.glass', { id: 'hud-weather' },
+      h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('b', {}, 'Pogoda i pora dnia'), h('button.btn.xs', { onclick: () => this.toggleWeather() }, '✕')),
+      row('Godzina', hourInp, hourOut),
+      presets,
+      h('label.small', { style: { display: 'block', margin: '6px 0' } }, flow, ' Czas płynie (1 s = 1 min)'),
+      h('div.field', {}, h('label', {}, 'Niebo'), skySeg),
+      row('Wiatr', windInp, windOut),
+      row('Kierunek wiatru (skąd)', dirInp, dirOut),
+      row('Porywistość', gustInp, gustOut),
+      h('div.small.muted', {}, 'Nocą świecą światła nawigacyjne jachtów, światła kotwiczne sąsiadów, latarnie i latarnie morskie.'));
+    this.sim.appendChild(panel);
+    this.weatherPanel = panel;
+    this._hourOut = hourOut; this._hourInp = hourInp; this._fmtH = fmtH;
+  }
+
+  // ---------- Okrągłe menu liny (klik na linę w 3D) ----------
+  openRadial(line, px, py) {
+    this.closeRadial();
+    this.tooltip.style.display = 'none';
+    const w = this.world;
+    const opts = [];
+    const act = (label, icon, fn, cls = '') => opts.push({ label, icon, fn, cls });
+    const tend = (mode) => (hold) => { w.setTending(line, mode); this._radialHold = hold ? { line, mode } : null; };
+    if (line.state === 'attached') {
+      act('Wybieraj', '⬆', tend('haul'), line.tending === 'haul' ? 'on' : '');
+      act('Obłóż', '■', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '');
+      act('Luzuj', '⬇', tend('ease'), line.tending === 'ease' ? 'on' : '');
+      act('Luz', '〰', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '');
+      act('Oddaj', '✋', () => w.release(line), 'danger');
+    } else if (line.state === 'onQuay') {
+      act('Podejmij', '⚓', () => w.pickupMooring(line));
+    } else if (line.state === 'queued' || line.state === 'pending') {
+      act('Anuluj', '✕', () => w.release(line), 'danger');
+    } else if (line.state === 'ready') {
+      act('Załóż', '⚓', () => this.attachOrPick(line));
+      act('Usuń', '🗑', () => w.removeLine(line), 'danger');
+    }
+    act('Wybierz', '☰', () => { this.selectedLine = line; });
+    const menu = h('div.radial', { style: { left: `${px}px`, top: `${py}px` } });
+    const R = 78;
+    opts.forEach((o, i) => {
+      const a = -Math.PI / 2 + (i / opts.length) * Math.PI * 2;
+      const b = h('button.rb', { class: o.cls, style: { left: `${Math.cos(a) * R}px`, top: `${Math.sin(a) * R}px` } }, h('span.ic', {}, o.icon), h('span', {}, o.label));
+      // krótkie kliknięcie – tryb ciągły; przytrzymanie wybierania/luzowania – działa tylko podczas trzymania
+      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); b._t = performance.now(); o.fn(true); });
+      b.addEventListener('pointerup', (e) => {
+        e.stopPropagation();
+        const held = performance.now() - (b._t || 0) > 350;
+        if (this._radialHold) {
+          if (held) { this.world.setTending(this._radialHold.line, 'hold'); }
+          this._radialHold = null;
+        }
+        this.closeRadial();
+        this.renderLines(true);
+      });
+      menu.appendChild(b);
+    });
+    menu.appendChild(h('div.rc', {}, h('b', {}, line.name), h('span', {}, line.state === 'attached' ? `${(line.tension / 1000).toFixed(1)} kN` : (LINE_STATE_LABEL[line.state] || ''))));
+    this.sim.appendChild(menu);
+    this.radial = menu;
+    this._radialOutside = (e) => { if (!menu.contains(e.target)) this.closeRadial(); };
+    setTimeout(() => window.addEventListener('pointerdown', this._radialOutside, true), 0);
+  }
+
+  closeRadial() {
+    if (this.radial) { this.radial.remove(); this.radial = null; }
+    if (this._radialOutside) { window.removeEventListener('pointerdown', this._radialOutside, true); this._radialOutside = null; }
+  }
+
   onViewClick(p) {
     const w = this.world;
     if (!p) return;
+    if (p.line && !this.pickLine && !(this.rig && this.rig.cleat)) {
+      const m = this.view.mousePx;
+      if (m) this.openRadial(p.line, m.x, m.y);
+      return;
+    }
     if (this.pickLine) {
       if (!p.bollard) return;
       const o = w.attachOptions(this.pickLine).find((x) => x.bollard === p.bollard);
@@ -468,7 +570,16 @@ export class SimScreen {
   }
 
   onViewHover(p) {
-    if (!p) { this.tooltip.style.display = 'none'; return; }
+    if (!p || this.radial) { this.tooltip.style.display = 'none'; return; }
+    if (p.line) {
+      const m = this.view.mousePx;
+      const l = p.line;
+      this.tooltip.textContent = `${l.name} · ${l.state === 'attached' ? (l.tension / 1000).toFixed(1) + ' kN · ' : ''}kliknij – menu`;
+      this.tooltip.style.display = 'block';
+      this.tooltip.style.left = `${m.x + 14}px`;
+      this.tooltip.style.top = `${m.y - 12}px`;
+      return;
+    }
     if (p.deckItem) {
       const it = p.deckItem, b = this.world.boat;
       const wp = localToWorld(b.x, b.z, b.th, it.x, it.y);
@@ -562,7 +673,8 @@ export class SimScreen {
       case 'KeyV': { const v = ['iso', 'close', 'top', 'helm']; this._vi = ((this._vi || 0) + 1) % v.length; this.view.setView(v[this._vi]); break; }
       case 'KeyM': this.sound.enabled = !this.sound.enabled; break;
       case 'KeyL': w.crew.ashore ? w.crewAboard() : w.crewAshore(); break;
-      case 'Escape': if (this.pickLine) this.cancelPick(); if (this.rig) this.cancelRig(); break;
+      case 'Escape': if (this.pickLine) this.cancelPick(); if (this.rig) this.cancelRig(); this.closeRadial(); break;
+      case 'KeyO': this.toggleWeather(); break;
       case 'KeyK': this.startRig(); break;
       case 'F1': case 'KeyH': this.showHelp(); e.preventDefault(); break;
       case 'KeyB': if (line) { if (line.state === 'ready') this.attachOrPick(line); else if (line.state === 'onQuay') w.pickupMooring(line); } break;
@@ -647,6 +759,7 @@ export class SimScreen {
         <span class="muted">Wiatr pozorny</span><b>${appKn.toFixed(0)} kn ${appDeg >= 0 ? 'P' : 'L'} ${Math.abs(appDeg).toFixed(0)}°</b>
         ${w.env.w.currentKn ? `<span class="muted">Prąd</span><b>${w.env.w.currentKn.toFixed(1)} kn → ${w.env.w.currentTo}°</b>` : ''}
         <span class="muted">Czas</span><b>${min}:${String(sec).padStart(2, '0')}</b>
+        <span class="muted">Godzina</span><b>${String(Math.floor(this.view.atmo.hour)).padStart(2, '0')}:${String(Math.floor((this.view.atmo.hour % 1) * 60)).padStart(2, '0')}</b>
       </div>`;
     // cel
     const sc = w.cfg.scenario;
@@ -699,6 +812,10 @@ export class SimScreen {
     const now = performance.now();
     for (const it of this.logItems) it.el.style.opacity = now - it.t > 7000 ? 0 : 1;
     this.drawCompass();
+    if (this.weatherPanel && this.view.atmo.timeFlows) {
+      this._hourOut.textContent = this._fmtH(this.view.atmo.hour);
+      this._hourInp.value = this.view.atmo.hour;
+    }
   }
 
   drawCompass() {
@@ -755,7 +872,7 @@ export class SimScreen {
     const rows = [
       ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo'], ['R', 'Ster na zero'],
       ['Q / E', 'Ster strumieniowy dziobowy: dziób w lewo / w prawo'], ['Z / C', 'Ster strumieniowy rufowy: rufa w lewo / w prawo'],
-      ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
+      ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['Klik na linę', 'Menu okrągłe: wybieraj, obłóż, luzuj, luz, oddaj (przytrzymaj – działa tylko podczas trzymania)'], ['O', 'Pogoda i pora dnia'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
       ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok'],
       ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
     ];
@@ -804,6 +921,7 @@ export class SimScreen {
   }
   destroy() {
     this.running = false;
+    this.closeRadial();
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this._blur);

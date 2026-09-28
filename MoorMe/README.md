@@ -28,7 +28,7 @@ Program prowadzi przez cztery kroki:
    - keja z dalbami (Bałtyk): dziobem do kei z rufą na dalbach, albo odwrotnie;
    - przy Y-bomach i dalbach suwakiem ustawiasz szerokość stanowiska (prześwit ponad szerokość jachtu, od 0,1 do 2,5 m);
    - zadanie: **cumowanie** (podejście) albo **odcumowanie** (start zacumowany, liny założone na biegowo, jedna osoba na kei).
-4. **Pogoda i start**: siła i kierunek wiatru, porywistość ze skrętami wiatru, prąd oraz miejsce startu na mapie portu.
+4. **Pogoda i start** (pogodę, niebo i porę dnia – także noc – zmienisz też w trakcie symulacji przyciskiem „🌦 Pogoda”): siła i kierunek wiatru, porywistość ze skrętami wiatru, prąd oraz miejsce startu na mapie portu.
    Wybierasz gotowe miejsce albo klikasz na mapie i przeciągasz, żeby ustawić kurs.
 
 ### Panel symulacji
@@ -78,6 +78,8 @@ Dane jachtów są orientacyjne i służą ćwiczeniu. To nie jest dokumentacja p
 | Q / E | ster strumieniowy dziobowy: dziób w lewo / w prawo |
 | Z / C | ster strumieniowy rufowy: rufa w lewo / w prawo |
 | K / klik na knagę | nowa lina myszą: knaga → (kluza/półkluza) → poler |
+| klik na linę | okrągłe menu: wybieraj, obłóż, luzuj, luz, oddaj, wybierz |
+| O | pogoda i pora dnia w trakcie symulacji |
 | 1–9 | wybór liny |
 | B | załóż wybraną linę / podejmij muring |
 | T / G (przytrzymaj) | wybieraj / luzuj wybraną linę |
