@@ -611,7 +611,7 @@ export class SimScreen {
       this.handleHeldKeys(dt);
       this.world.update(dt * this.timeScale);
     }
-    this.view.render(this.paused ? 0 : dt * this.timeScale);
+    this.view.render(this.paused ? 0 : dt * this.timeScale, dt);
     this.updateHUD();
     this.renderLines();
     this.sound.update(this.world.boat, this.world.env.windSpeed / KN);

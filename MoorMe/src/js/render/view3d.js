@@ -26,14 +26,18 @@ export class View3D {
 
     const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 2000);
     this.camera = camera;
-    const hemi = new THREE.HemisphereLight(0xdff2ff, 0x5a6b4a, 1.0);
+    // mniej światła rozproszonego = wyraźniejsze cienie
+    const hemi = new THREE.HemisphereLight(0xdff2ff, 0x4a5a44, 0.8);
     scene.add(hemi);
-    const sun = new THREE.DirectionalLight(0xfff1dc, 2.1);
+    const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    const maxTex = renderer.capabilities.maxTextureSize || 4096;
+    sun.shadow.mapSize.set(Math.min(4096, maxTex), Math.min(4096, maxTex));
     const sc = sun.shadow.camera;
-    sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 250;
-    sun.shadow.bias = -0.0006;
+    sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 300;
+    sun.shadow.bias = -0.0004;
+    sun.shadow.normalBias = 0.03;
+    sun.shadow.radius = 2.5;
     scene.add(sun);
     scene.add(sun.target);
     this.sun = sun;
@@ -410,7 +414,7 @@ export class View3D {
   }
 
   // ---------- Klatka ----------
-  render(dt) {
+  render(dt, camDt = dt) {
     const w = this.world, b = w.boat, spec = w.spec;
     const windKn = w.env.windSpeed / 0.5144;
     const windDir = (w.env.windFromDeg + 180) * DEG;
@@ -546,11 +550,11 @@ export class View3D {
       const want = 1.5 * Math.PI - b.th;
       let d = want - cam.az;
       d = Math.atan2(Math.sin(d), Math.cos(d));
-      cam.az += d * clamp(dt * 1.5, 0, 1);
+      cam.az += d * clamp(camDt * 1.5, 0, 1);
     }
     if (cam.follow) {
-      cam.tx += (b.x - cam.tx) * clamp(dt * 3, 0, 1);
-      cam.tz += (b.z - cam.tz) * clamp(dt * 3, 0, 1);
+      cam.tx += (b.x - cam.tx) * clamp(camDt * 3, 0, 1);
+      cam.tz += (b.z - cam.tz) * clamp(camDt * 3, 0, 1);
     }
     const cx = cam.tx + Math.cos(cam.el) * Math.sin(cam.az) * cam.dist;
     const cz = cam.tz + Math.cos(cam.el) * Math.cos(cam.az) * cam.dist;
@@ -558,7 +562,8 @@ export class View3D {
     this.camera.position.set(cx, cy, cz);
     this.camera.lookAt(cam.tx, 0, cam.tz);
     // słońce podąża za kamerą (cienie)
-    this.sun.position.set(cam.tx + 60, 90, cam.tz + 35);
+    // słońce ze wschodu, ok. 40° nad horyzontem – cienie padają w bok, dobrze widoczne z kamery
+    this.sun.position.set(cam.tx + 95, 85, cam.tz + 25);
     this.sun.target.position.set(cam.tx, 0, cam.tz);
     const sh = clamp(cam.dist * 0.7, 30, 120);
     const sc = this.sun.shadow.camera;

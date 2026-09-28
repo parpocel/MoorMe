@@ -132,39 +132,135 @@ function tree(r, x, z, y) {
   return g;
 }
 
+// Tekstury tynku i dachówki (szarości mnożone przez kolor materiału)
+function makeTex(draw, size = 256) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  draw(c.getContext('2d'), size);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+let plasterTex = null, tileTex = null;
+const texMats = new Map();
+function wallMat(color) {
+  if (!plasterTex) plasterTex = makeTex((g, S) => {
+    g.fillStyle = '#f2f2f2'; g.fillRect(0, 0, S, S);
+    const r = rng(8);
+    for (let i = 0; i < 1400; i++) { const v = 200 + Math.floor(r() * 55); g.fillStyle = `rgba(${v},${v},${v},0.35)`; g.fillRect(r() * S, r() * S, 2 + r() * 4, 2 + r() * 4); }
+    g.fillStyle = 'rgba(120,110,100,0.10)'; g.fillRect(0, S * 0.9, S, S * 0.1); // zacieki u dołu
+  });
+  const key = 'w' + color;
+  if (!texMats.has(key)) texMats.set(key, new THREE.MeshStandardMaterial({ color, map: plasterTex, flatShading: true, roughness: 0.95 }));
+  return texMats.get(key);
+}
+function roofMat(color) {
+  if (!tileTex) tileTex = makeTex((g, S) => {
+    g.fillStyle = '#e8e8e8'; g.fillRect(0, 0, S, S);
+    const rows = 10, cols = 8;
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      const ox = (y % 2) * (S / cols / 2);
+      const v = 170 + ((x * 7 + y * 13) % 5) * 14;
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.beginPath();
+      g.ellipse(((x * S) / cols + ox) % S + S / cols / 2, (y * S) / rows + S / rows * 0.55, S / cols / 2 - 1, S / rows / 2, 0, 0, Math.PI);
+      g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.25)';
+      g.fillRect(0, (y * S) / rows, S, 2);
+    }
+  });
+  const key = 'r' + color;
+  if (!texMats.has(key)) texMats.set(key, new THREE.MeshStandardMaterial({ color, map: tileTex, flatShading: true, roughness: 0.9 }));
+  return texMats.get(key);
+}
+
 function house(r, x, z, y, rotY) {
   const g = new THREE.Group();
-  const w = 6 + r() * 6, d = 5 + r() * 4, h = 3 + Math.floor(r() * 3) * 2.8;
-  const wallColors = [0xf1e3c6, 0xe8d2b0, 0xf4efe6, 0xd9a47f, 0xc9d6df, 0xe7c4a3, 0xffffff, 0xe4b9a0];
+  const w = 6 + r() * 6, d = 5 + r() * 4;
+  const floors = 1 + Math.floor(r() * 3);
+  const fh = 2.9, h = 0.5 + floors * fh;
+  const wallColors = [0xf1e3c6, 0xe8d2b0, 0xf4efe6, 0xd9a47f, 0xc9d6df, 0xe7c4a3, 0xffffff, 0xe4b9a0, 0xb8d3c9, 0xf0d6a8];
   const roofColors = [0xa8452e, 0x8c3b2a, 0x5b5b66, 0xb5563a, 0x6b3a2e];
-  const walls = box(w, h, d, wallColors[Math.floor(r() * wallColors.length)], 0, h / 2, 0);
+  const shutterColors = [0x2e6b4f, 0x2a5a8a, 0x6b4a2f, 0x8a8f96];
+  const wc = wallColors[Math.floor(r() * wallColors.length)];
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat(wc));
+  walls.position.y = h / 2;
   g.add(walls);
-  // dach dwuspadowy
+  // cokół i gzyms
+  g.add(box(w + 0.08, 0.5, d + 0.08, 0x8d8a82, 0, 0.25, 0));
+  g.add(box(w + 0.3, 0.18, d + 0.3, 0xefe9dd, 0, h - 0.05, 0));
+  for (let f = 1; f < floors; f++) g.add(box(w + 0.06, 0.1, d + 0.06, 0xe9e2d4, 0, 0.5 + f * fh, 0));
+  // dach dwuspadowy z dachówką
   const roofH = 1.6 + r() * 1.2;
   const shape = new THREE.Shape();
-  shape.moveTo(-d / 2 - 0.3, 0); shape.lineTo(d / 2 + 0.3, 0); shape.lineTo(0, roofH); shape.lineTo(-d / 2 - 0.3, 0);
-  const rg = new THREE.ExtrudeGeometry(shape, { depth: w + 0.4, bevelEnabled: false });
-  rg.translate(0, 0, -(w + 0.4) / 2);
+  shape.moveTo(-d / 2 - 0.35, 0); shape.lineTo(d / 2 + 0.35, 0); shape.lineTo(0, roofH); shape.lineTo(-d / 2 - 0.35, 0);
+  const rg = new THREE.ExtrudeGeometry(shape, { depth: w + 0.5, bevelEnabled: false });
+  rg.translate(0, 0, -(w + 0.5) / 2);
   rg.rotateY(Math.PI / 2);
-  const roof = new THREE.Mesh(rg, mat(roofColors[Math.floor(r() * roofColors.length)]));
-  roof.position.y = h;
+  const roof = new THREE.Mesh(rg, roofMat(roofColors[Math.floor(r() * roofColors.length)]));
+  roof.position.y = h + 0.02;
   roof.castShadow = true;
   g.add(roof);
-  // okna
-  const floors = Math.round(h / 2.8);
-  for (let f = 0; f < floors; f++) {
-    for (let k = 0; k < Math.floor(w / 2.2); k++) {
-      const wx = -w / 2 + 1.2 + k * 2.2;
-      g.add(box(0.9, 1.1, 0.08, 0x2c3e50, wx, 1.5 + f * 2.8, d / 2 + 0.02, { rough: 0.2, metal: 0.3 }));
-      g.add(box(0.9, 1.1, 0.08, 0x2c3e50, wx, 1.5 + f * 2.8, -d / 2 - 0.02, { rough: 0.2, metal: 0.3 }));
+  // komin
+  const chx = (r() - 0.5) * w * 0.6;
+  g.add(box(0.6, 1.4, 0.6, 0x9a6b55, chx, h + roofH * 0.6, -d * 0.12));
+  g.add(box(0.75, 0.12, 0.75, 0x6f6f6f, chx, h + roofH * 0.6 + 0.72, -d * 0.12));
+  // okna z ramami, parapetami i okiennicami (front i tył)
+  const shutters = r() < 0.55, sc = shutterColors[Math.floor(r() * shutterColors.length)];
+  const nWin = Math.max(2, Math.floor(w / 2.1));
+  const shop = r() < 0.4;
+  for (const s of [1, -1]) {
+    for (let f = 0; f < floors; f++) {
+      for (let k = 0; k < nWin; k++) {
+        const wx = -w / 2 + (w / nWin) * (k + 0.5);
+        const wy = 0.5 + f * fh + 1.35;
+        const zf = s * (d / 2 + 0.02);
+        const isDoor = s === 1 && f === 0 && k === Math.floor(nWin / 2);
+        if (isDoor) {
+          g.add(box(1.1, 2.2, 0.1, 0x5a3b26, wx, 0.5 + 1.1, zf));
+          g.add(box(1.4, 0.12, 0.12, 0xefe9dd, wx, 0.5 + 2.3, zf + s * 0.02));
+          g.add(box(1.6, 0.2, 0.6, 0x9a978f, wx, 0.1, zf + s * 0.3));
+          continue;
+        }
+        const big = shop && s === 1 && f === 0;
+        const ww = big ? w / nWin - 0.5 : 0.9, wh = big ? 1.9 : 1.2;
+        g.add(box(ww + 0.16, wh + 0.16, 0.06, 0xf4f1ea, wx, big ? 0.5 + 1.25 : wy, zf));
+        g.add(box(ww, wh, 0.08, 0x243447, wx, big ? 0.5 + 1.25 : wy, zf + s * 0.01, { rough: 0.15, metal: 0.4 }));
+        if (!big) {
+          g.add(box(ww + 0.3, 0.07, 0.22, 0xe6e0d2, wx, wy - wh / 2 - 0.06, zf + s * 0.08));
+          if (shutters) for (const sd of [-1, 1]) g.add(box(0.45, wh, 0.05, sc, wx + sd * (ww / 2 + 0.26), wy, zf + s * 0.03));
+        }
+      }
+      // balkon na piętrze
+      if (f > 0 && s === 1 && r() < 0.35) {
+        const bw = Math.min(w * 0.5, 3.5);
+        g.add(box(bw, 0.12, 0.9, 0xd8d3c8, 0, 0.5 + f * fh + 0.2, d / 2 + 0.45));
+        g.add(box(bw, 0.05, 0.05, 0x2d3436, 0, 0.5 + f * fh + 1.2, d / 2 + 0.88));
+        for (let p = 0; p <= 6; p++) g.add(box(0.03, 1.0, 0.03, 0x2d3436, -bw / 2 + (bw / 6) * p, 0.5 + f * fh + 0.7, d / 2 + 0.88));
+      }
+    }
+    // okna w szczytach
+    const gw = box(0.06, Math.min(0.8, roofH * 0.4), 0.7, 0x243447, s * (w / 2 + 0.28), h + roofH * 0.3, 0, { rough: 0.15, metal: 0.4 });
+    g.add(gw);
+  }
+  // markiza i szyld sklepu / kawiarni
+  if (shop) {
+    const acol = [0xc0392b, 0x2a6f97, 0x2e8b57, 0xe0a030][Math.floor(r() * 4)];
+    const aw = box(w * 0.85, 0.1, 1.6, acol, 0, 3.05, d / 2 + 0.8);
+    aw.rotation.x = 0.22;
+    g.add(aw);
+    g.add(box(w * 0.85, 0.3, 0.05, acol, 0, 2.75, d / 2 + 1.58));
+    g.add(box(Math.min(3, w * 0.5), 0.5, 0.08, 0x1d2a38, 0, 3.55, d / 2 + 0.05));
+    // stoliki
+    for (let t = 0; t < 2; t++) {
+      const tx = -w / 4 + t * (w / 2);
+      g.add(box(0.7, 0.05, 0.7, 0xf4f1ea, tx, 0.78, d / 2 + 2.4));
+      g.add(box(0.08, 0.75, 0.08, 0x2d3436, tx, 0.38, d / 2 + 2.4));
     }
   }
-  // markiza (kawiarnia) czasem
-  if (r() < 0.35) {
-    const aw = box(w * 0.8, 0.1, 1.6, r() < 0.5 ? 0xc0392b : 0x2a6f97, 0, 2.7, d / 2 + 0.8);
-    aw.rotation.x = 0.2;
-    g.add(aw);
-  }
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   g.position.set(x, y, z);
   g.rotation.y = rotY;
   return g;
@@ -220,7 +316,8 @@ function sagLine(a, b, sag, color = 0xf0ede4) {
   return m;
 }
 
-const NEIGHBOR_CANVAS = [0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
+const NEIGHBOR_NAMES = ['AURORA', 'MEWA', 'BRYZA', 'LUNA', 'SIROCCO', 'WIATR', 'ZEFIR', 'NEPTUN', 'ALBATROS', 'MISTRAL', 'POLARIS', 'ORKA'];
+const NEIGHBOR_CANVAS =[0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
 
 export function buildHarbor(H, scene) {
   const group = new THREE.Group();
@@ -380,7 +477,7 @@ export function buildHarbor(H, scene) {
     const key = n.spec.id + '_' + n.color;
     let proto = boatCache.get(key);
     if (!proto) {
-      proto = mergeByMaterial(buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length] }));
+      proto = mergeByMaterial(buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[boatCache.size % NEIGHBOR_NAMES.length] }));
       boatCache.set(key, proto);
     }
     const b = proto.clone();
@@ -440,6 +537,47 @@ export function buildHarbor(H, scene) {
   return { group: merged, dyn, bollardMeshes };
 }
 
+// Stonowana tekstura wody: plamy głębi + delikatne jaśniejsze zmarszczki (kafelkowalna)
+function waterTexture() {
+  const S = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  g.fillStyle = '#3b90ac';
+  g.fillRect(0, 0, S, S);
+  const r = rng(21);
+  // rysowanie z zawinięciem krawędzi (kafelkowanie bez szwów)
+  const wrap = (fn) => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { g.save(); g.translate(dx, dy); fn(); g.restore(); } };
+  for (let i = 0; i < 18; i++) {
+    const x = r() * S, y = r() * S, rad = 80 + r() * 120, dark = r() < 0.5;
+    wrap(() => {
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, dark ? 'rgba(30,85,110,0.10)' : 'rgba(110,175,195,0.08)');
+      gr.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = gr;
+      g.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    });
+  }
+  g.lineCap = 'round';
+  for (let i = 0; i < 110; i++) {
+    const x = r() * S, y = r() * S, len = 14 + r() * 30, a = (r() - 0.5) * 0.4;
+    const light = r() < 0.8;
+    wrap(() => {
+      g.strokeStyle = light ? `rgba(200,232,240,${0.06 + r() * 0.07})` : `rgba(25,70,90,${0.05 + r() * 0.05})`;
+      g.lineWidth = 1 + r() * 1.2;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + len / 2, y + Math.sin(a) * len * 0.4 - 3, x + len, y + Math.sin(a) * len);
+      g.stroke();
+    });
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
 // Woda – animowana siatka low-poly
 export class Water {
   constructor(scene) {
@@ -449,8 +587,10 @@ export class Water {
     geo.translate(0, 0, 100);
     this.geo = geo;
     this.base = geo.attributes.position.array.slice();
-    // matowa woda (bez odbłysków) – spokojniejszy wygląd, łagodne cieniowanie fasetek
-    const matW = new THREE.MeshLambertMaterial({ color: 0x2b86a6, flatShading: true, transparent: true, opacity: 0.9 });
+    // matowa woda ze stonowaną teksturą zmarszczek (bez odblasków)
+    this.tex = waterTexture();
+    this.tex.repeat.set(size / 22, size / 22);
+    const matW = new THREE.MeshLambertMaterial({ color: 0xffffff, map: this.tex, flatShading: true, transparent: true, opacity: 0.92 });
     this.mesh = new THREE.Mesh(geo, matW);
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
@@ -463,6 +603,10 @@ export class Water {
   }
   update(dt, windKn, windDir) {
     this.t += dt;
+    // tekstura dryfuje powoli z wiatrem
+    const drift = (0.004 + Math.min(windKn, 35) * 0.0006) * dt;
+    this.tex.offset.x += Math.sin(windDir) * drift;
+    this.tex.offset.y += Math.cos(windDir) * drift;
     const p = this.geo.attributes.position.array;
     const a = 0.015 + Math.min(windKn, 35) * 0.0022;
     const kx = Math.sin(windDir), kz = -Math.cos(windDir);

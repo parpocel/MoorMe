@@ -356,11 +356,137 @@ export function buildBoat(spec, opts = {}) {
   // platforma kąpielowa (opuszczana pawęż)
   heel.add(box(0.5, 0.08, spec.beam * 0.7, COL.teak, xs - 0.2, 0.35, 0));
 
+  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name });
+
   root.userData.heel = heel;
   root.userData.spec = spec;
   root.userData.deckY = deckY;
   root.userData.mastTop = mtop;
   return root;
+}
+
+// ---------- Szczegóły jachtu ----------
+const BOAT_NAMES = ['MOORME', 'AURORA', 'MEWA', 'BRYZA', 'LUNA', 'SIROCCO', 'WIATR', 'ZEFIR', 'NEPTUN', 'ALBATROS', 'MISTRAL', 'POLARIS'];
+const nameTexCache = new Map();
+function nameTexture(name) {
+  if (nameTexCache.has(name)) return nameTexCache.get(name);
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 96;
+  const g = c.getContext('2d');
+  g.clearRect(0, 0, 512, 96);
+  g.fillStyle = '#1b2a3a';
+  g.font = 'bold 64px Georgia, serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(name, 256, 44);
+  g.font = '22px Georgia, serif';
+  g.fillText('GDYNIA', 256, 84);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  nameTexCache.set(name, t);
+  return t;
+}
+
+let blobTex = null;
+function blobTexture() {
+  if (blobTex) return blobTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(64, 64, 8, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(0,20,30,0.55)');
+  gr.addColorStop(0.6, 'rgba(0,20,30,0.25)');
+  gr.addColorStop(1, 'rgba(0,20,30,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  blobTex = new THREE.CanvasTexture(c);
+  return blobTex;
+}
+
+// Seria odcinków cylindra wzdłuż linii pokładu (listwa, odbojnica)
+function sheerStrip(heel, spec, side, dy, inset, r, color, n = 14) {
+  const { xs, xb } = hullExtents(spec);
+  let prev = null;
+  for (let i = 0; i <= n; i++) {
+    const x = xs + 0.05 + (xb - xs - 0.25) * (i / n);
+    const p = [x, sheerHeight(spec, x) + dy, side * Math.max(0.05, halfBeamAt(spec, x) - inset)];
+    if (prev) heel.add(strut(prev, p, r, color, 5));
+    prev = p;
+  }
+}
+
+function addBoatDetails(heel, root, spec, d) {
+  const { xs, xb } = hullExtents(spec);
+  const L = spec.loa;
+  const glass = { rough: 0.15, metal: 0.5 };
+  // okna w burtach (charakterystyczne dla serii C): długie okno salonu + mniejsze kabinowe
+  for (const side of [-1, 1]) {
+    for (const [x0, x1, hRel] of [[-0.02 * L, 0.2 * L, 0.72], [0.24 * L, 0.3 * L, 0.74], [-0.32 * L, -0.24 * L, 0.73]]) {
+      const xm = (x0 + x1) / 2, len = x1 - x0;
+      const slope = (halfBeamAt(spec, x1) - halfBeamAt(spec, x0)) / len;
+      const w = box(len, 0.13 + L * 0.004, 0.02, 0x16202b, xm, sheerHeight(spec, xm) * hRel, side * (halfBeamAt(spec, xm) * 0.995 + 0.012), glass);
+      w.rotation.y = -side * Math.atan(slope);
+      heel.add(w);
+    }
+    // teakowa listwa na krawędzi pokładu i ciemna odbojnica pod nią
+    sheerStrip(heel, spec, side, 0.04, 0.03, 0.03, COL.teak);
+    sheerStrip(heel, spec, side, -0.06, -0.02, 0.028, 0x2a3036);
+    // prowadnice szotów foka na pokładzie bocznym
+    const gx = d.mastX - 0.6;
+    heel.add(box(1.4, 0.03, 0.05, COL.dark, gx - 0.9, sheerHeight(spec, gx) + 0.02, side * (halfBeamAt(spec, gx) - 0.35), { metal: 0.6 }));
+    // kabestany (winche): przy kokpicie i na dachu nadbudówki
+    for (const [wx, wy, wz] of [[d.ck0 + 0.9, d.fbC + 0.45, side * (d.ckw / 2 - 0.12)], [d.cabin.userData.x0 + 0.25, d.topY + 0.02, side * 0.55]]) {
+      const wch = cyl(0.09 + L * 0.002, 0.11 + L * 0.002, 0.16, 0x9aa3ab, 10, { metal: 0.8, rough: 0.3 });
+      wch.position.set(wx, wy + 0.08, wz);
+      heel.add(wch);
+      const top = cyl(0.05, 0.05, 0.05, 0x3a3f44, 8);
+      top.position.set(wx, wy + 0.18, wz);
+      heel.add(top);
+    }
+  }
+  // światła nawigacyjne na koszu dziobowym (lewa czerwona, prawa zielona)
+  const pbx = xb - 0.05 * L, pby = sheerHeight(spec, pbx) + 0.66;
+  heel.add(box(0.1, 0.08, 0.06, 0xff3030, pbx, pby, -halfBeamAt(spec, pbx) + 0.08, { emissive: 0x551010 }));
+  heel.add(box(0.1, 0.08, 0.06, 0x20d060, pbx, pby, halfBeamAt(spec, pbx) - 0.08, { emissive: 0x0a4020 }));
+  // winda kotwiczna
+  heel.add(box(0.3, 0.14, 0.24, COL.dark, xb - 0.08 * L, sheerHeight(spec, xb - 0.08 * L) + 0.07, 0, { metal: 0.5 }));
+  // tratwa ratunkowa na koszu rufowym
+  heel.add(box(0.55, 0.3, 0.4, 0xf2f2f2, xs + 0.35, d.fbC + 0.75, -spec.beam * 0.3));
+  // drabinka kąpielowa
+  for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
+  // nazwa na pawęży
+  const nm = d.name || BOAT_NAMES[0];
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * 0.55, spec.beam * 0.1), new THREE.MeshBasicMaterial({ map: nameTexture(nm), transparent: true, depthWrite: false }));
+  plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
+  plate.rotation.y = -Math.PI / 2;
+  plate.userData.keep = true;
+  heel.add(plate);
+  // fały wzdłuż masztu
+  const hp = [];
+  for (const dz of [-0.06, 0.06]) hp.push(d.mastX + 0.1, d.topY + 1.2, dz, d.mastX + 0.1, d.mtop - 0.3, dz);
+  const hg = new THREE.BufferGeometry();
+  hg.setAttribute('position', new THREE.Float32BufferAttribute(hp, 3));
+  heel.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0xd8d2c0 })));
+  // radar i światło salingowe na większych jachtach
+  if (L > 12) {
+    const rad = cyl(0.3, 0.3, 0.2, 0xf4f4f4, 12);
+    rad.position.set(d.mastX + 0.35, d.topY + (d.mtop - d.topY) * 0.42, 0);
+    heel.add(rad);
+    // bimini nad kokpitem
+    const bim = box(1.6, 0.04, d.ckw * 0.95, 0x24374f, d.ck0 + 1.4, d.fbC + 2.05, 0);
+    heel.add(bim);
+    for (const s of [-1, 1]) heel.add(strut([d.ck0 + 0.8, d.fbC + 0.4, s * d.ckw * 0.46], [d.ck0 + 1.0, d.fbC + 2.03, s * d.ckw * 0.46], 0.02, COL.metal));
+  }
+  // antena VHF na topie
+  heel.add(strut([d.mastX, d.mtop, 0], [d.mastX, d.mtop + 1.0, 0], 0.012, 0x222222, 4));
+  // miękki cień pod kadłubem na wodzie
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(L * 1.15, spec.beam * 1.5), new THREE.MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false }));
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.set((xs + xb) / 2, 0.06, 0);
+  blob.renderOrder = 1;
+  blob.userData.keep = true;
+  root.add(blob);
 }
 
 // Wyposażenie pokładowe wg konfiguracji: knagi, kluzy, półkluzy
