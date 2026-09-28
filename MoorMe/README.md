@@ -26,11 +26,9 @@ Kreator prowadzi przez cztery kroki:
    - śruba prawo- albo lewoskrętna, napęd saildrive albo wał;
    - ster strumieniowy dziobowy (brak, włącz/wyłącz albo proporcjonalny) i opcjonalnie rufowy;
    - winche ręczne albo elektryczne i rozmiar odbijaczy.
-3. **Keja i sposób cumowania**:
-   - nabrzeże betonowe: burtą (longside), rufą z muringiem, dziobem z muringiem;
-   - pomost pływający: muring rufą albo dziobem, longside;
-   - pomost z Y-bomami: dziobem albo rufą;
-   - keja z dalbami (Bałtyk): dziobem do kei z rufą na dalbach, albo odwrotnie;
+3. **Port i stanowisko**. Do wyboru są dwa porty, a stanowisko wybierasz z listy (mapa pokazuje stanowisko albo cały port):
+   - **Adriatyk – marina i riva (Dalmacja)**: miasteczko na zboczu z kamienną rivą (cumowanie rufą albo dziobem na muringach), betonowe pomosty mariny z muringami i falochron z keją do cumowania burtą. Wejście od południa, między czerwonym a zielonym światłem;
+   - **Ystad – Småbåtshamn (Bałtyk)**, wzorowany na układzie mariny w Ystad: drewniane pomosty z dalbami (dziobem albo rufą do pomostu) i z Y-bomami, długi pomost wzdłuż zachodniego falochronu do cumowania burtą, muringi przy kei północnej, a obok mola promowego stoi prom. Podejście od południa;
    - przy Y-bomach i dalbach suwakiem ustawiasz szerokość stanowiska (prześwit ponad szerokość jachtu, od 0,1 do 2,5 m);
    - zadanie: **cumowanie** (podejście) albo **odcumowanie** (start zacumowany, liny założone na biegowo, jedna osoba na kei).
 4. **Pogoda i start** (pogodę, niebo i porę dnia – także noc – zmienisz też w trakcie symulacji przyciskiem „🌦 Pogoda”): siła i kierunek wiatru, porywistość ze skrętami wiatru, prąd oraz miejsce startu na mapie portu.

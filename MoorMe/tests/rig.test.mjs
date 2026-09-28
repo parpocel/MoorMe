@@ -15,7 +15,13 @@ const b = H.berth;
 w.boat.reset(b.x, b.z, b.th);
 const cleat = (where) => w.findCleat(where, -1);
 // najbliższy poler do punktu lokalnego jachtu przesuniętego wzdłuż kei
-const bollardNear = (lx, shift) => { const p = localToWorld(b.x, b.z, b.th, lx, 0); return w.nearestBollard(p.x + shift, -0.5, (q) => q.z < 0.1); };
+const bollardNear = (lx, shift) => {
+  const p = localToWorld(b.x, b.z, b.th, lx, 0);
+  const F = b.frame, loc = F.toLocal(p.x, p.z);
+  const dir = Math.sign(Math.cos(b.th) * F.ax + Math.sin(b.th) * F.az) || 1; // dziób w stronę +u?
+  const q = F.toWorld(loc.u + shift * dir, -0.5);
+  return w.nearestBollard(q.x, q.z, (bb) => bb.onQuay && bb.zone === b.zone);
+};
 
 const bowC = cleat('bow'), sternC = cleat('stern'), midC = cleat('mid');
 // punkt na kei względem knagi: dx wzdłuż jachtu, 3 m w bok od burty (lewa burta do kei)
@@ -31,7 +37,7 @@ check(w.inferRole(midC, at(midC, 0.5)) === 'side', 'knaga śródokręcie → pol
 // półkluza wskazana ręcznie – lina prowadzona przez nią i założona (w zasięgu)
 const half = w.fairleads().find((f) => f.kind === 'halfFairlead' && f.y < 0 && f.x < 0);
 const hp = localToWorld(b.x, b.z, b.th, half.x, half.y);
-const tgt = w.nearestBollard(hp.x, hp.z, (q) => q.z < 0.1); // poler najbliżej półkluzy (w zasięgu rzutu)
+const tgt = w.nearestBollard(hp.x, hp.z, (q) => q.onQuay && q.zone === b.zone); // poler najbliżej półkluzy (w zasięgu rzutu)
 const line = w.rigLine(sternC.id, half.id, tgt, 'fixed');
 check(line.fairleadId === half.id, 'lina prowadzona przez wskazaną półkluzę');
 check(line.state === 'pending', `zakładanie rozpoczęte (stan: ${line.state})`);
@@ -39,7 +45,7 @@ run(w, 4);
 check(line.state === 'attached' && line.target === tgt, 'lina założona na wskazany poler');
 
 // poza zasięgiem – lina czeka, a załoga zakłada ją sama, gdy jacht podejdzie do kei
-w.boat.reset(b.x, b.z + 8, b.th);
+w.boat.reset(b.x - b.quayNormal.x * 8, b.z - b.quayNormal.z * 8, b.th); // 8 m od kei, na wodzie
 const farTgt = bollardNear(w.boat.xb, 4);
 const far = w.rigLine(bowC.id, null, farTgt, 'slip');
 check(far.state === 'queued' && far.fairleadId === null, `poza zasięgiem: lina czeka (stan: ${far.state}), bez kluzy`);
@@ -55,7 +61,8 @@ check(far.state === 'attached' && far.target === farTgt, `po podejściu do kei z
   w2.boat.reset(b.x, b.z, b.th);
   const stbdBow = w2.findCleat('bow', 1);
   const fwd = localToWorld(b.x, b.z, b.th, w2.boat.xb - 2.5, 0); // poler na trawersie dziobu, po stronie kei
-  const tgt2 = w2.nearestBollard(fwd.x, -0.5, (q) => q.z < 0.1);
+  const fl = b.frame.toLocal(fwd.x, fwd.z), fq = b.frame.toWorld(fl.u, -0.5);
+  const tgt2 = w2.nearestBollard(fq.x, fq.z, (q) => q.onQuay && q.zone === b.zone);
   const l2 = w2.rigLine(stbdBow.id, undefined, tgt2, 'fixed');
   const r = w2.ropeRoute(l2, w2.targetPoint(l2, tgt2));
   const { pointInConvex } = await import('../src/js/math.js');

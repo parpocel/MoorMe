@@ -231,43 +231,49 @@ export class HarbourLife {
 
   // ---------- Spacerowicze ----------
   buildPeople() {
-    const H = this.world.H;
-    const floating = H.quay.id === 'pontoon' || H.quay.id === 'yboom';
-    this.landY = floating ? 1.2 : H.quay.height;
-    // pas spacerowy między krawędzią kei a latarniami (bez kolizji z ławkami i budynkami)
-    this.promenade = floating ? [-10.3, -12.8] : [-1.8, -4.2];
+    const ways = this.world.H.port.walkways || [];
     const jackets = [0xe63946, 0x457b9d, 0xf4a261, 0x2a9d8f, 0x6d597a, 0xffffff, 0x264653, 0xe9c46a, 0x8ecae6];
     this.people = [];
-    for (let i = 0; i < 16; i++) {
+    if (!ways.length) return;
+    const total = ways.reduce((s, w) => s + Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), 0);
+    for (let i = 0; i < 18; i++) {
+      // ścieżka losowana proporcjonalnie do długości
+      let x = this.r() * total, way = ways[0];
+      for (const w of ways) { const l = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (x <= l) { way = w; break; } x -= l; }
+      const len = Math.hypot(way.b[0] - way.a[0], way.b[1] - way.a[1]);
       const mesh = buildPerson(jackets[i % jackets.length]);
-      const s = 0.92 + this.r() * 0.16;
-      mesh.scale.setScalar(s);
+      mesh.scale.setScalar(0.92 + this.r() * 0.16);
       this.scene.add(mesh);
-      const z = this.promenade[0] + (this.promenade[1] - this.promenade[0]) * this.r();
-      const p = { mesh, x: (this.r() - 0.5) * 220, z, tx: 0, speed: 1.0 + this.r() * 0.5, wait: this.r() * 4, phase: this.r() * 6 };
-      p.tx = p.x;
+      const off = (this.r() - 0.5) * 2.4;
+      const p = { mesh, way, len, t: this.r() * len, tt: 0, off, speed: 1.0 + this.r() * 0.5, wait: this.r() * 4, phase: this.r() * 6 };
+      p.tt = p.t;
       this.people.push(p);
     }
   }
 
   updatePeople(dt) {
     for (const p of this.people) {
+      const w = p.way;
+      const ux = (w.b[0] - w.a[0]) / p.len, uz = (w.b[1] - w.a[1]) / p.len;
+      const pos = () => ({ x: w.a[0] + ux * p.t - uz * p.off, z: w.a[1] + uz * p.t + ux * p.off });
       if (p.wait > 0) {
         p.wait -= dt;
-        p.mesh.position.set(p.x, this.landY, p.z);
+        const q = pos();
+        p.mesh.position.set(q.x, w.y, q.z);
         continue;
       }
-      const dx = p.tx - p.x;
-      if (Math.abs(dx) < 0.2) {
-        p.tx = clamp(p.x + (this.r() - 0.5) * 80, -125, 125);
+      const d = p.tt - p.t;
+      if (Math.abs(d) < 0.2) {
+        p.tt = clamp(p.t + (this.r() - 0.5) * 70, 1, p.len - 1);
         p.wait = this.r() < 0.4 ? 2 + this.r() * 8 : 0;
         continue;
       }
-      const s = Math.sign(dx) * Math.min(Math.abs(dx), p.speed * dt);
-      p.x += s;
+      const s = Math.sign(d) * Math.min(Math.abs(d), p.speed * dt);
+      p.t += s;
       p.phase += dt * p.speed * 5;
-      p.mesh.position.set(p.x, this.landY + Math.abs(Math.sin(p.phase)) * 0.04, p.z);
-      p.mesh.rotation.y = s > 0 ? Math.PI / 2 : -Math.PI / 2;
+      const q = pos();
+      p.mesh.position.set(q.x, w.y + Math.abs(Math.sin(p.phase)) * 0.04, q.z);
+      p.mesh.rotation.y = Math.atan2(ux * Math.sign(s), uz * Math.sign(s));
     }
   }
 
@@ -279,7 +285,8 @@ export class HarbourLife {
   }
 
   updateMotorboat(dt) {
-    const cx = -80, cz = 170, rx = 42, rz = 16;
+    const mp = this.world.H.port.motor || { cx: -80, cz: 170, rx: 42, rz: 16 };
+    const cx = mp.cx, cz = mp.cz, rx = mp.rx, rz = mp.rz;
     this.motoAng += dt * (4.5 / ((rx + rz) / 2));
     const a = this.motoAng;
     const x = cx + Math.cos(a) * rx, z = cz + Math.sin(a) * rz;

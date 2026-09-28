@@ -16,7 +16,7 @@ if (w.lines.length !== 1 || !w.lines[0].isMooring) { console.log('FAIL: oczekiwa
 for (const side of [-1, 1]) {
   const c = w.findCleat('stern', side);
   const lead = w.leadWorld({ cleatId: c.id, fairleadId: w.autoFairlead(c)?.id ?? null, jumped: false });
-  const b = w.nearestBollard(lead.x, lead.z, (q) => q.z < 0.1 && q.kind !== 'ring');
+  const b = w.nearestBollard(lead.x, lead.z, (q) => q.onQuay && q.zone === H.berth.zone && q.kind !== 'ring');
   const l = w.rigLine(c.id, undefined, b, 'fixed');
   console.log(l.name, '->', b.label, l.state);
 }

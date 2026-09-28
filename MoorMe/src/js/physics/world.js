@@ -295,13 +295,21 @@ export class World {
     // pozycja jachtu na stanowisku (do wyznaczenia sugerowanych polerów)
     const bx = b.x, bz = b.z, bth = b.th;
     const wpt = (lx, ly) => localToWorld(bx, bz, bth, lx, ly);
-    const quayBollard = (lx, ly, dxAlong = 0) => {
+    const F = b.frame;
+    const zoneQuay = (bb) => bb.zone === b.zone && bb.onQuay && bb.kind !== 'ring';
+    const nearestTo = (x, z, filter) => this.nearestBollard(x, z, filter);
+    // punkt na krawędzi kei naprzeciw punktu jachtu (przesunięty wzdłuż kei o du)
+    const quayBollard = (lx, ly, du = 0) => {
       const p = wpt(lx, ly);
-      return this.nearestBollard(p.x + dxAlong, -0.4, (bb) => bb.kind !== 'pile' && bb.z < 0.1);
+      const loc = F.toLocal(p.x, p.z);
+      const q = F.toWorld(loc.u + du, -0.4);
+      return nearestTo(q.x, q.z, zoneQuay);
     };
     if (m === 'longside') {
-      const s = H.berth.th === 0 ? -1 : 1; // burta od kei
-      const fwd = Math.cos(bth); // kierunek x dziobu
+      // burta zwrócona do kei
+      const stbd = { x: -Math.sin(bth), z: Math.cos(bth) };
+      const s = stbd.x * b.quayNormal.x + stbd.z * b.quayNormal.z > 0 ? 1 : -1;
+      const fwd = Math.sign(Math.cos(bth) * F.ax + Math.sin(bth) * F.az) || 1; // dziób w stronę +u?
       plan.push({ role: 'bow', where: 'bow', side: s, len: bigBoat ? 15 : 12, tgt: quayBollard(this.boat.xb, 0, fwd * 3.5) });
       plan.push({ role: 'stern', where: 'stern', side: s, len: bigBoat ? 15 : 12, tgt: quayBollard(this.boat.xs, 0, -fwd * 3.5) });
       plan.push({ role: 'springFwd', where: 'mid', side: s, len: bigBoat ? 18 : 15, tgt: quayBollard(this.boat.xs * 0.6, 0) });
@@ -314,7 +322,7 @@ export class World {
       const role = bowIn ? 'bow' : 'stern';
       for (const s of [-1, 1]) {
         const p = wpt(endX, s * sp.beam * 0.45);
-        const tgt = this.nearestBollard(p.x + (p.x - bx) * 0.8, -0.4, (bb) => bb.z < 0.1 && bb.kind !== 'ring');
+        const tgt = nearestTo(p.x + (p.x - bx) * 0.8, p.z + (p.z - bz) * 0.8, zoneQuay);
         plan.push({ role, where: quayEnd, side: s, len: bigBoat ? 12 : 10, tgt, name: `${ROLE_NAMES[role]} ${s < 0 ? 'L' : 'P'}` });
       }
       if (m === 'mooringStern' || m === 'mooringBow') {
@@ -322,14 +330,15 @@ export class World {
         plan.push({ role: 'mooring', where: farEnd, side: 1, len: 60, muring: mur, name: 'Muring' });
       } else if (m.startsWith('yboom')) {
         for (const s of [-1, 1]) {
-          const tgtX = b.x + s * (b.slotW / 2);
-          const tgt = this.nearestBollard(tgtX, 0.72 * L - 0.35, (bb) => bb.kind === 'ring' && bb.z > 1);
-          plan.push({ role: 'side', where: 'mid', side: s * (bowIn ? -1 : 1) * (b.th > 0 ? 1 : 1), len: bigBoat ? 12 : 10, tgt, name: `Cuma boczna (Y-bom) ${s < 0 ? 'L' : 'P'}` });
+          const q = F.toWorld(b.u + s * (b.slotW / 2), b.boomV - 0.35);
+          const tgt = nearestTo(q.x, q.z, (bb) => bb.kind === 'ring' && bb.onBoom && bb.zone === b.zone);
+          plan.push({ role: 'side', where: 'mid', side: s, len: bigBoat ? 12 : 10, tgt, name: `Cuma boczna (Y-bom) ${s < 0 ? 'L' : 'P'}` });
         }
       } else if (m.startsWith('piles')) {
         for (const s of [-1, 1]) {
-          const tgt = this.nearestBollard(b.x + s * (b.slotW / 2), b.pileZ, (bb) => bb.kind === 'pile');
-          plan.push({ role: bowIn ? 'stern' : 'bow', where: farEnd, side: 0, len: bigBoat ? 18 : 15, tgt, pileSide: s, name: `${bowIn ? 'Cuma rufowa' : 'Cuma dziobowa'} – dalba ${s < 0 ? 'W' : 'E'}` });
+          const q = F.toWorld(b.u + s * (b.slotW / 2), b.pileV);
+          const tgt = nearestTo(q.x, q.z, (bb) => bb.kind === 'pile' && bb.zone === b.zone);
+          plan.push({ role: bowIn ? 'stern' : 'bow', where: farEnd, side: 0, len: bigBoat ? 18 : 15, tgt, pileSide: s, name: `${bowIn ? 'Cuma rufowa' : 'Cuma dziobowa'} – dalba ${s < 0 ? 'A' : 'B'}` });
         }
       }
     }
@@ -377,11 +386,10 @@ export class World {
     if (this.cfg.scenario === 'unmoor') {
       // załoga na kei przy jachcie
       // najbliższy kei punkt burty
-      const poly = this.boatPolyWorld();
-      const near = poly.reduce((a, p) => (p[1] < a[1] ? p : a));
+      const spot = this.shoreSpot();
       this.crew.ashore = true;
-      this.crew.x = near[0];
-      this.crew.z = -0.6;
+      this.crew.x = spot.x;
+      this.crew.z = spot.z;
     }
   }
 
@@ -420,7 +428,7 @@ export class World {
 
   // Czy do polera da się dojść pieszo (keja, pomost, Y-bom) – dalby są tylko z wody
   onFoot(b) {
-    return b.kind !== 'pile' && !(b.kind === 'ring' && b.z > 1 && this.H.quay.id !== 'yboom');
+    return b.kind !== 'pile';
   }
 
   // Najbliższy punkt krawędzi kei/pomostu/Y-bomu (lekko w głąb), d – odległość od punktu
@@ -585,8 +593,7 @@ export class World {
   }
 
   bollardApproach(b) {
-    if (b.z > 1) return { x: b.x, z: b.z }; // pierścień na Y-bomie
-    return { x: b.x, z: b.z - 0.6 };
+    return b.approach || { x: b.x, z: b.z };
   }
 
   // Przełożenie liny na biegowo / na stałe (tylko gdy przygotowana)
@@ -702,7 +709,7 @@ export class World {
       if (kind === 'fender') {
         const q = depth / rf;
         Fn = k * depth * (1 + 6 * q * q) - c * vn;
-      } else Fn = k * depth - c * vn;
+      } else Fn = k * Math.min(depth, 0.6) - c * vn; // głęboka penetracja (np. zła pozycja startowa) nie może rozsadzić symulacji
       if (Fn < 0) Fn = 0;
       // tarcie
       const tx = -nz, tz = nx;

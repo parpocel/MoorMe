@@ -1,11 +1,11 @@
 // MoorMe – główny moduł aplikacji: kreator konfiguracji i uruchamianie symulacji
 import { h, seg } from './ui/dom.js';
 import { BOATS, defaultEquipment } from './data/boats.js';
-import { QUAYS, METHODS, generateHarbor, harborOpts, slotKind, slotClearFor } from './data/harbors.js';
+import { QUAYS, METHODS, PORTS, generateHarbor, harborOpts, slotKind, slotClearFor, berthOptions, normalizeBerth } from './data/harbors.js';
 import { createDeckEditor, relabel } from './ui/deckEditor.js';
 import { drawBoatTop, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
 import { SimScreen } from './ui/simUI.js';
-import { DEG, compassVec } from './math.js';
+import { DEG, compassVec, pointInConvex } from './math.js';
 
 const app = document.getElementById('app');
 const STORE_KEY = 'moorme.config.v1';
@@ -15,7 +15,7 @@ const STEPS = ['Jacht', 'Wyposażenie', 'Keja i cumowanie', 'Pogoda i start'];
 function loadConfig() {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY));
-    if (s && BOATS[s.boatId]) return s;
+    if (s && BOATS[s.boatId]) return normalizeBerth(s);
   } catch (e) { /* brak zapisu */ }
   return null;
 }
@@ -26,7 +26,8 @@ function saveConfig(c) {
 let config = loadConfig() || {
   boatId: 'C34',
   equip: defaultEquipment(BOATS.C34),
-  quay: 'pontoon',
+  port: 'med',
+  zone: 'riva',
   method: 'mooringStern',
   side: 'port',
   scenario: 'moor',
@@ -162,30 +163,48 @@ function stepEquipment() {
 
 const slotClear = (method) => slotClearFor({ ...config, method });
 
-// ---------- Krok 3: keja ----------
+// ---------- Krok 3: port i stanowisko ----------
 function stepHarbor() {
   const spec = BOATS[config.boatId];
-  if (!QUAYS[config.quay].methods.includes(config.method)) config.method = QUAYS[config.quay].methods[0];
-  const cards = h('div.cards', { style: { gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' } });
-  for (const q of Object.values(QUAYS)) {
-    cards.appendChild(h('div.card', { class: config.quay === q.id ? 'selected' : '', onclick: () => { config.quay = q.id; if (!q.methods.includes(config.method)) config.method = q.methods[0]; showStep(2); } },
-      h('h3', {}, q.name), h('div.small.muted', {}, q.desc)));
+  normalizeBerth(config);
+  const cards = h('div.cards', { style: { gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))' } });
+  for (const P of Object.values(PORTS)) {
+    cards.appendChild(h('div.card', { class: config.port === P.id ? 'selected' : '', onclick: () => { if (config.port !== P.id) { config.port = P.id; config.zone = null; normalizeBerth(config); } showStep(2); } },
+      h('h3', {}, P.name), h('div.small.muted', {}, P.desc)));
   }
-  const q = QUAYS[config.quay];
-  const mapCv = h('canvas', { width: 900, height: 560, style: { width: '100%', borderRadius: '12px' } });
+  const mapCv = h('canvas', { width: 900, height: 620, style: { width: '100%', borderRadius: '12px' } });
+  let zoom = 'berth';
   const drawMap = () => {
     const H = generateHarbor(harborOpts(config, spec));
     const b = H.berth;
-    const T = mapTransform(mapCv, { minX: b.x - 45, maxX: b.x + 45, minZ: -14, maxZ: 44 });
+    const T = zoom === 'port' ? mapTransform(mapCv, H.bounds) : mapTransform(mapCv, { minX: b.x - 50, maxX: b.x + 50, minZ: b.z - 35, maxZ: b.z + 35 });
     updateWidth();
-    drawHarborMap(mapCv.getContext('2d'), H, T, { spec });
+    drawHarborMap(mapCv.getContext('2d'), H, T, { spec, bollards: zoom !== 'port' });
     const ctx = mapCv.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
-    ctx.fillText('Twoje stanowisko (zielone)', 14, mapCv.height - 14);
+    ctx.fillText('Twoje stanowisko: „TU” (zielone)', 14, mapCv.height - 14);
   };
+  const opts = berthOptions(config.port);
+  const cur = () => opts.find((o) => o.zone === config.zone && o.method === config.method);
   const methodInfo = h('div.hint', {}, METHODS[config.method].desc);
   const sideField = h('div.field', { style: { display: config.method === 'longside' ? 'block' : 'none' } }, h('label', {}, 'Burta do kei'),
     seg([{ value: 'port', label: 'Lewa burta' }, { value: 'starboard', label: 'Prawa burta' }], config.side, (v) => { config.side = v; drawMap(); }));
+  // lista stanowisk w porcie
+  const list = h('div', { style: { display: 'flex', flexDirection: 'column', gap: '5px' } });
+  const drawList = () => {
+    list.innerHTML = '';
+    let lastZone = null;
+    for (const o of opts) {
+      if (o.zone !== lastZone) { list.appendChild(h('div.small.muted', { style: { marginTop: lastZone ? '6px' : 0 } }, o.zoneName)); lastZone = o.zone; }
+      list.appendChild(h('button.btn.sm', { class: cur() === o ? 'on' : '', style: { textAlign: 'left' }, onclick: () => {
+        config.zone = o.zone; config.method = o.method;
+        methodInfo.textContent = METHODS[o.method].desc;
+        sideField.style.display = o.method === 'longside' ? 'block' : 'none';
+        drawList(); drawMap();
+      } }, METHODS[o.method].name));
+    }
+  };
+  drawList();
   // szerokość stanowiska między Y-bomami / dalbami
   const widthOut = h('b');
   const widthInfo = h('div.small.muted', { style: { marginTop: '4px' } });
@@ -207,9 +226,10 @@ function stepHarbor() {
     config.slotClear = { ...(config.slotClear || {}), [slotKind(config.method)]: +widthInp.value };
     drawMap();
   });
+  const zoomSeg = seg([{ value: 'berth', label: 'Stanowisko' }, { value: 'port', label: 'Cały port' }], zoom, (v) => { zoom = v; drawMap(); });
   const right = h('div.panel', {},
-    h('h2', {}, 'Sposób cumowania'),
-    seg(q.methods.map((m) => ({ value: m, label: METHODS[m].name })), config.method, (v) => { config.method = v; methodInfo.textContent = METHODS[v].desc; sideField.style.display = v === 'longside' ? 'block' : 'none'; drawMap(); }),
+    h('h2', {}, 'Stanowisko w porcie'),
+    list,
     methodInfo,
     sideField,
     widthField,
@@ -218,8 +238,8 @@ function stepHarbor() {
     h('div.small.muted', { style: { marginTop: '6px' } }, 'Przy odcumowaniu startujesz zacumowany – liny założone na biegowo, jedna osoba na kei.'),
     h('h3', {}, 'Sąsiedzi'),
     h('div.row', {}, h('button.btn.sm', { onclick: () => { config.seed = Math.floor(Math.random() * 1000); drawMap(); } }, '🎲 Losuj rozmieszczenie jachtów')));
-  const body = h('div', {}, h('h2', { style: { marginBottom: '10px' } }, 'Wybierz keję'), cards,
-    h('div.two-col', { style: { marginTop: '18px' } }, h('div.panel', {}, mapCv), right));
+  const body = h('div', {}, h('h2', { style: { marginBottom: '10px' } }, 'Wybierz port'), cards,
+    h('div.two-col', { style: { marginTop: '18px' } }, h('div.panel', {}, h('div', { style: { marginBottom: '8px' } }, zoomSeg), mapCv), right));
   screen(2, body, () => showStep(3));
   drawMap();
 }
@@ -285,7 +305,7 @@ function stepWeather() {
 
   // mapa startu
   const mapCv = h('canvas', { width: 1000, height: 820, style: { width: '100%', borderRadius: '12px', cursor: 'crosshair' } });
-  const T = mapTransform(mapCv, { minX: -150, maxX: 150, minZ: -30, maxZ: 225 });
+  const T = mapTransform(mapCv, H.bounds);
   const drawMap = () => {
     const ctx = mapCv.getContext('2d');
     drawHarborMap(ctx, H, T, { spec, bollards: false });
@@ -307,7 +327,9 @@ function stepWeather() {
     if (config.scenario !== 'moor') return;
     const r = mapCv.getBoundingClientRect();
     const [x, z] = T.toWorld((e.clientX - r.left) * (mapCv.width / r.width), (e.clientY - r.top) * (mapCv.height / r.height));
-    if (x < -145 || x > 145 || z < 5 || z > 225) return;
+    const bb = H.bounds;
+    if (x < bb.minX + 5 || x > bb.maxX - 5 || z < bb.minZ + 5 || z > bb.maxZ - 5) return;
+    if (H.structures.some((st) => pointInConvex(st.poly, x, z))) return; // nie na lądzie / kei
     st.x = x; st.z = z; st.preset = 'custom';
     dragStart = { x, z };
     mapCv.setPointerCapture(e.pointerId);
@@ -381,13 +403,15 @@ export function randomConfig() {
   equip.bowThruster = pickW([['none', spec.loa < 12 ? 5 : 2], ['onoff', 4], ['proportional', 2]]);
   equip.sternThruster = spec.loa > 12 && Math.random() < 0.2;
   equip.drive = spec.id === 'C50' ? 'shaft' : Math.random() < 0.8 ? 'saildrive' : 'shaft';
-  const quay = pickW([['concrete', 3], ['pontoon', 3], ['yboom', 2], ['piles', 2]]);
-  const method = QUAYS[quay].methods[Math.floor(Math.random() * QUAYS[quay].methods.length)];
+  const port = pickW([['med', 1], ['ystad', 1]]);
+  const bo = berthOptions(port);
+  const pickB = bo[Math.floor(Math.random() * bo.length)];
+  const zone = pickB.zone, method = pickB.method;
   const windKn = Math.round(pickW([[rnd(0, 6), 25], [rnd(6, 12), 35], [rnd(12, 18), 25], [rnd(18, 25), 15]]));
   const hour = +pickW([[rnd(8, 18), 70], [rnd(5, 7.5), 7], [rnd(18.5, 21), 8], [rnd(21.5, 27) % 24, 15]]).toFixed(2);
   const sky = pickW([['clear', 45], ['cloudy', 30], ['rain', 15], ['fog', windKn < 10 ? 10 : 0]]);
   const cfg = {
-    boatId, equip, quay, method,
+    boatId, equip, port, zone, method,
     side: Math.random() < 0.5 ? 'port' : 'starboard',
     scenario: Math.random() < 0.6 ? 'moor' : 'unmoor',
     weather: {
@@ -407,8 +431,11 @@ export function randomConfig() {
 
 // Opis wiatru względem stanowiska (keja jest na północy)
 function windRelative(cfg) {
-  // keja jest od strony północnej: wiatr z północy (0°) wieje od kei
-  const a = Math.abs(((cfg.weather.windFrom + 540) % 360) - 180);
+  // kierunek (kompas) od wody w stronę kei przy naszym stanowisku
+  const H = generateHarbor(harborOpts(cfg, BOATS[cfg.boatId]));
+  const qn = H.berth.quayNormal;
+  const toQuay = ((Math.atan2(qn.x, -qn.z) * 180) / Math.PI + 360) % 360;
+  const a = Math.abs(((cfg.weather.windFrom - toQuay + 540) % 360) - 180); // 0 = wieje od kei
   if (cfg.weather.windKn < 4) return 'prawie bezwietrznie';
   if (a < 35) return 'wieje od kei – odpycha jacht od nabrzeża';
   if (a > 145) return 'wieje na keję – dociska jacht do nabrzeża';
@@ -445,7 +472,8 @@ function showRandom(cfg = randomConfig()) {
           row('Jacht', `${spec.name} (${spec.loa.toFixed(1)} m)`),
           row('Śruba / napęd', `${eq.propHand === 'right' ? 'prawoskrętna' : 'lewoskrętna'}, ${eq.drive === 'shaft' ? 'wał' : 'saildrive'}`),
           row('Ster strumieniowy', `${{ none: 'brak', onoff: 'dziobowy', proportional: 'dziobowy proporcjonalny' }[eq.bowThruster]}${eq.sternThruster ? ' + rufowy' : ''}`),
-          row('Keja', QUAYS[cfg.quay].name),
+          row('Port', PORTS[cfg.port].name),
+          row('Stanowisko', berthOptions(cfg.port).find((o) => o.zone === cfg.zone && o.method === cfg.method).zoneName),
           cfg.method === 'longside' ? row('Burta do kei', cfg.side === 'port' ? 'lewa' : 'prawa') : null,
           clear != null ? row('Szerokość stanowiska', `${(spec.beam + clear).toFixed(2)} m (luz ${clear.toFixed(2)} m)`) : null,
           row('Wiatr', `${w.windKn} kn z ${w.windFrom}°, porywy ${Math.round(w.gust * 100)}%`),
@@ -462,7 +490,7 @@ function showRandom(cfg = randomConfig()) {
   app.appendChild(s);
   // mapa: stanowisko, start, wiatr
   const H = generateHarbor(harborOpts(cfg, spec));
-  const T = mapTransform(mapCv, { minX: -150, maxX: 150, minZ: -30, maxZ: 225 });
+  const T = mapTransform(mapCv, H.bounds);
   const ctx = mapCv.getContext('2d');
   drawHarborMap(ctx, H, T, { spec, bollards: false });
   const wd = compassVec(w.windFrom + 180);

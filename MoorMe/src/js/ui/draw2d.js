@@ -116,8 +116,9 @@ export function drawHarborMap(ctx, H, T, opts = {}) {
     ctx.fillStyle = fill; ctx.fill();
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
   };
-  const colors = { quay: '#a3a29b', pontoon: '#a07a52', land: '#6f9a4c', breakwater: '#8b8a84', boom: '#c9d0d6', pile: '#5a4632', shallow: '#b8a878' };
-  for (const s of H.structures) poly(s.poly, s.shore ? '#8fae6a' : colors[s.kind] || '#999');
+  const colors = { quay: '#a3a29b', pontoon: '#d4d2cc', pier: '#a07a52', land: '#6f9a4c', breakwater: '#8b8a84', boom: '#c9d0d6', pile: '#5a4632', shallow: '#b8a878' };
+  const styles = { stone: '#d8cdb5', wood: '#a07a52', rock: '#a9a293', sand: '#d9c99a', port: '#9a9a94', concrete: '#a3a29b' };
+  for (const s of H.structures) poly(s.poly, (s.kind !== 'land' || s.style) && styles[s.style] && s.kind !== 'pier' ? styles[s.style] : colors[s.kind] || '#999');
   // sąsiedzi
   for (const n of H.neighbors) {
     const [px, pz] = T.toPx(n.x, n.z);

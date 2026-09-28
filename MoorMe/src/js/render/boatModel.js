@@ -485,10 +485,6 @@ function addBoatDetails(heel, root, spec, d) {
     const rad = cyl(0.3, 0.3, 0.2, 0xf4f4f4, 12);
     rad.position.set(d.mastX + 0.35, d.topY + (d.mtop - d.topY) * 0.42, 0);
     heel.add(rad);
-    // bimini nad kokpitem
-    const bim = box(1.6, 0.04, d.ckw * 0.95, 0x24374f, d.ck0 + 1.4, d.fbC + 2.05, 0);
-    heel.add(bim);
-    for (const s of [-1, 1]) heel.add(strut([d.ck0 + 0.8, d.fbC + 0.4, s * d.ckw * 0.46], [d.ck0 + 1.0, d.fbC + 2.03, s * d.ckw * 0.46], 0.02, COL.metal));
   }
   // antena VHF na topie
   heel.add(strut([d.mastX, d.mtop, 0], [d.mastX, d.mtop + 1.0, 0], 0.012, 0x222222, 4));

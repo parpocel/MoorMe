@@ -10,7 +10,7 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
 {
   const spec = BOATS.C46, equip = { ...defaultEquipment(BOATS.C46), bowThruster: 'onoff' };
   const H = generateHarbor({ quay: 'concrete', method: 'longside', side: 'port', boatSpec: spec, seed: 3 });
-  const w = new World({ spec, equip, harbor: H, weather: { windKn: 6, windFrom: 180, gust: 0 }, scenario: 'unmoor', random: rng(1) });
+  const w = new World({ spec, equip, harbor: H, weather: { windKn: 6, windFrom: 0, gust: 0 }, scenario: 'unmoor', random: rng(1) }); // wiatr od kei (falochron od północy)
   check(w.crew.ashore, 'załoga na kei na starcie');
   run(w, 3);
   check(!w.crew.ashore, 'załoga sama wróciła na pokład (liny na biegowo – nic do roboty na lądzie)');

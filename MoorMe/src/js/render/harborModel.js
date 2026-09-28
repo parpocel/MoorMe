@@ -176,14 +176,20 @@ function roofMat(color) {
   return texMats.get(key);
 }
 
-function house(r, x, z, y, rotY) {
+const PALETTES = {
+  med: { walls: [0xe6d7b8, 0xefe3c8, 0xf5f1e8, 0xe3be7c, 0xe8c9b3, 0xd9c7a3, 0xf2ead9], roofs: [0xb5563a, 0xa84a30, 0xc2663f], shutters: [0x3b6b4a, 0x2e6b4f, 0x2a5a8a, 0x4a7a8c], floors: 3 },
+  baltic: { walls: [0xa6432d, 0xe3c16f, 0xf3efe6, 0xb85a3c, 0xf0e2b8, 0xd8d0c0, 0x9c3f2b], roofs: [0x3d3d44, 0x9c3b28, 0x4a4a52, 0x7a2f22], shutters: [0xf3efe6, 0x2e4a3a], floors: 2, timber: true },
+  default: { walls: [0xf1e3c6, 0xe8d2b0, 0xf4efe6, 0xd9a47f, 0xc9d6df, 0xe7c4a3, 0xffffff], roofs: [0xa8452e, 0x8c3b2a, 0x5b5b66], shutters: [0x2e6b4f, 0x2a5a8a], floors: 3 }
+};
+
+function house(r, x, z, y, rotY, pal = PALETTES.default) {
   const g = new THREE.Group();
   const w = 6 + r() * 6, d = 5 + r() * 4;
-  const floors = 1 + Math.floor(r() * 3);
+  const floors = 1 + Math.floor(r() * pal.floors);
   const fh = 2.9, h = 0.5 + floors * fh;
-  const wallColors = [0xf1e3c6, 0xe8d2b0, 0xf4efe6, 0xd9a47f, 0xc9d6df, 0xe7c4a3, 0xffffff, 0xe4b9a0, 0xb8d3c9, 0xf0d6a8];
-  const roofColors = [0xa8452e, 0x8c3b2a, 0x5b5b66, 0xb5563a, 0x6b3a2e];
-  const shutterColors = [0x2e6b4f, 0x2a5a8a, 0x6b4a2f, 0x8a8f96];
+  const wallColors = pal.walls;
+  const roofColors = pal.roofs;
+  const shutterColors = pal.shutters;
   const wc = wallColors[Math.floor(r() * wallColors.length)];
   const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat(wc));
   walls.position.y = h / 2;
@@ -244,6 +250,13 @@ function house(r, x, z, y, rotY) {
     // okna w szczytach
     const gw = box(0.06, Math.min(0.8, roofH * 0.4), 0.7, 0x243447, s * (w / 2 + 0.28), h + roofH * 0.3, 0, { rough: 0.15, metal: 0.4 });
     g.add(gw);
+  }
+  // szachulec (korsvirke) – ciemne belki na jasnych ścianach
+  if (pal.timber && wc === 0xf3efe6) {
+    for (const sd of [1, -1]) {
+      for (let k = 0; k <= Math.floor(w / 1.6); k++) g.add(box(0.12, h - 0.5, 0.05, 0x3b2a20, -w / 2 + k * 1.6, 0.5 + (h - 0.5) / 2, sd * (d / 2 + 0.035)));
+      for (let f = 0; f <= floors; f++) g.add(box(w, 0.12, 0.05, 0x3b2a20, 0, 0.5 + f * fh - (f === floors ? 0.08 : 0), sd * (d / 2 + 0.035)));
+    }
   }
   // markiza i szyld sklepu / kawiarni
   if (shop) {
@@ -373,57 +386,209 @@ function pedestal(x, z, y) {
 }
 
 // Detale kei i promenady: kamienna krawędź, odbojnice, drabinki, słupki serwisowe, koła ratunkowe, ławki, donice
-function addQuayDetails(group, H, r, landY, baseZ) {
-  const q = H.quay;
-  const hard = q.id === 'concrete' || q.id === 'piles';
-  const top = q.height;
-  const x0 = -148, x1 = 148;
-  if (hard) {
-    // kamienna krawędź (granit) i żółta linia bezpieczeństwa
-    group.add(box(x1 - x0, 0.1, 0.6, 0xc9c5bb, 0, top + 0.05, -0.3));
-    group.add(box(x1 - x0, 0.012, 0.1, 0xe8c547, 0, top + 0.012, -0.85));
-    if (q.id === 'concrete') {
-      // pionowe odbojnice gumowe na ścianie nabrzeża
-      for (let x = x0 + 2; x < x1; x += 4) group.add(box(0.28, top + 0.7, 0.22, 0x1b1b1b, x, (top - 0.7) / 2, 0.11));
-    }
-    // drabinki wyjściowe z wody
-    for (let x = x0 + 12; x < x1; x += 24) {
-      for (const s of [-1, 1]) {
-        group.add(box(0.05, top + 1.3, 0.05, 0xe8c547, x + s * 0.25, (top - 1.3) / 2, 0.14));
-        group.add(box(0.05, 0.9, 0.05, 0xe8c547, x + s * 0.25, top + 0.45, -0.15));
+// ---------- Elementy ustawiane wzdłuż krawędzi kei / pomostów ----------
+// Krawędź: [ax, az, bx, bz]; strona wody – na zewnątrz wielokąta struktury
+function edgeFrame(s, e) {
+  const [ax, az, bx, bz] = e;
+  const len = Math.hypot(bx - ax, bz - az);
+  const ux = (bx - ax) / len, uz = (bz - az) / len;
+  let nx = -uz, nz = ux;
+  const cx = s.poly.reduce((a, p) => a + p[0], 0) / s.poly.length, cz = s.poly.reduce((a, p) => a + p[1], 0) / s.poly.length;
+  const mx = (ax + bx) / 2, mz = (az + bz) / 2;
+  if ((mx - cx) * nx + (mz - cz) * nz < 0) { nx = -nx; nz = -nz; }
+  return { ax, az, len, ux, uz, nx, nz, rotY: -Math.atan2(uz, ux), at: (t, off) => ({ x: ax + ux * t + nx * off, z: az + uz * t + nz * off }) };
+}
+function place(obj, p, y, rotY = 0) { obj.position.set(p.x, y, p.z); obj.rotation.y = rotY; return obj; }
+
+function addEdgeDetails(group, s, r, lamps) {
+  const style = s.style || s.kind;
+  const top = s.h;
+  for (const e of s.edges || []) {
+    const E = edgeFrame(s, e);
+    const mid = E.at(E.len / 2, 0);
+    if (style === 'stone' || style === 'concrete') {
+      // kamienna/betonowa krawędź (gzyms) i odbojnice na ścianie
+      group.add(place(box(E.len, 0.12, 0.7, style === 'stone' ? 0xd9ceb8 : 0xc9c5bb, 0, 0, 0), E.at(E.len / 2, -0.33), top + 0.05, E.rotY));
+      for (let t = 2; t < E.len; t += style === 'stone' ? 6 : 4) group.add(place(box(0.28, top + 0.7, 0.2, 0x1b1b1b, 0, 0, 0), E.at(t, 0.1), (top - 0.7) / 2, E.rotY));
+      // drabinki wyjściowe
+      for (let t = 12; t < E.len - 4; t += 26) {
+        for (const sd of [-1, 1]) group.add(place(box(0.05, top + 1.3, 0.05, 0xe8c547, 0, 0, 0), E.at(t + sd * 0.25, 0.14), (top - 1.3) / 2, E.rotY));
+        for (let y = -1.1; y < top; y += 0.3) group.add(place(box(0.5, 0.04, 0.04, 0xe8c547, 0, 0, 0), E.at(t, 0.14), y, E.rotY));
       }
-      for (let y = -1.1; y < top; y += 0.3) group.add(box(0.5, 0.04, 0.04, 0xe8c547, x, y, 0.14));
+    } else if (style === 'wood' || s.kind === 'pier') {
+      // drewniane pale pod pomostem i belka krawędziowa
+      for (let t = 1; t < E.len; t += 3) {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, top + 3.2, 6), mat(0x5a4632));
+        group.add(place(p, E.at(t, 0.05), (top - 3.2) / 2 + 0.05));
+      }
+      group.add(place(box(E.len, 0.22, 0.16, 0x6e5238, 0, 0, 0), E.at(E.len / 2, 0.05), top - 0.08, E.rotY));
+    } else if (s.kind === 'pontoon') {
+      group.add(place(box(E.len, 0.22, 0.14, 0xe9ecef, 0, 0, 0), E.at(E.len / 2, 0.05), top - 0.06, E.rotY));
     }
+    if (!s.walk) continue;
+    // słupki serwisowe i koła ratunkowe
+    for (let t = 6; t < E.len - 2; t += 12) group.add(place(pedestal(0, 0, 0), E.at(t, -1.0), top, E.rotY));
+    for (let t = 18; t < E.len - 2; t += 36) group.add(place(lifebuoy(0, 0, 0), E.at(t, -1.4), top, E.rotY + Math.PI));
+    // latarnie na pomostach
+    if (s.kind === 'pontoon' || s.kind === 'pier') {
+      for (let t = 10; t < E.len; t += 24) {
+        const p = E.at(t, -0.9);
+        group.add(lamp(p.x, p.z, top));
+        lamps.push({ x: p.x, y: top + 4.1, z: p.z });
+      }
+    }
+    void mid;
   }
-  // słupki serwisowe (prąd/woda) i koła ratunkowe przy krawędzi
-  const edgeY = q.id === 'pontoon' || q.id === 'yboom' ? q.height : top;
-  for (let x = x0 + 6.5; x < x1; x += 9) {
-    if (q.id === 'pontoon' || q.id === 'yboom') { if (Math.abs(x) > 92) continue; }
-    group.add(pedestal(x, -1.05, edgeY));
+}
+
+// ---------- Elementy scenografii ----------
+function cypress(x, z, y, h = 9) {
+  const g = new THREE.Group();
+  const c = new THREE.Mesh(new THREE.ConeGeometry(0.9, h, 6), mat(0x2c4a2e));
+  c.position.y = h / 2 + 0.5;
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.2, 1, 5), mat(0x5a4632));
+  t.position.y = 0.5;
+  g.add(c, t);
+  g.position.set(x, y, z);
+  return g;
+}
+function olive(r, x, z, y) {
+  const g = new THREE.Group();
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 1.8, 5), mat(0x6b5a45));
+  t.position.y = 0.9;
+  g.add(t);
+  for (let k = 0; k < 3; k++) {
+    const c = new THREE.Mesh(new THREE.IcosahedronGeometry(1.1 + r() * 0.5, 0), mat(0x7f8f5a));
+    c.position.set((r() - 0.5) * 1.4, 2.3 + r() * 0.6, (r() - 0.5) * 1.4);
+    g.add(c);
   }
-  for (let x = x0 + 20; x < x1; x += 36) {
-    if ((q.id === 'pontoon' || q.id === 'yboom') && Math.abs(x) > 92) continue;
-    group.add(lifebuoy(x, -1.5, edgeY));
+  g.position.set(x, y, z);
+  return g;
+}
+function pine(r, x, z, y) {
+  const g = new THREE.Group();
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 5, 5), mat(0x6b4a2f));
+  t.position.y = 2.5;
+  t.rotation.z = (r() - 0.5) * 0.3;
+  const c = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4, 0), mat(0x355e3b));
+  c.scale.y = 0.45;
+  c.position.y = 5.2;
+  g.add(t, c);
+  g.position.set(x, y, z);
+  return g;
+}
+function palm(r, x, z, y) {
+  const g = new THREE.Group();
+  const h = 5 + r() * 2;
+  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, h, 6), mat(0x8a7456));
+  t.position.y = h / 2;
+  g.add(t);
+  for (let k = 0; k < 7; k++) {
+    const leaf = box(2.6, 0.05, 0.45, 0x4e8a3a, 1.2, h, 0);
+    const pv = new THREE.Group();
+    pv.add(leaf);
+    pv.position.y = 0;
+    pv.rotation.y = (k / 7) * Math.PI * 2;
+    pv.rotation.z = -0.35;
+    const holder = new THREE.Group();
+    holder.add(pv);
+    holder.position.y = 0;
+    g.add(holder);
   }
-  // promenada: ławki z oparciem, kosze, donice z kwiatami
-  for (let x = -120; x < 120; x += 23) {
-    group.add(bench(x, baseZ - 7.2, landY));
-    const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.8, 8), mat(0x2e5e3a));
-    bin.position.set(x + 1.5, landY + 0.4, baseZ - 7.3);
-    group.add(bin);
-    group.add(planter(r, x + 11.5, baseZ - 7.2, landY));
+  g.position.set(x, y, z);
+  return g;
+}
+function parasol(x, z, y, color = 0xf5f1e8) {
+  const g = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.ConeGeometry(1.5, 0.6, 8), mat(color));
+  top.position.y = 2.4;
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.4, 5), mat(0x444444));
+  pole.position.y = 1.2;
+  g.add(top, pole);
+  g.add(box(0.8, 0.05, 0.8, 0x7a5a3a, 0, 0.75, 0));
+  for (const [dx, dz] of [[-0.8, 0], [0.8, 0], [0, 0.8]]) g.add(box(0.4, 0.45, 0.4, 0x3a3a3a, dx, 0.22, dz));
+  g.position.set(x, y, z);
+  return g;
+}
+function bellTower(x, z, y) {
+  const g = new THREE.Group();
+  const h = 20;
+  g.add(box(4, h, 4, 0xd9c9a8, 0, h / 2, 0));
+  for (const s of [-1, 1]) for (const [ox, oz] of [[s * 2.02, 0], [0, s * 2.02]]) g.add(box(ox ? 0.05 : 1.2, 2.2, oz ? 0.05 : 1.2, 0x2c2c2c, ox, h - 3, oz));
+  g.add(box(4.4, 0.4, 4.4, 0xcdbd9a, 0, h + 0.2, 0));
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(3.1, 4, 4), mat(0xa84a30));
+  roof.rotation.y = Math.PI / 4;
+  roof.position.y = h + 2.4;
+  g.add(roof);
+  // kościół
+  g.add(box(10, 8, 16, 0xe2d3b5, 0, 4, 11));
+  const rf = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 6.2, 3.2, 4, 1), mat(0xa84a30));
+  rf.rotation.set(Math.PI / 2, Math.PI / 4, 0);
+  rf.scale.set(1, 2.3, 1);
+  rf.position.set(0, 9.4, 11);
+  g.add(rf);
+  g.position.set(x, y, z);
+  return g;
+}
+function churchSpire(x, z, y) {
+  const g = new THREE.Group();
+  g.add(box(22, 12, 11, 0xa6432d, 0, 6, 12));
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 7.8, 22.5, 4, 1), mat(0x3d3d44));
+  roof.rotation.set(0, Math.PI / 4, Math.PI / 2);
+  roof.scale.set(1, 1, 0.7);
+  roof.position.set(0, 14, 12);
+  g.add(roof);
+  g.add(box(6, 26, 6, 0x9c3f2b, 0, 13, 0));
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(3.2, 16, 8), mat(0x6fa58e));
+  spire.position.y = 34;
+  g.add(spire);
+  g.add(box(0.2, 2, 0.2, 0xd4af37, 0, 43, 0));
+  g.position.set(x, y, z);
+  return g;
+}
+function ferry(d) {
+  const g = new THREE.Group();
+  const L = 150, B = 26;
+  g.add(box(L, 9, B, 0xf2f2f2, 0, 4, 0));
+  g.add(box(L * 0.98, 1.2, B + 0.1, 0x1d4e89, 0, 1.4, 0));
+  g.add(box(L * 0.7, 10, B * 0.92, 0xf6f6f6, -8, 13, 0));
+  for (let k = 0; k < 3; k++) g.add(box(L * 0.66, 0.9, B * 0.94, 0x23313f, -8, 10 + k * 3, 0, { rough: 0.2, metal: 0.4 }));
+  g.add(box(12, 6, B * 0.8, 0xf6f6f6, 20, 21, 0));
+  g.add(box(10, 1.2, B * 0.82, 0x23313f, 22, 22, 0, { rough: 0.2, metal: 0.4 }));
+  const funnel = box(8, 10, 5, 0x1d4e89, -40, 23, 0);
+  g.add(funnel);
+  const bow = new THREE.Mesh(new THREE.CylinderGeometry(B / 2, B / 2, 9, 12, 1, false, 0, Math.PI), mat(0xf2f2f2));
+  bow.rotation.y = -Math.PI / 2;
+  bow.position.set(L / 2, 4, 0);
+  g.add(bow);
+  g.position.set(d.x, 0, d.z);
+  g.rotation.y = -d.th;
+  return g;
+}
+function windTurbine(x, z) {
+  const g = new THREE.Group();
+  const tower = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 2, 70, 8), mat(0xf2f4f5));
+  tower.position.y = 35;
+  g.add(tower);
+  for (let k = 0; k < 3; k++) {
+    const bl = box(1.2, 32, 0.4, 0xf2f4f5, 0, 16, 0);
+    const pv = new THREE.Group();
+    pv.add(bl);
+    pv.rotation.z = (k * 2 * Math.PI) / 3 + 0.3;
+    pv.position.set(0, 70, 2);
+    g.add(pv);
   }
-  // budka z lodami
-  const kiosk = new THREE.Group();
-  kiosk.add(box(2.4, 2.2, 1.8, 0xf4efe6, 0, 1.1, 0));
-  kiosk.add(box(1.8, 0.8, 0.06, 0x243447, 0, 1.4, 0.92, { rough: 0.2, metal: 0.3 }));
-  for (let k = 0; k < 6; k++) {
-    const a = box(0.42, 0.08, 1.0, k % 2 ? 0xffffff : 0xe63946, -1.05 + k * 0.42, 2.35, 1.2);
-    a.rotation.x = 0.35;
-    kiosk.add(a);
-  }
-  kiosk.position.set(-35, landY, baseZ - 9.5);
-  group.add(kiosk);
+  g.position.set(x, 0, z);
+  return g;
+}
+function beachHut(x, z, y, color) {
+  const g = new THREE.Group();
+  g.add(box(2.4, 2.4, 2.2, color, 0, 1.2, 0));
+  const rf = box(2.8, 0.2, 2.6, 0xf5f5f5, 0, 2.6, 0);
+  g.add(rf);
+  g.add(box(0.9, 1.7, 0.05, 0xffffff, 0, 0.9, 1.12));
+  g.position.set(x, y, z);
+  return g;
 }
 
 const ropeMats = new Map();
@@ -446,77 +611,153 @@ function sagLine(a, b, sag, color = 0xf0ede4) {
 }
 
 const NEIGHBOR_NAMES = ['AURORA', 'MEWA', 'BRYZA', 'LUNA', 'SIROCCO', 'WIATR', 'ZEFIR', 'NEPTUN', 'ALBATROS', 'MISTRAL', 'POLARIS', 'ORKA'];
-const NEIGHBOR_CANVAS =[0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
+const NEIGHBOR_CANVAS = [0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
+
+// ---------- Scenografia: Adriatyk ----------
+function sceneryMed(group, r, lamps) {
+  const pal = PALETTES.med;
+  // promenada na rivie: palmy, parasole kawiarni, ławki, latarnie
+  for (let x = -140; x < 180; x += 13) {
+    group.add(palm(r, x + 3, -7.5, 1.0));
+    group.add(lamp(x + 9, -3.2, 1.0));
+    lamps.push({ x: x + 9, y: 5.1, z: -3.2 });
+  }
+  for (let x = -130; x < 30; x += 26) {
+    for (let k = 0; k < 3; k++) group.add(parasol(x + k * 3.4, -11.5, 1.0, k % 2 ? 0xf5f1e8 : 0xe9dcc3));
+  }
+  for (let x = -120; x < 170; x += 29) group.add(bench(x, -9.5, 1.0));
+  // miasteczko na tarasach wzgórza
+  for (let row = 0; row < 5; row++) {
+    const y = 1.0 + row * 3.4;
+    const z0 = -16 - row * 11;
+    // mur oporowy tarasu
+    group.add(box(330, y + 3, 11, 0xcbbd9e, 15, (y - 3) / 2, z0 - 5.5));
+    for (let x = -148 + (row % 2) * 7; x < 180; x += 13 + r() * 6) {
+      if (row >= 3 && Math.abs(x + 55) < 14) continue; // miejsce na kościół
+      if (r() < 0.12) { group.add(cypress(x, z0 - 4, y, 8 + r() * 4)); continue; }
+      group.add(house(r, x, z0 - 4 - r() * 2, y, 0, pal));
+    }
+  }
+  group.add(bellTower(-55, -66, 1.0 + 4 * 3.4));
+  // budynek mariny z tablicą
+  group.add(box(14, 4, 8, 0xf5f5f0, 88, 3, -12));
+  group.add(box(15, 0.4, 9, 0xd0d0d0, 88, 5.2, -12));
+  group.add(signBoard('MARINA', 88, -7.2, 1.0));
+  // skaliste brzegi: kamienie, sosny, oliwki, cyprysy
+  for (let z = -40; z < 250; z += 7) {
+    for (const [x0, dir] of [[-150, -1], [185, 1]]) {
+      const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4 + r(), 0), mat(0xa9a293));
+      rk.position.set(x0 + dir * r() * 2, 0.4 + r(), z + r() * 4);
+      rk.rotation.set(r() * 3, r() * 3, r() * 3);
+      group.add(rk);
+      const tx = x0 + dir * (6 + r() * 60);
+      const k = r();
+      group.add(k < 0.45 ? pine(r, tx, z, 3.5) : k < 0.75 ? olive(r, tx, z, 3.5) : cypress(tx, z, 3.5, 7 + r() * 4));
+    }
+  }
+  // falochron: kamienie od strony morza
+  for (let x = 20; x < 185; x += 2.4) {
+    const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(1.3 + r() * 0.8, 0), mat(0x9d998f));
+    rk.position.set(x, 0.3 + r() * 0.6, 169 + r() * 1.5);
+    rk.rotation.set(r() * 3, r() * 3, r() * 3);
+    group.add(rk);
+  }
+  for (let x = 30; x < 185; x += 24) { group.add(lamp(x, 164, 1.4)); lamps.push({ x, y: 5.5, z: 164 }); }
+  // góry krasowe w tle
+  for (let i = 0; i < 16; i++) {
+    const h = new THREE.Mesh(new THREE.ConeGeometry(55 + r() * 45, 60 + r() * 60, 6), mat(i % 3 ? 0x8a9178 : 0x9a9a8a));
+    h.position.set(-330 + i * 45 + r() * 20, 0, -150 - r() * 90);
+    group.add(h);
+  }
+}
+
+// ---------- Scenografia: Ystad (Bałtyk) ----------
+function sceneryBaltic(group, r, lamps) {
+  const pal = PALETTES.baltic;
+  // drewniana promenada: ławki, latarnie, restauracja z tarasem
+  for (let x = -140; x < 58; x += 12) { group.add(lamp(x + 4, -3.5, 1.0)); lamps.push({ x: x + 4, y: 5.1, z: -3.5 }); }
+  for (let x = -130; x < 50; x += 22) group.add(bench(x, -6.5, 1.0));
+  group.add(box(24, 5, 10, 0x8f8f86, -5, 3.5, -16));
+  const rr = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 7.5, 3, 4, 1), mat(0x3d3d44));
+  rr.rotation.set(0, Math.PI / 4, Math.PI / 2); rr.scale.set(1, 17, 1); rr.position.set(-5, 7.2, -16);
+  group.add(box(24.5, 0.3, 10.5, 0x3d3d44, -5, 6.1, -16));
+  group.add(signBoard('RESTAURANG · HAMNEN', -5, -10.5, 1.0));
+  for (let k = 0; k < 5; k++) group.add(parasol(-15 + k * 5, -9.5, 1.0, k % 2 ? 0xffffff : 0x1d4e89));
+  // trawnik i miasto: cegła, szachulec, ciemne dachy
+  group.add(box(210, 0.1, 14, 0x6f9a4c, -45, 1.05, -30));
+  for (let row = 0; row < 3; row++) {
+    for (let x = -145 + row * 5; x < 58; x += 13 + r() * 5) group.add(house(r, x, -44 - row * 13, 1.0, 0, pal));
+  }
+  for (let x = -145; x < 58; x += 11) group.add(tree(r, x + r() * 4, -24 - r() * 6, 1.0));
+  group.add(churchSpire(-55, -95, 1.0));
+  // plaża na zachód od falochronu: wydmy, domki plażowe
+  for (let z = -30; z < 250; z += 9) {
+    const d = new THREE.Mesh(new THREE.SphereGeometry(4 + r() * 3, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x8fa45f));
+    d.scale.y = 0.35;
+    d.position.set(-190 - r() * 40, 1.2, z);
+    group.add(d);
+  }
+  const hutColors = [0xe63946, 0x457b9d, 0xf4a261, 0x2a9d8f, 0xffffff, 0xe9c46a];
+  for (let k = 0; k < 10; k++) group.add(beachHut(-170, 80 + k * 5, 1.2, hutColors[k % hutColors.length]));
+  // port promowy: terminal, kontenery
+  group.add(box(40, 9, 18, 0xdadde0, 120, 6.5, -20));
+  group.add(signBoard('FÄRJETERMINAL', 120, -10.5, 2.0));
+  const cont = [0xb03a2e, 0x2e6fa7, 0xe0a030, 0x3c8d5a];
+  for (let k = 0; k < 24; k++) group.add(box(12, 2.6, 2.5, cont[k % 4], 170 + (k % 6) * 13, 3.3 + Math.floor(k / 12) * 2.6, 40 + (Math.floor(k / 6) % 2) * 3));
+  // falochrony: kamienie od strony morza
+  for (let z = 0; z < 200; z += 2.4) {
+    const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2 + r() * 0.7, 0), mat(0x8a8780));
+    rk.position.set(-151.5 - r() * 1.5, 0.3 + r() * 0.5, z);
+    rk.rotation.set(r() * 3, r() * 3, r() * 3);
+    group.add(rk);
+  }
+  for (let x = -150; x < -42; x += 2.4) {
+    const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2 + r() * 0.7, 0), mat(0x8a8780));
+    rk.position.set(x, 0.3 + r() * 0.5, 205.5 + r() * 1.5);
+    rk.rotation.set(r() * 3, r() * 3, r() * 3);
+    group.add(rk);
+  }
+  // wiatraki na horyzoncie
+  for (let k = 0; k < 6; k++) group.add(windTurbine(-420 + k * 140, -420 - (k % 2) * 60));
+}
 
 export function buildHarbor(H, scene) {
   const group = new THREE.Group();
   const dyn = new THREE.Group();
   const r = rng(99);
   const concreteMat = new THREE.MeshStandardMaterial({ map: concreteTexture(), flatShading: true, roughness: 0.9 });
+  const stoneMat = new THREE.MeshStandardMaterial({ map: concreteTexture(), color: 0xf0e6d0, flatShading: true, roughness: 0.95 });
   const woodMat = new THREE.MeshStandardMaterial({ map: plankTexture(), flatShading: true, roughness: 0.85 });
-  const grassMat = mat(0x6f9a4c, { rough: 1 });
-  const rockMat = mat(0x8a8780);
+  const pontMat = new THREE.MeshStandardMaterial({ map: concreteTexture(), color: 0xe4e2dc, flatShading: true, roughness: 0.9 });
+  const lamps = [];
+  const surf = (s) => {
+    const st = s.style || s.kind;
+    if (st === 'wood' || s.kind === 'pier') return woodMat;
+    if (st === 'stone') return stoneMat;
+    if (s.kind === 'pontoon') return pontMat;
+    if (st === 'rock') return mat(0xa9a293);
+    if (st === 'sand') return mat(0xd9c99a, { rough: 1 });
+    if (st === 'port') return mat(0x9a9a94);
+    if (s.kind === 'land') return mat(0x6f9a4c, { rough: 1 });
+    return concreteMat;
+  };
 
   for (const s of H.structures) {
-    if (s.kind === 'quay') {
-      const isWood = s.wood;
-      const m = extrudePoly(s.poly, s.h, -3, isWood ? woodMat : concreteMat);
-      setUVWorld(m.geometry, isWood ? 0.35 : 0.12);
-      group.add(m);
-      if (s.walk && !s.shore) {
-        // odbojnica gumowa wzdłuż krawędzi (dla nabrzeża betonowego)
-        const xs = s.poly.map((p) => p[0]);
-        const zmax = Math.max(...s.poly.map((p) => p[1]));
-        const x0 = Math.min(...xs), x1 = Math.max(...xs);
-        if (isWood) {
-          // pale pod keją drewnianą
-          for (let x = x0 + 2; x < x1; x += 4) {
-            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 4, 6), mat(0x5a4632));
-            p.position.set(x, s.h - 2, zmax - 0.1);
-            group.add(p);
-          }
-        } else {
-          const rub = box(x1 - x0, 0.35, 0.18, 0x1c1c1c, (x0 + x1) / 2, s.h - 0.35, zmax + 0.06);
-          group.add(rub);
-        }
+    if (s.kind === 'boom') {
+      group.add(extrudePoly(s.poly, s.h, s.h - 0.25, mat(0xb9c0c8, { metal: 0.5, rough: 0.4 })));
+      // pływaki wzdłuż bomu
+      const [p0, p1, , p3] = s.poly;
+      const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+      const cx = (p0[0] + p3[0]) / 2, cz = (p0[1] + p3[1]) / 2;
+      const ux = (p1[0] - p0[0]) / len, uz = (p1[1] - p0[1]) / len;
+      for (let t = 1.5; t < len; t += 3) {
+        const f = box(0.9, 0.45, 0.5, 0xf4f4f4, cx + ux * t, 0.02, cz + uz * t);
+        f.rotation.y = -Math.atan2(uz, ux);
+        group.add(f);
       }
-    } else if (s.kind === 'pontoon') {
-      const m = extrudePoly(s.poly, s.h, -0.4, woodMat);
-      setUVWorld(m.geometry, 0.35);
-      group.add(m);
-      // pływaki i krawężnik
-      const xs = s.poly.map((p) => p[0]);
-      const x0 = Math.min(...xs), x1 = Math.max(...xs);
-      group.add(box(x1 - x0, 0.25, 0.14, 0xe9ecef, (x0 + x1) / 2, s.h - 0.05, 0.05));
-      group.add(box(x1 - x0, 0.5, 2.3, 0x44484d, (x0 + x1) / 2, -0.35, -1.3));
-    } else if (s.kind === 'shallow') {
-      const m = extrudePoly(s.poly, -0.35, -1.5, mat(0xc2b280));
-      group.add(m);
-    } else if (s.kind === 'land') {
-      group.add(extrudePoly(s.poly, s.h, -3, grassMat));
-    } else if (s.kind === 'breakwater') {
-      group.add(extrudePoly(s.poly, s.h, -4, concreteMat));
-      // kamienie
-      const xs = s.poly.map((p) => p[0]), zs = s.poly.map((p) => p[1]);
-      const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
-      for (let x = x0; x < x1; x += 2.2) {
-        for (const zz of [z0 - 0.6, z1 + 0.6]) {
-          const rk = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2 + r() * 0.8, 0), rockMat);
-          rk.position.set(x + r(), 0.2 + r() * 0.6, zz + (r() - 0.5));
-          rk.rotation.set(r() * 3, r() * 3, r() * 3);
-          rk.castShadow = true;
-          group.add(rk);
-        }
-      }
-    } else if (s.kind === 'boom') {
-      const m = extrudePoly(s.poly, s.h, s.h - 0.25, mat(0xb9c0c8, { metal: 0.5, rough: 0.4 }));
-      group.add(m);
-      // pływaki
-      const cx = s.poly.reduce((a, p) => a + p[0], 0) / 4;
-      const zs = s.poly.map((p) => p[1]);
-      const z0 = Math.min(...zs), z1 = Math.max(...zs);
-      for (let z = z0 + 1.5; z < z1; z += 3) group.add(box(0.5, 0.45, 0.9, 0xf4f4f4, cx, 0.02, z));
-    } else if (s.kind === 'pile') {
+      continue;
+    }
+    if (s.kind === 'pile') {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(s.r, s.r * 1.1, s.h + 3, 7), mat(0x6b5236));
       p.position.set(s.cx, (s.h - 3) / 2, s.cz);
       p.castShadow = true;
@@ -524,23 +765,28 @@ export function buildHarbor(H, scene) {
       const top = new THREE.Mesh(new THREE.CylinderGeometry(s.r * 1.05, s.r * 1.05, 0.25, 7), mat(0xe9e9e9));
       top.position.set(s.cx, s.h - 0.1, s.cz);
       group.add(top);
+      continue;
     }
+    const bottom = s.kind === 'pontoon' ? -0.5 : s.kind === 'pier' ? s.h - 0.35 : -4;
+    const m = extrudePoly(s.poly, s.h, bottom, surf(s));
+    if (m.material.map) setUVWorld(m.geometry, (s.style === 'wood' || s.kind === 'pier') ? 0.35 : 0.12);
+    group.add(m);
+    if (s.kind === 'pontoon') group.add(extrudePoly(s.poly, -0.1, -0.6, mat(0x44484d)));
+    addEdgeDetails(group, s, r, lamps);
   }
 
   // polery
   const bollardMeshes = [];
   for (const b of H.bollards) {
     const m = buildBollard(b.kind);
-    m.position.set(b.x, b.kind === 'pile' ? b.h : b.h, b.z);
+    m.position.set(b.x, b.h, b.z);
     m.userData.bollard = b;
     group.add(m);
-    // niewidzialna strefa do klikania
     const hit = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
     hit.position.set(b.x, b.h + 0.3, b.z);
     hit.userData.bollard = b;
     dyn.add(hit);
     bollardMeshes.push(hit);
-    // znacznik podświetlenia
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.06, 4, 16), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.9 }));
     ring.rotation.x = Math.PI / 2;
     ring.position.set(b.x, b.h + 0.08, b.z);
@@ -549,63 +795,21 @@ export function buildHarbor(H, scene) {
     b._ring = ring;
   }
 
-  // muringi: bloczki na dnie + linki pilotowe
-  for (const m of H.murings) {
-    const blk = box(1.2, 0.8, 1.2, 0x6d6d6d, m.anchor.x, -m.anchor.depth + 0.3, m.anchor.z);
-    group.add(blk);
-  }
+  // muringi: bloczki na dnie
+  for (const m of H.murings) group.add(box(1.2, 0.8, 1.2, 0x6d6d6d, m.anchor.x, -m.anchor.depth + 0.3, m.anchor.z));
 
-  // dekoracje
+  // dekoracje stałe
   for (const d of H.deco) {
     if (d.type === 'lighthouse') {
       const l = lighthouse(d.color);
       l.position.set(d.x, 2.2, d.z);
       group.add(l);
-    } else if (d.type === 'gangway') {
-      const g = box(1.2, 0.1, d.len, 0x8a8f96, d.x, 0.8, d.z, { metal: 0.5 });
-      g.rotation.x = -0.1;
-      group.add(g);
-    }
+    } else if (d.type === 'ferry') group.add(ferry(d));
   }
+  if (H.style === 'med') sceneryMed(group, r, lamps);
+  else sceneryBaltic(group, r, lamps);
 
-  // zabudowa na lądzie (północ)
-  const landY = (H.quay.id === 'pontoon' || H.quay.id === 'yboom') ? 1.2 : H.quay.height;
-  const baseZ = (H.quay.id === 'pontoon' || H.quay.id === 'yboom') ? -9 : 0;
-  for (let x = -140; x < 140; x += 14 + r() * 6) {
-    group.add(house(r, x, baseZ - 22 - r() * 4, landY, 0));
-    if (r() < 0.6) group.add(tree(r, x + 7, baseZ - 13 - r() * 2, landY));
-  }
-  const lamps = [];
-  for (let x = -135; x < 135; x += 9) { group.add(lamp(x, baseZ - 5, landY)); lamps.push({ x, y: landY + 4.1, z: baseZ - 5 }); }
-  addQuayDetails(group, H, r, landY, baseZ);
-  // bosmanat z szyldem i masztem flagowym
-  const bos = house(rng(3), 55, baseZ - 13, landY, 0);
-  bos.scale.set(0.9, 0.9, 0.9);
-  group.add(bos);
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 10, 6), mat(0xffffff));
-  mast.position.set(64, landY + 5, baseZ - 8);
-  group.add(mast);
-  group.add(box(1.6, 0.05, 0.05, 0xffffff, 64, landY + 8.6, baseZ - 8));
-  const pennants = [0xffffff, 0xdc143c, 0x1d4e89, 0xf2c14e, 0x2a9d8f];
-  pennants.forEach((c, i) => {
-    const f = box(0.02, 0.28, 0.42, c, 64 + (i - 2) * 0.33, landY + 8.3 - Math.abs(i - 2) * 0.12, baseZ - 8.2);
-    group.add(f);
-  });
-  group.add(signBoard('MARINA · BOSMANAT', 55, baseZ - 6.5, landY));
-  // boczne brzegi – drzewa i skały
-  for (let z = -30; z < 200; z += 9) {
-    group.add(tree(r, -160 - r() * 20, z, 1.5));
-    group.add(tree(r, 160 + r() * 20, z, 1.5));
-  }
-  // wzgórza w tle
-  for (let i = 0; i < 14; i++) {
-    const h = new THREE.Mesh(new THREE.ConeGeometry(40 + r() * 40, 25 + r() * 35, 7), mat(i % 2 ? 0x5f7f4a : 0x6b8a52));
-    h.position.set(-260 + i * 40 + r() * 20, 0, -120 - r() * 60);
-    h.receiveShadow = true;
-    group.add(h);
-  }
-
-  // sąsiednie jachty
+  // sąsiednie jachty i ich cumy
   const boatCache = new Map();
   H.neighbors.forEach((n, i) => {
     const key = n.spec.id + '_' + n.color;
@@ -623,46 +827,15 @@ export function buildHarbor(H, scene) {
     b.userData.neighbor = n;
     dyn.add(b);
     n._mesh = b;
-    // cumy sąsiadów
-    const { xs, xb } = hullExtents(n.spec);
     const c = Math.cos(n.th), s = Math.sin(n.th);
-    const w = (lx, ly, y) => new THREE.Vector3(n.x + lx * c - ly * s, y, n.z + lx * s + ly * c);
-    if (n.scenery) return;
-    const qh = H.quay.height + 0.3;
-    if (n.alongside) {
-      const side = n.th === 0 ? -1 : 1;
-      group.add(sagLine(w(xb - 1, side * halfBeamAt(n.spec, xb - 1), n.spec.freeboard + 0.2), new THREE.Vector3(n.x + Math.cos(n.th) * (xb + 2), qh, -0.5), 0.3));
-      group.add(sagLine(w(xs + 0.5, side * halfBeamAt(n.spec, xs + 0.5), n.spec.freeboard), new THREE.Vector3(n.x + Math.cos(n.th) * (xs - 2), qh, -0.5), 0.3));
-    } else {
-      const quayEndX = n.th < 0 ? xb - 0.6 : xs + 0.4;
-      const farX = n.th < 0 ? xs + 0.4 : xb - 0.4;
-      for (const sd of [-1, 1]) {
-        const a = w(quayEndX, sd * halfBeamAt(n.spec, quayEndX) * 0.85, n.spec.freeboard + 0.1);
-        group.add(sagLine(a, new THREE.Vector3(a.x + sd * 0.8, qh, -0.45), 0.25));
-      }
-      if (n.mooring) {
-        const a = w(farX, 0, n.spec.freeboard + 0.2);
-        const dirz = n.th < 0 ? 1 : 1;
-        group.add(sagLine(a, new THREE.Vector3(a.x, -1.5, a.z + dirz * 7), 0.6, 0x9aa19f));
-      } else if (H.method.startsWith('piles')) {
-        for (const sd of [-1, 1]) {
-          const a = w(farX, sd * halfBeamAt(n.spec, farX) * 0.8, n.spec.freeboard + 0.1);
-          const pz = H.berth.pileZ;
-          const slotHalf = (n.spec.beam + 1.05) / 2;
-          group.add(sagLine(a, new THREE.Vector3(n.x + sd * slotHalf, 2.4, pz), 0.35));
-        }
-      } else if (H.method.startsWith('yboom')) {
-        for (const sd of [-1, 1]) {
-          const a = w(0, sd * halfBeamAt(n.spec, 0), n.spec.freeboard + 0.1);
-          const slotHalf = (n.spec.beam + 0.86) / 2;
-          group.add(sagLine(a, new THREE.Vector3(n.x + sd * slotHalf, 0.4, H.boomLen - 0.35), 0.2));
-        }
-      }
+    for (const rp of n.ropes || []) {
+      const a = new THREE.Vector3(n.x + rp.lx * c - rp.ly * s, n.spec.freeboard + 0.15, n.z + rp.lx * s + rp.ly * c);
+      group.add(sagLine(a, rp.to, rp.sag, rp.grey ? 0x9aa19f : 0xf0ede4));
     }
   });
 
   // dno
-  const bed = new THREE.Mesh(new THREE.PlaneGeometry(900, 900, 1, 1), mat(0x6f6a52, { rough: 1 }));
+  const bed = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200, 1, 1), mat(0x6f6a52, { rough: 1 }));
   bed.rotation.x = -Math.PI / 2;
   bed.position.y = -6;
   group.add(bed);
