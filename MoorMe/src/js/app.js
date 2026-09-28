@@ -1,7 +1,7 @@
 // MoorMe – główny moduł aplikacji: kreator konfiguracji i uruchamianie symulacji
 import { h, seg } from './ui/dom.js';
 import { BOATS, defaultEquipment } from './data/boats.js';
-import { QUAYS, METHODS, generateHarbor } from './data/harbors.js';
+import { QUAYS, METHODS, generateHarbor, harborOpts, slotKind, slotClearFor } from './data/harbors.js';
 import { createDeckEditor, relabel } from './ui/deckEditor.js';
 import { drawBoatTop, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
 import { SimScreen } from './ui/simUI.js';
@@ -159,6 +159,8 @@ function stepEquipment() {
   screen(1, body, () => showStep(2));
 }
 
+const slotClear = (method) => slotClearFor({ ...config, method });
+
 // ---------- Krok 3: keja ----------
 function stepHarbor() {
   const spec = BOATS[config.boatId];
@@ -171,9 +173,10 @@ function stepHarbor() {
   const q = QUAYS[config.quay];
   const mapCv = h('canvas', { width: 900, height: 560, style: { width: '100%', borderRadius: '12px' } });
   const drawMap = () => {
-    const H = generateHarbor({ quay: config.quay, method: config.method, side: config.side, boatSpec: spec, seed: config.seed });
+    const H = generateHarbor(harborOpts(config, spec));
     const b = H.berth;
     const T = mapTransform(mapCv, { minX: b.x - 45, maxX: b.x + 45, minZ: -14, maxZ: 44 });
+    updateWidth();
     drawHarborMap(mapCv.getContext('2d'), H, T, { spec });
     const ctx = mapCv.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
@@ -182,11 +185,33 @@ function stepHarbor() {
   const methodInfo = h('div.hint', {}, METHODS[config.method].desc);
   const sideField = h('div.field', { style: { display: config.method === 'longside' ? 'block' : 'none' } }, h('label', {}, 'Burta do kei'),
     seg([{ value: 'port', label: 'Lewa burta' }, { value: 'starboard', label: 'Prawa burta' }], config.side, (v) => { config.side = v; drawMap(); }));
+  // szerokość stanowiska między Y-bomami / dalbami
+  const widthOut = h('b');
+  const widthInfo = h('div.small.muted', { style: { marginTop: '4px' } });
+  const widthInp = h('input', { type: 'range', min: 0.1, max: 2.5, step: 0.05 });
+  const widthLabel = h('label');
+  const widthField = h('div.field', {}, widthLabel, h('div.row', {}, widthInp, widthOut), widthInfo);
+  function updateWidth() {
+    const k = slotKind(config.method);
+    widthField.style.display = k ? 'block' : 'none';
+    if (!k) return;
+    const c = slotClear(config.method);
+    widthInp.value = c;
+    widthLabel.textContent = k === 'yboom' ? 'Szerokość między Y-bomami (prześwit)' : 'Szerokość między dalbami (prześwit)';
+    widthOut.textContent = `${(spec.beam + c).toFixed(2)} m`;
+    const perSide = c / 2;
+    widthInfo.textContent = `Jacht ${spec.beam.toFixed(2)} m + ${c.toFixed(2)} m luzu (${(perSide * 100).toFixed(0)} cm na burtę${perSide < 0.25 ? ' – odbijacze będą mocno pracować' : perSide > 0.8 ? ' – dużo miejsca, łatwiej' : ''}).`;
+  }
+  widthInp.addEventListener('input', () => {
+    config.slotClear = { ...(config.slotClear || {}), [slotKind(config.method)]: +widthInp.value };
+    drawMap();
+  });
   const right = h('div.panel', {},
     h('h2', {}, 'Sposób cumowania'),
     seg(q.methods.map((m) => ({ value: m, label: METHODS[m].name })), config.method, (v) => { config.method = v; methodInfo.textContent = METHODS[v].desc; sideField.style.display = v === 'longside' ? 'block' : 'none'; drawMap(); }),
     methodInfo,
     sideField,
+    widthField,
     h('h3', {}, 'Zadanie'),
     seg([{ value: 'moor', label: 'Cumowanie (podejście do kei)' }, { value: 'unmoor', label: 'Odcumowanie (wyjście)' }], config.scenario, (v) => { config.scenario = v; }),
     h('div.small.muted', { style: { marginTop: '6px' } }, 'Przy odcumowaniu startujesz zacumowany – liny założone na biegowo, jedna osoba na kei.'),
@@ -202,7 +227,7 @@ function stepHarbor() {
 function stepWeather() {
   const spec = BOATS[config.boatId];
   const w = config.weather;
-  const H = generateHarbor({ quay: config.quay, method: config.method, side: config.side, boatSpec: spec, seed: config.seed });
+  const H = generateHarbor(harborOpts(config, spec));
   const st = config.start;
   if (!st.preset) st.preset = 'near';
   const pre = H.starts.find((s) => s.id === st.preset);

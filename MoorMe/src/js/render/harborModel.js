@@ -421,7 +421,7 @@ export function buildHarbor(H, scene) {
       } else if (H.method.startsWith('yboom')) {
         for (const sd of [-1, 1]) {
           const a = w(0, sd * halfBeamAt(n.spec, 0), n.spec.freeboard + 0.1);
-          const slotHalf = (n.spec.beam + 0.6) / 2;
+          const slotHalf = (n.spec.beam + 0.86) / 2;
           group.add(sagLine(a, new THREE.Vector3(n.x + sd * slotHalf, 0.4, H.boomLen - 0.35), 0.2));
         }
       }

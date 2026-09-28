@@ -132,9 +132,25 @@ export function drawHarborMap(ctx, H, T, opts = {}) {
   const b = H.berth;
   if (b && opts.spec) {
     const [px, pz] = T.toPx(b.x, b.z);
+    // wyraźny znacznik: przerywany obrys + podpis
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    drawBoatTop(ctx, opts.spec, px, pz, T.s, b.th, { simple: true, hull: 'rgba(61,220,132,0.35)', stroke: '#3ddc84' });
+    ctx.setLineDash([6, 4]);
+    drawBoatTop(ctx, opts.spec, px, pz, T.s, b.th, { simple: true, hull: 'rgba(61,220,132,0.28)', stroke: '#3ddc84' });
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = '#3ddc84';
+    ctx.lineWidth = 2.5;
+    ctx.setLineDash([6, 4]);
+    const r = (opts.spec.loa / 2 + 0.6) * T.s;
+    ctx.beginPath();
+    ctx.ellipse(px, pz, Math.abs(Math.cos(b.th)) * r + Math.abs(Math.sin(b.th)) * (opts.spec.beam / 2 + 0.4) * T.s,
+      Math.abs(Math.sin(b.th)) * r + Math.abs(Math.cos(b.th)) * (opts.spec.beam / 2 + 0.4) * T.s, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#3ddc84';
+    ctx.font = 'bold 13px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('TU', px, pz + 4);
     ctx.restore();
   }
   // muringi

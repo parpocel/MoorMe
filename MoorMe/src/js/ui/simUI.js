@@ -5,7 +5,7 @@ import { LINE_STATE_LABEL, TENDING_LABEL } from '../physics/lines.js';
 import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
 import { BOATS } from '../data/boats.js';
-import { generateHarbor, ROLE_NAMES, METHODS } from '../data/harbors.js';
+import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld } from '../math.js';
 
 export class SimScreen {
@@ -14,7 +14,7 @@ export class SimScreen {
     this.config = config;
     this.cb = callbacks;
     this.spec = BOATS[config.boatId];
-    this.harbor = generateHarbor({ quay: config.quay, method: config.method, side: config.side, boatSpec: this.spec, scenario: config.scenario, seed: config.seed || 7 });
+    this.harbor = generateHarbor(harborOpts(config, this.spec));
     this.world = new World({
       spec: this.spec,
       equip: JSON.parse(JSON.stringify(config.equip)),

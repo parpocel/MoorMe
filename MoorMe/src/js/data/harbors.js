@@ -44,6 +44,23 @@ export const METHODS = {
   pilesStern: { id: 'pilesStern', name: 'Rufą do kei, dziób na dalbach', desc: 'Cofanie między dalbami, cumy dziobowe na pale, rufowe na keję.' }
 };
 
+// Prześwit stanowiska ponad szerokość jachtu (Y-bomy / dalby), w metrach – ustawiany w kreatorze
+export const SLOT_CLEAR_DEFAULT = { yboom: 0.5, piles: 0.65 };
+export function slotKind(method) {
+  return method.startsWith('yboom') ? 'yboom' : method.startsWith('piles') ? 'piles' : null;
+}
+export function slotClearFor(cfg) {
+  const k = slotKind(cfg.method);
+  if (!k) return null;
+  const v = cfg.slotClear && cfg.slotClear[k];
+  return typeof v === 'number' ? v : SLOT_CLEAR_DEFAULT[k];
+}
+// Opcje generatora portu z konfiguracji kreatora
+export function harborOpts(cfg, spec) {
+  const clear = slotClearFor(cfg);
+  return { quay: cfg.quay, method: cfg.method, side: cfg.side, boatSpec: spec, scenario: cfg.scenario, seed: cfg.seed || 7, slotWidth: clear != null ? spec.beam + clear : undefined };
+}
+
 export const HARBOR_BOUNDS = { minX: -150, maxX: 150, minZ: -45, maxZ: 260 };
 
 // Struktura: { kind, poly, h, walk, color }
@@ -142,8 +159,10 @@ export function generateHarbor(opt) {
     const th = bowIn ? -Math.PI / 2 : Math.PI / 2;
     const gapQ = bowIn ? 1.0 : 0.75;
     const zc = (bowIn ? 0.52 * L : 0.48 * L) + gapQ;
-    const pad = method.startsWith('yboom') ? 0.6 : method.startsWith('piles') ? 1.05 : 0.9;
-    const slotW = B + pad;
+    const pad = method.startsWith('yboom') ? 0.86 : method.startsWith('piles') ? 1.05 : 0.9;
+    // grubość przegrody między stanowiskami (Y-bom / dalba); opt.slotWidth = prześwit ustawiony przez gracza
+    const divider = method.startsWith('yboom') ? 0.36 : method.startsWith('piles') ? 0.4 : 0;
+    const slotW = opt.slotWidth && divider ? opt.slotWidth + divider : B + pad;
     berth = { x: 0, z: zc, th, tolAlong: 0.9, tolAcross: 0.55, tolTh: 7, slotW, bowIn };
 
     // sloty po obu stronach

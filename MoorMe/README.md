@@ -26,6 +26,7 @@ Program prowadzi przez cztery kroki:
    - pomost pływający: muring rufą albo dziobem, longside;
    - pomost z Y-bomami: dziobem albo rufą;
    - keja z dalbami (Bałtyk): dziobem do kei z rufą na dalbach, albo odwrotnie;
+   - przy Y-bomach i dalbach suwakiem ustawiasz szerokość stanowiska (prześwit ponad szerokość jachtu, od 0,1 do 2,5 m);
    - zadanie: **cumowanie** (podejście) albo **odcumowanie** (start zacumowany, liny założone na biegowo, jedna osoba na kei).
 4. **Pogoda i start**: siła i kierunek wiatru, porywistość ze skrętami wiatru, prąd oraz miejsce startu na mapie portu.
    Wybierasz gotowe miejsce albo klikasz na mapie i przeciągasz, żeby ustawić kurs.
