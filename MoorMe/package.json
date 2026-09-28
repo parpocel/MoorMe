@@ -1,0 +1,43 @@
+{
+  "name": "moorme",
+  "productName": "MoorMe",
+  "version": "1.0.0",
+  "description": "MoorMe – symulator cumowania i odcumowywania jachtów żaglowych (Bavaria C34, C46, C50)",
+  "main": "main.js",
+  "author": "MoorMe",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node tests/run.mjs",
+    "dist": "electron-builder --win nsis --x64",
+    "dist:dir": "electron-builder --win dir --x64"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "pl.moorme.simulator",
+    "productName": "MoorMe",
+    "copyright": "MoorMe",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "src/**/*", "node_modules/three/build/three.module.js", "package.json"],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "build/icon.png",
+      "artifactName": "MoorMe-Setup-${version}.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MoorMe",
+      "language": "1045"
+    }
+  }
+}
