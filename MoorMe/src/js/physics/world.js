@@ -125,6 +125,91 @@ export class World {
     const w = localToWorld(this.boat.x, this.boat.z, this.boat.th, l.x, l.y);
     return { x: w.x, y: this.deckHeight(l.x) + 0.1, z: w.z, lx: l.x, ly: l.y };
   }
+  // ---------- Prowadzenie liny wokół kadłuba ----------
+  // Lina nie przenika przez jacht: jeśli prosty odcinek od kluzy do polera przechodzi przez obrys,
+  // lina opasuje burtę (najkrótszą drogą po obrysie) i schodzi z niej w punkcie wyjścia.
+  // Zwraca { pts: punkty na jachcie (świat, bez celu), exit: punkt zejścia z jachtu, onBoard: długość na jachcie }
+  ropeRoute(line, tgt = this.targetPoint(line)) {
+    const b = this.boat;
+    const lead = this.leadWorld(line);
+    const T = worldToLocal(b.x, b.z, b.th, tgt.x, tgt.z);
+    const cache = line._route;
+    let local;
+    if (cache && cache.lx === lead.lx && cache.ly === lead.ly && Math.hypot(cache.tx - T.x, cache.ty - T.y) < 0.15) local = cache.local;
+    else {
+      local = this.wrapLocal(lead.lx, lead.ly, T.x, T.y);
+      line._route = { lx: lead.lx, ly: lead.ly, tx: T.x, ty: T.y, local };
+    }
+    const pts = [lead];
+    let onBoard = 0, prev = lead;
+    for (const [x, y] of local) {
+      const w = localToWorld(b.x, b.z, b.th, x, y);
+      const p = { x: w.x, y: this.deckHeight(x) + 0.1, z: w.z, lx: x, ly: y };
+      onBoard += Math.hypot(p.x - prev.x, p.y - prev.y, p.z - prev.z);
+      pts.push(p);
+      prev = p;
+    }
+    return { pts, exit: prev, onBoard };
+  }
+
+  // Ścieżka w układzie jachtu (bez punktu startu i celu) – lista punktów na krawędzi pokładu
+  wrapLocal(ax, ay, tx, ty) {
+    if (!this._hullIn) {
+      const out = this.boat.outline;
+      this._hullIn = out;
+      // obrys lekko powiększony – po nim biegnie lina (na listwie burtowej)
+      this._hullOut = out.map(([x, y]) => [x * 1.01 + Math.sign(x) * 0.04, y * 1.03 + Math.sign(y) * 0.04]);
+    }
+    const poly = this._hullIn, ring = this._hullOut;
+    const free = (px, py) => {
+      const dx = tx - px, dy = ty - py, len = Math.hypot(dx, dy);
+      const n = Math.min(80, Math.ceil(Math.min(len, this.spec.loa * 1.3) / 0.25));
+      for (let i = 1; i <= n; i++) {
+        const s = (i * 0.25) / len;
+        if (s >= 1) break;
+        if (pointInConvex(poly, px + dx * s, py + dy * s)) return false;
+      }
+      return true;
+    };
+    const prefix = [];
+    let sx = ax, sy = ay;
+    if (pointInConvex(poly, ax, ay)) {
+      // knaga na pokładzie: jeśli cel jest po drugiej stronie, lina idzie najpierw do burty po swojej stronie
+      if (Math.sign(ty) === Math.sign(ay) || Math.abs(ay) < 0.1) return [];
+      const side = Math.sign(ay);
+      sx = ax; sy = side * (halfBeamAt(this.spec, ax) * 1.03 + 0.04);
+      prefix.push([sx, sy]);
+    }
+    if (free(sx, sy)) return prefix;
+    // najbliższy wierzchołek obrysu i obejście w obu kierunkach
+    let i0 = 0, bd = Infinity;
+    ring.forEach(([x, y], i) => { const d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; i0 = i; } });
+    const n = ring.length;
+    let best = null;
+    for (const dir of [1, -1]) {
+      const path = [];
+      let j = i0, len = Math.hypot(ring[j][0] - sx, ring[j][1] - sy), ok = false;
+      path.push(ring[j]);
+      for (let k = 0; k < n; k++) {
+        if (free(ring[j][0], ring[j][1])) { ok = true; break; }
+        const nj = (j + dir + n) % n;
+        len += Math.hypot(ring[nj][0] - ring[j][0], ring[nj][1] - ring[j][1]);
+        j = nj;
+        path.push(ring[j]);
+      }
+      if (!ok) continue;
+      len += Math.hypot(tx - ring[j][0], ty - ring[j][1]);
+      if (!best || len < best.len) best = { len, path };
+    }
+    return best ? prefix.concat(best.path) : prefix;
+  }
+
+  // Długość liny od kluzy do celu (z opasaniem burty)
+  ropeLength(line, tgt) {
+    const r = this.ropeRoute(line, tgt);
+    return r.onBoard + Math.hypot(tgt.x - r.exit.x, tgt.y - r.exit.y, tgt.z - r.exit.z);
+  }
+
   targetPoint(line, t = line.target) {
     if (!t) return null;
     if (line.isMooring) return { x: t.anchor.x, y: -t.anchor.depth, z: t.anchor.z };
@@ -166,7 +251,7 @@ export class World {
     const tmp = { cleatId, fairleadId: fairleadId === undefined ? (this.autoFairlead(cleat)?.id ?? null) : fairleadId, jumped: false };
     const lead = this.leadWorld(tmp);
     const t = this.targetPoint({}, bollard);
-    const d = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z);
+    const d = this.ropeLength(tmp, t);
     const parts = mode === 'slip' ? 2 : 1;
     const length = Math.min(40, Math.max(8, Math.ceil(d * parts * 1.25 + 4)));
     const fl = tmp.fairleadId ? this.deckItem(tmp.fairleadId) : null;
@@ -277,13 +362,13 @@ export class World {
           line.state = 'attached';
           const lead = this.leadWorld(line);
           const t = this.targetPoint(line);
-          line.rest = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z) - 0.25;
+          line.rest = this.ropeLength(line, t) - 0.25;
         } else if (p.tgt) {
           line.target = p.tgt;
           line.state = 'attached';
           const lead = this.leadWorld(line);
           const t = this.targetPoint(line);
-          const d = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z);
+          const d = this.ropeLength(line, t);
           line.rest = d * (line.mode === 'slip' ? 2 : 1) - 0.02;
           if (line.rest > line.length) { line.length = Math.ceil(line.rest + 3); }
         }
@@ -517,7 +602,7 @@ export class World {
       // załoga przekłada cumę
       line.mode = line.mode === 'slip' ? 'fixed' : 'slip';
       const lead = this.leadWorld(line), t = this.targetPoint(line);
-      const d = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z);
+      const d = this.ropeLength(line, t);
       line.rest = Math.min(line.length, d * (line.mode === 'slip' ? 2 : 1) + 0.1);
       if (d * (line.mode === 'slip' ? 2 : 1) > line.length) {
         line.mode = 'fixed';
@@ -770,7 +855,7 @@ export class World {
         line.tending = 'hold';
         const lead = this.leadWorld(line);
         const t = this.targetPoint(line);
-        const d = Math.hypot(t.x - lead.x, t.y - lead.y, t.z - lead.z);
+        const d = this.ropeLength(line, t);
         const parts = line.mode === 'slip' && !line.isMooring ? 2 : 1;
         line.rest = Math.min(line.length, d * parts + (line.isMooring ? 2.5 : 0.4));
         line.maxTension = 0;
@@ -811,22 +896,25 @@ export class World {
 
     tendLine(line, dt, this.lineParams);
 
-    const lead = this.leadWorld(line);
     const t = this.targetPoint(line);
+    // lina może opasywać burtę – siła działa w punkcie, w którym schodzi z jachtu
+    const route = this.ropeRoute(line, t);
+    line.route = route;
+    const lead = route.exit;
     const pv = b.pointVel(lead.lx, lead.ly);
     const dx = t.x - lead.x, dy = t.y - lead.y, dz = t.z - lead.z;
     const d3 = Math.hypot(dx, dy, dz) || 1e-6;
     // prędkość wydłużania (punkt na jachcie oddala się od celu)
     const rel = -(pv.x * dx + pv.z * dz) / d3;
-    const f = lineForce(line, lead, t, rel, this.lineParams, dt);
+    const f = lineForce(line, lead, t, rel, this.lineParams, dt, route.onBoard);
     if (f.T > 0) b.addWorldForce(lead.x, lead.z, f.fx, f.fz);
     line.maxTension = Math.max(line.maxTension, f.T);
 
-    // półkluza – lina może wyskoczyć przy dużym kącie
-    const lc = this.leadLocal(line);
+    // półkluza – lina może wyskoczyć przy dużym kącie (kierunek pierwszego odcinka od kluzy)
     const fl = line.fairleadId ? this.deckItem(line.fairleadId) : null;
     if (fl && fl.kind === 'halfFairlead' && f.T > 200) {
-      const dirL = worldToLocal(0, 0, b.th, dx, dz);
+      const nx = route.pts.length > 1 ? route.pts[1] : t;
+      const dirL = worldToLocal(0, 0, b.th, nx.x - route.pts[0].x, nx.z - route.pts[0].z);
       const n = hullNormalAt(this.spec, fl.x, Math.sign(fl.y) || 1);
       const cosA = (dirL.x * n.x + dirL.y * n.y) / (Math.hypot(dirL.x, dirL.y) || 1);
       if (!line.jumped && cosA < -0.2) {

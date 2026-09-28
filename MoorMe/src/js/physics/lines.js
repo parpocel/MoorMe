@@ -62,13 +62,14 @@ export class MooringLine {
 }
 
 // Fizyka pojedynczej liny – zwraca siłę (świat) przyłożoną w punkcie mocowania na jachcie
-export function lineForce(line, lead, tgt, relSpeed, params, dt) {
-  // lead, tgt: {x,y,z}; relSpeed – prędkość wydłużania [m/s]
+export function lineForce(line, lead, tgt, relSpeed, params, dt, extraLen = 0) {
+  // lead – punkt, w którym lina opuszcza jacht (kluza lub miejsce opasania burty), tgt: {x,y,z};
+  // extraLen – długość liny leżącej na jachcie (od kluzy, wokół burty); relSpeed – prędkość wydłużania [m/s]
   const dx = tgt.x - lead.x, dy = tgt.y - lead.y, dz = tgt.z - lead.z;
   const d3 = Math.hypot(dx, dy, dz) || 1e-6;
   const dh = Math.hypot(dx, dz) || 1e-6;
   const parts = line.mode === 'slip' && !line.isMooring ? 2 : 1;
-  const path = d3 * parts;
+  const path = (d3 + extraLen) * parts;
   const stretch = path - line.rest;
   let T = 0;
   if (stretch > 0) {

@@ -362,6 +362,13 @@ export function buildBoat(spec, opts = {}) {
   root.userData.spec = spec;
   root.userData.deckY = deckY;
   root.userData.mastTop = mtop;
+  // miejsca, na których siadają mewy: końce dolnych salingów i top masztu (układ grupy przechyłu)
+  root.userData.perches = [
+    [mastX - 0.3, spY1 + 0.05, -spec.beam * 0.3],
+    [mastX - 0.3, spY1 + 0.05, spec.beam * 0.3],
+    [mastX - 0.2, spY2 + 0.05, spec.beam * 0.2],
+    [mastX, mtop + 0.2, 0]
+  ];
   return root;
 }
 

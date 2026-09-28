@@ -80,6 +80,29 @@ export class Sound {
     src.start(t, Math.random());
     src.stop(t + 0.5);
   }
+  // krzyk mewy: dwa krótkie opadające tony
+  gull(volume = 0.5) {
+    if (!this.ctx || !this.enabled) return;
+    const ctx = this.ctx;
+    const t0 = ctx.currentTime;
+    for (let k = 0; k < 2 + Math.floor(Math.random() * 2); k++) {
+      const t = t0 + k * 0.22;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      const f0 = 1500 + Math.random() * 400;
+      o.frequency.setValueAtTime(f0, t);
+      o.frequency.exponentialRampToValueAtTime(f0 * 0.55, t + 0.18);
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 3;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12 * volume, t + 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+      o.connect(bp); bp.connect(g); g.connect(this.master);
+      o.start(t); o.stop(t + 0.22);
+    }
+  }
+
   suspend() { if (this.ctx) this.ctx.suspend(); }
   resume() { if (this.ctx) this.ctx.resume(); }
   close() { if (this.ctx) { this.ctx.close(); this.ctx = null; } }

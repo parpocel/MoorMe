@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { buildBoat, buildDeckGear, buildFender, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
+import { HarbourLife } from './life.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
 import { localToWorld, DEG, clamp } from '../math.js';
 
@@ -134,6 +135,9 @@ export class View3D {
     // smugi wiatru
     this.windStreaks = this.makeWindStreaks();
     scene.add(this.windStreaks);
+
+    // życie w porcie: mewy, spacerowicze, motorówka
+    this.life = new HarbourLife(this);
 
     // wskaźnik kursu (strzałka na wodzie)
     this.raycaster = new THREE.Raycaster();
@@ -366,15 +370,28 @@ export class View3D {
       }
       if (!a || !b) continue;
       alive.add(line.id);
-      const N = 18;
       const pts = [];
-      for (let i = 0; i <= N; i++) {
+      if (a === lead) {
+        // część liny na jachcie: knaga -> kluza -> wzdłuż burty (opasanie), potem wolny odcinek do celu
+        const cl = w.deckItem(line.cleatId);
+        const route = w.ropeRoute(line, b);
+        if (cl && (cl.x !== lead.lx || cl.y !== lead.ly)) {
+          const cw = localToWorld(w.boat.x, w.boat.z, w.boat.th, cl.x, cl.y);
+          pts.push(new THREE.Vector3(cw.x, w.deckHeight(cl.x) + 0.12, cw.z));
+        }
+        for (const p of route.pts) pts.push(new THREE.Vector3(p.x, p.y, p.z));
+        a = route.exit;
+      } else pts.push(new THREE.Vector3(a.x, a.y, a.z));
+      const N = 18;
+      for (let i = 1; i <= N; i++) {
         const t = i / N;
-        let y = a.y + (b.y - a.y) * t - Math.sin(Math.PI * t) * sag;
+        // zwis rośnie od burty – lina nie zapada się w kadłub tuż przy punkcie zejścia
+        let y = a.y + (b.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
         if (!underwater) y = Math.max(y, 0.02);
         pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t, y, a.z + (b.z - a.z) * t));
       }
-      const geo = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), N * 2, line.isMooring ? 0.05 : 0.06, 12, false);
+      const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+      const geo = new THREE.TubeGeometry(curve, pts.length * 2, line.isMooring ? 0.05 : 0.06, 12, false);
       let mesh = this.ropeMeshes.get(line.id);
       if (!mesh) {
         mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: false }));
@@ -478,6 +495,8 @@ export class View3D {
     }
 
     this.updateRopes();
+    this.boat.updateMatrixWorld(true);
+    this.life.update(dt);
 
     // znacznik stanowiska
     if (this.berthMarker.visible) {
@@ -558,9 +577,9 @@ export class View3D {
     }
     const cx = cam.tx + Math.cos(cam.el) * Math.sin(cam.az) * cam.dist;
     const cz = cam.tz + Math.cos(cam.el) * Math.cos(cam.az) * cam.dist;
-    const cy = Math.sin(cam.el) * cam.dist;
+    const cy = Math.sin(cam.el) * cam.dist + (cam.ty || 0);
     this.camera.position.set(cx, cy, cz);
-    this.camera.lookAt(cam.tx, 0, cam.tz);
+    this.camera.lookAt(cam.tx, cam.ty || 0, cam.tz);
     // słońce podąża za kamerą (cienie)
     // słońce ze wschodu, ok. 40° nad horyzontem – cienie padają w bok, dobrze widoczne z kamery
     this.sun.position.set(cam.tx + 95, 85, cam.tz + 25);

@@ -34,6 +34,12 @@ export class SimScreen {
     this.world.onEvent = (e) => this.pushLog(e);
     this.world.onImpact = (s, kind) => this.sound.bump(s, kind);
     this.world.onFinish = (r) => setTimeout(() => this.showResult(r), 600);
+    this.view.life.onCry = (pos) => {
+      // głośność zależna od odległości od kamery
+      const c = this.view.cam;
+      const d = Math.hypot(pos.x - c.tx, pos.z - c.tz);
+      if (d < 90) this.sound.gull(clamp(1 - d / 90, 0.1, 1));
+    };
     this.view.onClick = (p) => this.onViewClick(p);
     this.view.onHover = (p) => this.onViewHover(p);
     this.last = performance.now();

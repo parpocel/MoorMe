@@ -297,6 +297,135 @@ function lamp(x, z, y) {
   return g;
 }
 
+// Tablica z napisem na dwóch słupkach
+function signBoard(text, x, z, y) {
+  const g = new THREE.Group();
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 96;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#1d4e89'; ctx.fillRect(0, 0, 512, 96);
+  ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.strokeRect(6, 6, 500, 84);
+  ctx.fillStyle = '#ffffff'; ctx.font = 'bold 44px Segoe UI, Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 50);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.6, 0.06), [mat(0x1d4e89), mat(0x1d4e89), mat(0x1d4e89), mat(0x1d4e89), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 }), mat(0x1d4e89)]);
+  board.position.y = 2.1;
+  board.userData.keep = true; // wiele materiałów – bez scalania
+  g.add(board);
+  for (const s of [-1, 1]) g.add(box(0.08, 2.4, 0.08, 0x3a3f44, s * 1.4, 1.2, 0));
+  g.position.set(x, y, z);
+  return g;
+}
+
+function bench(x, z, y) {
+  const g = new THREE.Group();
+  for (let k = 0; k < 3; k++) g.add(box(1.8, 0.05, 0.12, 0x9b6b3f, 0, 0.45, -0.16 + k * 0.16));
+  for (let k = 0; k < 2; k++) g.add(box(1.8, 0.1, 0.05, 0x9b6b3f, 0, 0.62 + k * 0.16, -0.26));
+  for (const s of [-1, 1]) {
+    g.add(box(0.06, 0.45, 0.45, 0x2d3436, s * 0.8, 0.22, 0));
+    g.add(box(0.06, 0.4, 0.06, 0x2d3436, s * 0.8, 0.7, -0.26));
+  }
+  g.position.set(x, y, z);
+  return g;
+}
+
+function planter(r, x, z, y) {
+  const g = new THREE.Group();
+  g.add(box(1.2, 0.55, 1.2, 0xb7b2a8, 0, 0.27, 0));
+  const bush = new THREE.Mesh(new THREE.IcosahedronGeometry(0.62, 0), mat(0x4f8a3c));
+  bush.position.y = 0.9;
+  bush.scale.y = 0.8;
+  g.add(bush);
+  const flowers = [0xe63946, 0xf4a261, 0xffffff, 0xc77dff, 0xffd166];
+  for (let k = 0; k < 7; k++) {
+    const a = r() * Math.PI * 2, rr = 0.35 + r() * 0.2;
+    g.add(box(0.1, 0.1, 0.1, flowers[Math.floor(r() * flowers.length)], Math.cos(a) * rr, 0.95 + r() * 0.3, Math.sin(a) * rr));
+  }
+  g.position.set(x, y, z);
+  return g;
+}
+
+function lifebuoy(x, z, y) {
+  const g = new THREE.Group();
+  g.add(box(0.1, 1.4, 0.1, 0xc0392b, 0, 0.7, 0));
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.07, 6, 16), mat(0xf26b21));
+  ring.position.set(0, 1.05, 0.09);
+  g.add(ring);
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2 + Math.PI / 4;
+    const seg = box(0.13, 0.16, 0.16, 0xffffff, Math.cos(a) * 0.3, 1.05 + Math.sin(a) * 0.3, 0.09);
+    seg.rotation.z = a;
+    g.add(seg);
+  }
+  g.position.set(x, y, z);
+  return g;
+}
+
+function pedestal(x, z, y) {
+  const g = new THREE.Group();
+  g.add(box(0.32, 0.95, 0.32, 0xf2f2f2, 0, 0.47, 0));
+  g.add(box(0.36, 0.12, 0.36, 0x1d4e89, 0, 1.0, 0));
+  g.add(box(0.1, 0.06, 0.02, 0x3ddc84, 0, 0.8, 0.17, { emissive: 0x1a6b3a }));
+  g.add(box(0.2, 0.14, 0.02, 0x2d3436, 0, 0.55, 0.17));
+  g.position.set(x, y, z);
+  return g;
+}
+
+// Detale kei i promenady: kamienna krawędź, odbojnice, drabinki, słupki serwisowe, koła ratunkowe, ławki, donice
+function addQuayDetails(group, H, r, landY, baseZ) {
+  const q = H.quay;
+  const hard = q.id === 'concrete' || q.id === 'piles';
+  const top = q.height;
+  const x0 = -148, x1 = 148;
+  if (hard) {
+    // kamienna krawędź (granit) i żółta linia bezpieczeństwa
+    group.add(box(x1 - x0, 0.1, 0.6, 0xc9c5bb, 0, top + 0.05, -0.3));
+    group.add(box(x1 - x0, 0.012, 0.1, 0xe8c547, 0, top + 0.012, -0.85));
+    if (q.id === 'concrete') {
+      // pionowe odbojnice gumowe na ścianie nabrzeża
+      for (let x = x0 + 2; x < x1; x += 4) group.add(box(0.28, top + 0.7, 0.22, 0x1b1b1b, x, (top - 0.7) / 2, 0.11));
+    }
+    // drabinki wyjściowe z wody
+    for (let x = x0 + 12; x < x1; x += 24) {
+      for (const s of [-1, 1]) {
+        group.add(box(0.05, top + 1.3, 0.05, 0xe8c547, x + s * 0.25, (top - 1.3) / 2, 0.14));
+        group.add(box(0.05, 0.9, 0.05, 0xe8c547, x + s * 0.25, top + 0.45, -0.15));
+      }
+      for (let y = -1.1; y < top; y += 0.3) group.add(box(0.5, 0.04, 0.04, 0xe8c547, x, y, 0.14));
+    }
+  }
+  // słupki serwisowe (prąd/woda) i koła ratunkowe przy krawędzi
+  const edgeY = q.id === 'pontoon' || q.id === 'yboom' ? q.height : top;
+  for (let x = x0 + 6.5; x < x1; x += 9) {
+    if (q.id === 'pontoon' || q.id === 'yboom') { if (Math.abs(x) > 92) continue; }
+    group.add(pedestal(x, -1.05, edgeY));
+  }
+  for (let x = x0 + 20; x < x1; x += 36) {
+    if ((q.id === 'pontoon' || q.id === 'yboom') && Math.abs(x) > 92) continue;
+    group.add(lifebuoy(x, -1.5, edgeY));
+  }
+  // promenada: ławki z oparciem, kosze, donice z kwiatami
+  for (let x = -120; x < 120; x += 23) {
+    group.add(bench(x, baseZ - 7.2, landY));
+    const bin = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.22, 0.8, 8), mat(0x2e5e3a));
+    bin.position.set(x + 1.5, landY + 0.4, baseZ - 7.3);
+    group.add(bin);
+    group.add(planter(r, x + 11.5, baseZ - 7.2, landY));
+  }
+  // budka z lodami
+  const kiosk = new THREE.Group();
+  kiosk.add(box(2.4, 2.2, 1.8, 0xf4efe6, 0, 1.1, 0));
+  kiosk.add(box(1.8, 0.8, 0.06, 0x243447, 0, 1.4, 0.92, { rough: 0.2, metal: 0.3 }));
+  for (let k = 0; k < 6; k++) {
+    const a = box(0.42, 0.08, 1.0, k % 2 ? 0xffffff : 0xe63946, -1.05 + k * 0.42, 2.35, 1.2);
+    a.rotation.x = 0.35;
+    kiosk.add(a);
+  }
+  kiosk.position.set(-35, landY, baseZ - 9.5);
+  group.add(kiosk);
+}
+
 const ropeMats = new Map();
 function ropeMat(color) {
   if (!ropeMats.has(color)) ropeMats.set(color, new THREE.MeshStandardMaterial({ color, roughness: 0.7 }));
@@ -447,17 +576,21 @@ export function buildHarbor(H, scene) {
     if (r() < 0.6) group.add(tree(r, x + 7, baseZ - 13 - r() * 2, landY));
   }
   for (let x = -135; x < 135; x += 9) group.add(lamp(x, baseZ - 5, landY));
-  // ławki, skrzynki
-  for (let x = -120; x < 120; x += 23) {
-    group.add(box(1.8, 0.45, 0.5, 0x8b5a2b, x, landY + 0.25, baseZ - 7));
-  }
-  // bosmanat
-  const bos = house(rng(3), 55, baseZ - 12, landY, 0);
+  addQuayDetails(group, H, r, landY, baseZ);
+  // bosmanat z szyldem i masztem flagowym
+  const bos = house(rng(3), 55, baseZ - 13, landY, 0);
   bos.scale.set(0.9, 0.9, 0.9);
   group.add(bos);
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 9, 5), mat(0xffffff));
-  mast.position.set(62, landY + 4.5, baseZ - 8);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 10, 6), mat(0xffffff));
+  mast.position.set(64, landY + 5, baseZ - 8);
   group.add(mast);
+  group.add(box(1.6, 0.05, 0.05, 0xffffff, 64, landY + 8.6, baseZ - 8));
+  const pennants = [0xffffff, 0xdc143c, 0x1d4e89, 0xf2c14e, 0x2a9d8f];
+  pennants.forEach((c, i) => {
+    const f = box(0.02, 0.28, 0.42, c, 64 + (i - 2) * 0.33, landY + 8.3 - Math.abs(i - 2) * 0.12, baseZ - 8.2);
+    group.add(f);
+  });
+  group.add(signBoard('MARINA · BOSMANAT', 55, baseZ - 6.5, landY));
   // boczne brzegi – drzewa i skały
   for (let z = -30; z < 200; z += 9) {
     group.add(tree(r, -160 - r() * 20, z, 1.5));
@@ -477,7 +610,9 @@ export function buildHarbor(H, scene) {
     const key = n.spec.id + '_' + n.color;
     let proto = boatCache.get(key);
     if (!proto) {
-      proto = mergeByMaterial(buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[boatCache.size % NEIGHBOR_NAMES.length] }));
+      const built = buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[boatCache.size % NEIGHBOR_NAMES.length] });
+      proto = mergeByMaterial(built);
+      proto.userData.perches = built.userData.perches;
       boatCache.set(key, proto);
     }
     const b = proto.clone();

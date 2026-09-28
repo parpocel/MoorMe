@@ -49,5 +49,35 @@ w.boat.reset(b.x, b.z, b.th); // jacht dosunięty do kei
 run(w, 25);
 check(far.state === 'attached' && far.target === farTgt, `po podejściu do kei załoga sama założyła linę (stan: ${far.state}, załoga na lądzie: ${w.crew.ashore})`);
 
+// lina nie przenika przez kadłub: z prawej knagi dziobowej na poler po lewej stronie (keja) opasuje dziób
+{
+  const w2 = new World({ spec, equip, harbor: H, weather: { windKn: 0, windFrom: 0, gust: 0 }, scenario: 'moor', start: { x: 30, z: 40, compass: 270 }, random: rng(5) });
+  w2.boat.reset(b.x, b.z, b.th);
+  const stbdBow = w2.findCleat('bow', 1);
+  const fwd = localToWorld(b.x, b.z, b.th, w2.boat.xb - 2.5, 0); // poler na trawersie dziobu, po stronie kei
+  const tgt2 = w2.nearestBollard(fwd.x, -0.5, (q) => q.z < 0.1);
+  const l2 = w2.rigLine(stbdBow.id, undefined, tgt2, 'fixed');
+  const r = w2.ropeRoute(l2, w2.targetPoint(l2, tgt2));
+  const { pointInConvex } = await import('../src/js/math.js');
+  const hull = w2.boatPolyWorld();
+  let crosses = false;
+  // wolny odcinek od zejścia z burty do polera nie może wchodzić w kadłub
+  const tp = w2.targetPoint(l2, tgt2);
+  for (let i = 1; i < 40; i++) {
+    const s = i / 40;
+    if (pointInConvex(hull, r.exit.x + (tp.x - r.exit.x) * s, r.exit.z + (tp.z - r.exit.z) * s)) crosses = true;
+  }
+  // odcinki na jachcie biegną po krawędzi, nie przez środek pokładu
+  for (let i = 1; i < r.pts.length; i++) {
+    const a = r.pts[i - 1], c = r.pts[i];
+    for (let k = 1; k < 10; k++) {
+      const m = { x: a.x + (c.x - a.x) * k / 10, z: a.z + (c.z - a.z) * k / 10 };
+      const inner = hull.map(([x, z]) => [b.x + (x - b.x) * 0.85, b.z + (z - b.z) * 0.85]);
+      if (i > 1 && pointInConvex(inner, m.x, m.z)) crosses = true;
+    }
+  }
+  check(r.pts.length > 2 && !crosses, `lina z prawej burty na keję po lewej opasuje dziób (punktów na burcie: ${r.pts.length - 1}, długość na jachcie ${r.onBoard.toFixed(1)} m)`);
+}
+
 console.log(fails ? `${fails} błędów` : 'Wszystko OK');
 process.exit(fails ? 1 : 0);
