@@ -239,7 +239,13 @@ export class View3D {
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
       drag.x = e.clientX; drag.y = e.clientY;
-      if (drag.button === 2 || (drag.button === 0 && e.shiftKey)) {
+      if (this.cam.mode === 'fpv') {
+        // widok kapitana: przeciąganie obraca głowę
+        if (drag.moved) {
+          this.cam.fpvYaw -= dx * 0.004;
+          this.cam.fpvPitch = clamp(this.cam.fpvPitch - dy * 0.003, -1.1, 0.9);
+        }
+      } else if (drag.button === 2 || (drag.button === 0 && e.shiftKey)) {
         this.cam.mode = 'free';
         this.cam.az -= dx * 0.006;
         this.cam.el = clamp(this.cam.el + dy * 0.004, 12 * DEG, 88 * DEG);
@@ -261,6 +267,7 @@ export class View3D {
     });
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
+      if (this.cam.mode === 'fpv') { this.cam.fov = clamp((this.cam.fov || 62) * Math.exp(e.deltaY * 0.001), 25, 85); return; }
       this.cam.dist = clamp(this.cam.dist * Math.exp(e.deltaY * 0.0012), 12, 320);
     }, { passive: false });
   }
@@ -331,6 +338,7 @@ export class View3D {
     else if (kind === 'iso') { this.cam.el = 52 * DEG; this.cam.dist = 55 + L * 1.5; }
     else if (kind === 'helm') { this.cam.el = 24 * DEG; this.cam.dist = 22 + L; this.cam.az = 1.5 * Math.PI - this.world.boat.th; }
     else if (kind === 'close') { this.cam.el = 40 * DEG; this.cam.dist = 26 + L; }
+    else if (kind === 'fpv') { this.cam.fpvYaw = 0; this.cam.fpvPitch = -0.12; this.cam.fov = this.cam.fov || 62; }
     this.cam.follow = true;
   }
 
@@ -612,14 +620,31 @@ export class View3D {
       cam.tx += (b.x - cam.tx) * clamp(camDt * 3, 0, 1);
       cam.tz += (b.z - cam.tz) * clamp(camDt * 3, 0, 1);
     }
-    const cx = cam.tx + Math.cos(cam.el) * Math.sin(cam.az) * cam.dist;
-    const cz = cam.tz + Math.cos(cam.el) * Math.cos(cam.az) * cam.dist;
-    const cy = Math.sin(cam.el) * cam.dist + (cam.ty || 0);
-    this.camera.position.set(cx, cy, cz);
-    this.camera.lookAt(cam.tx, cam.ty || 0, cam.tz);
+    const fpv = cam.mode === 'fpv';
+    this.helmsman.visible = !fpv;
+    if (fpv) {
+      // oczy kapitana przy kole sterowym; kamera kołysze się razem z jachtem
+      const heel = this.boat.userData.heel;
+      this.boat.updateMatrixWorld(true);
+      const hp = this.helmsman.position;
+      const eye = heel.localToWorld(new THREE.Vector3(hp.x - 0.15, hp.y + 1.62, hp.z));
+      const cy = Math.cos(cam.fpvPitch);
+      const look = heel.localToWorld(new THREE.Vector3(hp.x - 0.15 + Math.cos(cam.fpvYaw) * cy * 10, hp.y + 1.62 + Math.sin(cam.fpvPitch) * 10, hp.z - Math.sin(cam.fpvYaw) * cy * 10));
+      this.camera.position.copy(eye);
+      this.camera.up.set(0, 1, 0);
+      this.camera.lookAt(look);
+      if (this.camera.fov !== cam.fov || this.camera.near !== 0.08) { this.camera.fov = cam.fov; this.camera.near = 0.08; this.camera.updateProjectionMatrix(); }
+    } else {
+      if (this.camera.fov !== 32 || this.camera.near !== 0.5) { this.camera.fov = 32; this.camera.near = 0.5; this.camera.updateProjectionMatrix(); }
+      const cx = cam.tx + Math.cos(cam.el) * Math.sin(cam.az) * cam.dist;
+      const cz = cam.tz + Math.cos(cam.el) * Math.cos(cam.az) * cam.dist;
+      const cy = Math.sin(cam.el) * cam.dist + (cam.ty || 0);
+      this.camera.position.set(cx, cy, cz);
+      this.camera.lookAt(cam.tx, cam.ty || 0, cam.tz);
+    }
     // pora dnia, pogoda, światła (słońce/księżyc podąża za kamerą – cienie)
     this.atmo.update(dt, camDt);
-    const sh = clamp(cam.dist * 0.7, 30, 120);
+    const sh = fpv ? 45 : clamp(cam.dist * 0.7, 30, 120);
     const sc = this.sun.shadow.camera;
     if (Math.abs(sc.right - sh) > 5) { sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.updateProjectionMatrix(); }
 

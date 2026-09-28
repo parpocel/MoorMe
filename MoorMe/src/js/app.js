@@ -69,7 +69,8 @@ function showTitle() {
       h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
       h('p', {}, 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe zanim zrobisz je naprawdę.'),
       h('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center' } },
-        h('button.btn.primary.big', { onclick: () => showStep(0) }, 'Nowa symulacja'),
+        h('button.btn.primary.big', { onclick: () => { config.random = false; showStep(0); } }, 'Nowa symulacja'),
+        h('button.btn.big', { onclick: () => showRandom(), title: 'Losowe zadanie w losowych warunkach' }, '🎲 Random'),
         loadConfig() ? h('button.btn.big', { onclick: () => startSim() }, 'Szybki start (ostatnie ustawienia)') : null),
       h('p.small', { style: { marginTop: '40px' } }, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne')));
   app.appendChild(s);
@@ -359,8 +360,118 @@ function startSim() {
   app.appendChild(root);
   window.__sim = new SimScreen(root, JSON.parse(JSON.stringify(config)), {
     restart: () => startSim(),
-    exit: () => showStep(3)
+    exit: () => (config.random ? showTitle() : showStep(3))
   });
+}
+
+// ---------- Tryb Random: losowe zadanie w losowych warunkach ----------
+function pickW(items) {
+  const total = items.reduce((a, [, w]) => a + w, 0);
+  let x = Math.random() * total;
+  for (const [v, w] of items) { x -= w; if (x <= 0) return v; }
+  return items[0][0];
+}
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+export function randomConfig() {
+  const boatId = pickW([['C34', 4], ['C46', 3], ['C50', 3]]);
+  const spec = BOATS[boatId];
+  const equip = defaultEquipment(spec);
+  equip.propHand = Math.random() < 0.75 ? 'right' : 'left';
+  equip.bowThruster = pickW([['none', spec.loa < 12 ? 5 : 2], ['onoff', 4], ['proportional', 2]]);
+  equip.sternThruster = spec.loa > 12 && Math.random() < 0.2;
+  equip.drive = spec.id === 'C50' ? 'shaft' : Math.random() < 0.8 ? 'saildrive' : 'shaft';
+  const quay = pickW([['concrete', 3], ['pontoon', 3], ['yboom', 2], ['piles', 2]]);
+  const method = QUAYS[quay].methods[Math.floor(Math.random() * QUAYS[quay].methods.length)];
+  const windKn = Math.round(pickW([[rnd(0, 6), 25], [rnd(6, 12), 35], [rnd(12, 18), 25], [rnd(18, 25), 15]]));
+  const hour = +pickW([[rnd(8, 18), 70], [rnd(5, 7.5), 7], [rnd(18.5, 21), 8], [rnd(21.5, 27) % 24, 15]]).toFixed(2);
+  const sky = pickW([['clear', 45], ['cloudy', 30], ['rain', 15], ['fog', windKn < 10 ? 10 : 0]]);
+  const cfg = {
+    boatId, equip, quay, method,
+    side: Math.random() < 0.5 ? 'port' : 'starboard',
+    scenario: Math.random() < 0.6 ? 'moor' : 'unmoor',
+    weather: {
+      windKn, windFrom: Math.round(Math.random() * 72) * 5, gust: +rnd(0.1, windKn > 12 ? 0.6 : 0.4).toFixed(2),
+      currentKn: Math.random() < 0.2 ? +rnd(0.2, 1).toFixed(1) : 0, currentTo: Math.round(Math.random() * 72) * 5,
+      hour, sky
+    },
+    seed: Math.floor(Math.random() * 1000),
+    slotClear: { yboom: +rnd(0.25, 1.0).toFixed(2), piles: +rnd(0.4, 1.1).toFixed(2) },
+    random: true
+  };
+  const H = generateHarbor(harborOpts(cfg, spec));
+  const st = H.starts[Math.floor(Math.random() * H.starts.length)];
+  cfg.start = { preset: st.id, x: st.x, z: st.z, compass: st.compass, speedKn: Math.random() < 0.3 ? 1.5 : 0 };
+  return cfg;
+}
+
+// Opis wiatru względem stanowiska (keja jest na północy)
+function windRelative(cfg) {
+  // keja jest od strony północnej: wiatr z północy (0°) wieje od kei
+  const a = Math.abs(((cfg.weather.windFrom + 540) % 360) - 180);
+  if (cfg.weather.windKn < 4) return 'prawie bezwietrznie';
+  if (a < 35) return 'wieje od kei – odpycha jacht od nabrzeża';
+  if (a > 145) return 'wieje na keję – dociska jacht do nabrzeża';
+  return a < 90 ? 'boczny, lekko od kei' : 'boczny, lekko na keję';
+}
+
+function difficulty(cfg) {
+  const spec = BOATS[cfg.boatId], w = cfg.weather;
+  let d = w.windKn / 4 + w.gust * 3 + spec.loa / 5 + (cfg.equip.bowThruster === 'none' ? 2 : 0) + (w.currentKn || 0) * 2;
+  if (w.hour < 5.5 || w.hour > 20.5) d += 1.5;
+  if (w.sky === 'fog') d += 1.5; else if (w.sky === 'rain') d += 0.8;
+  if (cfg.method.startsWith('yboom') || cfg.method.startsWith('piles')) d += 1;
+  if (cfg.slotClear && slotKind(cfg.method) && cfg.slotClear[slotKind(cfg.method)] < 0.4) d += 1;
+  return d < 6 ? ['Łatwe', '#3ddc84'] : d < 9 ? ['Średnie', '#ffd166'] : d < 12 ? ['Trudne', '#ffb347'] : ['Ekspert', '#ff5a5a'];
+}
+
+function showRandom(cfg = randomConfig()) {
+  const spec = BOATS[cfg.boatId], w = cfg.weather, eq = cfg.equip;
+  const [diff, dcol] = difficulty(cfg);
+  const skyName = { clear: '☀ słonecznie', cloudy: '☁ pochmurno', rain: '🌧 deszcz', fog: '🌫 mgła' }[w.sky];
+  const hh = `${String(Math.floor(w.hour)).padStart(2, '0')}:${String(Math.round((w.hour % 1) * 60) % 60).padStart(2, '0')}`;
+  const night = w.hour < 5.5 || w.hour > 20.5;
+  const task = cfg.scenario === 'moor' ? `Zacumuj: ${METHODS[cfg.method].name.toLowerCase()}` : `Odcumuj i wyjdź ze stanowiska (${METHODS[cfg.method].name.toLowerCase()})`;
+  const clear = slotKind(cfg.method) ? slotClearFor(cfg) : null;
+  const mapCv = h('canvas', { width: 700, height: 460, style: { width: '100%', borderRadius: '12px' } });
+  app.innerHTML = '';
+  const row = (k, v) => h('tr', {}, h('td', {}, k), h('td', {}, v));
+  const s = h('div.screen', {}, h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'tryb Random – losowe zadanie')),
+    h('div.screen-body', {}, h('div.two-col', {},
+      h('div.panel', {}, mapCv),
+      h('div.panel', {},
+        h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' } }, h('h2', {}, '🎲 ' + task), h('span.chip', { style: { background: dcol, color: '#03121e', fontWeight: 800, fontSize: '13px' } }, diff)),
+        h('table.spec-table', { style: { marginTop: '10px' } },
+          row('Jacht', `${spec.name} (${spec.loa.toFixed(1)} m)`),
+          row('Śruba / napęd', `${eq.propHand === 'right' ? 'prawoskrętna' : 'lewoskrętna'}, ${eq.drive === 'shaft' ? 'wał' : 'saildrive'}`),
+          row('Ster strumieniowy', `${{ none: 'brak', onoff: 'dziobowy', proportional: 'dziobowy proporcjonalny' }[eq.bowThruster]}${eq.sternThruster ? ' + rufowy' : ''}`),
+          row('Keja', QUAYS[cfg.quay].name),
+          cfg.method === 'longside' ? row('Burta do kei', cfg.side === 'port' ? 'lewa' : 'prawa') : null,
+          clear != null ? row('Szerokość stanowiska', `${(spec.beam + clear).toFixed(2)} m (luz ${clear.toFixed(2)} m)`) : null,
+          row('Wiatr', `${w.windKn} kn z ${w.windFrom}°, porywy ${Math.round(w.gust * 100)}%`),
+          row('Względem kei', windRelative(cfg)),
+          w.currentKn ? row('Prąd', `${w.currentKn} kn na ${w.currentTo}°`) : null,
+          row('Pora / niebo', `${hh}${night ? ' (noc)' : ''} · ${skyName}`),
+          cfg.scenario === 'moor' ? row('Start', `${cfg.start.preset === 'custom' ? 'własny' : ({ entrance: 'wejście do portu', basin: 'środek basenu', near: 'blisko stanowiska', east: 'wschodnia część basenu' }[cfg.start.preset] || cfg.start.preset)}${cfg.start.speedKn ? `, w ruchu ${cfg.start.speedKn} kn` : ''}`) : null),
+        h('div.hint', {}, cfg.scenario === 'moor' ? 'Stanowisko jest zaznaczone na zielono. Cumy przygotujesz w trakcie – kliknij knagę, a potem poler.' : 'Liny są założone na biegowo, jedna osoba jest na kei. Oddaj liny, zabierz załogę i wyjdź ze stanowiska.')))),
+    h('div.screen-footer', {},
+      h('button.btn', { onclick: () => showTitle() }, '← Menu'),
+      h('div', { style: { display: 'flex', gap: '10px' } },
+        h('button.btn.big', { onclick: () => showRandom() }, '🎲 Losuj ponownie'),
+        h('button.btn.primary.big', { onclick: () => { config = cfg; startSim(); } }, '⚓ Start'))));
+  app.appendChild(s);
+  // mapa: stanowisko, start, wiatr
+  const H = generateHarbor(harborOpts(cfg, spec));
+  const T = mapTransform(mapCv, { minX: -150, maxX: 150, minZ: -30, maxZ: 225 });
+  const ctx = mapCv.getContext('2d');
+  drawHarborMap(ctx, H, T, { spec, bollards: false });
+  const wd = compassVec(w.windFrom + 180);
+  for (let i = 0; i < 4; i++) drawArrow(ctx, 80 + i * 180, 50, Math.atan2(wd.z, wd.x), 50, 'rgba(94,200,255,0.85)', 3);
+  if (cfg.scenario === 'moor') {
+    const [px, pz] = T.toPx(cfg.start.x, cfg.start.z);
+    drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (cfg.start.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI'; ctx.fillText('START', px + 12, pz - 10);
+  }
 }
 
 window.addEventListener('error', (e) => {

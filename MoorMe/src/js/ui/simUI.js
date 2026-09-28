@@ -84,7 +84,7 @@ export class SimScreen {
     top.appendChild(h('span', { style: { width: '8px' } }));
     this.followBtn = h('button.btn.sm.on', { onclick: () => { this.view.cam.follow = !this.view.cam.follow; } , title: 'Kamera śledzi jacht (F)' }, '🎯 Śledź');
     top.appendChild(this.followBtn);
-    for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
+    for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
@@ -670,7 +670,7 @@ export class SimScreen {
       case 'KeyX': b.throttle = 0; break;
       case 'KeyR': b.rudderCmd = 0; break;
       case 'KeyF': this.view.cam.follow = !this.view.cam.follow; break;
-      case 'KeyV': { const v = ['iso', 'close', 'top', 'helm']; this._vi = ((this._vi || 0) + 1) % v.length; this.view.setView(v[this._vi]); break; }
+      case 'KeyV': { const v = ['iso', 'close', 'top', 'helm', 'fpv']; this._vi = ((this._vi || 0) + 1) % v.length; this.view.setView(v[this._vi]); break; }
       case 'KeyM': this.sound.enabled = !this.sound.enabled; break;
       case 'KeyL': w.crew.ashore ? w.crewAboard() : w.crewAshore(); break;
       case 'Escape': if (this.pickLine) this.cancelPick(); if (this.rig) this.cancelRig(); this.closeRadial(); break;
@@ -873,7 +873,7 @@ export class SimScreen {
       ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo'], ['R', 'Ster na zero'],
       ['Q / E', 'Ster strumieniowy dziobowy: dziób w lewo / w prawo'], ['Z / C', 'Ster strumieniowy rufowy: rufa w lewo / w prawo'],
       ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['Klik na linę', 'Menu okrągłe: wybieraj, obłóż, luzuj, luz, oddaj (przytrzymaj – działa tylko podczas trzymania)'], ['O', 'Pogoda i pora dnia'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
-      ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok'],
+      ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (także widok kapitana)'], ['Widok kapitana', 'Przeciągnij myszą – rozglądanie się, kółko – przybliżenie'],
       ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
     ];
     const m = h('div.modal.glass', { style: { width: '640px' } },

@@ -13,7 +13,12 @@ Modele jachtów oparto na danych Bavarii C34, C46 i C50.
 
 ## Jak to działa
 
-Program prowadzi przez cztery kroki:
+Na ekranie startowym są dwie drogi:
+
+- **Nowa symulacja**: kreator, w którym sam ustawiasz jacht, keję i warunki (opis niżej).
+- **🎲 Random**: program losuje zadanie (cumowanie albo odcumowanie) i warunki: jacht, wyposażenie, keję, sposób cumowania, wiatr, prąd, porę dnia i niebo. Przed startem widzisz odprawę z mapą, opisem wiatru względem kei i oceną trudności. Możesz losować ponownie.
+
+Kreator prowadzi przez cztery kroki:
 
 1. **Jacht**: Bavaria C34 (10,8 m), C46 (14,6 m) albo C50 (15,6 m).
 2. **Wyposażenie**:
@@ -87,7 +92,7 @@ Dane jachtów są orientacyjne i służą ćwiczeniu. To nie jest dokumentacja p
 | N | oddaj |
 | L | załoga na ląd / na pokład |
 | P, Spacja | pauza |
-| F / V | śledzenie kamerą / zmiana widoku |
+| F / V | śledzenie kamerą / zmiana widoku (w tym widok kapitana „👁 Kapitan” – przeciąganie myszą obraca głowę, kółko przybliża) |
 | Mysz | LPM: przesuwanie widoku, PPM: obrót kamery, kółko: zoom |
 | F11 | pełny ekran |
 
