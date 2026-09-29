@@ -5,7 +5,7 @@ import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { Atmosphere } from './atmosphere.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
-import { localToWorld, DEG, clamp } from '../math.js';
+import { localToWorld, DEG, clamp, tensionColor } from '../math.js';
 
 export class View3D {
   constructor(container, world) {
@@ -364,11 +364,7 @@ export class View3D {
     const bl = this.world.lineParams.breakLoad;
     const q = line.tension / bl;
     if (line.state === 'broken') return 0xff2d2d;
-    if (q < 0.03) return 0xfff0c2;
-    if (q < 0.15) return 0xffe28a;
-    if (q < 0.35) return 0xffb347;
-    if (q < 0.6) return 0xff7043;
-    return 0xff2020;
+    return tensionColor(q);
   }
 
   updateRopes() {

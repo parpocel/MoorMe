@@ -6,7 +6,7 @@ import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
 import { BOATS } from '../data/boats.js';
 import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
-import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld } from '../math.js';
+import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, tensionColor } from '../math.js';
 
 export class SimScreen {
   constructor(root, config, callbacks) {
@@ -263,7 +263,7 @@ export class SimScreen {
       const modeTxt = line.isMooring ? 'muring' : line.mode === 'slip' ? 'na biegowo' : 'na stałe';
       card.appendChild(h('div.top', {},
         h('div', {}, h('span.nm', {}, `${idx + 1}. ${line.name}`), h('div.st', { class: stCls }, `${LINE_STATE_LABEL[line.state] || line.state}${line.state === 'attached' ? ' · ' + TENDING_LABEL[line.tending] : ''}${line.target && line.state === 'attached' && !line.isMooring ? ' · ' + line.target.label : ''}`)),
-        h('div.small.muted', { style: { textAlign: 'right' } }, `${modeTxt} · ${line.length} m${line.winch ? ' · winch' : ''}`, line.jumped ? h('div', { style: { color: '#ffb347' } }, 'wyskoczyła z półkluzy!') : null)
+        h('div.small.muted', { style: { textAlign: 'right' } }, `${modeTxt} · ${line.length} m${line.winch ? ' · kabestan' : ''}`, line.jumped ? h('div', { style: { color: '#ffb347' } }, 'wyskoczyła z półkluzy!') : null)
       ));
       if (!line.isMooring) {
         const tgt = line.state === 'attached' || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.state === 'pending' ? line.pendingTarget : line.plannedTarget;
@@ -289,7 +289,7 @@ export class SimScreen {
           acts.append(
             btn(line.plannedTarget ? 'Inny poler…' : '⚓ Załóż…', () => this.startPick(line), line.plannedTarget ? '' : 'on', 'Wybierz poler / knagę / dalbę'),
             btn(line.mode === 'slip' ? '⇄ na stałe' : '⇄ na biegowo', () => w.toggleMode(line), '', 'Zmień sposób mocowania'),
-            btn(line.winch ? 'Winch: tak' : 'Winch: nie', () => { line.winch = !line.winch; }, '', 'Obsługa na kabestanie/winchu'),
+            btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }, '', 'Obsługa na kabestanie'),
             btn('−2 m', () => { line.length = Math.max(4, line.length - 2); line.rest = line.length; }),
             btn('+2 m', () => { line.length = Math.min(40, line.length + 2); line.rest = line.length; }),
             btn('🗑', () => { w.removeLine(line); if (this.selectedLine === line) this.selectedLine = null; }, 'danger', 'Usuń linę')
@@ -298,13 +298,18 @@ export class SimScreen {
         case 'onQuay':
           if (line.mooringQueued) acts.append(h('span.small', { style: { color: '#ffd166' } }, 'Załoga podejmie muring przy kei'), btn('Anuluj', () => w.release(line)));
           else acts.append(btn('⚓ Podejmij muring', () => w.pickupMooring(line), 'on', 'Załoga podejmuje linkę pilotową z kei (B)'));
-          acts.append(btn(line.winch ? 'Winch: tak' : 'Winch: nie', () => { line.winch = !line.winch; }));
+          acts.append(btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }));
           break;
         case 'queued':
           acts.append(btn('Anuluj', () => w.release(line)), btn('Inny poler…', () => { w.release(line); this.startPick(line); }));
+          if (!line.isMooring) acts.append(btn(line.mode === 'slip' ? '⇄ na stałe' : '⇄ na biegowo', () => w.toggleMode(line), '', 'Zmień sposób mocowania (załoga założy linę tak, jak ustawisz)'));
+          acts.append(btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }));
           break;
         case 'pending':
           acts.append(btn('Przerwij', () => w.release(line)));
+          break;
+        case 'waitingCrew':
+          acts.append(btn('Anuluj', () => w.cancelRelease(line), '', 'Załoga wraca – lina zostaje założona'));
           break;
         case 'attached':
           acts.append(
@@ -315,7 +320,8 @@ export class SimScreen {
             btn('✋ Oddaj', () => w.release(line), 'danger', 'Oddaj / zdejmij linę (N)')
           );
           if (!line.isMooring && w.crew.ashore) acts.append(btn('⇄ tryb', () => w.toggleMode(line), '', 'Załoga na kei przekłada linę'));
-          acts.append(btn(line.winch ? 'Winch ✓' : 'Winch ✗', () => { line.winch = !line.winch; }));
+          acts.append(btn(line.winch ? 'Kabestan ✓' : 'Kabestan ✗', () => { line.winch = !line.winch; }));
+          if (line.releaseQueued) acts.append(btn('Anuluj oddanie', () => w.cancelRelease(line), '', 'Załoga jeszcze nie zeszła – zostaw linę założoną'));
           break;
         case 'broken':
           acts.append(btn('🗑 Usuń', () => { line.state = 'ready'; w.removeLine(line); }, 'danger'));
@@ -338,7 +344,7 @@ export class SimScreen {
       const q = line.tension / bl;
       e.tval.innerHTML = `<span>Naciąg: <b>${(line.tension / 1000).toFixed(2)} kN</b></span><span class="muted">${line.slack > 0.05 ? 'luz ' + line.slack.toFixed(1) + ' m' : 'napięta'} · ${line.dist ? line.dist.toFixed(1) : '-'} m</span>`;
       e.tbar.style.width = `${clamp(q * 100 * 2, 0, 100)}%`;
-      e.tbar.style.background = q < 0.15 ? '#3ddc84' : q < 0.4 ? '#ffd166' : '#ff5a5a';
+      e.tbar.style.background = '#' + tensionColor(q).toString(16).padStart(6, '0');
     }
   }
 
@@ -493,6 +499,8 @@ export class SimScreen {
       act('Podejmij', '⚓', () => w.pickupMooring(line));
     } else if (line.state === 'queued' || line.state === 'pending') {
       act('Anuluj', '✕', () => w.release(line), 'danger');
+    } else if (line.state === 'waitingCrew') {
+      act('Anuluj', '✕', () => w.cancelRelease(line), 'danger');
     } else if (line.state === 'ready') {
       act('Załóż', '⚓', () => this.attachOrPick(line));
       act('Usuń', '🗑', () => w.removeLine(line), 'danger');
@@ -629,7 +637,7 @@ export class SimScreen {
       h('div.field', {}, h('label', {}, 'Prowadzenie przez'), sel([['auto', 'Automatycznie (najbliższa kluza/półkluza)'], ['none', 'Bez kluzy – prosto z knagi'], ...fls.map((f) => [f.id, f.label])], 'auto', (v) => (st.fairleadId = v))),
       h('div.field', {}, h('label', {}, 'Długość'), h('div.row', {}, lenInp, lenOut)),
       h('div.field', {}, h('label', {}, 'Sposób założenia'), (() => { const s = h('div.seg'); const r = () => { s.innerHTML = ''; for (const [v, l] of [['fixed', 'Na stałe (oko na poler)'], ['slip', 'Na biegowo (wraca na jacht)']]) s.appendChild(h('button', { class: st.mode === v ? 'on' : '', onclick: () => { st.mode = v; r(); } }, l)); }; r(); return s; })()),
-      h('div.field', {}, h('label', {}, h('input', { type: 'checkbox', onchange: (e) => (st.winch = e.target.checked) }), ' Obsługa na winchu (większa siła, wolniej)')),
+      h('div.field', {}, h('label', {}, h('input', { type: 'checkbox', onchange: (e) => (st.winch = e.target.checked) }), ' Obsługa na kabestanie (większa siła, wolniej)')),
       h('div.hint', {}, 'Na stałe: oko rzucasz na poler z pokładu (do ~3.4 m) – zdjąć je może tylko załoga na lądzie. Na biegowo: lina okłada poler i wraca na jacht – potrzebny bliższy dostęp (~1.5 m), ale oddasz ją z pokładu.'),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },
         h('button.btn', { onclick: () => back.remove() }, 'Anuluj'),

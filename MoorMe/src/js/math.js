@@ -121,3 +121,13 @@ export function smoothNoise(seed) {
   const norm = comps.reduce((s, c) => s + c.a, 0);
   return (t) => comps.reduce((s, c) => s + c.a * Math.sin(t * c.f * 2 * Math.PI + c.p), 0) / norm;
 }
+
+// Kolor naciągu liny: zielony (luz/mały naciąg) -> żółty -> czerwony (duży naciąg); q = naciąg / siła zrywająca
+export function tensionColor(q) {
+  const t = clamp(q / 0.5, 0, 1);
+  const stops = [[0x3d, 0xdc, 0x84], [0xff, 0xd1, 0x66], [0xff, 0x2a, 0x2a]];
+  const f = t * 2, i = Math.min(1, Math.floor(f)), u = f - i;
+  const a = stops[i], b = stops[i + 1];
+  const c = a.map((v, k) => Math.round(v + (b[k] - v) * u));
+  return (c[0] << 16) | (c[1] << 8) | c[2];
+}

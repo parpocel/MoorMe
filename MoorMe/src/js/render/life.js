@@ -188,13 +188,16 @@ export class HarbourLife {
       // składa skrzydła, rozgląda się
       // skrzydła złożone wzdłuż tułowia
       for (const { pivot, s } of w) { pivot.rotation.set(0, s * 1.45, s * 0.12); pivot.scale.x = 0.62; }
-      g.mesh.rotation.x = 0;
-      g.mesh.rotation.y += Math.sin(g.flap * 0.8) * dt * 0.6;
+      // po locie Euler z lookAt bywa odwrócony (x/z ≈ π) – siedząca mewa ma stać prosto, więc zostawiamy tylko kurs
+      if (g.yaw === undefined) { const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(g.mesh.quaternion); g.yaw = Math.atan2(fw.x, fw.z); }
+      g.yaw += Math.sin(g.flap * 0.8) * dt * 0.6;
+      g.mesh.rotation.set(0, g.yaw, 0);
       g.timer -= dt;
       if (this.r() < dt * 0.05 && this.onCry) this.onCry(g.pos);
       const spooked = g.perch.own && (boatFast || Math.abs(this.world.boat.bowOut) > 0.5);
       if (g.timer <= 0 || spooked) {
         g.state = 'takeoff';
+        g.yaw = undefined;
         g.timer = 1.8;
         g.vel.set((this.r() - 0.5) * 3, 3, (this.r() - 0.5) * 3);
         if (spooked && this.onCry) this.onCry(g.pos);

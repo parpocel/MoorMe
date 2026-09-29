@@ -596,10 +596,21 @@ export class World {
     return b.approach || { x: b.x, z: b.z };
   }
 
+  // Anulowanie oddania liny, która czeka na załogę (załoga jeszcze idzie / nie zeszła na ląd)
+  cancelRelease(line) {
+    if (line.releaseQueued) { line.releaseQueued = false; this.log(`${line.name}: oddanie anulowane – lina zostaje założona`); return; }
+    if (line.state !== 'waitingCrew') return;
+    line.state = 'attached';
+    line.timer = 0;
+    line.warnedTension = false;
+    if (this.crew.task && this.crew.task.line === line) { this.crew.task = null; this.crew.walking = false; }
+    this.log(`${line.name}: oddanie anulowane – lina zostaje założona`);
+  }
+
   // Przełożenie liny na biegowo / na stałe (tylko gdy przygotowana)
   toggleMode(line) {
     if (line.isMooring) return;
-    if (line.state === 'ready') {
+    if (line.state === 'ready' || line.state === 'queued') {
       line.mode = line.mode === 'slip' ? 'fixed' : 'slip';
       line.rest = line.length;
       return;

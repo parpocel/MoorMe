@@ -187,7 +187,8 @@ function buildCabin(spec) {
 // Linie (relingi, wanty) nie reagują na oświetlenie – Atmosphere przyciemnia je nocą, żeby nie świeciły
 export const LINE_MATS = {
   rail: { mat: new THREE.LineBasicMaterial({ color: 0xb8bec5 }), base: 0xb8bec5 },
-  rig: { mat: new THREE.LineBasicMaterial({ color: 0x3a3f44 }), base: 0x3a3f44 }
+  rig: { mat: new THREE.LineBasicMaterial({ color: 0x3a3f44 }), base: 0x3a3f44 },
+  halyard: { mat: new THREE.LineBasicMaterial({ color: 0xd8d2c0 }), base: 0xd8d2c0 }
 };
 
 export function buildBoat(spec, opts = {}) {
@@ -501,7 +502,7 @@ function addBoatDetails(heel, root, spec, d) {
   for (const dz of [-0.06, 0.06]) hp.push(d.mastX + 0.1, d.topY + 1.2, dz, d.mastX + 0.1, d.mtop - 0.3, dz);
   const hg = new THREE.BufferGeometry();
   hg.setAttribute('position', new THREE.Float32BufferAttribute(hp, 3));
-  heel.add(new THREE.LineSegments(hg, new THREE.LineBasicMaterial({ color: 0xd8d2c0 })));
+  heel.add(new THREE.LineSegments(hg, LINE_MATS.halyard.mat));
   // radar i światło salingowe na większych jachtach
   if (L > 12) {
     const rad = cyl(0.3, 0.3, 0.2, 0xf4f4f4, 12);

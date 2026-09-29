@@ -547,21 +547,79 @@ function churchSpire(x, z, y) {
   g.position.set(x, y, z);
   return g;
 }
+function ferryNameTexture() {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#ffffff';
+  g.font = 'bold 44px Arial, sans-serif';
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText('YSTAD  LINE', 256, 34);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 function ferry(d) {
   const g = new THREE.Group();
   const L = 150, B = 26;
-  g.add(box(L, 9, B, 0xf2f2f2, 0, 4, 0));
-  g.add(box(L * 0.98, 1.2, B + 0.1, 0x1d4e89, 0, 1.4, 0));
-  g.add(box(L * 0.7, 10, B * 0.92, 0xf6f6f6, -8, 13, 0));
-  for (let k = 0; k < 3; k++) g.add(box(L * 0.66, 0.9, B * 0.94, 0x23313f, -8, 10 + k * 3, 0, { rough: 0.2, metal: 0.4 }));
-  g.add(box(12, 6, B * 0.8, 0xf6f6f6, 20, 21, 0));
-  g.add(box(10, 1.2, B * 0.82, 0x23313f, 22, 22, 0, { rough: 0.2, metal: 0.4 }));
-  const funnel = box(8, 10, 5, 0x1d4e89, -40, 23, 0);
-  g.add(funnel);
-  const bow = new THREE.Mesh(new THREE.CylinderGeometry(B / 2, B / 2, 9, 12, 1, false, 0, Math.PI), mat(0xf2f2f2));
+  const white = 0xf4f4f2, navy = 0x1d4e89, glass = 0x1c2a38;
+  // kadłub: burta, pas wodnicy (antifouling), czerwona linia burtowa
+  g.add(box(L, 9, B, white, 0, 4, 0));
+  g.add(box(L * 0.99, 1.4, B + 0.15, 0x7a1f1f, 0, 0.9, 0));
+  g.add(box(L * 0.98, 0.6, B + 0.12, navy, 0, 2.0, 0));
+  // pokład samochodowy: ciemne otwory wzdłuż burt i rufowa rampa
+  for (const s of [-1, 1]) {
+    g.add(box(L * 0.8, 2.6, 0.2, 0x252b31, -4, 5.2, s * (B / 2 + 0.05)));
+    for (let k = 0; k < 24; k++) g.add(box(1.0, 1.0, 0.15, glass, -L * 0.42 + k * 2.4 + 8, 8.3, s * (B / 2 + 0.08), { rough: 0.2, metal: 0.4 })); // iluminatory
+  }
+  g.add(box(0.6, 6, B * 0.8, 0x252b31, -L / 2 - 0.05, 5.2, 0));
+  // pokłady pasażerskie z długimi rzędami okien
+  g.add(box(L * 0.72, 6, B * 0.94, 0xf8f8f6, -8, 12.5, 0));
+  g.add(box(L * 0.62, 5, B * 0.86, 0xf8f8f6, -12, 17.5, 0));
+  for (const [y, len, w] of [[12.5, 0.7, B * 0.94], [16, 0.68, B * 0.94], [17.5, 0.6, B * 0.86], [19.6, 0.58, B * 0.86]]) {
+    for (const s of [-1, 1]) g.add(box(L * len, 1.0, 0.15, glass, -8, y, s * (w / 2 + 0.05), { rough: 0.2, metal: 0.4 }));
+  }
+  // mostek z szerokim oknem i skrzydłami
+  g.add(box(12, 5, B * 0.78, 0xf8f8f6, 24, 22, 0));
+  g.add(box(0.2, 1.8, B * 0.78 - 0.4, glass, 30.1, 22.6, 0, { rough: 0.2, metal: 0.4 }));
+  g.add(box(9, 0.6, B + 4, 0xf8f8f6, 24, 20.2, 0)); // skrzydła mostka
+  // komin z pasem i logo
+  g.add(box(9, 11, 6, white, -36, 25, 0));
+  g.add(box(9.05, 2.6, 6.05, navy, -36, 28, 0));
+  g.add(box(9.4, 0.6, 6.4, 0x222222, -36, 30.7, 0));
+  // maszt z radarem i flagą
+  g.add(box(0.4, 9, 0.4, 0xdddddd, 27, 29, 0));
+  g.add(box(4.5, 0.3, 0.9, 0x333333, 27, 33.4, 0));
+  // szalupy ratunkowe na pokładzie łodziowym (pomarańczowe)
+  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
+    g.add(box(8, 2.2, 2.6, 0xff6a13, -34 + k * 10, 16.6 + 3.4, s * (B * 0.43 + 1.4)));
+    g.add(box(8.2, 0.4, 2.8, 0xf2f2f2, -34 + k * 10, 20.2, s * (B * 0.43 + 1.4)));
+  }
+  // pomost/reling wokół górnego pokładu
+  for (const s of [-1, 1]) g.add(box(L * 0.7, 0.15, 0.15, 0xdddddd, -10, 21.2, s * B * 0.42));
+  // napis na burtach
+  const nameMat = new THREE.MeshBasicMaterial({ map: ferryNameTexture(), transparent: true, depthWrite: false });
+  for (const s of [-1, 1]) {
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(34, 4.25), nameMat);
+    pl.position.set(20, 8.6, s * (B / 2 + 0.2));
+    if (s < 0) pl.rotation.y = Math.PI;
+    pl.userData.keep = true;
+    g.add(pl);
+  }
+  // dziób: półwalec + zaostrzenie + dzwon kotwiczny
+  const bow = new THREE.Mesh(new THREE.CylinderGeometry(B / 2, B / 2, 9, 16, 1, false, 0, Math.PI), mat(white));
   bow.rotation.y = -Math.PI / 2;
   bow.position.set(L / 2, 4, 0);
   g.add(bow);
+  const bowNavy = new THREE.Mesh(new THREE.CylinderGeometry(B / 2 + 0.1, B / 2 + 0.1, 1.4, 16, 1, false, 0, Math.PI), mat(0x7a1f1f));
+  bowNavy.rotation.y = -Math.PI / 2;
+  bowNavy.position.set(L / 2, 0.9, 0);
+  g.add(bowNavy);
+  g.add(box(6, 1.2, 6, 0x9aa1a7, L / 2 - 6, 9.6, 0)); // kabestan dziobowy
+  // duże okna / kurtyna w salonie dziobowym
+  g.add(box(0.2, 2.2, B * 0.7, glass, -8 + L * 0.36 + 0.1, 14.4, 0, { rough: 0.2, metal: 0.4 }));
   g.position.set(d.x, 0, d.z);
   g.rotation.y = -d.th;
   return g;
