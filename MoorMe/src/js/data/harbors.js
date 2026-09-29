@@ -55,7 +55,7 @@ export const PORTS = {
       { id: 'breakwater', name: 'Falochron – keja wewnętrzna', a: [178, 150], b: [28, 150], quay: 'concrete', methods: ['longside'], ownU: -10 }
     ],
     starts: [
-      { id: 'entrance', name: 'Wejście do portu', x: -35, z: 228, compass: 5 },
+      { id: 'entrance', name: 'Wejście do portu (między główkami)', x: -32, z: 172, compass: 347 },
       { id: 'basin', name: 'Środek zatoki', x: -30, z: 95, compass: 80 },
       { id: 'marina', name: 'Przed mariną', x: 85, z: 125, compass: 340 }
     ],
@@ -98,7 +98,7 @@ export const PORTS = {
       { id: 'west', name: 'Pomost wzdłuż falochronu – burtą', a: [-135, 180], b: [-135, 10], quay: 'wood', methods: ['longside'], ownU: -20 }
     ],
     starts: [
-      { id: 'entrance', name: 'Podejście (kurs 19°)', x: -20, z: 240, compass: 19 },
+      { id: 'entrance', name: 'Wejście do portu (między główkami)', x: 11, z: 211, compass: 14 },
       { id: 'basin', name: 'Środek basenu', x: -60, z: 140, compass: 60 },
       { id: 'east', name: 'Wschodnia część basenu', x: 40, z: 120, compass: 300 }
     ],
