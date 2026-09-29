@@ -31,7 +31,7 @@ export class World {
     this.acc = 0;
     this.events = [];
     this.lines = [];
-    this.stats = { hullHits: 0, maxHit: 0, hardFender: 0, breaks: 0, overheat: 0, fouled: false, lassoMiss: 0 };
+    this.stats = { hullHits: 0, maxHit: 0, hardFender: 0, breaks: 0, overheat: 0, fouled: false, lassoMiss: 0, softTouch: 0, path: 0, maxTens: 0 };
     this.result = null;
     this.successTimer = 0;
     this.engineDead = false;
@@ -744,7 +744,10 @@ export class World {
           this.stats.hardFender++;
           this.log(`Mocne uderzenie w odbijacz (${(sp_ / KN).toFixed(1)} kn)`, 'warn');
           if (this.onImpact) this.onImpact(sp_, 'fender', px, pz);
-        } else if (this.onImpact) this.onImpact(sp_, 'soft', px, pz);
+        } else {
+          this.stats.softTouch++;
+          if (this.onImpact) this.onImpact(sp_, 'soft', px, pz);
+        }
       }
     };
 
@@ -890,7 +893,8 @@ export class World {
     if (line.state === 'sinking') {
       line.timer -= dt;
       // ryzyko wkręcenia muringu w śrubę
-      if (b.gear !== 0 && !this.engineDead) {
+      // pierwsze ~5 s po oddaniu muringu lina jeszcze opada – jest czas wrzucić na luz, zanim dojdzie do śruby
+      if (b.gear !== 0 && !this.engineDead && line.timer < 14 - 5) {
         const pp = localToWorld(b.x, b.z, b.th, b.xProp, 0);
         const m = line.muring;
         const c = closestOnSegment(m.pickup.x, m.pickup.z, m.anchor.x, m.anchor.z, pp.x, pp.z);
@@ -1041,6 +1045,9 @@ export class World {
   evaluate(dt) {
     if (this.result) return;
     const b = this.boat;
+    if (!this._p0) this._p0 = { x: b.x, z: b.z };
+    this.stats.path += b.speed * dt;
+    for (const l of this.lines) if (l.state === 'attached' && l.tension > this.stats.maxTens) this.stats.maxTens = l.tension;
     if (this.cfg.scenario === 'moor') {
       const e = this.berthError();
       const t = this.H.berth;
@@ -1075,9 +1082,25 @@ export class World {
     score -= s.hardFender * 5;
     score -= s.breaks * 20;
     score -= s.overheat * 5;
-    score -= s.lassoMiss * 1;
+    score -= s.lassoMiss * 1.5;
     if (s.fouled) score -= 30;
-    score -= Math.max(0, (this.time - 180) / 20);
+    score -= Math.min(10, s.softTouch * 1.5); // każdy kontakt z odbijaczem to drobna strata
+    score -= Math.min(10, Math.max(0, s.maxHit / KN - 0.3) * 4);
+    const moor = this.cfg.scenario === 'moor';
+    score -= Math.max(0, (this.time - (moor ? 100 : 70)) / 8);
+    // dokładność ustawienia względem stanowiska
+    if (moor) {
+      const e = this.berthError(), t = this.H.berth;
+      score -= Math.min(14, 6 * Math.min(2, Math.abs(e.across) / t.tolAcross) + 4 * Math.min(2, Math.abs(e.along) / t.tolAlong) + 3 * Math.min(2, Math.abs(e.dth) / t.tolTh));
+    }
+    // droga: im więcej kluczenia względem prostej trasy, tym mniej punktów
+    const p0 = this._p0 || { x: this.boat.x, z: this.boat.z };
+    const t2 = this.H.berth;
+    const ideal = Math.max(10, moor ? Math.hypot(p0.x - t2.x, p0.z - t2.z) : this.spec.loa * 2.2);
+    score -= Math.min(8, Math.max(0, s.path / ideal - 1.5) * 5);
+    // duże naprężenia lin
+    const bl = this.lineParams.breakLoad;
+    score -= s.maxTens > 0.6 * bl ? 6 : s.maxTens > 0.35 * bl ? 3 : 0;
     score = Math.round(clamp(score, 0, 100));
     this.result = { ok, score, time: this.time, stats: { ...s } };
     this.log(ok ? (this.cfg.scenario === 'moor' ? 'Zacumowano!' : 'Odcumowano – jacht wolny!') : 'Koniec', ok ? 'good' : 'bad');

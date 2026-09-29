@@ -48,9 +48,14 @@ const run = (w, s, fn) => { for (let i = 0; i < s * 240; i++) { if (fn) fn(i / 2
   const mur = w.lines.find((l) => l.isMooring);
   w.release(mur);
   check(mur.state === 'sinking', 'muring tonie');
-  w.boat.throttle = 0.6; // naprzód nad linką muringu
+  w.boat.throttle = 0.6; // bieg tuż po oddaniu: przez kilka sekund muring jeszcze opada – nie wkręca się
+  run(w, 4);
+  check(!w.engineDead, 'muring nie wkręca się w śrubę w pierwszych sekundach po oddaniu');
+  w.boat.throttle = 0; w.boat.gear = 0;
+  run(w, 3);
+  w.boat.throttle = 0.6; // dopiero potem bieg naprzód nad linką muringu
   run(w, 8);
-  check(w.engineDead && w.stats.fouled, 'muring w śrubie przy biegu naprzód tuż po oddaniu');
+  check(w.engineDead && w.stats.fouled, 'muring w śrubie przy biegu naprzód po kilku sekundach od oddania');
 }
 // 3) Zerwanie liny przy dużej sile
 {

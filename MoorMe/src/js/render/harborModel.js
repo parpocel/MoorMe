@@ -1020,8 +1020,15 @@ export class Water {
     this.tex.repeat.set(size / 22, size / 22);
     const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, specular: 0x16252d, shininess: 35, transparent: true, opacity: 0.93 });
     this.mesh = new THREE.Mesh(geo, matW);
-    this.mesh.receiveShadow = true;
     scene.add(this.mesh);
+    // cienie odbiera osobna, płaska płaszczyzna – cienie nie „falują” razem z siatką fal
+    const sg = new THREE.PlaneGeometry(size, size);
+    sg.rotateX(-Math.PI / 2);
+    sg.translate(0, 0, 100);
+    this.shadowPlane = new THREE.Mesh(sg, new THREE.ShadowMaterial({ opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    this.shadowPlane.receiveShadow = true;
+    this.shadowPlane.renderOrder = 2;
+    scene.add(this.shadowPlane);
     // dwie dodatkowe warstwy zmarszczek płynące w różnych kierunkach i skalach na tej samej siatce
     this.ripples = [0, 1].map((k) => {
       const tex = rippleTexture();
@@ -1070,6 +1077,7 @@ export class Water {
     const p = this.geo.attributes.position.array;
     const n = this.geo.attributes.normal.array;
     const a = 0.04 + Math.min(windKn, 35) * 0.0045;
+    this.shadowPlane.position.y = a * 1.4; // na wysokości typowych grzbietów fal
     const g = {};
     for (let i = 0; i < p.length; i += 3) {
       p[i + 1] = this.wave(this.base[i], this.base[i + 2], this.t, a, windDir, g);

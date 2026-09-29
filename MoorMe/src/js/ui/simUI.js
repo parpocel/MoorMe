@@ -902,6 +902,7 @@ export class SimScreen {
         h('tr', {}, h('td', {}, 'Czas manewru'), h('td', {}, `${Math.floor(r.time / 60)}:${String(Math.floor(r.time % 60)).padStart(2, '0')}`)),
         h('tr', {}, h('td', {}, 'Uderzenia kadłubem'), h('td', {}, `${s.hullHits}${s.maxHit ? ` (max ${(s.maxHit / KN).toFixed(1)} kn)` : ''}`)),
         h('tr', {}, h('td', {}, 'Mocne uderzenia w odbijacze'), h('td', {}, `${s.hardFender}`)),
+        h('tr', {}, h('td', {}, 'Lekkie kontakty z odbijaczami'), h('td', {}, `${s.softTouch || 0}`)),
         h('tr', {}, h('td', {}, 'Zerwane liny'), h('td', {}, `${s.breaks}`)),
         h('tr', {}, h('td', {}, 'Przegrzanie steru strumieniowego'), h('td', {}, `${s.overheat}`)),
         h('tr', {}, h('td', {}, 'Chybione rzuty'), h('td', {}, `${s.lassoMiss}`)),

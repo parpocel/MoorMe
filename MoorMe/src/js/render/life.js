@@ -320,8 +320,8 @@ export class HarbourLife {
     const ways = H.port.walkways || [];
     const colors = [0xd98a3d, 0x25252a, 0x8e939b, 0xf1eee6, 0x87643f, 0xe6c99a];
     this.cats = [];
-    for (let i = 0; i < 6; i++) {
-      const way = i < 3 ? berthWay : (ways.length ? ways[Math.floor(this.r() * ways.length)] : berthWay);
+    for (let i = 0; i < 3; i++) {
+      const way = i < 2 ? berthWay : (ways.length ? ways[Math.floor(this.r() * ways.length)] : berthWay);
       const len = Math.hypot(way.b[0] - way.a[0], way.b[1] - way.a[1]);
       const mesh = buildCat(colors[i % colors.length]);
       this.scene.add(mesh);
