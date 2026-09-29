@@ -492,7 +492,7 @@ function addBoatDetails(heel, root, spec, d) {
   for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * (d.split ? 0.8 : 0.55), spec.beam * (d.split ? 0.8 : 0.55) * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(nm, d.sub ?? 'Gdynia', d.split), transparent: true, depthWrite: false }));
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * (d.split ? 0.6 : 0.55), spec.beam * (d.split ? 0.6 : 0.55) * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(nm, d.sub ?? 'Gdynia', d.split), transparent: true, depthWrite: false }));
   plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
   plate.rotation.y = -Math.PI / 2;
   plate.userData.keep = true;

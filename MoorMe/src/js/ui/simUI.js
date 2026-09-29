@@ -234,7 +234,9 @@ export class SimScreen {
       fr.appendChild(btn);
     }
     panel.appendChild(fr);
-    panel.appendChild(h('h4', { style: { marginTop: '10px' } }, 'Załoga'));
+    const pool = ['Wojtek', 'Bartek', 'Babcia', 'Piotrek', 'Piotrek', 'Kinga', 'Dominika'];
+    this.crewNames = ['Kuba', pool[Math.floor(Math.random() * pool.length)]];
+    panel.appendChild(h('h4', { style: { marginTop: '10px' } }, `${this.crewNames[0]} (kapitan) · ${this.crewNames[1]}`));
     this.crewBtn = h('button.btn.sm', { style: { width: '100%' }, onclick: () => (w.crew.ashore ? w.crewAboard() : w.crewAshore()) }, 'Zejdź na ląd');
     panel.appendChild(this.crewBtn);
     return panel;

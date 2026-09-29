@@ -571,7 +571,7 @@ function ferry(d) {
   g.add(box(L * 0.98, 0.6, B + 0.12, navy, 0, 2.0, 0));
   // pokład samochodowy: ciemne otwory wzdłuż burt i rufowa rampa
   for (const s of [-1, 1]) {
-    g.add(box(L * 0.8, 2.6, 0.2, 0x252b31, -4, 5.2, s * (B / 2 + 0.05)));
+    g.add(box(L * 0.8, 3.4, 0.2, 0x252b31, -4, 5.0, s * (B / 2 + 0.05)));
     for (let k = 0; k < 24; k++) g.add(box(1.0, 1.0, 0.15, glass, -L * 0.42 + k * 2.4 + 8, 8.3, s * (B / 2 + 0.08), { rough: 0.2, metal: 0.4 })); // iluminatory
   }
   g.add(box(0.6, 6, B * 0.8, 0x252b31, -L / 2 - 0.05, 5.2, 0));
@@ -602,8 +602,8 @@ function ferry(d) {
   // napis na burtach
   const nameMat = new THREE.MeshBasicMaterial({ map: ferryNameTexture(), transparent: true, depthWrite: false });
   for (const s of [-1, 1]) {
-    const pl = new THREE.Mesh(new THREE.PlaneGeometry(34, 4.25), nameMat);
-    pl.position.set(20, 8.6, s * (B / 2 + 0.2));
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(24, 3), nameMat);
+    pl.position.set(20, 5.0, s * (B / 2 + 0.2));
     if (s < 0) pl.rotation.y = Math.PI;
     pl.userData.keep = true;
     g.add(pl);
@@ -950,6 +950,33 @@ function waterTexture() {
   return t;
 }
 
+// Półprzezroczysta warstwa drobnych zmarszczek (przesuwana osobno – daje efekt przeplatających się fal)
+function rippleTexture() {
+  const S = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const g = c.getContext('2d');
+  const r = rng(5);
+  const wrap = (fn) => { for (const dx of [-S, 0, S]) for (const dy of [-S, 0, S]) { g.save(); g.translate(dx, dy); fn(); g.restore(); } };
+  g.lineCap = 'round';
+  for (let i = 0; i < 160; i++) {
+    const x = r() * S, y = r() * S, len = 8 + r() * 22, light = r() < 0.7;
+    wrap(() => {
+      g.strokeStyle = light ? `rgba(225,245,250,${0.10 + r() * 0.14})` : `rgba(15,55,75,${0.08 + r() * 0.1})`;
+      g.lineWidth = 0.8 + r() * 1.4;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.quadraticCurveTo(x + len / 2, y - 2.5 - r() * 2, x + len, y);
+      g.stroke();
+    });
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  return t;
+}
+
 // Woda – animowana siatka z sumą kilku fal (gładkie normalne, delikatny połysk)
 const WAVES = [
   // (siatka ma ~3,5 m oczka – fale krótsze niż ~10 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
@@ -974,6 +1001,15 @@ export class Water {
     this.mesh = new THREE.Mesh(geo, matW);
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
+    // dwie dodatkowe warstwy zmarszczek płynące w różnych kierunkach i skalach na tej samej siatce
+    this.ripples = [0, 1].map((k) => {
+      const tex = rippleTexture();
+      tex.repeat.set(size / (k ? 9 : 14), size / (k ? 9 : 14));
+      const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.55, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+      m.renderOrder = 1;
+      scene.add(m);
+      return { tex, mat: m.material, k };
+    });
     // otwarte morze poza portem
     const far = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshLambertMaterial({ color: 0x2a7b98 }));
     far.rotation.x = -Math.PI / 2;
@@ -1002,6 +1038,14 @@ export class Water {
     const drift = (0.004 + Math.min(windKn, 35) * 0.0006) * dt;
     this.tex.offset.x += Math.sin(windDir) * drift;
     this.tex.offset.y += Math.cos(windDir) * drift;
+    // warstwy zmarszczek: różne kierunki, prędkości i pulsowanie krycia
+    const wsp = 0.02 + Math.min(windKn, 35) * 0.0012;
+    this.ripples.forEach((rp, i) => {
+      const dir = windDir + (i ? 1.1 : -0.7);
+      rp.tex.offset.x += Math.sin(dir) * wsp * (i ? 1.4 : 0.8) * dt;
+      rp.tex.offset.y += Math.cos(dir) * wsp * (i ? 1.4 : 0.8) * dt;
+      rp.mat.opacity = 0.38 + 0.2 * Math.sin(this.t * (0.5 + i * 0.37) + i * 2);
+    });
     const p = this.geo.attributes.position.array;
     const n = this.geo.attributes.normal.array;
     const a = 0.04 + Math.min(windKn, 35) * 0.0045;

@@ -124,11 +124,24 @@ export class Atmosphere {
     const hb = this.view.harbor;
     this.lamps = hb.lamps || [];
     for (const l of this.lamps) {
-      const s = glow(0xffd28a, 2.6);
+      const s = glow(0xffd28a, 1.2); // mała, delikatna kula wokół lampy
       s.position.set(l.x, l.y, l.z);
       s.userData.far = true; // powiększany z odległością, żeby dalekie latarnie też były widoczne
+      s.userData.dim = 0.55;
       this.scene.add(s);
       this.glows.push(s);
+    }
+    // plamy światła na ziemi pod KAŻDĄ latarnią (tanie – jedna instancjonowana siatka), niezależnie od odległości od kamery
+    if (this.lamps.length) {
+      const pg = new THREE.PlaneGeometry(1, 1);
+      pg.rotateX(-Math.PI / 2);
+      this.poolMat = new THREE.MeshBasicMaterial({ map: glowTexture(), color: 0xffc98a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      this.pools = new THREE.InstancedMesh(pg, this.poolMat, this.lamps.length);
+      const m4 = new THREE.Matrix4();
+      this.lamps.forEach((l, i) => { m4.makeScale(11, 1, 11).setPosition(l.x, l.y - 4.1 + 0.07, l.z); this.pools.setMatrixAt(i, m4); });
+      this.pools.frustumCulled = false;
+      this.pools.renderOrder = 2;
+      this.scene.add(this.pools);
     }
     // pula kilku prawdziwych świateł przypisywanych do najbliższych latarni
     this.lampLights = [0, 1, 2].map(() => {
@@ -229,15 +242,16 @@ export class Atmosphere {
       if (g.userData.mode === 'moving') k *= this.mv;
       else if (g.userData.mode === 'anchor') k *= (1 - this.mv) * this.free; // kotwiczne: tylko gdy jacht nie stoi przy kei
       g.visible = k > 0.02;
-      g.material.opacity = k;
+      g.material.opacity = k * (g.userData.dim || 1);
       let sc = g.userData.size * (0.6 + 0.4 * lightsOn);
-      if (g.userData.far) { g.getWorldPosition(wp); sc *= clamp(this.view.camera.position.distanceTo(wp) / 45, 1, 5); }
+      if (g.userData.far) { g.getWorldPosition(wp); sc *= clamp(this.view.camera.position.distanceTo(wp) / 80, 1, 3); }
       g.scale.setScalar(sc);
     }
     for (const m of this.boatWindowMats) {
       m.emissive.setHex(0xffc27a);
       m.emissiveIntensity = lightsOn * 0.28; // okna jachtów – przyciemnione
     }
+    if (this.poolMat) this.poolMat.opacity = lightsOn * 0.42;
     for (const m of this.lampMats) {
       m.emissive.setHex(0xffd890);
       m.emissiveIntensity = lightsOn * 2.2;
