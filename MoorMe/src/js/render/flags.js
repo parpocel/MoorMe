@@ -13,7 +13,6 @@ export const FLAGS = {
   ES: { h: ['#aa151b', '#f1bf00', '#f1bf00', '#aa151b'], w: [1, 1, 1, 1], ports: ['Palma', 'Barcelona', 'Vigo'] },
   PT: { v: ['#046a38', '#046a38', '#da291c'], w: [2, 1, 3], ports: ['Lisboa', 'Cascais', 'Faro'] },
   HR: { h: ['#ff0000', '#ffffff', '#171796'], ports: ['Split', 'Zadar', 'Pula'] },
-  SI: { h: ['#ffffff', '#0000ff', '#ff0000'], ports: ['Portoroz', 'Piran'] },
   LT: { h: ['#fdb913', '#006a44', '#c1272d'], ports: ['Klaipeda'] },
   LV: { h: ['#9e3039', '#ffffff', '#9e3039'], w: [2, 1, 2], ports: ['Riga', 'Liepaja'] },
   EE: { h: ['#0072ce', '#000000', '#ffffff'], ports: ['Tallinn', 'Parnu'] },

@@ -48,7 +48,7 @@ Kreator prowadzi przez cztery kroki:
   - „Załóż…” podświetla polery w zasięgu. Klikasz poler w widoku 3D albo wybierasz go z listy;
   - oko **na stałe** rzucasz z pokładu na poler z odległości do ok. 3,4 m i możesz chybić. Zdjąć je może tylko osoba na lądzie, i tylko gdy lina nie jest napięta;
   - linę **na biegowo** zakładasz z bliska (ok. 1,5 m), ale oddajesz ją z pokładu;
-  - komendy: **Wybieraj** (przytrzymaj), **Luzuj** (przytrzymaj), **Obłóż**, **Luzem**, **Oddaj**;
+  - komendy: **Wybieraj** (przytrzymaj), **Luzuj** (przytrzymaj), **Wybierz** (do napięcia), **Luz**, **Knaguj**, **Oddaj**;
   - lina rozciąga się sprężyście i zwisa, gdy ma luz. Kolor pokazuje naciąg. Po przekroczeniu wytrzymałości lina się zrywa. Z półkluzy lina może wyskoczyć, gdy ciągnie pod dużym kątem;
   - **muring**: załoga podejmuje linkę pilotową przy kei i przenosi ją na dziób (albo rufę). Oddany muring tonie przez kilka sekund. Jeśli w tym czasie włączysz bieg nad nim, lina wkręci się w śrubę.
 - **Ocena**: liczy uderzenia kadłubem, mocne uderzenia w odbijacze, zerwane liny, przegrzanie steru strumieniowego i czas. Na końcu dostajesz wynik w punktach na 100.
@@ -81,12 +81,13 @@ Dane jachtów są orientacyjne i służą ćwiczeniu. To nie jest dokumentacja p
 | Q / E | ster strumieniowy dziobowy: dziób w lewo / w prawo |
 | Z / C | ster strumieniowy rufowy: rufa w lewo / w prawo |
 | K / klik na knagę | nowa lina myszą: knaga → (kluza/półkluza) → poler |
-| klik na linę | okrągłe menu: wybieraj, obłóż, luzuj, luz, oddaj, wybierz |
+| klik na linę | okrągłe menu: wybieraj, wybierz, luzuj, luz, knaguj, oddaj |
 | O | pogoda i pora dnia w trakcie symulacji |
 | 1–9 | wybór liny |
 | B | załóż wybraną linę / podejmij muring |
 | T / G (przytrzymaj) | wybieraj / luzuj wybraną linę |
-| Y | obłóż |
+| Y | knaguj |
+| U | wybierz (do napięcia) |
 | N | oddaj |
 | L | załoga na ląd / na pokład |
 | P, Spacja | pauza |

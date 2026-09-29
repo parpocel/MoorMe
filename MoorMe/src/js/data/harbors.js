@@ -342,7 +342,7 @@ function genZone(H, Z, own, R, ctx) {
       const th = Math.atan2(F.nz, F.nx);
       for (const ue of edges) {
         const c = F.toWorld(ue, bl / 2);
-        H.structures.push(struct('boom', rectPoly(c.x, c.z, bl, 0.36, th), qh * 0.8, true, { zone: Z.id }));
+        H.structures.push(struct('boom', rectPoly(c.x, c.z, bl, 0.36, th), qh * 0.8, true, { zone: Z.id, fork: { bx: F.toWorld(ue, 0).x, bz: F.toWorld(ue, 0).z, nx: F.nx, nz: F.nz, tx: F.ax, tz: F.az, len: bl } }));
         addBollard(ue, bl - 0.35, 'ring', qh * 0.8, 'Pierścień na końcu Y-bomu', { onBoom: true });
         addBollard(ue, bl * 0.5, 'ring', qh * 0.8, 'Pierścień na Y-bomie', { onBoom: true });
       }
@@ -400,7 +400,7 @@ export function generateHarbor(opt) {
   const H = {
     port: P, portId: P.id, style: P.style, method: cfg.method, zoneId: cfg.zone,
     structures: [], bollards: [], murings: [], neighbors: [], deco: [...P.deco],
-    berth: null, starts: [], bounds: P.bounds
+    berth: null, starts: [], bounds: P.bounds, seed: opt.seed || 7
   };
   for (const s of P.structures) H.structures.push(struct(s.kind, s.poly, s.h, !!s.walk, { style: s.style, edges: s.edges }));
   const ctx = { bid: 0 };

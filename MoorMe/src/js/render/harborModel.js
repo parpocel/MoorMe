@@ -1,6 +1,6 @@
 // Scenografia portu: keje, pomosty, polery, dalby, Y-bomy, falochron, zabudowa, zieleń, sąsiednie jachty
 import * as THREE from 'three';
-import { mat, buildBoat } from './boatModel.js';
+import { mat, buildBoat, createFlag, createNamePlate } from './boatModel.js';
 import { FLAGS, FLAG_CODES } from './flags.js';
 import { mergeByMaterial } from './merge.js';
 import { rng } from '../math.js';
@@ -669,7 +669,8 @@ function sagLine(a, b, sag, color = 0xf0ede4) {
   return m;
 }
 
-const NEIGHBOR_NAMES = ['Sea Breeze', 'Blue Horizon', 'Wind Dancer', 'Salty Dog', 'Northern Star', 'Lady Grace', 'Free Spirit', 'Windsong', 'Sea Hawk', 'Silver Wake', 'Morning Star', 'Happy Days', 'Ocean Pearl', 'Wanderer', 'Blue Moon', 'Sunset Rider'];
+const NAME_ADJ = ['Blue', 'Silver', 'Happy', 'Salty', 'Northern', 'Lucky', 'Wild', 'Golden', 'Swift', 'Quiet', 'Brave', 'Bright', 'Lazy', 'Proud', 'Morning', 'Evening', 'Red', 'White', 'Fair', 'Merry'];
+const NAME_NOUN = ['Breeze', 'Horizon', 'Dancer', 'Dog', 'Star', 'Lady', 'Spirit', 'Song', 'Hawk', 'Wake', 'Pearl', 'Wanderer', 'Moon', 'Rider', 'Gull', 'Wave', 'Dolphin', 'Anchor', 'Compass', 'Voyager', 'Tern', 'Harbour', 'Tide', 'Sail', 'Sparrow'];
 const NEIGHBOR_CANVAS = [0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
 
 // ---------- Scenografia: Adriatyk ----------
@@ -803,16 +804,27 @@ export function buildHarbor(H, scene) {
 
   for (const s of H.structures) {
     if (s.kind === 'boom') {
-      group.add(extrudePoly(s.poly, s.h, s.h - 0.25, mat(0xb9c0c8, { metal: 0.5, rough: 0.4 })));
-      // pływaki wzdłuż bomu
-      const [p0, p1, , p3] = s.poly;
-      const len = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
-      const cx = (p0[0] + p3[0]) / 2, cz = (p0[1] + p3[1]) / 2;
-      const ux = (p1[0] - p0[0]) / len, uz = (p1[1] - p0[1]) / len;
-      for (let t = 1.5; t < len; t += 3) {
-        const f = box(0.9, 0.45, 0.5, 0xf4f4f4, cx + ux * t, 0.02, cz + uz * t);
-        f.rotation.y = -Math.atan2(uz, ux);
-        group.add(f);
+      const bm = mat(0xb9c0c8, { metal: 0.5, rough: 0.4 });
+      const f = s.fork;
+      const fv = 3.2; // od tego miejsca bom rozwidla się w „Y” ku pomostowi
+      const P = (a, b2) => [f.bx + f.nx * a + f.tx * b2, f.bz + f.nz * a + f.tz * b2];
+      group.add(extrudePoly([P(fv, -0.18), P(f.len, -0.18), P(f.len, 0.18), P(fv, 0.18)], s.h, s.h - 0.25, bm));
+      // dwa ramiona rozwidlenia opierające się o pomost
+      for (const sd of [-1, 1]) {
+        const a0 = P(fv, 0), a1 = P(0.15, sd * 0.6);
+        const dx = a1[0] - a0[0], dz = a1[1] - a0[1], len = Math.hypot(dx, dz);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(len + 0.1, 0.25, 0.3), bm);
+        arm.position.set((a0[0] + a1[0]) / 2, s.h - 0.125, (a0[1] + a1[1]) / 2);
+        arm.rotation.y = -Math.atan2(dz, dx);
+        arm.castShadow = true;
+        group.add(arm);
+      }
+      // pływaki wzdłuż pnia
+      for (let t = fv + 1.2; t < f.len; t += 3) {
+        const p = P(t, 0);
+        const fl = box(0.9, 0.45, 0.5, 0xf4f4f4, p[0], 0.02, p[1]);
+        fl.rotation.y = -Math.atan2(f.nz, f.nx);
+        group.add(fl);
       }
       continue;
     }
@@ -868,21 +880,30 @@ export function buildHarbor(H, scene) {
   if (H.style === 'med') sceneryMed(group, r, lamps);
   else sceneryBaltic(group, r, lamps);
 
-  // sąsiednie jachty i ich cumy
+  // sąsiednie jachty i ich cumy (kadłub wspólny dla typu i koloru; nazwa, port i bandera – osobno dla każdego, bez powtórzeń nazw)
   const boatCache = new Map();
+  const rn = rng((H.seed || 7) * 31 + 5);
+  const names = [];
+  for (const a of NAME_ADJ) for (const n of NAME_NOUN) if (a !== n) names.push(`${a} ${n}`);
+  for (let i = names.length - 1; i > 0; i--) { const j = Math.floor(rn() * (i + 1)); [names[i], names[j]] = [names[j], names[i]]; }
+  const neighborFlags = [];
   H.neighbors.forEach((n, i) => {
-    const variant = (i * 5 + ((H.seed || 0) % 7)) % 8; // 8 wariantów nazwa/bandera (mniej budowania modeli)
-    const key = n.spec.id + '_' + n.color + '_' + variant;
+    const key = n.spec.id + '_' + n.color;
     let proto = boatCache.get(key);
     if (!proto) {
-      const code = FLAG_CODES[(variant * 7 + (H.seed || 0)) % FLAG_CODES.length];
-      const ports = FLAGS[code].ports;
-      const built = buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[(variant * 3 + n.spec.id.charCodeAt(2)) % NEIGHBOR_NAMES.length], sub: ports[variant % ports.length], flag: code });
+      const built = buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], noPlate: true, noFlag: true });
       proto = mergeByMaterial(built);
       proto.userData.perches = built.userData.perches;
       boatCache.set(key, proto);
     }
     const b = proto.clone();
+    const code = FLAG_CODES[Math.floor(rn() * FLAG_CODES.length)];
+    const ports = FLAGS[code].ports;
+    b.add(createNamePlate(n.spec, names[i % names.length], ports[Math.floor(rn() * ports.length)], false));
+    const flag = createFlag(n.spec, code);
+    b.add(flag);
+    n._flag = flag;
+    n._flagPhase = rn() * 6;
     b.position.set(n.x, 0, n.z);
     b.rotation.y = -n.th;
     b.userData.bobPhase = r() * 6;
@@ -1059,6 +1080,10 @@ export class Water {
     }
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.normal.needsUpdate = true;
+  }
+  // wysokość narysowanej powierzchni (do unoszących się obiektów)
+  surfaceY(x, z, windKn, windDir) {
+    return this.wave(x, z, this.t, 0.04 + Math.min(windKn, 35) * 0.0045, windDir);
   }
   heightAt(x, z, windKn, windDir) {
     const a = 0.03 + Math.min(windKn, 35) * 0.0032;

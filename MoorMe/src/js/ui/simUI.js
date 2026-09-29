@@ -316,9 +316,10 @@ export class SimScreen {
         case 'attached':
           acts.append(
             holdBtn('⬆ Wybieraj', 'haul', 'Przytrzymaj (T)'),
+            btn('⤒ Wybierz', () => w.setTending(line, 'take'), line.tending === 'take' ? 'on' : '', 'Wybieraj do momentu napięcia liny (U)'),
             holdBtn('⬇ Luzuj', 'ease', 'Przytrzymaj (G)'),
-            btn('Obłóż', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '', 'Zablokuj długość (Y)'),
-            btn('Luzem', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '', 'Puść linę luzem'),
+            btn('Luz', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '', 'Puść linę luzem'),
+            btn('Knaguj', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '', 'Zablokuj długość (Y)'),
             btn('✋ Oddaj', () => w.release(line), 'danger', 'Oddaj / zdejmij linę (N)')
           );
           if (!line.isMooring && w.crew.ashore) acts.append(btn('⇄ tryb', () => w.toggleMode(line), '', 'Załoga na kei przekłada linę'));
@@ -493,9 +494,10 @@ export class SimScreen {
     const tend = (mode) => (hold) => { w.setTending(line, mode); this._radialHold = hold ? { line, mode } : null; };
     if (line.state === 'attached') {
       act('Wybieraj', '⬆', tend('haul'), line.tending === 'haul' ? 'on' : '');
-      act('Obłóż', '■', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '');
+      act('Wybierz', '⤒', () => w.setTending(line, 'take'), line.tending === 'take' ? 'on' : '');
       act('Luzuj', '⬇', tend('ease'), line.tending === 'ease' ? 'on' : '');
       act('Luz', '〰', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '');
+      act('Knaguj', '■', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '');
       act('Oddaj', '✋', () => w.release(line), 'danger');
     } else if (line.state === 'onQuay') {
       act('Podejmij', '⚓', () => w.pickupMooring(line));
@@ -692,6 +694,7 @@ export class SimScreen {
       case 'KeyY': if (line) w.setTending(line, 'hold'); break;
       case 'KeyT': if (line && line.state === 'attached') w.setTending(line, 'haul'); break;
       case 'KeyG': if (line && line.state === 'attached') w.setTending(line, 'ease'); break;
+      case 'KeyU': if (line && line.state === 'attached') w.setTending(line, 'take'); break;
       default:
         if (/^Digit[1-9]$/.test(e.code)) {
           const i = +e.code.slice(5) - 1;

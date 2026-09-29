@@ -1,7 +1,8 @@
 // Życie w porcie: mewy (latają, siadają na salingach i polerach), spacerowicze, motorówka w oddali
 import * as THREE from 'three';
-import { mat, buildPerson } from './boatModel.js';
-import { rng, clamp } from '../math.js';
+import { mat, buildPerson, sheerHeight } from './boatModel.js';
+import { hullExtents } from '../data/boats.js';
+import { rng, clamp, distToPoly } from '../math.js';
 
 const V = () => new THREE.Vector3();
 
@@ -42,6 +43,32 @@ function buildGull() {
   g.userData = { wings, legs };
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   g.scale.setScalar(1.35);
+  return g;
+}
+
+function buildCat(color) {
+  const g = new THREE.Group();
+  const fur = mat(color, { rough: 1 });
+  const dark = mat(0x222222);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.16, 0.38), fur); body.position.y = 0.2;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.13, 0.13), fur); head.position.set(0, 0.27, 0.24);
+  const nose = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.02), dark); nose.position.set(0, 0.26, 0.31);
+  g.add(body, head, nose);
+  for (const s of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 4), fur); ear.position.set(s * 0.045, 0.35, 0.24); g.add(ear);
+    const eye = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.01), dark); eye.position.set(s * 0.035, 0.29, 0.31); g.add(eye);
+  }
+  const tail = new THREE.Group();
+  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.32), fur); tb.position.z = -0.16; tail.add(tb);
+  tail.position.set(0, 0.26, -0.19); tail.rotation.x = -0.6;
+  g.add(tail);
+  const legs = [];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.045), fur); l.position.set(sx * 0.055, 0.065, sz * 0.13); g.add(l); legs.push(l);
+  }
+  g.userData = { tail, legs, body };
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  g.scale.setScalar(1.15);
   return g;
 }
 
@@ -87,6 +114,7 @@ export class HarbourLife {
     this.onCry = null;
     this.buildGulls();
     this.buildPeople();
+    this.buildCats();
     this.buildMotorboat();
   }
 
@@ -280,6 +308,122 @@ export class HarbourLife {
     }
   }
 
+  // ---------- Koty na kejach: wskakują na pokład aktywnego jachtu, gdy przechodzą obok ----------
+  buildCats() {
+    const w = this.world, H = w.H, b = H.berth, F = b.frame;
+    // odcinek keji przy stanowisku (koty chodzą tam, gdzie stoi nasz jacht)
+    const seg = (uA, uB, v, y) => {
+      const A = F.toWorld(uA, v), B = F.toWorld(uB, v);
+      return { a: [A.x, A.z], b: [B.x, B.z], y };
+    };
+    const berthWay = seg(b.u - 22, b.u + 22, -0.9, H.quay.height);
+    const ways = H.port.walkways || [];
+    const colors = [0xd98a3d, 0x25252a, 0x8e939b, 0xf1eee6, 0x87643f, 0xe6c99a];
+    this.cats = [];
+    for (let i = 0; i < 6; i++) {
+      const way = i < 3 ? berthWay : (ways.length ? ways[Math.floor(this.r() * ways.length)] : berthWay);
+      const len = Math.hypot(way.b[0] - way.a[0], way.b[1] - way.a[1]);
+      const mesh = buildCat(colors[i % colors.length]);
+      this.scene.add(mesh);
+      const c = { mesh, way, len, t: this.r() * len, tt: 0, off: (this.r() - 0.5) * 0.5, speed: 0.5 + this.r() * 0.5, wait: this.r() * 5, phase: this.r() * 6, state: 'walk', cool: 5 + this.r() * 20 };
+      c.tt = c.t;
+      this.cats.push(c);
+    }
+    this.catDeck = null;
+  }
+
+  catPos(c) {
+    const w = c.way, ux = (w.b[0] - w.a[0]) / c.len, uz = (w.b[1] - w.a[1]) / c.len;
+    return { x: w.a[0] + ux * c.t - uz * c.off, z: w.a[1] + uz * c.t + ux * c.off, ux, uz };
+  }
+
+  deckSpot() {
+    const spec = this.world.spec, { xs } = hullExtents(spec);
+    const x = xs + 0.2 * spec.loa;
+    return new THREE.Vector3(x, sheerHeight(spec, x) + 0.05, spec.beam * 0.22); // kokpit, burta sterburtowa
+  }
+
+  updateCats(dt) {
+    const w = this.world, boat = w.boat, heel = this.view.boat.userData.heel;
+    const poly = w.boatPolyWorld();
+    const slow = boat.speed < 0.5;
+    for (const c of this.cats) {
+      c.cool -= dt;
+      const m = c.mesh, ud = m.userData;
+      ud.tail.rotation.y = Math.sin(this.t * 2 + c.phase) * 0.4;
+      if (c.state === 'walk') {
+        const q = this.catPos(c);
+        if (c.wait > 0) {
+          c.wait -= dt;
+          m.position.set(q.x, c.way.y, q.z);
+          // siedzi: obniżony zad
+          ud.body.rotation.x = -0.25; ud.body.position.y = 0.16;
+        } else {
+          ud.body.rotation.x = 0; ud.body.position.y = 0.2;
+          const d = c.tt - c.t;
+          if (Math.abs(d) < 0.15) {
+            c.tt = clamp(c.t + (this.r() - 0.5) * 24, 0.5, c.len - 0.5);
+            c.wait = this.r() < 0.6 ? 2 + this.r() * 9 : 0;
+          } else {
+            const s = Math.sign(d) * Math.min(Math.abs(d), c.speed * dt);
+            c.t += s; c.phase += dt * c.speed * 9;
+            const q2 = this.catPos(c);
+            m.position.set(q2.x, c.way.y + Math.abs(Math.sin(c.phase)) * 0.02, q2.z);
+            m.rotation.y = Math.atan2(q2.ux * Math.sign(s), q2.uz * Math.sign(s));
+          }
+        }
+        // blisko aktywnego jachtu? -> wskakuje na pokład
+        if (slow && c.cool <= 0) {
+          const dist = distToPoly(poly, m.position.x, m.position.z).dist;
+          if (dist < 3.2 && !this.cats.some((o) => o !== c && (o.state === 'jump' || o.state === 'aboard') && o.aboard)) {
+            c.state = 'jump'; c.aboard = true; c.u = 0; c.from = m.position.clone(); c.dir = 1;
+          }
+        }
+      } else if (c.state === 'jump') {
+        c.u += dt / 0.85;
+        const u = Math.min(1, c.u);
+        let to;
+        if (c.dir > 0) { to = heel.localToWorld(this.deckSpot()); }
+        else to = c.landing;
+        m.position.lerpVectors(c.from, to, u);
+        m.position.y += Math.sin(Math.PI * u) * 0.9;
+        m.rotation.y = Math.atan2(to.x - c.from.x, to.z - c.from.z);
+        ud.body.rotation.x = -0.3 * Math.sin(Math.PI * u);
+        if (u >= 1) {
+          if (c.dir > 0) {
+            c.state = 'aboard'; c.timer = 25 + this.r() * 35;
+            this.scene.remove(m); heel.add(m);
+            m.position.copy(this.deckSpot()); m.rotation.set(0, this.r() * 6, 0);
+          } else {
+            c.state = 'walk'; c.aboard = false; c.cool = 40 + this.r() * 40; c.wait = 3;
+            // ustaw parametr t na ścieżce najbliżej lądowania
+            const wy = c.way, ux = (wy.b[0] - wy.a[0]) / c.len, uz = (wy.b[1] - wy.a[1]) / c.len;
+            c.t = clamp((m.position.x - wy.a[0]) * ux + (m.position.z - wy.a[1]) * uz, 0.5, c.len - 0.5);
+            c.tt = c.t;
+          }
+        }
+      } else if (c.state === 'aboard') {
+        // siedzi na pokładzie, czasem rozgląda się
+        m.rotation.y += Math.sin(this.t * 0.7 + c.phase) * dt * 0.5;
+        ud.body.rotation.x = -0.25; ud.body.position.y = 0.16;
+        c.timer -= dt;
+        if (c.timer <= 0 && slow) {
+          // zeskok na najbliższy punkt swojej ścieżki, jeśli jest w zasięgu
+          const wp = new THREE.Vector3(); m.getWorldPosition(wp);
+          const wy = c.way, ux = (wy.b[0] - wy.a[0]) / c.len, uz = (wy.b[1] - wy.a[1]) / c.len;
+          const t = clamp((wp.x - wy.a[0]) * ux + (wp.z - wy.a[1]) * uz, 0.5, c.len - 0.5);
+          const lx = wy.a[0] + ux * t - uz * c.off, lz = wy.a[1] + uz * t + ux * c.off;
+          if (Math.hypot(lx - wp.x, lz - wp.z) < 5) {
+            heel.remove(m); this.scene.add(m);
+            m.position.copy(wp);
+            c.from = wp.clone(); c.landing = new THREE.Vector3(lx, wy.y, lz); c.state = 'jump'; c.dir = -1; c.u = 0;
+            ud.body.position.y = 0.2;
+          } else c.timer = 6;
+        }
+      }
+    }
+  }
+
   // ---------- Motorówka w oddali ----------
   buildMotorboat() {
     this.moto = buildMotorboat();
@@ -309,6 +453,7 @@ export class HarbourLife {
     this.t += dt;
     for (const g of this.gulls) this.updateGull(g, dt);
     this.updatePeople(dt);
+    this.updateCats(dt);
     this.updateMotorboat(dt);
     // okazjonalny krzyk mewy w locie
     if (this.onCry && this.r() < dt * 0.06) this.onCry(this.gulls[Math.floor(this.r() * this.gulls.length)].pos);

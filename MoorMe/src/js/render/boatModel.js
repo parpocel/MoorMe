@@ -191,6 +191,32 @@ export const LINE_MATS = {
   halyard: { mat: new THREE.LineBasicMaterial({ color: 0xd8d2c0 }), base: 0xd8d2c0 }
 };
 
+// Bandera na rufie (grupa: obrót wokół pionowego drzewca ustawia się według wiatru)
+export function createFlag(spec, code) {
+  const { xs } = hullExtents(spec);
+  const flag = new THREE.Group();
+  const fg = new THREE.PlaneGeometry(0.6, 0.4);
+  fg.rotateY(Math.PI / 2);
+  fg.translate(0, 0, -0.3);
+  const fm = new THREE.Mesh(fg, flagMaterial(code));
+  fm.userData.keep = true; // nie scalać – ma własny materiał z teksturą
+  flag.add(fm);
+  flag.position.set(xs - 0.2, sheerHeight(spec, xs + 0.03 * spec.loa) + 1.2, spec.beam * 0.3);
+  flag.rotation.y = Math.PI / 2;
+  return flag;
+}
+
+// Tabliczka z nazwą na pawęży
+export function createNamePlate(spec, name, sub, split = false) {
+  const { xs } = hullExtents(spec);
+  const w = spec.beam * (split ? 0.6 : 0.55);
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(name, sub, split), transparent: true, depthWrite: false }));
+  plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
+  plate.rotation.y = -Math.PI / 2;
+  plate.userData.keep = true;
+  return plate;
+}
+
 export function buildBoat(spec, opts = {}) {
   const hullColor = opts.color ?? spec.color;
   const stripe = opts.stripe ?? spec.stripe;
@@ -313,7 +339,7 @@ export function buildBoat(spec, opts = {}) {
   rg.setAttribute('position', new THREE.Float32BufferAttribute(rigPos, 3));
   heel.add(new THREE.LineSegments(rg, LINE_MATS.rig.mat));
   // zrolowany genua na sztagu
-  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.13, opts.canvas ?? COL.canvas, 12);
+  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.085, opts.canvas ?? COL.canvas, 12);
   gen.scale.set(1, 0.9, 1);
   heel.add(gen);
   // windex i światło topowe
@@ -352,21 +378,13 @@ export function buildBoat(spec, opts = {}) {
   // bandera na rufie
   const flagStaff = strut([xs + 0.1, fbC + 0.2, spec.beam * 0.3], [xs - 0.2, fbC + 1.3, spec.beam * 0.3], 0.015, COL.teak);
   heel.add(flagStaff);
-  const flag = new THREE.Group();
-  const fg = new THREE.PlaneGeometry(0.6, 0.4);
-  fg.rotateY(Math.PI / 2);
-  fg.translate(0, 0, -0.3);
-  const fm = new THREE.Mesh(fg, flagMaterial(opts.flag || 'DE'));
-  fm.userData.keep = true; // nie scalać – ma własny materiał z teksturą
-  flag.add(fm);
-  flag.position.set(xs - 0.2, fbC + 1.2, spec.beam * 0.3);
-  flag.rotation.y = Math.PI / 2;
-  heel.add(flag);
+  const flag = createFlag(spec, opts.flag || 'DE');
+  if (!opts.noFlag) heel.add(flag);
   root.userData.flag = flag;
   // platforma kąpielowa (opuszczana pawęż)
   heel.add(box(0.5, 0.08, spec.beam * 0.7, COL.teak, xs - 0.2, 0.35, 0));
 
-  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split });
+  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split, noPlate: opts.noPlate });
 
   root.userData.heel = heel;
   root.userData.spec = spec;
@@ -492,11 +510,7 @@ function addBoatDetails(heel, root, spec, d) {
   for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * (d.split ? 0.6 : 0.55), spec.beam * (d.split ? 0.6 : 0.55) * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(nm, d.sub ?? 'Gdynia', d.split), transparent: true, depthWrite: false }));
-  plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
-  plate.rotation.y = -Math.PI / 2;
-  plate.userData.keep = true;
-  heel.add(plate);
+  if (!d.noPlate) heel.add(createNamePlate(spec, nm, d.sub ?? 'Gdynia', d.split));
   // fały wzdłuż masztu
   const hp = [];
   for (const dz of [-0.06, 0.06]) hp.push(d.mastX + 0.1, d.topY + 1.2, dz, d.mastX + 0.1, d.mtop - 0.3, dz);

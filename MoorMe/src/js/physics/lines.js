@@ -18,10 +18,11 @@ export const LINE_STATE_LABEL = {
 };
 
 export const TENDING_LABEL = {
-  hold: 'Obłożona',
+  hold: 'Zaknagowana',
   haul: 'Wybieranie',
+  take: 'Wybieranie do napięcia',
   ease: 'Luzowanie',
-  free: 'Luzem'
+  free: 'Luz'
 };
 
 export function breakLoadFor(spec) {
@@ -101,6 +102,13 @@ export function tendLine(line, dt, params) {
       const load = line.tension / cap;
       const f = line.tension < 50 ? 1.6 : clamp(1 - load, 0, 1);
       line.rest -= spd * f * dt * parts;
+      break;
+    }
+    case 'take': {
+      // wybieraj aż lina się napnie, potem zaknaguj
+      if (line.tension > 250) { line.tending = 'hold'; break; }
+      const spd = line.winch ? params.winchSpeed : params.handSpeed;
+      line.rest -= spd * 1.6 * dt * parts;
       break;
     }
     case 'ease':

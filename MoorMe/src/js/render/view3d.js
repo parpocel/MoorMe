@@ -1,5 +1,6 @@
 // Widok 3D symulacji (kamera w rzucie izometrycznym jak w grach RTS)
 import * as THREE from 'three';
+import { Seasick } from './seasick.js';
 import { buildBoat, buildDeckGear, buildFender, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
@@ -98,7 +99,8 @@ export class View3D {
       shape.holes.push(hole);
       const rg = new THREE.ShapeGeometry(shape);
       rg.rotateX(-Math.PI / 2);
-      this.selRing = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x5ee0ff, transparent: true, opacity: 0.8, depthWrite: false }));
+      this.selRing = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x5ee0ff, transparent: true, opacity: 0.8, depthWrite: false, depthTest: false }));
+      this.selRing.renderOrder = 8; // zawsze widoczny – fale go nie zasłaniają
       this.selRing.position.y = 0.07;
       this.boat.add(this.selRing);
     }
@@ -163,6 +165,7 @@ export class View3D {
     this.windStreaks = this.makeWindStreaks();
     scene.add(this.windStreaks);
 
+    this.seasick = new Seasick(this);
     // życie w porcie: mewy, spacerowicze, motorówka
     this.life = new HarbourLife(this);
     // pora dnia i pogoda
@@ -186,12 +189,14 @@ export class View3D {
     const pts = out.map(([x, y]) => new THREE.Vector3(x, 0.05, y));
     pts.push(pts[0].clone());
     const g = new THREE.BufferGeometry().setFromPoints(pts);
-    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.9 }));
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.9, depthTest: false }));
+    line.renderOrder = 8;
     const grp = new THREE.Group();
     grp.add(line);
     const shape = new THREE.Shape();
     out.forEach(([x, y], i) => (i ? shape.lineTo(x, -y) : shape.moveTo(x, -y)));
-    const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.16, depthWrite: false }));
+    const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.16, depthWrite: false, depthTest: false }));
+    fill.renderOrder = 7;
     fill.rotation.x = -Math.PI / 2;
     fill.position.y = 0.04;
     grp.add(fill);
@@ -562,6 +567,17 @@ export class View3D {
     this.updateRopes();
     this.boat.updateMatrixWorld(true);
     this.updateCrewTags();
+    this.seasick.update(dt);
+    // bandery sąsiadów łopoczą zgodnie z wiatrem
+    {
+      const wv = w.env.windVec(), wsp = Math.hypot(wv.x, wv.z);
+      for (const n of w.H.neighbors) {
+        if (!n._flag) continue;
+        const c = Math.cos(n.th), s = Math.sin(n.th);
+        const mx = wv.x * c + wv.z * s, mz = -wv.x * s + wv.z * c;
+        n._flag.rotation.y = Math.atan2(-mx, -mz) + Math.sin(t * 5 + n._flagPhase) * Math.min(0.35, 0.05 + wsp * 0.02);
+      }
+    }
     this.life.update(dt);
 
     // znacznik stanowiska
