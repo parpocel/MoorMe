@@ -34,7 +34,7 @@ function createWindow() {
       const wait = (ms) => new Promise((r) => setTimeout(r, ms));
       // przejście kreatora: tytuł -> 4 kroki -> symulacja
       for (let i = 0; i < 5; i++) {
-        await win.webContents.executeJavaScript(`document.querySelector('.btn.primary').click()`);
+        await win.webContents.executeJavaScript(`document.querySelector('.btn.primary, .tbtn.main').click()`);
         await wait(400);
       }
       await wait(3000);
