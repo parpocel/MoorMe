@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { cachedMaterials, sheerHeight } from './boatModel.js';
 import { hullExtents, halfBeamAt } from '../data/boats.js';
+import { LINE_MATS } from './boatModel.js';
 import { clamp, DEG, rng } from '../math.js';
 
 export const SKIES = {
@@ -212,6 +213,9 @@ export class Atmosphere {
     // woda przygaszona przy szarym niebie
     const wm = v.water.mesh.material;
     wm.color.copy(lerpC(C(0xffffff), C(0x9fa9b0), sky.grey * (this.sky === 'fog' ? 0.9 : 0.6)));
+
+    // relingi i wanty: stalowe, nocą prawie czarne (bez świecenia)
+    for (const l of Object.values(LINE_MATS)) l.mat.color.setHex(l.base).multiplyScalar(1 - 0.9 * night);
 
     this.stars.material.opacity = night * (1 - sky.grey) * 0.9;
     this.stars.position.set(cam.tx, 0, cam.tz);

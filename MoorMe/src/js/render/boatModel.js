@@ -183,6 +183,12 @@ function buildCabin(spec) {
   return g;
 }
 
+// Linie (relingi, wanty) nie reagują na oświetlenie – Atmosphere przyciemnia je nocą, żeby nie świeciły
+export const LINE_MATS = {
+  rail: { mat: new THREE.LineBasicMaterial({ color: 0xb8bec5 }), base: 0xb8bec5 },
+  rig: { mat: new THREE.LineBasicMaterial({ color: 0x3a3f44 }), base: 0x3a3f44 }
+};
+
 export function buildBoat(spec, opts = {}) {
   const hullColor = opts.color ?? spec.color;
   const stripe = opts.stripe ?? spec.stripe;
@@ -267,16 +273,6 @@ export function buildBoat(spec, opts = {}) {
     heel.add(box(0.12, wheelR + 0.25, 0.12, 0xe8e6e1, ck0 + 0.55, fbC + (wheelR + 0.25) / 2, s * spec.beam * 0.27));
     root.userData.wheels.push(wg);
   }
-  // sprayhood
-  const shg = new THREE.CylinderGeometry(0.85, 0.85, halfBeamAt(spec, cabin.userData.x0) * 1.15, 8, 1, true, 0, Math.PI);
-  shg.rotateX(Math.PI / 2);
-  shg.rotateZ(Math.PI / 2);
-  const sh = new THREE.Mesh(shg, mat(COL.canvas, { side: THREE.DoubleSide }));
-  sh.scale.set(1.0, 0.75, 1);
-  sh.position.set(cabin.userData.x0 + 0.15, cabin.userData.topY - 0.08, 0);
-  sh.castShadow = true;
-  heel.add(sh);
-
   // maszt, bom, olinowanie
   const mastX = 0.1 * L;
   const mastH = spec.mastHeight - spec.freeboard;
@@ -310,7 +306,7 @@ export function buildBoat(spec, opts = {}) {
   rig.forEach(([a, b]) => rigPos.push(...a, ...b));
   const rg = new THREE.BufferGeometry();
   rg.setAttribute('position', new THREE.Float32BufferAttribute(rigPos, 3));
-  heel.add(new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: 0x3a3f44 })));
+  heel.add(new THREE.LineSegments(rg, LINE_MATS.rig.mat));
   // zrolowany genua na sztagu
   const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.13, opts.canvas ?? COL.canvas, 6);
   gen.scale.set(1, 0.9, 1);
@@ -344,7 +340,7 @@ export function buildBoat(spec, opts = {}) {
   railPos.push(pb, pY, -halfBeamAt(spec, pb) + 0.06, xb - 0.1, pY, 0, xb - 0.1, pY, 0, pb, pY, halfBeamAt(spec, pb) - 0.06);
   const rlg = new THREE.BufferGeometry();
   rlg.setAttribute('position', new THREE.Float32BufferAttribute(railPos, 3));
-  heel.add(new THREE.LineSegments(rlg, new THREE.LineBasicMaterial({ color: 0xb8bec5 })));
+  heel.add(new THREE.LineSegments(rlg, LINE_MATS.rail.mat));
 
   // kotwica na rolce
   heel.add(box(0.5, 0.12, 0.2, COL.metal, xb + 0.1, sheerHeight(spec, xb) + 0.05, 0, { metal: 0.8, rough: 0.3 }));
