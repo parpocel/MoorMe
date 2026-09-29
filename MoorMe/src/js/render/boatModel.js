@@ -288,7 +288,7 @@ export function buildBoat(spec, opts = {}) {
   heel.add(box(0.9, 0.06, 0.55, COL.teak, ck1 - (ck1 - ck0) * 0.45, fbC + 0.75, 0));
   heel.add(box(0.12, 0.7, 0.12, COL.metal, ck1 - (ck1 - ck0) * 0.45, fbC + 0.4, 0));
   // podwójne koła sterowe
-  const wheelR = 0.45 + L * 0.02;
+  const wheelR = 0.3 + L * 0.008; // małe koło – nie zasłania widoku kapitana
   root.userData.wheels = [];
   for (const s of [-1, 1]) {
     const wg = new THREE.Group();
