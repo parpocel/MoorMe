@@ -607,6 +607,18 @@ export class World {
     this.log(`${line.name}: oddanie anulowane – lina zostaje założona`);
   }
 
+  // Wybór „na stałe” / „na biegowo” w dowolnym momencie: przygotowana, w kolejce, w trakcie zakładania albo już założona
+  setMode(line, mode) {
+    if (line.isMooring || line.mode === mode) return;
+    if (line.state === 'ready' || line.state === 'queued') { this.toggleMode(line); return; }
+    if (line.state === 'pending') {
+      line.mode = mode;
+      this.log(`${line.name}: będzie założona ${mode === 'slip' ? 'na biegowo' : 'na stałe'}`);
+      return;
+    }
+    if (line.state === 'attached') this.toggleMode(line); // załoga przekłada linę (zejdzie na ląd, jeśli może)
+  }
+
   // Przełożenie liny na biegowo / na stałe (tylko gdy przygotowana)
   toggleMode(line) {
     if (line.isMooring) return;

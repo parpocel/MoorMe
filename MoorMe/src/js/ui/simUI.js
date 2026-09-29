@@ -290,7 +290,6 @@ export class SimScreen {
           if (line.plannedTarget) acts.append(btn(`⚓ Załóż na ${line.plannedTarget.label}`, () => this.attachOrPick(line), 'on', 'Załóż na wskazany poler (B)'));
           acts.append(
             btn(line.plannedTarget ? 'Inny poler…' : '⚓ Załóż…', () => this.startPick(line), line.plannedTarget ? '' : 'on', 'Wybierz poler / knagę / dalbę'),
-            btn(line.mode === 'slip' ? '⇄ na stałe' : '⇄ na biegowo', () => w.toggleMode(line), '', 'Zmień sposób mocowania'),
             btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }, '', 'Obsługa na kabestanie'),
             btn('−2 m', () => { line.length = Math.max(4, line.length - 2); line.rest = line.length; }),
             btn('+2 m', () => { line.length = Math.min(40, line.length + 2); line.rest = line.length; }),
@@ -304,7 +303,6 @@ export class SimScreen {
           break;
         case 'queued':
           acts.append(btn('Anuluj', () => w.release(line)), btn('Inny poler…', () => { w.release(line); this.startPick(line); }));
-          if (!line.isMooring) acts.append(btn(line.mode === 'slip' ? '⇄ na stałe' : '⇄ na biegowo', () => w.toggleMode(line), '', 'Zmień sposób mocowania (załoga założy linę tak, jak ustawisz)'));
           acts.append(btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }));
           break;
         case 'pending':
@@ -322,7 +320,6 @@ export class SimScreen {
             btn('Knaguj', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '', 'Zablokuj długość (Y)'),
             btn('✋ Oddaj', () => w.release(line), 'danger', 'Oddaj / zdejmij linę (N)')
           );
-          if (!line.isMooring && w.crew.ashore) acts.append(btn('⇄ tryb', () => w.toggleMode(line), '', 'Załoga na kei przekłada linę'));
           acts.append(btn(line.winch ? 'Kabestan ✓' : 'Kabestan ✗', () => { line.winch = !line.winch; }));
           if (line.releaseQueued) acts.append(btn('Anuluj oddanie', () => w.cancelRelease(line), '', 'Załoga jeszcze nie zeszła – zostaw linę założoną'));
           break;
@@ -331,6 +328,14 @@ export class SimScreen {
           break;
         default:
           break;
+      }
+      // wybór sposobu założenia: na stałe (oko) / na biegowo – dostępny przy zakładaniu i na założonej linie
+      if (!line.isMooring && ['ready', 'queued', 'pending', 'attached'].includes(line.state)) {
+        const ms = h('div.seg', { style: { margin: '6px 0 2px' } });
+        for (const [v, l, tt] of [['fixed', 'Na stałe', 'Oko na polerze – zdejmie je tylko załoga na lądzie'], ['slip', 'Na biegowo', 'Lina okłada poler i wraca na jacht – można ją oddać z pokładu']]) {
+          ms.appendChild(h('button.btn.xs', { class: line.mode === v ? 'on' : '', title: tt, onclick: (e) => { e.stopPropagation(); w.setMode(line, v); this.renderLines(true); } }, l));
+        }
+        card.appendChild(ms);
       }
       card.appendChild(acts);
       this.linesList.appendChild(card);
@@ -418,6 +423,9 @@ export class SimScreen {
     this.pickBanner.appendChild(head);
     if (r.stage === 'cleat') {
       this.pickBanner.appendChild(h('div.small.muted', { style: { marginTop: '4px' } }, 'Kliknij podświetloną knagę (żółte pierścienie na pokładzie).'));
+      const m0 = h('div.seg', { style: { margin: '6px 0 2px' } });
+      for (const [v, l] of [['fixed', 'Na stałe (oko)'], ['slip', 'Na biegowo']]) m0.appendChild(h('button', { class: r.mode === v ? 'on' : '', onclick: () => { r.mode = v; this.rigMode = v; this.updateRig(); } }, l));
+      this.pickBanner.appendChild(m0);
       this.view.highlightDeck((it) => (it.kind === 'cleat' ? 0xffd166 : null));
       this.view.highlightBollards(null);
       return;
@@ -498,6 +506,7 @@ export class SimScreen {
       act('Luzuj', '⬇', tend('ease'), line.tending === 'ease' ? 'on' : '');
       act('Luz', '〰', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '');
       act('Knaguj', '■', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '');
+      if (!line.isMooring) act(line.mode === 'slip' ? 'Na stałe' : 'Na biegowo', '⇄', () => w.setMode(line, line.mode === 'slip' ? 'fixed' : 'slip'));
       act('Oddaj', '✋', () => w.release(line), 'danger');
     } else if (line.state === 'onQuay') {
       act('Podejmij', '⚓', () => w.pickupMooring(line));
