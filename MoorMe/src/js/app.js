@@ -6,6 +6,25 @@ import { createDeckEditor, relabel } from './ui/deckEditor.js';
 import { drawBoatTop, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
 import { SimScreen } from './ui/simUI.js';
 import { DEG, compassVec, pointInConvex } from './math.js';
+import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
+import { buildHelpContent } from './ui/help.js';
+import { Preview3D } from './render/preview.js';
+
+// tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
+function sceneryEl() {
+  const d = document.createElement('div');
+  d.innerHTML = sceneryHTML();
+  return d.firstChild;
+}
+const icon = {
+  play: '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="#fff7f1"/></svg>',
+  chev: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#fff7f1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  dice: '<svg width="26" height="26" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#d2695f" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="15.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="8.5" cy="15.5" r="1.6" fill="#d2695f"/></svg>',
+  fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
+  help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
+  down: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6" fill="none" stroke="#4a5a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+};
+const raw = (html) => { const d = document.createElement('span'); d.style.display = 'contents'; d.innerHTML = html; return d; };
 
 const app = document.getElementById('app');
 const STORE_KEY = 'moorme.config.v1';
@@ -57,50 +76,45 @@ function footer(step, onNext, nextLabel = 'Dalej →') {
 
 function screen(step, body, onNext, nextLabel) {
   app.innerHTML = '';
-  const s = h('div.screen', {}, header(step), h('div.screen-body', {}, body), footer(step, onNext, nextLabel));
+  const s = h('div.screen', {}, sceneryEl(), header(step), h('div.screen-body', {}, body), footer(step, onNext, nextLabel));
   app.appendChild(s);
 }
 
 // ---------- Ekran tytułowy ----------
 function showTitle() {
   app.innerHTML = '';
-  const cv = h('canvas');
-  const s = h('div.screen.title-screen', {}, cv,
-    h('div.inner', {},
+  const saved = !!loadConfig();
+  const btn = (cls, iconHtml, label, sub, onclick, extra = {}) => h('button.tbtn' + cls, { onclick, ...extra },
+    h('span.ic', {}, raw(iconHtml)), sub ? h('span', {}, label, h('small', {}, sub)) : h('span', {}, label));
+  const main = btn('.main', icon.play, 'Nowa symulacja', null, () => { config.random = false; showStep(0); });
+  main.appendChild(h('span.chev', {}, raw(icon.chev)));
+  const s = h('div.screen.title-screen', {}, sceneryEl(),
+    h('div.title-card', {},
+      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'PORT BAŁTYK')),
+      h('div.title-sub', {}, 'SYMULATOR MANEWRÓW PORTOWYCH'),
       h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
-      h('p', {}, 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe zanim zrobisz je naprawdę.'),
-      h('div', { style: { display: 'flex', gap: '12px', justifyContent: 'center' } },
-        h('button.btn.primary.big', { onclick: () => { config.random = false; showStep(0); } }, 'Nowa symulacja'),
-        h('button.btn.big', { onclick: () => showRandom(), title: 'Losowe zadanie w losowych warunkach' }, '🎲 Random'),
-        loadConfig() ? h('button.btn.big', { onclick: () => startSim() }, 'Szybki start (ostatnie ustawienia)') : null),
-      h('p.small', { style: { marginTop: '40px' } }, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne')));
+      h('p.desc', {}, 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.'),
+      main,
+      h('div.tbtn-row', {},
+        btn('.sec.rnd', icon.dice, 'Random', null, () => showRandom(), { title: 'Losowe zadanie w losowych warunkach' }),
+        btn('.sec.fast', icon.fast, 'Szybki start', 'ostatnie ustawienia', () => startSim(), saved ? {} : { disabled: true, title: 'Najpierw ustaw i uruchom symulację' })),
+      btn('.help', icon.help, 'Pomoc – sterowanie i praca na cumach', null, () => showHelp()),
+      h('div.title-note', {}, raw(icon.down), h('span', {}, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne'))));
   app.appendChild(s);
-  // animowane tło – fale
-  const ctx = cv.getContext('2d');
-  let t = 0;
-  const loop = () => {
-    if (!cv.isConnected) return;
-    cv.width = cv.clientWidth; cv.height = cv.clientHeight;
-    ctx.clearRect(0, 0, cv.width, cv.height);
-    for (let k = 0; k < 7; k++) {
-      ctx.strokeStyle = `rgba(47,179,232,${0.07 + k * 0.02})`;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let x = 0; x <= cv.width; x += 12) {
-        const y = cv.height * (0.55 + k * 0.06) + Math.sin(x * 0.01 + t * (0.6 + k * 0.1) + k) * (10 + k * 3);
-        x ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
-      }
-      ctx.stroke();
-    }
-    t += 0.02;
-    requestAnimationFrame(loop);
-  };
-  loop();
+}
+
+// ---------- Pomoc ----------
+function showHelp() {
+  app.innerHTML = '';
+  app.appendChild(h('div.screen', {}, sceneryEl(),
+    h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'pomoc')),
+    h('div.screen-body', {}, h('div.help-card', {}, h('h2', { style: { marginBottom: '4px' } }, 'Jak sterować i cumować'), ...buildHelpContent())),
+    h('div.screen-footer', {}, h('button.btn', { onclick: () => showTitle() }, '← Menu'), h('span'))));
 }
 
 // ---------- Krok 1: jacht ----------
 function stepBoat() {
-  const cards = h('div.cards');
+  const cards = h('div.cards', { style: { gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' } });
   for (const b of Object.values(BOATS)) {
     const cv = h('canvas', { width: 520, height: 170 });
     const ctx = cv.getContext('2d');
@@ -118,8 +132,18 @@ function stepBoat() {
       [['Długość całkowita', `${b.loa.toFixed(2)} m`], ['Szerokość', `${b.beam.toFixed(2)} m`], ['Zanurzenie', `${b.draft.toFixed(2)} m`], ['Wyporność', `${(b.displacement / 1000).toFixed(1)} t`], ['Silnik', `${b.engineHp} KM`], ['Prędkość maks. na silniku', `~${b.maxSpeedKn} kn`], ['Pow. nawiewu (bok)', `${b.windageSide} m²`], ['Ster strumieniowy (opcja)', `${Math.round(b.bowThrusterN / 9.81)} kgf`], ['Płetwy sterowe', 'podwójne']].map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v)))));
     cards.appendChild(card);
   }
-  const body = h('div', {}, h('h2', { style: { marginBottom: '6px' } }, 'Wybierz jacht'), h('p.muted', { style: { marginTop: 0 } }, 'Większy jacht = większa bezwładność i nawiew, ale mocniejszy silnik i ster strumieniowy.'), cards);
+  const pv = h('div.preview3d', { style: { height: '420px' } });
+  const pvTitle = h('h2', { style: { margin: '0 0 8px' } }, BOATS[config.boatId].name);
+  const body = h('div', {}, h('h2', { style: { marginBottom: '6px' } }, 'Wybierz jacht'), h('p.muted', { style: { marginTop: 0 } }, 'Większy jacht = większa bezwładność i nawiew, ale mocniejszy silnik i ster strumieniowy.'),
+    h('div.pv-split', {}, cards, h('div.panel', { style: { position: 'sticky', top: '0' } }, pvTitle, pv, h('div.small.muted', { style: { marginTop: '8px' } }, 'Przeciągnij myszą, żeby obrócić model; kółko – przybliżenie. Najedź na kartę, żeby zobaczyć inny jacht.'))));
   screen(0, body, () => showStep(1));
+  const prev = new Preview3D(pv, '');
+  prev.setBoat(BOATS[config.boatId]);
+  for (const c of cards.children) {
+    const id = Object.keys(BOATS)[[...cards.children].indexOf(c)];
+    c.addEventListener('mouseenter', () => { prev.setBoat(BOATS[id]); pvTitle.textContent = BOATS[id].name; });
+    c.addEventListener('mouseleave', () => { prev.setBoat(BOATS[config.boatId]); pvTitle.textContent = BOATS[config.boatId].name; });
+  }
 }
 
 // ---------- Krok 2: wyposażenie ----------
@@ -183,6 +207,16 @@ function stepHarbor() {
     const ctx = mapCv.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
     ctx.fillText('Twoje stanowisko: „TU” (zielone)', 14, mapCv.height - 14);
+    schedulePreview(H);
+  };
+  // podgląd 3D portu (przebudowa z opóźnieniem, żeby suwak szerokości nie mielił sceny)
+  const pv = h('div.preview3d', { style: { height: '300px', marginBottom: '12px' } });
+  let prev = null, pvKey = '', pvTimer = null;
+  const schedulePreview = (H) => {
+    const key = [config.port, config.zone, config.method, config.side, config.seed, JSON.stringify(config.slotClear || {})].join('|');
+    if (!prev || key === pvKey) return;
+    clearTimeout(pvTimer);
+    pvTimer = setTimeout(() => { if (!pv.isConnected || !prev) return; pvKey = key; prev.setHarbor(H, spec); }, 250);
   };
   const opts = berthOptions(config.port);
   const cur = () => opts.find((o) => o.zone === config.zone && o.method === config.method);
@@ -239,8 +273,9 @@ function stepHarbor() {
     h('h3', {}, 'Sąsiedzi'),
     h('div.row', {}, h('button.btn.sm', { onclick: () => { config.seed = Math.floor(Math.random() * 1000); drawMap(); } }, '🎲 Losuj rozmieszczenie jachtów')));
   const body = h('div', {}, h('h2', { style: { marginBottom: '10px' } }, 'Wybierz port'), cards,
-    h('div.two-col', { style: { marginTop: '18px' } }, h('div.panel', {}, h('div', { style: { marginBottom: '8px' } }, zoomSeg), mapCv), right));
+    h('div.two-col', { style: { marginTop: '18px' } }, h('div.panel', {}, pv, h('div', { style: { marginBottom: '8px' } }, zoomSeg), mapCv), right));
   screen(2, body, () => showStep(3));
+  prev = new Preview3D(pv, 'podgląd 3D – przeciągnij, żeby obrócić');
   drawMap();
 }
 
@@ -463,7 +498,7 @@ function showRandom(cfg = randomConfig()) {
   const mapCv = h('canvas', { width: 700, height: 460, style: { width: '100%', borderRadius: '12px' } });
   app.innerHTML = '';
   const row = (k, v) => h('tr', {}, h('td', {}, k), h('td', {}, v));
-  const s = h('div.screen', {}, h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'tryb Random – losowe zadanie')),
+  const s = h('div.screen', {}, sceneryEl(), h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'tryb Random – losowe zadanie')),
     h('div.screen-body', {}, h('div.two-col', {},
       h('div.panel', {}, mapCv),
       h('div.panel', {},

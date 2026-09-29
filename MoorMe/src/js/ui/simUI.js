@@ -6,6 +6,7 @@ import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
 import { BOATS } from '../data/boats.js';
 import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
+import { buildHelpContent } from './help.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, tensionColor } from '../math.js';
 
 export class SimScreen {
@@ -234,9 +235,8 @@ export class SimScreen {
       fr.appendChild(btn);
     }
     panel.appendChild(fr);
-    const pool = ['Wojtek', 'Bartek', 'Babcia', 'Piotrek', 'Piotrek', 'Kinga', 'Dominika'];
-    this.crewNames = ['Kuba', pool[Math.floor(Math.random() * pool.length)]];
-    panel.appendChild(h('h4', { style: { marginTop: '10px' } }, `${this.crewNames[0]} (kapitan) · ${this.crewNames[1]}`));
+    const names = this.view.crewNames;
+    panel.appendChild(h('h4', { style: { marginTop: '10px' } }, `${names[0]} (kapitan) · ${names.slice(1).join(' · ')}`));
     this.crewBtn = h('button.btn.sm', { style: { width: '100%' }, onclick: () => (w.crew.ashore ? w.crewAboard() : w.crewAshore()) }, 'Zejdź na ląd');
     panel.appendChild(this.crewBtn);
     return panel;
@@ -879,18 +879,9 @@ export class SimScreen {
 
   showHelp() {
     const back = h('div.modal-back', { onclick: (e) => { if (e.target === back) back.remove(); } });
-    const rows = [
-      ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo'], ['R', 'Ster na zero'],
-      ['Q / E', 'Ster strumieniowy dziobowy: dziób w lewo / w prawo'], ['Z / C', 'Ster strumieniowy rufowy: rufa w lewo / w prawo'],
-      ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['Klik na linę', 'Menu okrągłe: wybieraj, obłóż, luzuj, luz, oddaj (przytrzymaj – działa tylko podczas trzymania)'], ['O', 'Pogoda i pora dnia'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Obłóż (zablokuj)'], ['N', 'Oddaj linę'],
-      ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (także widok kapitana)'], ['Widok kapitana', 'Przeciągnij myszą – rozglądanie się, kółko – przybliżenie'],
-      ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
-    ];
-    const m = h('div.modal.glass', { style: { width: '640px' } },
-      h('h2', {}, 'Sterowanie'),
-      h('div.help-grid', {}, rows.map(([k, d]) => [h('kbd', {}, k), h('span', {}, d)])),
-      h('div.hint', {}, 'Wskazówki: śruba prawoskrętna na biegu wstecz ściąga rufę w lewo – wykorzystaj to przy cofaniu. Podwójne płetwy sterowe serii C słabo działają bez prędkości – przy wolnym manewrze pomagaj sobie krótkim „kopnięciem” silnika lub sterem strumieniowym. Ster strumieniowy przegrzewa się po ok. 2 minutach ciągłej pracy.'),
-      h('div.hint', {}, 'Liny: przygotuj je przed podejściem (knaga, kluza, długość, sposób). Oko „na stałe” rzucisz z pokładu na poler do ~3.4 m, „na biegowo” potrzebujesz ~1.5 m. Gdy ktoś zejdzie na ląd, może założyć dowolną linę. Kolor liny: biały – luźna, żółty/pomarańczowy – napięta, czerwony – blisko zerwania.'),
+    const m = h('div.modal.glass', { style: { width: '760px', maxHeight: '86vh', overflow: 'auto' } },
+      h('h2', {}, 'Pomoc'),
+      ...buildHelpContent(),
       h('div', { style: { textAlign: 'right', marginTop: '10px' } }, h('button.btn.primary', { onclick: () => back.remove() }, 'OK')));
     back.appendChild(m);
     this.sim.appendChild(back);

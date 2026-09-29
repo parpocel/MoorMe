@@ -123,6 +123,30 @@ export class View3D {
     this.shoreCrew = buildPerson(0xf4a261);
     this.shoreCrew.visible = false;
     scene.add(this.shoreCrew);
+    // kapitan Kuba + trzech losowych członków załogi (dwóch stoi/siedzi na pokładzie, jeden to „deckhand”, który schodzi na ląd)
+    const pool = ['Wojtek', 'Bartek', 'Babcia', 'Piotrek', 'Piotrek', 'Kinga', 'Dominika', 'Maciej'];
+    const pick = pool.map((n, i) => [Math.random(), n]).sort((a, b) => a[0] - b[0]).slice(0, 3).map((x) => x[1]);
+    this.crewNames = ['Kuba', ...pick];
+    const L = spec.loa;
+    this.mate1 = buildPerson(0x457b9d);
+    this.mate2 = buildPerson(0x2a9d8f);
+    this.mate1.position.set(xs + 0.13 * L, sheerHeight(spec, xs) + 0.05, -spec.beam * 0.2); // ławka w kokpicie
+    this.mate1.rotation.y = -Math.PI / 2 + 0.5;
+    this.mate2.position.set(0.16 * L, sheerHeight(spec, 0.16 * L) - 0.05, halfBeamAt(spec, 0.16 * L) * 0.8); // burta przy nadbudówce
+    this.mate2.rotation.y = 0.3;
+    this.boat.userData.heel.add(this.mate1, this.mate2);
+    // małe etykiety z imionami nad głowami
+    this.tags = document.createElement('div');
+    this.tags.className = 'crew-tags';
+    container.appendChild(this.tags);
+    this.tagEls = [];
+    const tagged = [[this.helmsman, this.crewNames[0]], [this.deckhand, this.crewNames[1]], [this.mate1, this.crewNames[2]], [this.mate2, this.crewNames[3]], [this.shoreCrew, this.crewNames[1]]];
+    for (const [p, n] of tagged) {
+      const el = document.createElement('div');
+      el.textContent = n;
+      this.tags.appendChild(el);
+      this.tagEls.push({ p, el });
+    }
 
     // znacznik stanowiska
     this.berthMarker = this.makeBerthMarker();
@@ -537,6 +561,7 @@ export class View3D {
 
     this.updateRopes();
     this.boat.updateMatrixWorld(true);
+    this.updateCrewTags();
     this.life.update(dt);
 
     // znacznik stanowiska
@@ -662,6 +687,20 @@ export class View3D {
     return this.world.H.quay.height;
   }
 
+  updateCrewTags() {
+    const v = new THREE.Vector3();
+    const fpv = this.cam.mode === 'fpv';
+    for (const { p, el } of this.tagEls) {
+      if (fpv || !p.visible) { el.style.display = 'none'; continue; }
+      p.getWorldPosition(v);
+      const s = this.project(v.x, v.y + 1.95, v.z);
+      const dist = this.camera.position.distanceTo(v);
+      if (!s.visible || dist > 70) { el.style.display = 'none'; continue; }
+      el.style.display = 'block';
+      el.style.transform = `translate(${s.x.toFixed(0)}px, ${s.y.toFixed(0)}px) translate(-50%, -100%)`;
+    }
+  }
+
   // Projekcja punktu świata na ekran (dla etykiet)
   project(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(this.camera);
@@ -671,6 +710,7 @@ export class View3D {
 
   dispose() {
     this._ro.disconnect();
+    if (this.tags) this.tags.remove();
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
