@@ -71,7 +71,7 @@ function smallBoat(x, y, w, stripe) {
 
 export function sceneryHTML() {
   const r = rng(11);
-  let s = `<svg class="scenery" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">`;
+  let s = `<svg class="scenery" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMaxYMax slice" xmlns="http://www.w3.org/2000/svg">`;
   s += `<g>${facets(0, 0, W, 680, 110, (y) => ramp(SKY, y), 5, r)}</g>`;
   // słońce
   const sx = 1610, sy = 565;

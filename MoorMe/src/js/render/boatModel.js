@@ -168,10 +168,14 @@ function buildCabin(spec) {
   g.add(m);
   const topY = m.position.y + h + 0.08;
   // okna boczne
-  const wl = (x1 - x0) * 0.62;
+  // burta nadbudówki biegnie od (x0, wA) do (x1 - 0.4, wF); okno leży na niej równo (obrót zgodny ze zbieżnością, przesunięcie o fazkę 0.08)
+  const sideLen = x1 - 0.4 - x0;
+  const wl = sideLen * 0.6;
+  const xc = x0 + sideLen * 0.5;
+  const wc = (wA + wF) / 2 + 0.08 + 0.012;
   for (const s of [-1, 1]) {
-    const win = box(wl, 0.16, 0.04, COL.window, (x0 + x1) / 2 - 0.1, topY - 0.22, s * ((wA + wF) / 2 + 0.07), { rough: 0.2, metal: 0.4 });
-    win.rotation.y = s * Math.atan2(wA - wF, x1 - x0) * -1;
+    const win = box(wl, 0.16, 0.03, COL.window, xc, topY - 0.22, s * wc, { rough: 0.2, metal: 0.4 });
+    win.rotation.y = s * Math.atan2(wA - wF, sideLen);
     g.add(win);
   }
   // okna dachowe (luki)

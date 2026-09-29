@@ -196,9 +196,11 @@ function stepHarbor() {
     cards.appendChild(h('div.card', { class: config.port === P.id ? 'selected' : '', onclick: () => { if (config.port !== P.id) { config.port = P.id; config.zone = null; normalizeBerth(config); } showStep(2); } },
       h('h3', {}, P.name), h('div.small.muted', {}, P.desc)));
   }
-  const mapCv = h('canvas', { width: 900, height: 620, style: { width: '100%', borderRadius: '12px' } });
+  const mapCv = h('canvas', { width: 900, height: 620, style: { width: '100%', height: 'min(300px, 34vh)', borderRadius: '12px', background: '#0e2a42', display: 'block' } });
   let zoom = 'berth';
   const drawMap = () => {
+    // rozdzielczość płótna dopasowana do rozmiaru na ekranie (mapa nie rozciąga się po maksymalizacji okna)
+    if (mapCv.clientWidth) { mapCv.width = mapCv.clientWidth; mapCv.height = mapCv.clientHeight; }
     const H = generateHarbor(harborOpts(config, spec));
     const b = H.berth;
     const T = zoom === 'port' ? mapTransform(mapCv, H.bounds) : mapTransform(mapCv, { minX: b.x - 50, maxX: b.x + 50, minZ: b.z - 35, maxZ: b.z + 35 });
