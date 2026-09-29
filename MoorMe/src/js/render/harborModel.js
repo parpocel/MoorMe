@@ -1,6 +1,7 @@
 // Scenografia portu: keje, pomosty, polery, dalby, Y-bomy, falochron, zabudowa, zieleń, sąsiednie jachty
 import * as THREE from 'three';
 import { mat, buildBoat } from './boatModel.js';
+import { FLAGS, FLAG_CODES } from './flags.js';
 import { mergeByMaterial } from './merge.js';
 import { rng } from '../math.js';
 import { hullExtents, halfBeamAt } from '../data/boats.js';
@@ -610,7 +611,7 @@ function sagLine(a, b, sag, color = 0xf0ede4) {
   return m;
 }
 
-const NEIGHBOR_NAMES = ['AURORA', 'MEWA', 'BRYZA', 'LUNA', 'SIROCCO', 'WIATR', 'ZEFIR', 'NEPTUN', 'ALBATROS', 'MISTRAL', 'POLARIS', 'ORKA'];
+const NEIGHBOR_NAMES = ['Sea Breeze', 'Blue Horizon', 'Wind Dancer', 'Salty Dog', 'Northern Star', 'Lady Grace', 'Free Spirit', 'Windsong', 'Sea Hawk', 'Silver Wake', 'Morning Star', 'Happy Days', 'Ocean Pearl', 'Wanderer', 'Blue Moon', 'Sunset Rider'];
 const NEIGHBOR_CANVAS = [0x24374f, 0x1f5f8b, 0x2d6a4f, 0x7a1f1f, 0x3d3d3d, 0x1f4e79];
 
 // ---------- Scenografia: Adriatyk ----------
@@ -812,10 +813,13 @@ export function buildHarbor(H, scene) {
   // sąsiednie jachty i ich cumy
   const boatCache = new Map();
   H.neighbors.forEach((n, i) => {
-    const key = n.spec.id + '_' + n.color;
+    const variant = (i * 5 + ((H.seed || 0) % 7)) % 8; // 8 wariantów nazwa/bandera (mniej budowania modeli)
+    const key = n.spec.id + '_' + n.color + '_' + variant;
     let proto = boatCache.get(key);
     if (!proto) {
-      const built = buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[boatCache.size % NEIGHBOR_NAMES.length] });
+      const code = FLAG_CODES[(variant * 7 + (H.seed || 0)) % FLAG_CODES.length];
+      const ports = FLAGS[code].ports;
+      const built = buildBoat(n.spec, { color: n.color, stripe: n.color === 0xffffff ? 0x2b3a4a : 0xffffff, canvas: NEIGHBOR_CANVAS[i % NEIGHBOR_CANVAS.length], name: NEIGHBOR_NAMES[(variant * 3 + n.spec.id.charCodeAt(2)) % NEIGHBOR_NAMES.length], sub: ports[variant % ports.length], flag: code });
       proto = mergeByMaterial(built);
       proto.userData.perches = built.userData.perches;
       boatCache.set(key, proto);
@@ -888,28 +892,51 @@ function waterTexture() {
   return t;
 }
 
-// Woda – animowana siatka low-poly
+// Woda – animowana siatka z sumą kilku fal (gładkie normalne, delikatny połysk)
+const WAVES = [
+  // (siatka ma ~3,5 m oczka – fale krótsze niż ~10 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
+  { d: 0, k: 0.42, w: 1.3, a: 1.0 },
+  { d: 0.5, k: 0.55, w: 1.5, a: 0.5 },
+  { d: -0.7, k: 0.3, w: 1.05, a: 0.6 },
+  { d: 1.4, k: 0.22, w: 0.85, a: 0.6 },
+  { d: -0.25, k: 0.62, w: 1.6, a: 0.3 }
+];
 export class Water {
   constructor(scene) {
-    const size = 520, seg = 90;
+    const size = 520, seg = 150;
     const geo = new THREE.PlaneGeometry(size, size, seg, seg);
     geo.rotateX(-Math.PI / 2);
     geo.translate(0, 0, 100);
     this.geo = geo;
     this.base = geo.attributes.position.array.slice();
-    // matowa woda ze stonowaną teksturą zmarszczek (bez odblasków)
+    // stonowana tekstura zmarszczek + łagodny połysk (Phong z ciemnym odblaskiem)
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
-    const matW = new THREE.MeshLambertMaterial({ color: 0xffffff, map: this.tex, flatShading: true, transparent: true, opacity: 0.92 });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, specular: 0x16252d, shininess: 35, transparent: true, opacity: 0.93 });
     this.mesh = new THREE.Mesh(geo, matW);
     this.mesh.receiveShadow = true;
     scene.add(this.mesh);
     // otwarte morze poza portem
     const far = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshLambertMaterial({ color: 0x2a7b98 }));
     far.rotation.x = -Math.PI / 2;
-    far.position.y = -0.08;
+    far.position.y = -0.7; // poniżej dołków fal (inaczej prześwituje przez wodę)
     scene.add(far);
     this.t = 0;
+  }
+  // wysokość i nachylenie sumy fal w punkcie
+  wave(x, z, t, a, windDir, out) {
+    let h = 0, gx = 0, gz = 0;
+    for (const W of WAVES) {
+      const dir = windDir + W.d;
+      const kx = Math.sin(dir) * W.k, kz = -Math.cos(dir) * W.k;
+      const ph = x * kx + z * kz - t * W.w;
+      const amp = a * W.a;
+      h += amp * Math.sin(ph);
+      const c = amp * Math.cos(ph);
+      gx += c * kx; gz += c * kz;
+    }
+    if (out) { out.gx = gx; out.gz = gz; }
+    return h;
   }
   update(dt, windKn, windDir) {
     this.t += dt;
@@ -918,20 +945,21 @@ export class Water {
     this.tex.offset.x += Math.sin(windDir) * drift;
     this.tex.offset.y += Math.cos(windDir) * drift;
     const p = this.geo.attributes.position.array;
-    const a = 0.015 + Math.min(windKn, 35) * 0.0022;
-    const kx = Math.sin(windDir), kz = -Math.cos(windDir);
-    const t = this.t;
+    const n = this.geo.attributes.normal.array;
+    const a = 0.04 + Math.min(windKn, 35) * 0.0045;
+    const g = {};
     for (let i = 0; i < p.length; i += 3) {
-      const x = this.base[i], z = this.base[i + 2];
-      const ph = (x * kx + z * kz) * 0.35 - t * 1.3;
-      p[i + 1] = a * Math.sin(ph) + a * 0.5 * Math.sin(x * 0.21 + z * 0.17 + t * 0.9);
+      p[i + 1] = this.wave(this.base[i], this.base[i + 2], this.t, a, windDir, g);
+      // normalna z analitycznego gradientu
+      const gx = g.gx * 3, gz = g.gz * 3; // nachylenie przerysowane, żeby fale były czytelne w oświetleniu
+      const l = 1 / Math.hypot(gx, 1, gz);
+      n[i] = -gx * l; n[i + 1] = l; n[i + 2] = -gz * l;
     }
     this.geo.attributes.position.needsUpdate = true;
+    this.geo.attributes.normal.needsUpdate = true;
   }
   heightAt(x, z, windKn, windDir) {
-    const a = 0.03 + Math.min(windKn, 35) * 0.0045; // kołysanie jachtu nieco silniejsze niż rysowana fala
-    const kx = Math.sin(windDir), kz = -Math.cos(windDir);
-    const ph = (x * kx + z * kz) * 0.35 - this.t * 1.3;
-    return a * Math.sin(ph) + a * 0.5 * Math.sin(x * 0.21 + z * 0.17 + this.t * 0.9);
+    const a = 0.03 + Math.min(windKn, 35) * 0.0032;
+    return this.wave(x, z, this.t, a, windDir) * 1.5; // kołysanie jachtu nieco silniejsze niż rysowana fala
   }
 }

@@ -66,7 +66,7 @@ export class View3D {
 
     // nasz jacht
     const spec = world.spec;
-    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive });
+    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive, color: 0xffffff, name: 'ANNELIESE', sub: 'Bregge', split: true, flag: 'DE' });
     this.boat.userData.heel.add(buildDeckGear(spec, world.equip.deck));
     scene.add(this.boat);
 

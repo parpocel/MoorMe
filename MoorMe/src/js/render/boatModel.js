@@ -2,6 +2,7 @@
 // Układ modelu: +x do dziobu, +y do góry, +z na sterburtę. Środek = środek ciężkości na linii wodnej.
 import * as THREE from 'three';
 import { hullExtents, halfBeamAt } from '../data/boats.js';
+import { flagMaterial } from './flags.js';
 
 const matCache = new Map();
 export function mat(color, opts = {}) {
@@ -277,24 +278,27 @@ export function buildBoat(spec, opts = {}) {
   const mastX = 0.1 * L;
   const mastH = spec.mastHeight - spec.freeboard;
   const topY = cabin.userData.topY;
-  const mast = cyl(0.09, 0.07, mastH, COL.mast, 6, { metal: 0.5, rough: 0.4 });
+  const mast = cyl(0.09, 0.07, mastH, COL.mast, 12, { metal: 0.5, rough: 0.4 });
   mast.position.set(mastX, topY + mastH / 2, 0);
   heel.add(mast);
   const boomL = mastX - (xs + 0.12 * L);
   const boomY = topY + 1.9;
-  const boom = cyl(0.07, 0.07, boomL, COL.mast, 5);
+  const boom = cyl(0.07, 0.07, boomL, COL.mast, 12);
   boom.rotation.z = Math.PI / 2;
   boom.position.set(mastX - boomL / 2, boomY, 0);
   heel.add(boom);
   // pokrowiec grota (lazy bag)
-  const bag = box(boomL * 0.92, 0.45, 0.32, opts.canvas ?? COL.canvas, mastX - boomL / 2 + 0.1, boomY + 0.22, 0);
+  const bag = cyl(0.19, 0.19, boomL * 0.92, opts.canvas ?? COL.canvas, 12);
+  bag.rotation.z = Math.PI / 2;
+  bag.scale.set(1.15, 1, 0.8); // lekko spłaszczony, jak zwinięty grot
+  bag.position.set(mastX - boomL / 2 + 0.1, boomY + 0.2, 0);
   heel.add(bag);
   // salingi
   const rig = [];
   const mtop = topY + mastH;
   const spY1 = topY + mastH * 0.36, spY2 = topY + mastH * 0.68;
   for (const s of [-1, 1]) {
-    heel.add(strut([mastX, spY1, 0], [mastX - 0.3, spY1, s * spec.beam * 0.3], 0.025, COL.mast));
+    heel.add(strut([mastX, spY1, 0], [mastX - 0.3, spY1, s * spec.beam * 0.3], 0.025, COL.mast, 8));
     heel.add(strut([mastX, spY2, 0], [mastX - 0.2, spY2, s * spec.beam * 0.2], 0.02, COL.mast));
     const chain = [mastX - 0.6, sheerHeight(spec, mastX), s * (halfBeamAt(spec, mastX) - 0.12)];
     rig.push([chain, [mastX - 0.3, spY1, s * spec.beam * 0.3]], [[mastX - 0.3, spY1, s * spec.beam * 0.3], [mastX - 0.2, spY2, s * spec.beam * 0.2]], [[mastX - 0.2, spY2, s * spec.beam * 0.2], [mastX, mtop - 0.3, 0]]);
@@ -308,7 +312,7 @@ export function buildBoat(spec, opts = {}) {
   rg.setAttribute('position', new THREE.Float32BufferAttribute(rigPos, 3));
   heel.add(new THREE.LineSegments(rg, LINE_MATS.rig.mat));
   // zrolowany genua na sztagu
-  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.13, opts.canvas ?? COL.canvas, 6);
+  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.13, opts.canvas ?? COL.canvas, 12);
   gen.scale.set(1, 0.9, 1);
   heel.add(gen);
   // windex i światło topowe
@@ -348,8 +352,12 @@ export function buildBoat(spec, opts = {}) {
   const flagStaff = strut([xs + 0.1, fbC + 0.2, spec.beam * 0.3], [xs - 0.2, fbC + 1.3, spec.beam * 0.3], 0.015, COL.teak);
   heel.add(flagStaff);
   const flag = new THREE.Group();
-  flag.add(box(0.02, 0.18, 0.5, 0xffffff, 0, 0.09, -0.25));
-  flag.add(box(0.02, 0.18, 0.5, 0xdc143c, 0, -0.09, -0.25));
+  const fg = new THREE.PlaneGeometry(0.6, 0.4);
+  fg.rotateY(Math.PI / 2);
+  fg.translate(0, 0, -0.3);
+  const fm = new THREE.Mesh(fg, flagMaterial(opts.flag || 'DE'));
+  fm.userData.keep = true; // nie scalać – ma własny materiał z teksturą
+  flag.add(fm);
   flag.position.set(xs - 0.2, fbC + 1.2, spec.beam * 0.3);
   flag.rotation.y = Math.PI / 2;
   heel.add(flag);
@@ -357,13 +365,16 @@ export function buildBoat(spec, opts = {}) {
   // platforma kąpielowa (opuszczana pawęż)
   heel.add(box(0.5, 0.08, spec.beam * 0.7, COL.teak, xs - 0.2, 0.35, 0));
 
-  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name });
+  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split });
 
   root.userData.heel = heel;
   root.userData.spec = spec;
   root.userData.deckY = deckY;
   root.userData.mastTop = mtop;
   // miejsca, na których siadają mewy: końce dolnych salingów i top masztu (układ grupy przechyłu)
+  root.userData.mastX = mastX;
+  root.userData.steamPos = [mastX + 0.1, topY + mastH * 0.5, 0];
+  heel.add(box(0.1, 0.1, 0.1, 0xf2f2f2, mastX + 0.1, topY + mastH * 0.5, 0, { emissive: 0x222222 }));
   root.userData.perches = [
     [mastX - 0.3, spY1 + 0.05, -spec.beam * 0.3],
     [mastX - 0.3, spY1 + 0.05, spec.beam * 0.3],
@@ -376,23 +387,38 @@ export function buildBoat(spec, opts = {}) {
 // ---------- Szczegóły jachtu ----------
 const BOAT_NAMES = ['MOORME', 'AURORA', 'MEWA', 'BRYZA', 'LUNA', 'SIROCCO', 'WIATR', 'ZEFIR', 'NEPTUN', 'ALBATROS', 'MISTRAL', 'POLARIS'];
 const nameTexCache = new Map();
-function nameTexture(name) {
-  if (nameTexCache.has(name)) return nameTexCache.get(name);
+function nameTexture(name, sub, split) {
+  const key = name + '|' + (sub || '') + '|' + !!split;
+  if (nameTexCache.has(key)) return nameTexCache.get(key);
   const c = document.createElement('canvas');
   c.width = 512; c.height = 96;
   const g = c.getContext('2d');
   g.clearRect(0, 0, 512, 96);
   g.fillStyle = '#1b2a3a';
-  g.font = 'bold 64px Georgia, serif';
-  g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText(name, 256, 44);
-  g.font = '22px Georgia, serif';
-  g.fillText('GDYNIA', 256, 84);
+  if (split) {
+    // nazwa po lewej (widok od rufy = lewa burta), port macierzysty mniejszą czcionką po prawej
+    g.textAlign = 'left';
+    let fs = 60;
+    g.font = `bold ${fs}px Georgia, serif`;
+    while (g.measureText(name).width > 330 && fs > 20) { fs -= 2; g.font = `bold ${fs}px Georgia, serif`; }
+    g.fillText(name, 10, 48);
+    g.textAlign = 'right';
+    g.font = 'italic 30px Georgia, serif';
+    g.fillText(sub, 502, 54);
+  } else {
+    g.textAlign = 'center';
+    let fs = 60;
+    g.font = `bold ${fs}px Georgia, serif`;
+    while (g.measureText(name).width > 470 && fs > 20) { fs -= 2; g.font = `bold ${fs}px Georgia, serif`; }
+    g.fillText(name, 256, 44);
+    g.font = '22px Georgia, serif';
+    g.fillText(sub || '', 256, 84);
+  }
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 4;
-  nameTexCache.set(name, t);
+  nameTexCache.set(key, t);
   return t;
 }
 
@@ -465,7 +491,7 @@ function addBoatDetails(heel, root, spec, d) {
   for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * 0.55, spec.beam * 0.1), new THREE.MeshBasicMaterial({ map: nameTexture(nm), transparent: true, depthWrite: false }));
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(spec.beam * (d.split ? 0.8 : 0.55), spec.beam * (d.split ? 0.8 : 0.55) * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(nm, d.sub ?? 'Gdynia', d.split), transparent: true, depthWrite: false }));
   plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
   plate.rotation.y = -Math.PI / 2;
   plate.userData.keep = true;

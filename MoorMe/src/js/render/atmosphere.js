@@ -55,6 +55,8 @@ export class Atmosphere {
     this.buildBoatLights();
     this.buildHarbourLights();
     this.windowMats = cachedMaterials().filter((m) => [0x243447, 0x2c3e50, 0x16202b, 0x1b2632].includes(m.color.getHex()));
+    this.lampMats = cachedMaterials().filter((m) => [0xfff5d6, 0xfff2b0].includes(m.color.getHex()));
+    this.mv = 0; // wygładzony stan „jacht w ruchu” (0–1)
   }
 
   setHour(h) { this.hour = ((h % 24) + 24) % 24; }
@@ -103,7 +105,10 @@ export class Atmosphere {
     add(heel, 0xff2a2a, 1.4, pbx, py, -halfBeamAt(spec, pbx) + 0.08); // lewa – czerwone
     add(heel, 0x22ff66, 1.4, pbx, py, halfBeamAt(spec, pbx) - 0.08); // prawa – zielone
     add(heel, 0xffffff, 1.3, xs + 0.1, sheerHeight(spec, xs) + 0.9, 0); // rufowe
-    add(heel, 0xffffff, 1.6, 0.1 * L, v.boat.userData.mastTop + 0.2, 0); // topowe / kotwiczne
+    // światło kotwiczne (topowe, dookólne) – gdy jacht stoi; światło silnikowe (białe, w połowie masztu) – w ruchu
+    add(heel, 0xffffff, 1.6, 0.1 * L, v.boat.userData.mastTop + 0.2, 0).userData.mode = 'still';
+    const sp = v.boat.userData.steamPos;
+    add(heel, 0xfff6e0, 1.5, sp[0], sp[1], sp[2]).userData.mode = 'moving';
     // światło salingowe oświetlające pokład (prawdziwe źródło światła)
     this.deckLight = new THREE.PointLight(0xfff1d6, 0, 14, 1.6);
     const perch = v.boat.userData.perches && v.boat.userData.perches[0];
@@ -114,7 +119,7 @@ export class Atmosphere {
       const m = n._mesh;
       if (!m || !m.userData.perches) continue;
       const top = m.userData.perches[m.userData.perches.length - 1];
-      add(m, 0xffffff, 1.2, top[0], top[1] + 0.1, top[2]);
+      add(m, 0xffffff, 1.2, top[0], top[1] + 0.1, top[2]).userData.mode = 'still';
     }
   }
 
@@ -124,6 +129,7 @@ export class Atmosphere {
     for (const l of this.lamps) {
       const s = glow(0xffd28a, 2.6);
       s.position.set(l.x, l.y, l.z);
+      s.userData.far = true; // powiększany z odległością, żeby dalekie latarnie też były widoczne
       this.scene.add(s);
       this.glows.push(s);
     }
@@ -222,10 +228,23 @@ export class Atmosphere {
 
     // światła: nawigacyjne, latarnie, okna – włączają się o zmierzchu (i w mgle/deszczu trochę wcześniej)
     const lightsOn = clamp(night * 1.3 + (sky.grey > 0.5 ? 0.25 : 0) - 0.05, 0, 1);
+    const bt = this.world.boat;
+    const movingNow = Math.hypot(bt.vx || 0, bt.vz || 0) > 0.25 || Math.abs(bt.throttle || 0) > 0.05;
+    this.mv += ((movingNow ? 1 : 0) - this.mv) * clamp(camDt * 3, 0, 1);
+    const wp = new THREE.Vector3();
     for (const g of this.glows) {
-      g.visible = lightsOn > 0.02;
-      g.material.opacity = lightsOn;
-      g.scale.setScalar(g.userData.size * (0.6 + 0.4 * lightsOn));
+      let k = lightsOn;
+      if (g.userData.mode === 'moving') k *= this.mv;
+      else if (g.userData.mode === 'still') k *= 1 - this.mv;
+      g.visible = k > 0.02;
+      g.material.opacity = k;
+      let sc = g.userData.size * (0.6 + 0.4 * lightsOn);
+      if (g.userData.far) { g.getWorldPosition(wp); sc *= clamp(this.view.camera.position.distanceTo(wp) / 45, 1, 5); }
+      g.scale.setScalar(sc);
+    }
+    for (const m of this.lampMats) {
+      m.emissive.setHex(0xffd890);
+      m.emissiveIntensity = lightsOn * 2.2;
     }
     for (const m of this.windowMats) {
       m.emissive.setHex(0xffc27a);
