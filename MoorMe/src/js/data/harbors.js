@@ -302,7 +302,7 @@ function genZone(H, Z, own, R, ctx) {
       if (isMooring && q.rings) addBollard(s.u, -0.2, 'ring', qh);
       if (s.own) continue;
       const dist = Math.abs(s.u - (Z.ownU || 0));
-      if ((!own || dist > (own ? 8 : 0)) && R() < 0.14) { s.empty = true; continue; }
+      if ((!own || dist > (own ? 8 : 0)) && R() < 0.30) { s.empty = true; continue; }
       const nSpec = s.spec;
       const nBowIn = R() < 0.2 ? !bowIn : bowIn;
       const nv = (nBowIn ? 0.52 * nSpec.loa : 0.48 * nSpec.loa) + (nBowIn ? 1.0 : 0.75);
