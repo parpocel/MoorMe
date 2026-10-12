@@ -337,10 +337,21 @@ export class HarbourLife {
     return { x: w.a[0] + ux * c.t - uz * c.off, z: w.a[1] + uz * c.t + ux * c.off, ux, uz };
   }
 
-  deckSpot() {
+  // Miejsce kota na ławce kokpitu po stronie, z której skacze (side = -1 lewa, 1 prawa)
+  deckSpot(side = 1) {
+    const s = this.view.boat.userData.seatSpot;
+    if (s) return new THREE.Vector3(s[0], s[1], side * s[2]);
     const spec = this.world.spec, { xs } = hullExtents(spec);
     const x = xs + 0.2 * spec.loa;
-    return new THREE.Vector3(x, sheerHeight(spec, x) + 0.05, spec.beam * 0.22); // kokpit, burta sterburtowa
+    return new THREE.Vector3(x, sheerHeight(spec, x) + 0.05, side * spec.beam * 0.22);
+  }
+
+  // Wysokość łuku skoku: kot musi przelecieć nad relingiem (ok. 0.62 m nad burtą) i nad burtą
+  catArc(from, to, heel) {
+    const spec = this.world.spec;
+    const rail = heel.localToWorld(new THREE.Vector3(0, sheerHeight(spec, 0) + 0.62 + 0.3, 0)).y;
+    const base = from.y + (to.y - from.y) * 0.75;
+    return Math.max(0.9, (rail - base) / 0.7);
   }
 
   updateCats(dt) {
@@ -377,23 +388,25 @@ export class HarbourLife {
           const dist = distToPoly(poly, m.position.x, m.position.z).dist;
           if (dist < 3.2 && !this.cats.some((o) => o !== c && (o.state === 'jump' || o.state === 'aboard') && o.aboard)) {
             c.state = 'jump'; c.aboard = true; c.u = 0; c.from = m.position.clone(); c.dir = 1;
+            c.side = heel.worldToLocal(m.position.clone()).z < 0 ? -1 : 1;
+            c.arc = this.catArc(c.from, heel.localToWorld(this.deckSpot(c.side)), heel);
           }
         }
       } else if (c.state === 'jump') {
         c.u += dt / 0.85;
         const u = Math.min(1, c.u);
         let to;
-        if (c.dir > 0) { to = heel.localToWorld(this.deckSpot()); }
+        if (c.dir > 0) { to = heel.localToWorld(this.deckSpot(c.side)); }
         else to = c.landing;
         m.position.lerpVectors(c.from, to, u);
-        m.position.y += Math.sin(Math.PI * u) * 0.9;
+        m.position.y += Math.sin(Math.PI * u) * c.arc;
         m.rotation.y = Math.atan2(to.x - c.from.x, to.z - c.from.z);
         ud.body.rotation.x = -0.3 * Math.sin(Math.PI * u);
         if (u >= 1) {
           if (c.dir > 0) {
             c.state = 'aboard'; c.timer = 25 + this.r() * 35;
             this.scene.remove(m); heel.add(m);
-            m.position.copy(this.deckSpot()); m.rotation.set(0, this.r() * 6, 0);
+            m.position.copy(this.deckSpot(c.side)); m.rotation.set(0, this.r() * 6, 0);
           } else {
             c.state = 'walk'; c.aboard = false; c.cool = 40 + this.r() * 40; c.wait = 3;
             // ustaw parametr t na ścieżce najbliżej lądowania
@@ -417,6 +430,7 @@ export class HarbourLife {
             heel.remove(m); this.scene.add(m);
             m.position.copy(wp);
             c.from = wp.clone(); c.landing = new THREE.Vector3(lx, wy.y, lz); c.state = 'jump'; c.dir = -1; c.u = 0;
+            c.arc = this.catArc(c.from, c.landing, heel);
             ud.body.position.y = 0.2;
           } else c.timer = 6;
         }

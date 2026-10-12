@@ -15,6 +15,9 @@ function aabb(poly) {
   return { minX: a, minZ: b, maxX: c, maxZ: d };
 }
 
+// wysokość punktu zaczepienia liny nad podstawą polera (szyjka polera, róg knagi, pierścień, obejma dalby)
+export const TARGET_DY = { bollard: 0.42, cleat: 0.2, ring: 0.07, pile: 0 };
+
 export class World {
   /**
    * cfg: { spec, equip, harbor, weather, scenario: 'moor'|'unmoor', start: {x,z,compass} }
@@ -213,7 +216,7 @@ export class World {
   targetPoint(line, t = line.target) {
     if (!t) return null;
     if (line.isMooring) return { x: t.anchor.x, y: -t.anchor.depth, z: t.anchor.z };
-    return { x: t.x, y: t.h + (t.kind === 'pile' ? 0.3 : t.kind === 'ring' ? 0.05 : 0.35), z: t.z };
+    return { x: t.x, y: t.h + (TARGET_DY[t.kind] ?? 0.42), z: t.z };
   }
 
   // ---------- Domyślne liny ----------
@@ -253,7 +256,7 @@ export class World {
     const t = this.targetPoint({}, bollard);
     const d = this.ropeLength(tmp, t);
     const parts = mode === 'slip' ? 2 : 1;
-    const length = Math.min(40, Math.max(8, Math.ceil(d * parts * 1.25 + 4)));
+    const length = Math.min(40, Math.max(25, Math.ceil(d * parts * 1.25 + 4)));
     const fl = tmp.fairleadId ? this.deckItem(tmp.fairleadId) : null;
     const line = this.addLine({
       role,
@@ -310,10 +313,10 @@ export class World {
       const stbd = { x: -Math.sin(bth), z: Math.cos(bth) };
       const s = stbd.x * b.quayNormal.x + stbd.z * b.quayNormal.z > 0 ? 1 : -1;
       const fwd = Math.sign(Math.cos(bth) * F.ax + Math.sin(bth) * F.az) || 1; // dziób w stronę +u?
-      plan.push({ role: 'bow', where: 'bow', side: s, len: bigBoat ? 15 : 12, tgt: quayBollard(this.boat.xb, 0, fwd * 3.5) });
-      plan.push({ role: 'stern', where: 'stern', side: s, len: bigBoat ? 15 : 12, tgt: quayBollard(this.boat.xs, 0, -fwd * 3.5) });
-      plan.push({ role: 'springFwd', where: 'mid', side: s, len: bigBoat ? 18 : 15, tgt: quayBollard(this.boat.xs * 0.6, 0) });
-      plan.push({ role: 'springAft', where: 'stern', side: s, len: bigBoat ? 18 : 15, tgt: quayBollard(this.boat.xb * 0.35, 0) });
+      plan.push({ role: 'bow', where: 'bow', side: s, len: 25, tgt: quayBollard(this.boat.xb, 0, fwd * 3.5) });
+      plan.push({ role: 'stern', where: 'stern', side: s, len: 25, tgt: quayBollard(this.boat.xs, 0, -fwd * 3.5) });
+      plan.push({ role: 'springFwd', where: 'mid', side: s, len: 25, tgt: quayBollard(this.boat.xs * 0.6, 0) });
+      plan.push({ role: 'springAft', where: 'stern', side: s, len: 25, tgt: quayBollard(this.boat.xb * 0.35, 0) });
     } else {
       const bowIn = b.bowIn;
       const quayEnd = bowIn ? 'bow' : 'stern';
@@ -323,7 +326,7 @@ export class World {
       for (const s of [-1, 1]) {
         const p = wpt(endX, s * sp.beam * 0.45);
         const tgt = nearestTo(p.x + (p.x - bx) * 0.8, p.z + (p.z - bz) * 0.8, zoneQuay);
-        plan.push({ role, where: quayEnd, side: s, len: bigBoat ? 12 : 10, tgt, name: `${ROLE_NAMES[role]} ${s < 0 ? 'L' : 'P'}` });
+        plan.push({ role, where: quayEnd, side: s, len: 25, tgt, name: `${ROLE_NAMES[role]} ${s < 0 ? 'L' : 'P'}` });
       }
       if (m === 'mooringStern' || m === 'mooringBow') {
         const mur = H.murings.find((x) => x.own);
@@ -332,13 +335,13 @@ export class World {
         for (const s of [-1, 1]) {
           const q = F.toWorld(b.u + s * (b.slotW / 2), b.boomV - 0.35);
           const tgt = nearestTo(q.x, q.z, (bb) => bb.kind === 'ring' && bb.onBoom && bb.zone === b.zone);
-          plan.push({ role: 'side', where: 'mid', side: s, len: bigBoat ? 12 : 10, tgt, name: `Cuma boczna (Y-bom) ${s < 0 ? 'L' : 'P'}` });
+          plan.push({ role: 'side', where: 'mid', side: s, len: 25, tgt, name: `Cuma boczna (Y-bom) ${s < 0 ? 'L' : 'P'}` });
         }
       } else if (m.startsWith('piles')) {
         for (const s of [-1, 1]) {
           const q = F.toWorld(b.u + s * (b.slotW / 2), b.pileV);
           const tgt = nearestTo(q.x, q.z, (bb) => bb.kind === 'pile' && bb.zone === b.zone);
-          plan.push({ role: bowIn ? 'stern' : 'bow', where: farEnd, side: 0, len: bigBoat ? 18 : 15, tgt, pileSide: s, name: `${bowIn ? 'Cuma rufowa' : 'Cuma dziobowa'} – dalba ${s < 0 ? 'A' : 'B'}` });
+          plan.push({ role: bowIn ? 'stern' : 'bow', where: farEnd, side: 0, len: 25, tgt, pileSide: s, name: `${bowIn ? 'Cuma rufowa' : 'Cuma dziobowa'} – dalba ${s < 0 ? 'A' : 'B'}` });
         }
       }
     }

@@ -6,7 +6,8 @@ import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { Atmosphere } from './atmosphere.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
-import { localToWorld, DEG, clamp, tensionColor } from '../math.js';
+import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
+import { TARGET_DY } from '../physics/world.js';
 
 export class View3D {
   constructor(container, world) {
@@ -397,6 +398,22 @@ export class View3D {
     return tensionColor(q);
   }
 
+  // Wysokość nabrzeża / pomostu / bomu pod punktem (0 = woda) – liny nie mogą się w nie zapadać
+  groundY(x, z) {
+    if (!this._ground) {
+      this._ground = this.world.H.structures.filter((s) => s.poly && s.kind !== 'pile').map((s) => {
+        const xs = s.poly.map((p) => p[0]), zs = s.poly.map((p) => p[1]);
+        return { poly: s.poly, h: s.h, minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+      });
+    }
+    let y = 0;
+    for (const g of this._ground) {
+      if (x < g.minX || x > g.maxX || z < g.minZ || z > g.maxZ || g.h <= y) continue;
+      if (pointInConvex(g.poly, x, z)) y = g.h;
+    }
+    return y;
+  }
+
   updateRopes() {
     const w = this.world;
     const alive = new Set();
@@ -451,13 +468,30 @@ export class View3D {
         for (const p of route.pts) pts.push(new THREE.Vector3(p.x, p.y, p.z));
         a = route.exit;
       } else pts.push(new THREE.Vector3(a.x, a.y, a.z));
+      // koniec liny na polerze: oczko okręcone wokół szyjki (poler, dalba), przy knadze – krótka pętla, przy pierścieniu – wpięcie
+      const tg = line.target;
+      const fx = !underwater && !line.isMooring && (line.state === 'attached' || line.state === 'waitingCrew') && tg && tg.kind ? { kind: tg.kind, r: { bollard: 0.27, pile: 0.29, cleat: 0.15, ring: 0 }[tg.kind] ?? 0.27 } : null;
+      let e = b;
+      if (fx) {
+        const dx = b.x - a.x, dz = b.z - a.z, dl = Math.hypot(dx, dz) || 1;
+        const rr = fx.r || 0.1;
+        e = { x: b.x - (dx / dl) * rr, y: b.y, z: b.z - (dz / dl) * rr };
+      }
       const N = 18;
       for (let i = 1; i <= N; i++) {
         const t = i / N;
         // zwis rośnie od burty – lina nie zapada się w kadłub tuż przy punkcie zejścia
-        let y = a.y + (b.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
-        if (!underwater) y = Math.max(y, 0.02);
-        pts.push(new THREE.Vector3(a.x + (b.x - a.x) * t, y, a.z + (b.z - a.z) * t));
+        const x = a.x + (e.x - a.x) * t, z = a.z + (e.z - a.z) * t;
+        let y = a.y + (e.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
+        if (!underwater) y = Math.max(y, 0.02, this.groundY(x, z) + 0.08);
+        pts.push(new THREE.Vector3(x, y, z));
+      }
+      if (fx && fx.r) {
+        const ph0 = Math.atan2(e.z - b.z, e.x - b.x), dir = line.id % 2 ? 1 : -1, M = 9;
+        for (let k = 1; k <= M; k++) {
+          const ph = ph0 + dir * (k / M) * Math.PI * 1.75;
+          pts.push(new THREE.Vector3(b.x + Math.cos(ph) * fx.r, b.y + (k / M) * 0.03, b.z + Math.sin(ph) * fx.r));
+        }
       }
       if (!this.ropePts) this.ropePts = new Map();
       this.ropePts.set(line.id, pts);

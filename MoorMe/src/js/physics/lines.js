@@ -38,7 +38,7 @@ export class MooringLine {
     this.name = opts.name || ROLE_NAMES[this.role];
     this.cleatId = opts.cleatId;
     this.fairleadId = opts.fairleadId ?? null;
-    this.length = opts.length || 15;
+    this.length = opts.length || 25;
     this.mode = opts.mode || 'fixed';
     this.winch = !!opts.winch;
     this.state = opts.state || 'ready';

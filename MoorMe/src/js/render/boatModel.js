@@ -286,6 +286,9 @@ export function buildBoat(spec, opts = {}) {
   const fbC = sheerHeight(spec, ck0);
   heel.add(box(ck1 - ck0, 0.05, ckw, COL.teak, (ck0 + ck1) / 2, fbC + 0.01, 0));
   for (const s of [-1, 1]) heel.add(box((ck1 - ck0) * 0.7, 0.35, 0.45, 0xe8e6e1, ck1 - (ck1 - ck0) * 0.38, fbC + 0.2, s * (ckw / 2 - 0.2)));
+  // granatowe poduszki na ławkach kokpitu
+  for (const s of [-1, 1]) heel.add(box((ck1 - ck0) * 0.66, 0.05, 0.4, 0x2d4a6b, ck1 - (ck1 - ck0) * 0.38, fbC + 0.4, s * (ckw / 2 - 0.2)));
+  root.userData.seatSpot = [ck1 - (ck1 - ck0) * 0.38, fbC + 0.43, ckw / 2 - 0.2];
   heel.add(box(0.9, 0.06, 0.55, COL.teak, ck1 - (ck1 - ck0) * 0.45, fbC + 0.75, 0));
   heel.add(box(0.12, 0.7, 0.12, COL.metal, ck1 - (ck1 - ck0) * 0.45, fbC + 0.4, 0));
   // podwójne koła sterowe
@@ -304,6 +307,9 @@ export function buildBoat(spec, opts = {}) {
     wg.position.set(ck0 + 0.55, fbC + wheelR + 0.25, s * spec.beam * 0.27);
     heel.add(wg);
     heel.add(box(0.12, wheelR + 0.25, 0.12, 0xe8e6e1, ck0 + 0.55, fbC + (wheelR + 0.25) / 2, s * spec.beam * 0.27));
+    const cmp = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x1b2128, { rough: 0.2, metal: 0.4 }));
+    cmp.position.set(ck0 + 0.55 - 0.12, fbC + wheelR + 0.25, s * spec.beam * 0.27);
+    heel.add(cmp);
     root.userData.wheels.push(wg);
   }
   // maszt, bom, olinowanie
@@ -509,8 +515,64 @@ function addBoatDetails(heel, root, spec, d) {
   heel.add(box(0.1, 0.08, 0.06, 0x20d060, pbx, pby, halfBeamAt(spec, pbx) - 0.08, { emissive: 0x0a4020 }));
   // winda kotwiczna
   heel.add(box(0.3, 0.14, 0.24, COL.dark, xb - 0.08 * L, sheerHeight(spec, xb - 0.08 * L) + 0.07, 0, { metal: 0.5 }));
-  // tratwa ratunkowa na koszu rufowym
-  heel.add(box(0.55, 0.3, 0.4, 0xf2f2f2, xs + 0.35, d.fbC + 0.75, -spec.beam * 0.3));
+  // tratwa ratunkowa: biały kanister z pomarańczowym pasem, w uchwycie na relingu rufowym (burta lewa)
+  {
+    const rx = xs + 0.42, ry = sheerHeight(spec, rx) + 0.62 + 0.2, rz = -(halfBeamAt(spec, rx) - 0.34);
+    const can = cyl(0.17, 0.17, 0.78, 0xf2f2f2, 12);
+    can.rotation.z = Math.PI / 2; can.position.set(rx, ry, rz);
+    const band = cyl(0.18, 0.18, 0.07, 0xff6a13, 12);
+    band.rotation.z = Math.PI / 2; band.position.set(rx, ry, rz);
+    heel.add(can, band);
+    for (const dx of [-0.25, 0.25]) heel.add(box(0.05, 0.1, 0.12, COL.dark, rx + dx, ry - 0.2, rz));
+  }
+  // koło ratunkowe i pława ratunkowa (danbuoy) na relingu rufowym (burta prawa)
+  {
+    const cx = xs + 0.3, cy = sheerHeight(spec, cx) + 0.5, cz = halfBeamAt(spec, cx) - 0.1;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.055, 6, 14), mat(0xf26b21));
+    ring.position.set(cx, cy, cz); ring.castShadow = true;
+    heel.add(ring);
+    const px = xs + 0.55, pz = halfBeamAt(spec, px) - 0.1, py = sheerHeight(spec, px) + 0.62;
+    heel.add(strut([px, py, pz], [px, py + 1.3, pz], 0.014, 0x222222, 4));
+    const fl = cyl(0.07, 0.07, 0.4, 0xf26b21, 8); fl.position.set(px, py + 0.55, pz); heel.add(fl);
+    heel.add(box(0.02, 0.2, 0.26, 0xe63946, px, py + 1.2, pz));
+  }
+  // antena GPS na relingu rufowym
+  heel.add(cyl(0.04, 0.05, 0.1, 0xf2f2f2, 8).translateX(xs + 0.3).translateY(sheerHeight(spec, xs + 0.3) + 0.67).translateZ(spec.beam * 0.16));
+  // maszt: kołnierz u podstawy, kicker (vang), trawelerz i szot grota
+  {
+    const bY = d.topY + 1.9;
+    const col = cyl(0.13, 0.16, 0.16, COL.mast, 10, { metal: 0.5, rough: 0.4 });
+    col.position.set(d.mastX, d.topY + 0.08, 0);
+    heel.add(col);
+    heel.add(strut([d.mastX, d.topY + 0.3, 0], [d.mastX - 0.5, bY - 0.04, 0], 0.022, COL.metal, 5));
+    const tx = d.ck1 - 0.35, ty = d.fbC + 0.09;
+    heel.add(box(0.05, 0.04, d.ckw * 0.75, COL.metal, tx, ty, 0, { metal: 0.8, rough: 0.3 }));
+    heel.add(box(0.12, 0.06, 0.1, COL.dark, tx, ty + 0.05, 0));
+    const bx = d.mastX - (d.mastX - (xs + 0.12 * L)) * 0.65;
+    heel.add(strut([bx, bY - 0.04, 0], [tx, ty + 0.08, 0], 0.013, COL.rope, 4));
+    heel.add(box(0.07, 0.07, 0.07, COL.dark, bx, bY - 0.07, 0));
+  }
+  // dach nadbudówki: panel słoneczny, luk i grzybki wentylacyjne
+  {
+    const x0 = d.cabin.userData.x0, x1 = d.cabin.userData.x1;
+    const mx = x0 + (x1 - x0) * 0.62;
+    heel.add(box(0.75, 0.025, 0.55, 0x1b2a4a, mx, d.topY + 0.03, 0, { rough: 0.25, metal: 0.4 }));
+    heel.add(box(0.5, 0.04, 0.5, 0xe8e6e1, x0 + (x1 - x0) * 0.25, d.topY + 0.03, 0));
+    heel.add(box(0.42, 0.045, 0.42, 0x16202b, x0 + (x1 - x0) * 0.25, d.topY + 0.032, 0, glass));
+  }
+  for (const s of [-1, 1]) {
+    const vx = xb - 0.2 * L;
+    const vy = sheerHeight(spec, vx);
+    const v1 = cyl(0.05, 0.05, 0.12, 0xc9ced4, 8, { metal: 0.6 }); v1.position.set(vx, vy + 0.06, s * halfBeamAt(spec, vx) * 0.5);
+    const v2 = cyl(0.1, 0.06, 0.05, 0xc9ced4, 10, { metal: 0.6 }); v2.position.set(vx, vy + 0.14, s * halfBeamAt(spec, vx) * 0.5);
+    heel.add(v1, v2);
+  }
+  // luk dziobowy i skrzynka łańcucha
+  {
+    const hx = xb - 0.27 * L, hy = sheerHeight(spec, hx);
+    heel.add(box(0.6, 0.04, 0.6, 0xe8e6e1, hx, hy + 0.03, 0));
+    heel.add(box(0.5, 0.045, 0.5, 0x16202b, hx, hy + 0.034, 0, glass));
+  }
   // drabinka kąpielowa
   for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
   // nazwa na pawęży

@@ -631,7 +631,7 @@ export class SimScreen {
     const w = this.world;
     const cleats = w.cleats();
     const fls = w.fairleads();
-    const st = { role: 'bow', cleatId: cleats[0]?.id, fairleadId: 'auto', length: 12, mode: 'fixed', winch: false };
+    const st = { role: 'bow', cleatId: cleats[0]?.id, fairleadId: 'auto', length: 25, mode: 'fixed', winch: false };
     const back = h('div.modal-back');
     const m = h('div.modal.glass');
     const sel = (opts, val, on) => {
