@@ -461,12 +461,14 @@ export class View3D {
         // część liny na jachcie: knaga -> kluza -> wzdłuż burty (opasanie), potem wolny odcinek do celu
         const cl = w.deckItem(line.cleatId);
         const route = w.ropeRoute(line, b);
-        if (cl && (cl.x !== lead.lx || cl.y !== lead.ly)) {
-          const cw = localToWorld(w.boat.x, w.boat.z, w.boat.th, cl.x, cl.y);
-          pts.push(new THREE.Vector3(cw.x, w.deckHeight(cl.x) + 0.12, cw.z));
-        }
-        for (const p of route.pts) pts.push(new THREE.Vector3(p.x, p.y, p.z));
-        a = route.exit;
+        // punkty na pokładzie leżą w układzie jachtu (kołysze się razem z modelem), reszta liny – w świecie
+        const hv = this.boat.userData.heel;
+        hv.updateMatrixWorld(true);
+        const onDeck = (p) => (p.lx === undefined ? new THREE.Vector3(p.x, p.y, p.z) : hv.localToWorld(new THREE.Vector3(p.lx, p.y, p.ly)));
+        if (cl && (cl.x !== lead.lx || cl.y !== lead.ly)) pts.push(hv.localToWorld(new THREE.Vector3(cl.x, w.deckHeight(cl.x) + 0.12, cl.y)));
+        for (const p of route.pts) pts.push(onDeck(p));
+        const ex = onDeck(route.exit);
+        a = { x: ex.x, y: ex.y, z: ex.z };
       } else pts.push(new THREE.Vector3(a.x, a.y, a.z));
       // koniec liny na polerze: oczko okręcone wokół szyjki (poler, dalba), przy knadze – krótka pętla, przy pierścieniu – wpięcie
       const tg = line.target;
@@ -478,15 +480,36 @@ export class View3D {
         e = { x: b.x - (dx / dl) * rr, y: b.y, z: b.z - (dz / dl) * rr };
       }
       const N = 18;
+      // na biegowo: dwie równoległe nitki – do polera i z powrotem na jacht (rozchodzą się od burty)
+      const slip = !!fx && line.mode === 'slip';
+      const sdx = e.x - a.x, sdz = e.z - a.z, sdl = Math.hypot(sdx, sdz) || 1;
+      const nx = -sdz / sdl, nz = sdx / sdl, OFF = 0.065;
+      const strandA = [], strandB = [];
       for (let i = 1; i <= N; i++) {
         const t = i / N;
         // zwis rośnie od burty – lina nie zapada się w kadłub tuż przy punkcie zejścia
         const x = a.x + (e.x - a.x) * t, z = a.z + (e.z - a.z) * t;
         let y = a.y + (e.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
         if (!underwater) y = Math.max(y, 0.02, this.groundY(x, z) + 0.08);
-        pts.push(new THREE.Vector3(x, y, z));
+        if (slip) {
+          const o = OFF * Math.min(1, t * 4);
+          strandA.push(new THREE.Vector3(x + nx * o, y, z + nz * o));
+          strandB.push(new THREE.Vector3(x - nx * o, y, z - nz * o));
+        } else pts.push(new THREE.Vector3(x, y, z));
       }
-      if (fx && fx.r) {
+      if (slip) {
+        pts.push(...strandA);
+        if (fx.r) {
+          // pętla wokół polera: od jednej nitki, dookoła szyjki, do drugiej
+          const ph0 = Math.atan2(e.z - b.z, e.x - b.x), dlt = Math.asin(Math.min(0.9, OFF / fx.r)), dir = line.id % 2 ? 1 : -1, M = 12;
+          const span = Math.PI * 2 - 2 * dlt;
+          for (let k = 0; k <= M; k++) {
+            const ph = ph0 - dir * dlt + dir * (k / M) * span;
+            pts.push(new THREE.Vector3(b.x + Math.cos(ph) * fx.r, b.y + 0.01, b.z + Math.sin(ph) * fx.r));
+          }
+        }
+        pts.push(...strandB.reverse());
+      } else if (fx && fx.r) {
         const ph0 = Math.atan2(e.z - b.z, e.x - b.x), dir = line.id % 2 ? 1 : -1, M = 9;
         for (let k = 1; k <= M; k++) {
           const ph = ph0 + dir * (k / M) * Math.PI * 1.75;
@@ -496,7 +519,7 @@ export class View3D {
       if (!this.ropePts) this.ropePts = new Map();
       this.ropePts.set(line.id, pts);
       const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-      const geo = new THREE.TubeGeometry(curve, pts.length * 2, line.isMooring ? 0.05 : 0.06, 12, false);
+      const geo = new THREE.TubeGeometry(curve, pts.length * 2, line.isMooring ? 0.035 : 0.04, 8, false);
       let mesh = this.ropeMeshes.get(line.id);
       if (!mesh) {
         mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: false }));
