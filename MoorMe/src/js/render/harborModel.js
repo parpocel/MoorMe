@@ -1007,6 +1007,7 @@ const WAVES = [
   { d: 1.4, k: 0.22, w: 0.85, a: 0.6 },
   { d: -0.25, k: 0.62, w: 1.6, a: 0.3 }
 ];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export class Water {
   constructor(scene) {
     const size = 520, seg = 150;
@@ -1018,7 +1019,7 @@ export class Water {
     // stonowana tekstura zmarszczek + łagodny połysk (Phong z ciemnym odblaskiem)
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, bumpMap: this.tex, bumpScale: 2.2, specular: 0x6f8794, shininess: 90, transparent: true, opacity: 0.94, vertexColors: true });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, bumpMap: this.tex, bumpScale: 1.1, specular: 0x24343c, shininess: 55, transparent: true, opacity: 0.94, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
     matW.onBeforeCompile = (sh) => {
@@ -1089,6 +1090,7 @@ export class Water {
       col.setXYZ(i, c.r, c.g, c.b);
     }
     col.needsUpdate = true;
+    this.baseCol = col.array.slice();
   }
   // wysokość i nachylenie sumy fal w punkcie
   wave(x, z, t, a, windDir, out) {
@@ -1119,29 +1121,32 @@ export class Water {
       const dir = windDir + (i ? 1.1 : -0.7);
       rp.tex.offset.x += Math.sin(dir) * wsp * (i ? 1.4 : 0.8) * dt;
       rp.tex.offset.y += Math.cos(dir) * wsp * (i ? 1.4 : 0.8) * dt;
-      rp.mat.opacity = 0.38 + 0.2 * Math.sin(this.t * (0.5 + i * 0.37) + i * 2);
+      rp.mat.opacity = 0.15 + 0.08 * Math.sin(this.t * (0.5 + i * 0.37) + i * 2);
     });
     const p = this.geo.attributes.position.array;
     const n = this.geo.attributes.normal.array;
-    const a = 0.04 + Math.min(windKn, 35) * 0.0045;
+    const a = (0.04 + Math.min(windKn, 35) * 0.0045) * 1.9; // wyższe fale – wyraźniejsza bryła wody
     this.shadowPlane.position.y = a * 1.4; // na wysokości typowych grzbietów fal
     const g = {};
+    const cl = this.baseCol ? this.geo.attributes.color.array : null;
     for (let i = 0; i < p.length; i += 3) {
       p[i + 1] = this.wave(this.base[i], this.base[i + 2], this.t, a, windDir, g);
+      if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.16; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
       // normalna z analitycznego gradientu
-      const gx = g.gx * 3, gz = g.gz * 3; // nachylenie przerysowane, żeby fale były czytelne w oświetleniu
+      const gx = g.gx * 4.2, gz = g.gz * 4.2; // nachylenie przerysowane, żeby fale były czytelne w oświetleniu
       const l = 1 / Math.hypot(gx, 1, gz);
       n[i] = -gx * l; n[i + 1] = l; n[i + 2] = -gz * l;
     }
     this.geo.attributes.position.needsUpdate = true;
     this.geo.attributes.normal.needsUpdate = true;
+    if (cl) this.geo.attributes.color.needsUpdate = true;
   }
   // wysokość narysowanej powierzchni (do unoszących się obiektów)
   surfaceY(x, z, windKn, windDir) {
-    return this.wave(x, z, this.t, 0.04 + Math.min(windKn, 35) * 0.0045, windDir);
+    return this.wave(x, z, this.t, (0.04 + Math.min(windKn, 35) * 0.0045) * 1.9, windDir);
   }
   heightAt(x, z, windKn, windDir) {
     const a = 0.03 + Math.min(windKn, 35) * 0.0032;
-    return this.wave(x, z, this.t, a, windDir) * 1.5; // kołysanie jachtu nieco silniejsze niż rysowana fala
+    return this.wave(x, z, this.t, a, windDir) * 2.2; // kołysanie jachtu nieco silniejsze niż rysowana fala
   }
 }
