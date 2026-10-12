@@ -424,7 +424,7 @@ export class View3D {
         a = lead; b = w.targetPoint(line);
         const slack = line.slack || 0;
         const d = line.dist || 1;
-        sag = slack > 0.01 ? Math.sqrt((3 * d * slack) / 8) : 0.02;
+        sag = slack > 0.01 ? Math.min(4, Math.sqrt((3 * d * slack) / 8)) : 0.02;
         underwater = line.isMooring;
       } else if (line.state === 'pending') {
         const t = w.targetPoint(line, line.pendingTarget);
@@ -490,7 +490,9 @@ export class View3D {
         // zwis rośnie od burty – lina nie zapada się w kadłub tuż przy punkcie zejścia
         const x = a.x + (e.x - a.x) * t, z = a.z + (e.z - a.z) * t;
         let y = a.y + (e.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
-        if (!underwater) y = Math.max(y, 0.02, this.groundY(x, z) + 0.08);
+        // nad kei lina leży na powierzchni, nad wodą luźna lina tonie (zwis poniżej lustra wody)
+        const gy = underwater ? 0 : this.groundY(x, z);
+        if (gy > 0) y = Math.max(y, gy + 0.08);
         if (slip) {
           const o = OFF * Math.min(1, t * 4);
           strandA.push(new THREE.Vector3(x + nx * o, y, z + nz * o));
