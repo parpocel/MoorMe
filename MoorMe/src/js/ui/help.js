@@ -1,7 +1,7 @@
 // Treść pomocy: sterowanie klawiaturą, praca na linach – używana w menu głównym i w symulacji
 import { h } from './dom.js';
 
-const KEYS = [
+export const KEYS = [
   ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo'], ['R', 'Ster na zero'],
   ['Q / E', 'Ster strumieniowy dziobowy: dziób w lewo / w prawo'], ['Z / C', 'Ster strumieniowy rufowy: rufa w lewo / w prawo'],
   ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['Klik na linę', 'Menu okrągłe: wybieraj, wybierz, luzuj, luz, knaguj, oddaj (przytrzymaj wybieraj/luzuj – działa tylko podczas trzymania)'],
@@ -10,7 +10,7 @@ const KEYS = [
   ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
 ];
 
-const LINES = [
+export const LINES = [
   ['Zakładanie liny', 'Kliknij knagę na jachcie, opcjonalnie kluzę lub półkluzę, a potem poler (dalbę, pal) na nabrzeżu. Rolę liny (dziobowa, rufowa, szpring, brest) program rozpozna sam z położenia polera. Jeśli poler jest poza zasięgiem, lina czeka w kolejce, a załoga założy ją sama, gdy jacht podejdzie.'],
   ['Na stałe i na biegowo', 'Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Na biegowo: lina okłada poler i wraca na jacht (potrzebny bliższy dostęp, ok. 1,5 m), oddasz ją z pokładu. Tryb zmienisz przyciskiem „⇄” na karcie liny.'],
   ['Wybieranie i luzowanie', 'Na karcie liny (lewy dolny róg) lub w menu kołowym po kliknięciu liny: Wybieraj (przytrzymaj – wybiera), Wybierz (wybiera samo do napięcia liny), Luzuj (popuszczanie), Luz (lina bez naciągu), Knaguj (zablokuj długość), Oddaj. Kabestan daje większą siłę, ale wybiera wolniej.'],

@@ -1018,7 +1018,22 @@ export class Water {
     // stonowana tekstura zmarszczek + łagodny połysk (Phong z ciemnym odblaskiem)
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, specular: 0x16252d, shininess: 35, transparent: true, opacity: 0.93 });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, bumpMap: this.tex, bumpScale: 2.2, specular: 0x6f8794, shininess: 90, transparent: true, opacity: 0.94, vertexColors: true });
+    // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
+    this.skyU = { value: new THREE.Color(0x9fd0e6) };
+    matW.onBeforeCompile = (sh) => {
+      sh.uniforms.uSky = this.skyU;
+      sh.fragmentShader = sh.fragmentShader
+        .replace('void main() {', 'uniform vec3 uSky;\nvoid main() {')
+        .replace('#include <dithering_fragment>', `
+          float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.7, 0.0, 0.6));
+          #include <dithering_fragment>`);
+    };
+    this.sceneRef = scene;
+    // kolor wierzchołków: ciemniejsza głęboka woda, jaśniejsza przy brzegu (uzupełniane w setHarbor)
+    const vc = new Float32Array(geo.attributes.position.count * 3).fill(1);
+    geo.setAttribute('color', new THREE.BufferAttribute(vc, 3));
     this.mesh = new THREE.Mesh(geo, matW);
     scene.add(this.mesh);
     // cienie odbiera osobna, płaska płaszczyzna – cienie nie „falują” razem z siatką fal
@@ -1045,6 +1060,36 @@ export class Water {
     scene.add(far);
     this.t = 0;
   }
+  // Barwa zależna od odległości od brzegu (płycizna jaśniejsza i bardziej zielona, głębia ciemniejsza)
+  setHarbor(H) {
+    const polys = H.structures.filter((s) => s.kind !== 'boom' && s.kind !== 'pile' && s.poly).map((s) => {
+      const xs = s.poly.map((p) => p[0]), zs = s.poly.map((p) => p[1]);
+      return { poly: s.poly, minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
+    });
+    const dSeg = (px, pz, ax, az, bx, bz) => {
+      const dx = bx - ax, dz = bz - az, l2 = dx * dx + dz * dz || 1;
+      const k = Math.max(0, Math.min(1, ((px - ax) * dx + (pz - az) * dz) / l2));
+      return Math.hypot(px - (ax + dx * k), pz - (az + dz * k));
+    };
+    const col = this.geo.attributes.color;
+    const deep = new THREE.Color(0x6aa8bd), shallow = new THREE.Color(0xd2f1e8), mid = new THREE.Color(0xffffff);
+    const c = new THREE.Color();
+    for (let i = 0; i < col.count; i++) {
+      const x = this.base[i * 3], z = this.base[i * 3 + 2];
+      let d = 60;
+      for (const q of polys) {
+        if (x < q.minX - 60 || x > q.maxX + 60 || z < q.minZ - 60 || z > q.maxZ + 60) continue;
+        for (let k = 0; k < q.poly.length; k++) {
+          const a = q.poly[k], b = q.poly[(k + 1) % q.poly.length];
+          d = Math.min(d, dSeg(x, z, a[0], a[1], b[0], b[1]));
+        }
+      }
+      const t = Math.min(1, d / 45);
+      c.copy(shallow).lerp(mid, Math.min(1, d / 6)).lerp(deep, Math.max(0, (t - 0.15) / 0.85) * 0.9);
+      col.setXYZ(i, c.r, c.g, c.b);
+    }
+    col.needsUpdate = true;
+  }
   // wysokość i nachylenie sumy fal w punkcie
   wave(x, z, t, a, windDir, out) {
     let h = 0, gx = 0, gz = 0;
@@ -1062,6 +1107,8 @@ export class Water {
   }
   update(dt, windKn, windDir) {
     this.t += dt;
+    const fc = this.sceneRef.fog && this.sceneRef.fog.color;
+    if (fc) this.skyU.value.copy(fc).multiplyScalar(1.08);
     // tekstura dryfuje powoli z wiatrem
     const drift = (0.004 + Math.min(windKn, 35) * 0.0006) * dt;
     this.tex.offset.x += Math.sin(windDir) * drift;

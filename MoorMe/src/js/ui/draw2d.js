@@ -1,5 +1,6 @@
 // Rysunki 2D: widok jachtu z góry, mapa portu
 import { hullExtents, hullOutline, halfBeamAt } from '../data/boats.js';
+import { t } from '../i18n.js';
 
 export function drawBoatTop(ctx, spec, cx, cy, scale, rot = 0, opts = {}) {
   const { xs, xb } = hullExtents(spec);
@@ -151,7 +152,7 @@ export function drawHarborMap(ctx, H, T, opts = {}) {
     ctx.fillStyle = '#3ddc84';
     ctx.font = 'bold 13px Segoe UI';
     ctx.textAlign = 'center';
-    ctx.fillText('TU', px, pz + 4);
+    ctx.fillText(t('TU'), px, pz + 4);
     ctx.restore();
   }
   // muringi

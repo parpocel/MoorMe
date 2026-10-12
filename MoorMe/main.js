@@ -23,7 +23,7 @@ function createWindow() {
     }
   });
   Menu.setApplicationMenu(null);
-  win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  win.loadFile(path.join(__dirname, 'src', 'index.html'), process.env.MOORME_SMOKE_OUT ? { query: { smoke: '1' } } : undefined);
 
   // Test dymny (CI): MOORME_SMOKE_OUT=plik.png – zrzut ekranu po starcie i zamknięcie
   const smokeOut = process.env.MOORME_SMOKE_OUT;

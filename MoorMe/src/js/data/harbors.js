@@ -242,8 +242,9 @@ function genZone(H, Z, own, R, ctx) {
       let ur = u0 + free / 2, ul = u0 - free / 2;
       for (let i = 0; i < 8; i++) {
         const sR = pickSpec(), sL = pickSpec();
-        if (ur + sR.loa < half - 1) place(sR, ur + sR.loa / 2);
-        if (ul - sL.loa > -half + 1) place(sL, ul - sL.loa / 2);
+        // dwa najbliższe jachty po każdej stronie stoją zawsze, dalsze według obsadzenia portu
+        if (ur + sR.loa < half - 1 && (i < 2 || R() < ctx.occ)) place(sR, ur + sR.loa / 2);
+        if (ul - sL.loa > -half + 1 && (i < 2 || R() < ctx.occ)) place(sL, ul - sL.loa / 2);
         ur += sR.loa + 1.2 + R() * 1.5;
         ul -= sL.loa + 1.2 + R() * 1.5;
       }
@@ -252,7 +253,7 @@ function genZone(H, Z, own, R, ctx) {
       while (true) {
         const s = pickSpec();
         if (u + s.loa > half - 1) break;
-        if (R() > 0.15) place(s, u + s.loa / 2);
+        if (R() < ctx.occ) place(s, u + s.loa / 2);
         u += s.loa + 1.5 + R() * 3;
       }
     }
@@ -302,7 +303,7 @@ function genZone(H, Z, own, R, ctx) {
       if (isMooring && q.rings) addBollard(s.u, -0.2, 'ring', qh);
       if (s.own) continue;
       const dist = Math.abs(s.u - (Z.ownU || 0));
-      if ((!own || dist > (own ? 8 : 0)) && R() < 0.30) { s.empty = true; continue; }
+      if ((!own || dist > 8) && R() > ctx.occ) { s.empty = true; continue; }
       const nSpec = s.spec;
       const nBowIn = R() < 0.2 ? !bowIn : bowIn;
       const nv = (nBowIn ? 0.52 * nSpec.loa : 0.48 * nSpec.loa) + (nBowIn ? 1.0 : 0.75);
@@ -403,7 +404,8 @@ export function generateHarbor(opt) {
     berth: null, starts: [], bounds: P.bounds, seed: opt.seed || 7
   };
   for (const s of P.structures) H.structures.push(struct(s.kind, s.poly, s.h, !!s.walk, { style: s.style, edges: s.edges }));
-  const ctx = { bid: 0 };
+  // obsadzenie miejsc w porcie: losowo 25–75% (nie więcej niż 3/4)
+  const ctx = { bid: 0, occ: 0.25 + 0.5 * R() };
   for (const Z of P.zones) {
     const own = Z.id === cfg.zone ? { method: cfg.method, spec, side: opt.side, slotWidth: opt.slotWidth } : null;
     if (!own && !Z.decor && Z.methods) {

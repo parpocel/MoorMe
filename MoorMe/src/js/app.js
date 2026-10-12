@@ -9,6 +9,7 @@ import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
 import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
+import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 function sceneryEl() {
@@ -22,6 +23,7 @@ const icon = {
   dice: '<svg width="26" height="26" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#d2695f" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="15.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="8.5" cy="15.5" r="1.6" fill="#d2695f"/></svg>',
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
   help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
+  gear: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
   down: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6" fill="none" stroke="#4a5a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 const raw = (html) => { const d = document.createElement('span'); d.style.display = 'contents'; d.innerHTML = html; return d; };
@@ -99,8 +101,39 @@ function showTitle() {
         btn('.sec.rnd', icon.dice, 'Random', null, () => showRandom(), { title: 'Losowe zadanie w losowych warunkach' }),
         btn('.sec.fast', icon.fast, 'Szybki start', 'ostatnie ustawienia', () => startSim(), saved ? {} : { disabled: true, title: 'Najpierw ustaw i uruchom symulację' })),
       btn('.help', icon.help, 'Pomoc – sterowanie i praca na cumach', null, () => showHelp()),
+      btn('.help', icon.gear, 'Ustawienia', null, () => showSettings()),
       h('div.title-note', {}, raw(icon.down), h('span', {}, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne'))));
   app.appendChild(s);
+}
+
+// ---------- Język i ustawienia ----------
+function chooseLang(id) {
+  setLang(id);
+  location.reload();
+}
+
+function langButtons() {
+  const cur = hasSavedLang() ? getLang() : null;
+  return h('div.tbtn-row', {}, LANGS.map((l) => h('button.tbtn.sec' + (cur === l.id ? '.rnd' : ''), { onclick: () => chooseLang(l.id) }, h('span', {}, l.name, cur === l.id ? h('small', {}, '✓') : null))));
+}
+
+// pierwsze uruchomienie: wybór języka (napisy dwujęzyczne, więc bez tłumaczenia DOM)
+function showLangPicker() {
+  app.innerHTML = '';
+  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
+    h('div.title-card', {},
+      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
+      h('p.desc', {}, 'Wybierz język / Choose your language'),
+      langButtons(),
+      h('div.title-note', {}, h('span', {}, 'Język możesz później zmienić w Ustawieniach. / You can change the language later in Settings.')))));
+}
+
+function showSettings() {
+  app.innerHTML = '';
+  app.appendChild(h('div.screen', {}, sceneryEl(),
+    h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),
+    h('div.screen-body', {}, h('div.help-card', {}, h('h2', { style: { marginBottom: '8px' } }, 'Język / Language'), langButtons())),
+    h('div.screen-footer', {}, h('button.btn', { onclick: () => showTitle() }, '← Menu'), h('span'))));
 }
 
 // ---------- Pomoc ----------
@@ -208,7 +241,7 @@ function stepHarbor() {
     drawHarborMap(mapCv.getContext('2d'), H, T, { spec, bollards: zoom !== 'port' });
     const ctx = mapCv.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
-    ctx.fillText('Twoje stanowisko: „TU” (zielone)', 14, mapCv.height - 14);
+    ctx.fillText(t('Twoje stanowisko: „TU” (zielone)'), 14, mapCv.height - 14);
     schedulePreview(H);
   };
   // podgląd 3D portu (przebudowa z opóźnieniem, żeby suwak szerokości nie mielił sceny)
@@ -354,10 +387,10 @@ function stepWeather() {
       const [px, pz] = T.toPx(st.x, st.z);
       drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (st.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
       ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
-      ctx.fillText('START', px + 14, pz - 12);
+      ctx.fillText(t('START'), px + 14, pz - 12);
     }
     ctx.fillStyle = '#fff'; ctx.font = '13px Segoe UI';
-    ctx.fillText(config.scenario === 'moor' ? 'Kliknij, aby ustawić start. Przeciągnij, aby ustawić kurs.' : 'Odcumowanie – start ze stanowiska (zielone).', 14, mapCv.height - 14);
+    ctx.fillText(t(config.scenario === 'moor' ? 'Kliknij, aby ustawić start. Przeciągnij, aby ustawić kurs.' : 'Odcumowanie – start ze stanowiska (zielone).'), 14, mapCv.height - 14);
   };
   let dragStart = null;
   mapCv.addEventListener('pointerdown', (e) => {
@@ -535,7 +568,7 @@ function showRandom(cfg = randomConfig()) {
   if (cfg.scenario === 'moor') {
     const [px, pz] = T.toPx(cfg.start.x, cfg.start.z);
     drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (cfg.start.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI'; ctx.fillText('START', px + 12, pz - 10);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI'; ctx.fillText(t('START'), px + 12, pz - 10);
   }
 }
 
@@ -543,4 +576,8 @@ window.addEventListener('error', (e) => {
   console.error(e.error || e.message);
 });
 
-showTitle();
+installDomTranslator(document.body);
+document.documentElement.lang = getLang();
+document.title = t('MoorMe – symulator cumowania');
+// test dymny (CI) pomija wybór języka
+if (!hasSavedLang() && !location.search.includes('smoke')) showLangPicker(); else showTitle();

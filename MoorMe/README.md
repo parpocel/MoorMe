@@ -34,6 +34,12 @@ Kreator prowadzi przez cztery kroki:
 4. **Pogoda i start** (pogodę, niebo i porę dnia – także noc – zmienisz też w trakcie symulacji przyciskiem „🌦 Pogoda”): siła i kierunek wiatru, porywistość ze skrętami wiatru, prąd oraz miejsce startu na mapie portu.
    Wybierasz gotowe miejsce albo klikasz na mapie i przeciągasz, żeby ustawić kurs.
 
+### Język
+
+Gra jest dostępna po polsku i po angielsku. Przy pierwszym uruchomieniu pokazuje się wybór języka. Później zmienisz go w menu głównym: **Ustawienia → Język**. Wybór jest zapamiętywany.
+
+Teksty źródłowe w kodzie są po polsku, a angielskie tłumaczenia leżą w `src/js/i18n/en.js` (słownik oraz reguły dla komunikatów z liczbami). Obserwator DOM w `src/js/i18n.js` tłumaczy je na ekranie, a napisy rysowane na płótnach przechodzą przez `t()`. Nowy tekst w interfejsie trzeba dopisać do słownika; test `tests/i18n.test.mjs` sprawdza, czy nazwy, opisy, pomoc i komunikaty symulacji mają tłumaczenie.
+
 ### Panel symulacji
 
 - **Silnik**: manetka z luzem pośrodku. Zmiana biegu odbywa się ze zwłoką sprzęgła, obroty rosną i spadają płynnie.

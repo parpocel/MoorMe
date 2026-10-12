@@ -7,6 +7,7 @@ import { Sound } from '../audio.js';
 import { BOATS } from '../data/boats.js';
 import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
 import { buildHelpContent } from './help.js';
+import { t, sideLetters } from '../i18n.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, tensionColor } from '../math.js';
 
 export class SimScreen {
@@ -778,7 +779,7 @@ export class SimScreen {
         <span class="muted">Ruch wzdłużny</span><b>${u >= 0 ? '▲' : '▼'} ${Math.abs(u).toFixed(2)} kn</b>
         <span class="muted">Obrót</span><b>${(b.r / DEG).toFixed(1)} °/s</b>
         <span class="muted">Wiatr rzecz.</span><b>${(env.windSpeed / KN).toFixed(0)} kn z ${env.windFromDeg.toFixed(0).padStart(3, '0')}°</b>
-        <span class="muted">Wiatr pozorny</span><b>${appKn.toFixed(0)} kn ${appDeg >= 0 ? 'P' : 'L'} ${Math.abs(appDeg).toFixed(0)}°</b>
+        <span class="muted">Wiatr pozorny</span><b>${appKn.toFixed(0)} kn ${appDeg >= 0 ? sideLetters()[1] : sideLetters()[0]} ${Math.abs(appDeg).toFixed(0)}°</b>
         ${w.env.w.currentKn ? `<span class="muted">Prąd</span><b>${w.env.w.currentKn.toFixed(1)} kn → ${w.env.w.currentTo}°</b>` : ''}
         <span class="muted">Czas</span><b>${min}:${String(sec).padStart(2, '0')}</b>
         <span class="muted">Godzina</span><b>${String(Math.floor(this.view.atmo.hour)).padStart(2, '0')}:${String(Math.floor((this.view.atmo.hour % 1) * 60)).padStart(2, '0')}</b>
@@ -800,7 +801,7 @@ export class SimScreen {
       gh += ck(w.poseOk, `Odejście od stanowiska (${distB.toFixed(0)} / ${(w.spec.loa * 2.2).toFixed(0)} m)`);
     }
     const s = w.stats;
-    gh += `<div class="small muted" style="margin-top:6px">Uderzenia kadłubem: <b style="color:${s.hullHits ? '#ff5a5a' : 'inherit'}">${s.hullHits}</b> · mocne w odbijacz: ${s.hardFender}${s.breaks ? ' · zerwane liny: ' + s.breaks : ''}</div>`;
+    gh += `<div class="small muted" style="margin-top:6px">Uderzenia kadłubem: <b style="color:${s.hullHits ? '#ff5a5a' : 'inherit'}">${s.hullHits}</b><span> · </span><span>mocne w odbijacz: ${s.hardFender}</span>${s.breaks ? `<span> · </span><span>zerwane liny: ${s.breaks}</span>` : ''}</div>`;
     if (w.engineDead) gh += `<div style="color:#ff5a5a;font-weight:700;margin-top:4px">Silnik: lina w śrubie!</div>`;
     this.goal.innerHTML = gh;
 
@@ -818,7 +819,8 @@ export class SimScreen {
     const a0 = 50, a1 = ((ra / 35 + 1) / 2) * 100;
     this.rudAct.style.left = `${Math.min(a0, a1)}%`;
     this.rudAct.style.width = `${Math.abs(a1 - a0)}%`;
-    this.rudVal.innerHTML = `<span class="muted">L</span><b>${ra >= 0 ? 'P' : 'L'} ${Math.abs(ra).toFixed(0)}°</b><span class="muted">P</span>`;
+    const [SL, SP] = sideLetters();
+    this.rudVal.innerHTML = `<span class="muted">${SL}</span><b>${ra >= 0 ? SP : SL} ${Math.abs(ra).toFixed(0)}°</b><span class="muted">${SP}</span>`;
     for (const kind of ['bow', 'stern']) {
       const bt = this[kind + 'Btns'];
       if (!bt) continue;
@@ -886,7 +888,7 @@ export class SimScreen {
       ctx.beginPath(); ctx.arc(cx + sx * R, cy + sy * R, 5, 0, Math.PI * 2); ctx.fill();
     }
     ctx.fillStyle = '#cfe6f5'; ctx.font = '10px Segoe UI';
-    ctx.fillText(`wiatr ${(w.env.windSpeed / KN).toFixed(0)} kn`, cx, cy + R * 0.45);
+    ctx.fillText(t(`wiatr ${(w.env.windSpeed / KN).toFixed(0)} kn`), cx, cy + R * 0.45);
   }
 
   showHelp() {

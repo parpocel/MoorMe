@@ -62,6 +62,7 @@ export class View3D {
     this.sky = sky;
 
     this.water = new Water(scene);
+    this.water.setHarbor(world.H);
     const hb = buildHarbor(world.H, scene);
     this.harbor = hb;
 

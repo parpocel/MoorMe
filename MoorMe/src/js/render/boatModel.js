@@ -43,7 +43,7 @@ function sheerHeight(spec, x) {
 // Kadłub: stacje poprzeczne, pasy z kolorami (burta, pas okien, linia wodna, antyfouling)
 function buildHull(spec, hullColor, stripeColor) {
   const { xs, xb } = hullExtents(spec);
-  const N = 18;
+  const N = 23; // gęstsza siatka kadłuba (+25% wierzchołków)
   const bands = [
     // [wysokość względna do wolnej burty lub bezwzględna, szerokość względna, kolor]
     { h: (fb) => fb, w: 1.0 },
@@ -129,7 +129,7 @@ function box(w, h, d, color, x, y, z, opts) {
   return m;
 }
 function cyl(r1, r2, h, color, seg = 6, opts) {
-  const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, seg), mat(color, opts));
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, Math.ceil(seg * 1.25)), mat(color, opts));
   m.castShadow = true;
   return m;
 }
@@ -190,9 +190,10 @@ function buildCabin(spec) {
 
 // Linie (relingi, wanty) nie reagują na oświetlenie – Atmosphere przyciemnia je nocą, żeby nie świeciły
 export const LINE_MATS = {
-  rail: { mat: new THREE.LineBasicMaterial({ color: 0xb8bec5 }), base: 0xb8bec5 },
-  rig: { mat: new THREE.LineBasicMaterial({ color: 0x3a3f44 }), base: 0x3a3f44 },
-  halyard: { mat: new THREE.LineBasicMaterial({ color: 0xd8d2c0 }), base: 0xd8d2c0 }
+  // linie rysowane są zawsze 1-pikselowe; półprzezroczystość sprawia, że wanty, sztagi i relingi wyglądają cieniej
+  rail: { mat: new THREE.LineBasicMaterial({ color: 0xb8bec5, transparent: true, opacity: 0.6 }), base: 0xb8bec5 },
+  rig: { mat: new THREE.LineBasicMaterial({ color: 0x3a3f44, transparent: true, opacity: 0.5 }), base: 0x3a3f44 },
+  halyard: { mat: new THREE.LineBasicMaterial({ color: 0xd8d2c0, transparent: true, opacity: 0.5 }), base: 0xd8d2c0 }
 };
 
 // Bandera na rufie (grupa: obrót wokół pionowego drzewca ustawia się według wiatru)
@@ -343,7 +344,7 @@ export function buildBoat(spec, opts = {}) {
   rg.setAttribute('position', new THREE.Float32BufferAttribute(rigPos, 3));
   heel.add(new THREE.LineSegments(rg, LINE_MATS.rig.mat));
   // zrolowany genua na sztagu
-  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.085, opts.canvas ?? COL.canvas, 12);
+  const gen = strut(stemTop, [mastX, mtop - 0.9, 0], 0.06, opts.canvas ?? COL.canvas, 12);
   gen.scale.set(1, 0.9, 1);
   heel.add(gen);
   // windex i światło topowe

@@ -426,9 +426,130 @@ export class World {
     return res;
   }
 
-  // Czy do polera da się dojść pieszo (keja, pomost, Y-bom) – dalby są tylko z wody
+  // Czy do polera da się dojść pieszo (keja, pomost, Y-bom połączone z miejscem, gdzie jest załoga) – dalby są tylko z wody
   onFoot(b) {
-    return b.kind !== 'pile';
+    if (b.kind === 'pile') return false;
+    let from = this.crew.ashore ? this.crew : null;
+    if (!from) {
+      if (!this._shoreCache || this._shoreCache.t !== this.time) this._shoreCache = { t: this.time, v: this.shoreSpot() };
+      from = this._shoreCache.v;
+    }
+    if (!from) return true;
+    const a = this.walkComp(from.x, from.z);
+    return a < 0 || a === this.walkComp(b.x, b.z);
+  }
+
+  // ---------- Chodzenie załogi tylko po kei, pomostach i bomach ----------
+  walkObstacles() {
+    if (!this._walkObs) this._walkObs = this.obstacles.filter((o) => o.walk || o.kind === 'boom');
+    return this._walkObs;
+  }
+
+  walkable(x, z, tol = 0.3) {
+    for (const o of this.walkObstacles()) {
+      if (x < o.box.minX - tol || x > o.box.maxX + tol || z < o.box.minZ - tol || z > o.box.maxZ + tol) continue;
+      if (distToPoly(o.poly, x, z).dist <= tol) return true;
+    }
+    return false;
+  }
+
+  // Numer spójnego obszaru chodzenia (keje i pomosty stykające się ze sobą), -1 gdy punkt nie leży na lądzie
+  walkComp(x, z) {
+    if (!this._comps) {
+      const obs = this.walkObstacles();
+      const par = obs.map((_, i) => i);
+      const find = (i) => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+      const touch = (a, b) => {
+        if (a.box.minX > b.box.maxX + 0.7 || b.box.minX > a.box.maxX + 0.7 || a.box.minZ > b.box.maxZ + 0.7 || b.box.minZ > a.box.maxZ + 0.7) return false;
+        return a.poly.some((v) => distToPoly(b.poly, v[0], v[1]).dist <= 0.7) || b.poly.some((v) => distToPoly(a.poly, v[0], v[1]).dist <= 0.7);
+      };
+      for (let i = 0; i < obs.length; i++) for (let j = i + 1; j < obs.length; j++) if (touch(obs[i], obs[j])) par[find(i)] = find(j);
+      this._comps = obs.map((_, i) => find(i));
+    }
+    const obs = this.walkObstacles();
+    for (let i = 0; i < obs.length; i++) {
+      const o = obs[i];
+      if (x < o.box.minX - 0.4 || x > o.box.maxX + 0.4 || z < o.box.minZ - 0.4 || z > o.box.maxZ + 0.4) continue;
+      if (distToPoly(o.poly, x, z).dist <= 0.4) return this._comps[i];
+    }
+    return -1;
+  }
+
+  clearWalk(a, b) {
+    const n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.4);
+    for (let i = 1; i < n; i++) {
+      const k = i / n;
+      if (!this.walkable(a.x + (b.x - a.x) * k, a.z + (b.z - a.z) * k, 0.2)) return false;
+    }
+    return true;
+  }
+
+  // Trasa piesza a -> b po siatce (omija wodę), uproszczona do prostych odcinków; zwraca punkty po a, z b na końcu
+  walkLeg(a, b) {
+    if (this.clearWalk(a, b)) return [{ x: b.x, z: b.z }];
+    const cs = 0.6, pad = 15;
+    const x0 = Math.min(a.x, b.x) - pad, z0 = Math.min(a.z, b.z) - pad;
+    const W = Math.ceil((Math.abs(a.x - b.x) + 2 * pad) / cs), Hh = Math.ceil((Math.abs(a.z - b.z) + 2 * pad) / cs);
+    const cx = (i) => x0 + (i + 0.5) * cs, cz = (j) => z0 + (j + 0.5) * cs;
+    const id = (i, j) => j * W + i;
+    const si = Math.floor((a.x - x0) / cs), sj = Math.floor((a.z - z0) / cs), ti = Math.floor((b.x - x0) / cs), tj = Math.floor((b.z - z0) / cs);
+    const ok = new Map();
+    const isOk = (i, j) => {
+      if (i < 0 || j < 0 || i >= W || j >= Hh) return false;
+      const k = id(i, j);
+      if (!ok.has(k)) ok.set(k, (i === si && j === sj) || (i === ti && j === tj) || this.walkable(cx(i), cz(j), 0.15));
+      return ok.get(k);
+    };
+    const prev = new Map([[id(si, sj), -1]]);
+    const dist = new Map([[id(si, sj), 0]]);
+    const open = [[si, sj]];
+    let found = false;
+    // A* uproszczony: kolejka z sortowaniem po koszcie + heurystyce
+    const h = (i, j) => Math.hypot(i - ti, j - tj);
+    const cost = new Map([[id(si, sj), h(si, sj)]]);
+    while (open.length) {
+      let bi = 0;
+      for (let q = 1; q < open.length; q++) if (cost.get(id(...open[q])) < cost.get(id(...open[bi]))) bi = q;
+      const [i, j] = open.splice(bi, 1)[0];
+      if (i === ti && j === tj) { found = true; break; }
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+        const ni = i + di, nj = j + dj;
+        if (!isOk(ni, nj)) continue;
+        if (di && dj && (!isOk(i + di, j) || !isOk(i, j + dj))) continue;
+        const nk = id(ni, nj), nd = dist.get(id(i, j)) + (di && dj ? 1.414 : 1);
+        if (!dist.has(nk) || nd < dist.get(nk)) {
+          dist.set(nk, nd); prev.set(nk, id(i, j)); cost.set(nk, nd + h(ni, nj));
+          if (!open.some((o) => o[0] === ni && o[1] === nj)) open.push([ni, nj]);
+        }
+      }
+    }
+    if (!found) return [{ x: b.x, z: b.z }];
+    const cells = [];
+    for (let k = id(ti, tj); k !== -1; k = prev.get(k)) cells.push({ x: cx(k % W), z: cz(Math.floor(k / W)) });
+    cells.reverse();
+    cells[0] = { x: a.x, z: a.z };
+    cells[cells.length - 1] = { x: b.x, z: b.z };
+    // prostowanie: najdalszy widoczny punkt
+    const out = [];
+    let from = 0;
+    while (from < cells.length - 1) {
+      let to = cells.length - 1;
+      while (to > from + 1 && !this.clearWalk(cells[from], cells[to])) to--;
+      out.push(cells[to]);
+      from = to;
+    }
+    return out;
+  }
+
+  // Zamienia listę punktów docelowych na trasę po lądzie, zaczynając od pozycji załogi
+  walkRoute(points) {
+    const res = [];
+    let cur = { x: this.crew.x, z: this.crew.z };
+    for (const p of points) {
+      res.push(...this.walkLeg(cur, p));
+      cur = p;
+    }
+    return res;
   }
 
   // Najbliższy punkt krawędzi kei/pomostu/Y-bomu (lekko w głąb), d – odległość od punktu
@@ -465,7 +586,7 @@ export class World {
   }
 
   crewWalk(points, extra = {}) {
-    this.crew.task = { type: 'walk', path: points.map((p) => ({ x: p.x, z: p.z })), ...extra };
+    this.crew.task = { type: 'walk', path: this.walkRoute(points).map((p) => ({ x: p.x, z: p.z })), ...extra };
   }
 
   attach(line, bollard, quiet = false) {
@@ -499,10 +620,11 @@ export class World {
       const lead = this.leadWorld(line);
       const c = this.catchPoint(lead);
       const dest = this.bollardApproach(bollard);
-      const walk = Math.hypot(c.x - this.crew.x, c.z - this.crew.z) + Math.hypot(dest.x - c.x, dest.z - c.z);
-      line.timer = 2.5 + walk / 1.4 + 1.5;
       line.pendingVia = 'crew';
       this.crewWalk([c, dest]);
+      let walk = 0, px = this.crew.x, pz = this.crew.z;
+      for (const q of this.crew.task.path) { walk += Math.hypot(q.x - px, q.z - pz); px = q.x; pz = q.z; }
+      line.timer = 2.5 + walk / 1.4 + 1.5;
       this.log(`${line.name}: podana na ląd – załoga zakłada na ${bollard.label.toLowerCase()}`);
     } else {
       line.pendingVia = 'deck';

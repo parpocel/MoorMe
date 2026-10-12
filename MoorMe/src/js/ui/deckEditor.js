@@ -2,6 +2,7 @@
 import { h } from './dom.js';
 import { drawBoatTop, fenderLocal } from './draw2d.js';
 import { hullExtents, halfBeamAt, ITEM_KIND_LABEL } from '../data/boats.js';
+import { t } from '../i18n.js';
 
 export function autoLabel(spec, it) {
   const L = spec.loa;
@@ -140,19 +141,19 @@ export function createDeckEditor(spec, equip, onChange) {
     for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
     for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
     ctx.fillStyle = '#ff8080'; ctx.font = 'bold 15px Segoe UI';
-    ctx.fillText('LEWA BURTA (bakburta)', cx + xs * scale, 22);
+    ctx.fillText(t('LEWA BURTA (bakburta)'), cx + xs * scale, 22);
     ctx.fillStyle = '#80ffb0';
-    ctx.fillText('PRAWA BURTA (sterburta)', cx + xs * scale, H - 12);
+    ctx.fillText(t('PRAWA BURTA (sterburta)'), cx + xs * scale, H - 12);
     ctx.fillStyle = '#9fb8cc';
-    ctx.fillText('DZIÓB →', cx + xb * scale - 20, cy - (spec.beam / 2) * scale - 14);
-    ctx.fillText('RUFA', cx + xs * scale - 50, cy + 5);
+    ctx.fillText(t('DZIÓB →'), cx + xb * scale - 20, cy - (spec.beam / 2) * scale - 14);
+    ctx.fillText(t('RUFA'), cx + xs * scale - 50, cy + 5);
     drawBoatTop(ctx, spec, cx, cy, scale, 0, { deck: equip.deck, fenders: equip.fenders, fenderRadius: equip.fenderRadius, selected: selected && selected.id, bowThruster: equip.bowThruster, sternThruster: equip.sternThruster });
     // podpisy
     ctx.font = '13px Segoe UI';
     ctx.fillStyle = '#d7e6f2';
     for (const it of equip.deck) {
       const px = cx + it.x * scale, py = cy + it.y * scale;
-      ctx.fillText(it.label.split(' ')[0].slice(0, 5), px - 12, py + (it.y < 0 ? -12 : 20));
+      ctx.fillText(t(it.label).split(' ')[0].slice(0, 5), px - 12, py + (it.y < 0 ? -12 : 20));
     }
     // skala
     ctx.strokeStyle = '#9fb8cc'; ctx.lineWidth = 2;
