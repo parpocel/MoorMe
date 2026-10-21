@@ -128,6 +128,15 @@ function groundAt(H, x, z) {
 }
 
 // ---------- Światła znaków ----------
+const LIGHT_RANGE = 926; // 0,5 Nm – dalej światła nie są widoczne
+// punkcik o stałej wielkości kątowej, gasnący pod koniec zasięgu
+function dotLight(sp, d, on, lightsOn) {
+  const fade = clamp((LIGHT_RANGE - d) / 150, 0, 1);
+  sp.visible = on > 0 && fade > 0;
+  if (!sp.visible) return;
+  sp.material.opacity = on * lightsOn * fade;
+  sp.scale.setScalar(clamp(d * 0.007, 0.7, 6));
+}
 let glowTex = null;
 function glowTexture() {
   if (glowTex) return glowTex;
@@ -135,7 +144,7 @@ function glowTexture() {
   c.width = c.height = 64;
   const g = c.getContext('2d');
   const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.25, 'rgba(255,255,255,0.7)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
   glowTex = new THREE.CanvasTexture(c);
   return glowTex;
@@ -502,19 +511,13 @@ export function buildSea(H, scene) {
         let on = lightsOn > 0.05 ? m.pattern(t + mesh.userData.phase) : 0;
         let col = mesh.userData.lightColor;
         if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x5aa0ff : 0xffd23a;
-        sp.visible = on > 0;
-        if (on > 0) {
-          sp.material.color.setHex(col);
-          sp.material.opacity = on * lightsOn;
-          sp.getWorldPosition(tmp);
-          const d = cam.distanceTo(tmp);
-          sp.scale.setScalar(clamp(d / 60, 2.6, 46));
-        }
+        sp.material.color.setHex(col);
+        sp.getWorldPosition(tmp);
+        dotLight(sp, cam.distanceTo(tmp), on, lightsOn);
       }
       for (const hd of heads) {
         const on = lightsOn > 0.05 ? hd.pattern(t) : 0;
-        hd.sprite.visible = on > 0;
-        if (on > 0) { hd.sprite.material.opacity = on * lightsOn; hd.sprite.scale.setScalar(clamp(cam.distanceTo(hd.sprite.position) / 60, 2.6, 46)); }
+        dotLight(hd.sprite, cam.distanceTo(hd.sprite.position), on, lightsOn);
       }
       beam.material.opacity = 0.16 + 0.08 * Math.sin(t * 2);
       routeGroup.visible = lightsOn < 0.35; // nocą trasa widoczna tylko na kartplotterze
