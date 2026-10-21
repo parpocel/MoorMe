@@ -188,7 +188,7 @@ export class BoatPhysics {
     }
 
     // --- Płetwy sterowe (dwie, połowa powierzchni każda) ---
-    const rRate = 28 * DEG;
+    const rRate = 50 * DEG;
     const dr = clamp(this.rudderCmd - this.rudder, -rRate * dt, rRate * dt);
     this.rudder = clamp(this.rudder + dr, -35 * DEG, 35 * DEG);
     let ur = u;
@@ -203,7 +203,7 @@ export class BoatPhysics {
       const vloc = v + r * this.xRudder;
       const uloc = ur - r * yR;
       // płetwa zawietrzna (bardziej zanurzona) – uproszczone równe działanie
-      const f = plateForce(spec.rudderArea / 2, uloc, vloc, this.rudder);
+      const f = plateForce(spec.rudderArea * 0.65, uloc, vloc, this.rudder);
       X += f.x; Y += f.y;
       N += this.xRudder * f.y - yR * f.x;
     }

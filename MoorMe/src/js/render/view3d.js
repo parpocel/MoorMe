@@ -581,6 +581,9 @@ export class View3D {
     heel.rotation.x = b.heelAngle() + Math.sin(t * 1.3) * 0.006 * (1 + windKn / 10);
     heel.rotation.z = Math.sin(t * 0.9 + 1) * 0.004 * (1 + windKn / 10);
     this.selRing.material.opacity = 0.45 + 0.35 * Math.sin(t * 2.5);
+    // obrys dna kadłuba tylko w pobliżu keji (do 0,2 nm = 370 m)
+    const bq = this.world.H.berth;
+    this.selRing.visible = !this.world.isPassage && (!bq || Math.hypot(b.x - bq.x, b.z - bq.z) < 370);
     // koła sterowe
     for (const wh of this.boat.userData.wheels) wh.rotation.x = b.rudder * 4;
     // śruba

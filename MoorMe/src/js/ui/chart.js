@@ -76,7 +76,7 @@ export function drawChart(ctx, W, Hh, opts) {
     for (const q of lands) { if (q.kind === 'land') { path(q.poly); ctx.stroke(); } }
   }
   // mielizny
-  for (const sh of P.shoals) {
+  for (const sh of (w.blind ? [] : P.shoals)) {
     path(sh.poly);
     ctx.fillStyle = N ? 'rgba(40,96,120,0.95)' : 'rgba(84,170,196,0.95)'; ctx.fill();
     ctx.setLineDash([4, 3]); ctx.strokeStyle = '#2b6f86'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);

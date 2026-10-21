@@ -69,7 +69,11 @@ const DEFS = {
       { name: 'Skała Mała', poly: ell(1500, -50, 20, 18, 0, 10), depth: 0.6 },
       { name: 'Skała Południowa', poly: ell(2000, 260, 20, 18, 0, 10), depth: 0.6 },
       { name: 'Pławica Południowa', poly: ell(3950, 330, 70, 40, 0.2, 12), depth: 1.1 },
-      { name: 'Skała Torowa', poly: ell(5500, 320, 20, 18, 0, 10), depth: 0.6 }
+      { name: 'Skała Torowa', poly: ell(5500, 320, 20, 18, 0, 10), depth: 0.6 },
+      { name: 'Rafa A', poly: ell(1900, -60, 45, 32, 0, 10), depth: 0.8 },
+      { name: 'Rafa B', poly: ell(-100, 300, 45, 32, 0, 10), depth: 0.8 },
+      { name: 'Rafa C', poly: ell(2600, 300, 45, 32, 0, 10), depth: 0.8 },
+      { name: 'Rafa D', poly: ell(4600, -110, 45, 32, 0, 10), depth: 0.8 }
     ],
     wrecks: [{ name: 'Wrak „Maria”', x: 3800, z: -150, rot: 0.6 }],
     lighthouses: [{ x: 5200, z: -200, color: 0xd62828, name: 'Latarnia Przylądek' }],
@@ -94,7 +98,11 @@ const DEFS = {
       { type: 'isolated', x: 4300, z: -40, name: 'Skała Rybacka' },
       { type: 'safe', x: 4800, z: 150, name: 'Pława torowa' },
       { type: 'special', x: 5000, z: 40, name: 'Strefa regat' },
-      { type: 'isolated', x: 5500, z: 320, name: 'Skała Torowa' }
+      { type: 'isolated', x: 5500, z: 320, name: 'Skała Torowa' },
+      { type: 'cardS', x: 1900, z: 10, name: 'Rafa A – S' },
+      { type: 'cardN', x: -100, z: 225, name: 'Rafa B – N' },
+      { type: 'cardN', x: 2600, z: 235, name: 'Rafa C – N' },
+      { type: 'cardS', x: 4600, z: -40, name: 'Rafa D – S' }
     ]
   },
   adriatic: {
@@ -125,7 +133,11 @@ const DEFS = {
       { name: 'Hrid Zachodni', poly: ell(-100, -60, 22, 20, 0, 10), depth: 0.5 },
       { name: 'Hrid Prvi', poly: ell(500, 330, 22, 20, 0, 10), depth: 0.5 },
       { name: 'Hrid Kanał', poly: ell(2500, -330, 20, 18, 0, 10), depth: 0.5 },
-      { name: 'Plićak Mały', poly: ell(4600, 110, 60, 40, 0, 12), depth: 1.1 }
+      { name: 'Plićak Mały', poly: ell(4600, 110, 60, 40, 0, 12), depth: 1.1 },
+      { name: 'Rafa E', poly: ell(-500, 200, 40, 30, 0, 10), depth: 0.8 },
+      { name: 'Rafa F', poly: ell(1050, 350, 40, 30, 0, 10), depth: 0.8 },
+      { name: 'Rafa G', poly: ell(3300, -390, 40, 30, 0, 10), depth: 0.8 },
+      { name: 'Rafa H', poly: ell(5100, -170, 40, 30, 0, 10), depth: 0.8 }
     ],
     wrecks: [{ name: 'Wrak „Galeb”', x: 4350, z: 125, rot: -0.4 }],
     lighthouses: [{ x: 3560, z: -20, color: 0xd62828, name: 'Latarnia Trzeci' }],
@@ -148,6 +160,10 @@ const DEFS = {
       { type: 'cardN', x: 3600, z: -120, name: 'Otok Trzeci – N' },
       { type: 'wreck', x: 4350, z: 65, name: 'Wrak „Galeb”' },
       { type: 'cardN', x: 4600, z: 60, name: 'Plićak Mały – N' },
+      { type: 'cardN', x: -500, z: 140, name: 'Rafa E – N' },
+      { type: 'cardN', x: 1050, z: 275, name: 'Rafa F – N' },
+      { type: 'cardS', x: 3300, z: -320, name: 'Rafa G – S' },
+      { type: 'cardS', x: 5100, z: -100, name: 'Rafa H – S' },
       { type: 'special', x: 5300, z: -230, name: 'Kabel podwodny' },
       { type: 'cardS', x: 5600, z: -105, name: 'Plićak – S' },
     ]

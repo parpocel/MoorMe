@@ -728,8 +728,8 @@ export class SimScreen {
     const b = this.world.boat, k = this.keys;
     if (k.has('KeyW') || k.has('ArrowUp')) { b.throttle = clamp(b.throttle + dt * 0.6, -1, 1); if (Math.abs(b.throttle) < 0.02) b.throttle = 0.02; }
     if (k.has('KeyS') || k.has('ArrowDown')) { b.throttle = clamp(b.throttle - dt * 0.6, -1, 1); if (Math.abs(b.throttle) < 0.02) b.throttle = -0.02; }
-    if (k.has('KeyA') || k.has('ArrowLeft')) b.rudderCmd = clamp(b.rudderCmd - dt * 45 * DEG, -35 * DEG, 35 * DEG);
-    if (k.has('KeyD') || k.has('ArrowRight')) b.rudderCmd = clamp(b.rudderCmd + dt * 45 * DEG, -35 * DEG, 35 * DEG);
+    if (k.has('KeyA') || k.has('ArrowLeft')) b.rudderCmd = clamp(b.rudderCmd - dt * 90 * DEG, -35 * DEG, 35 * DEG);
+    if (k.has('KeyD') || k.has('ArrowRight')) b.rudderCmd = clamp(b.rudderCmd + dt * 90 * DEG, -35 * DEG, 35 * DEG);
     const pw = this.thrPower;
     b.bowCmd = (k.has('KeyQ') ? -1 : 0) + (k.has('KeyE') ? 1 : 0) || this.thrHold.bow;
     b.bowCmd *= pw;

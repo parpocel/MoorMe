@@ -205,7 +205,7 @@ export function buildMarkMesh(type) {
       g.add(cone(0.95, 2.2, GREEN, 0.45));
       g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
       g.add(cone(0.3, 0.6, GREEN, 3.4));
-      lightY = 4.3; lightColor = 0x00d848;
+      lightY = 4.3; lightColor = 0x00e81c;
       break;
     case 'cardN': case 'cardS': case 'cardE': case 'cardW': {
       floatBase(YELLOW, 0.85);
@@ -278,7 +278,7 @@ export function buildMarkMesh(type) {
     default:
       floatBase(WHITE, 0.8);
   }
-  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: lightColor, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 }));
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: lightColor, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));
   sp.position.y = lightY;
   sp.visible = false;
   g.add(sp);
@@ -360,7 +360,7 @@ export function buildSea(H, scene) {
   }
   // mielizny: jaśniejsza plama tuż nad lustrem wody (nocą przygaszona)
   const shoalMats = [];
-  for (const s of H.shoals) {
+  for (const s of (H.blind ? [] : H.shoals)) {
     const shape = new THREE.Shape();
     s.poly.forEach(([x, z], i) => (i ? shape.lineTo(x, -z) : shape.moveTo(x, -z)));
     const g = new THREE.ShapeGeometry(shape);
@@ -456,11 +456,11 @@ export function buildSea(H, scene) {
   H.moles.forEach((poly, i) => {
     const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
     const hx = (Math.min(...xs) + Math.max(...xs)) / 2, hz = Math.max(...zs);
-    const col = i === 0 ? 0xff1008 : 0x00d848;
+    const col = i === 0 ? 0xff1008 : 0x00e81c;
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 6, 8), M(i === 0 ? RED : GREEN));
     post.position.set(hx, 5.5, hz - 3);
     group.add(post);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, opacity: 0 }));
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));
     sp.position.set(hx, 8.8, hz - 3);
     sp.visible = false;
     dyn.add(sp);
@@ -508,6 +508,9 @@ export function buildSea(H, scene) {
         mesh.rotation.x = Math.sin(t * 0.9 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         mesh.rotation.z = Math.cos(t * 0.7 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         const sp = mesh.userData.light;
+        // nocą z daleka widać tylko światło, nie bryłę znaku
+        const hideBody = lightsOn > 0.3 && cam.distanceTo(mesh.position) > 90;
+        if (mesh.userData.hidden !== hideBody) { mesh.userData.hidden = hideBody; mesh.traverse((o) => { if (o.isMesh) o.visible = !hideBody; }); }
         let on = lightsOn > 0.05 ? m.pattern(t + mesh.userData.phase) : 0;
         let col = mesh.userData.lightColor;
         if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x1f6bff : 0xffb800;

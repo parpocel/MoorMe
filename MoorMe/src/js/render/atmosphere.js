@@ -32,6 +32,19 @@ function glowTexture() {
   return glowTex;
 }
 
+let dotTex = null;
+function dotTexture() {
+  if (dotTex) return dotTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.3, 'rgba(255,255,255,0.95)'); gr.addColorStop(0.5, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  dotTex = new THREE.CanvasTexture(c);
+  return dotTex;
+}
+
 function glow(color, size) {
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
   s.scale.setScalar(size);
@@ -103,7 +116,7 @@ export class Atmosphere {
     const { xs, xb } = hullExtents(spec);
     const L = spec.loa;
     const pbx = xb - 0.05 * L, py = sheerHeight(spec, pbx) + 0.66;
-    const add = (parent, color, size, x, y, z) => { const s = glow(color, size); s.position.set(x, y, z); parent.add(s); this.glows.push(s); return s; };
+    const add = (parent, color, size, x, y, z) => { const s = glow(color, size); s.material.map = dotTexture(); s.material.depthTest = false; s.userData.dot = true; s.position.set(x, y, z); parent.add(s); this.glows.push(s); return s; };
     // światła nawigacyjne (burtowe i rufowe) palą się tylko w ruchu – zacumowany jacht ma je wyłączone
     add(heel, 0xff2a2a, 1.4, pbx, py, -halfBeamAt(spec, pbx) + 0.08).userData.mode = 'moving'; // lewa – czerwone
     add(heel, 0x22ff66, 1.4, pbx, py, halfBeamAt(spec, pbx) - 0.08).userData.mode = 'moving'; // prawa – zielone
@@ -235,7 +248,10 @@ export class Atmosphere {
     const lightsOn = clamp(night * 1.3 + (sky.grey > 0.5 ? 0.25 : 0) - 0.05, 0, 1);
     this.lightsOn = lightsOn;
     const bt = this.world.boat;
-    const movingNow = Math.hypot(bt.vx || 0, bt.vz || 0) > 0.25 || Math.abs(bt.throttle || 0) > 0.05;
+    // histereza + w rejsie jacht zawsze jest w drodze – bez migotania świateł masztowych
+    const spd = Math.hypot(bt.vx || 0, bt.vz || 0);
+    this._mvState = this.world.isPassage || spd > (this._mvState ? 0.12 : 0.3) || Math.abs(bt.throttle || 0) > (this._mvState ? 0.02 : 0.05);
+    const movingNow = this._mvState;
     this.mv += ((movingNow ? 1 : 0) - this.mv) * clamp(camDt * 3, 0, 1);
     const moored = this.world.lines.some((l) => l.state === 'attached' && !l.isMooring);
     this.free += ((moored ? 0 : 1) - this.free) * clamp(camDt * 3, 0, 1);
@@ -248,6 +264,7 @@ export class Atmosphere {
       g.material.opacity = k * (g.userData.dim || 1);
       let sc = g.userData.size * (0.6 + 0.4 * lightsOn);
       if (g.userData.far) { g.getWorldPosition(wp); sc *= clamp(this.view.camera.position.distanceTo(wp) / 80, 1, 3); }
+      if (g.userData.dot) { g.getWorldPosition(wp); sc = clamp(this.view.camera.position.distanceTo(wp) * 0.008, 0.14, 3); }
       g.scale.setScalar(sc);
     }
     for (const m of this.boatWindowMats) {
