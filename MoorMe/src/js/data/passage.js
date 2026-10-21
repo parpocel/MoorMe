@@ -244,7 +244,7 @@ export function buildPassage(id) {
   }
   const marks = [...handMarks, ...gen].map((m, i) => {
     const T = MARK_TYPES[m.type];
-    return { id: 'm' + i, ...m, rule: T.rule, radius: T.radius || 0, gate: m.gate ?? T.gate, label: m.name || T.name, typeName: T.name };
+    return { id: 'm' + i, ...m, rule: T.rule, flash: T.flash, radius: T.radius || 0, gate: m.gate ?? T.gate, label: m.name || T.name, typeName: T.name };
   });
   const route = d.route.map((p, i) => ({ ...p, i }));
   const first = route[0], second = route[1];
