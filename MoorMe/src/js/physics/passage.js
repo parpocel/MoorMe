@@ -25,7 +25,7 @@ export class PassageWorld extends World {
    * cfg: { spec, equip, passageId, weather, start? }
    */
   constructor(cfg) {
-    const H = cfg.harbor || buildPassage(cfg.passageId);
+    const H = cfg.harbor || buildPassage(cfg.passageId, cfg.seed);
     super({ ...cfg, harbor: H, scenario: 'passage', start: cfg.start || { x: H.start.x, z: H.start.z, compass: H.start.compass, speedKn: 0 } });
     this.isPassage = true;
     this.blind = !!cfg.blind; // bez trasy i waypointów: tylko BRG na port, znaki rozpoznawane po światłach

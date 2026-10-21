@@ -26,6 +26,7 @@ export class PassageScreen extends SimScreen {
       spec: this.spec,
       equip: JSON.parse(JSON.stringify(config.equip)),
       passageId: config.passageId,
+      seed: config.seed,
       weather: config.weather,
       blind: config.assist !== 'full'
     });

@@ -131,11 +131,13 @@ function groundAt(H, x, z) {
 const LIGHT_RANGE = 926; // 0,5 Nm – dalej światła nie są widoczne
 // punkcik o stałej wielkości kątowej, gasnący pod koniec zasięgu
 function dotLight(sp, d, on, lightsOn) {
-  const fade = clamp((LIGHT_RANGE - d) / 150, 0, 1);
-  sp.visible = on > 0 && fade > 0;
+  // natężenie maleje z odległością: z bliska pełne, na granicy zasięgu ledwo widoczne
+  const k = clamp(1 - d / LIGHT_RANGE, 0, 1);
+  const fade = k * k * 0.75 + k * 0.25;
+  sp.visible = on > 0 && fade > 0.01;
   if (!sp.visible) return;
   sp.material.opacity = on * lightsOn * fade;
-  sp.scale.setScalar(clamp(d * 0.007, 0.7, 6));
+  sp.scale.setScalar(clamp(d * 0.007, 0.7, 6) * (0.55 + 0.45 * k));
 }
 let glowTex = null;
 function glowTexture() {

@@ -140,6 +140,7 @@ function loadPassageCfg() {
 let passageCfg = loadPassageCfg() || { passageId: 'baltic', boatId: 'C34', weather: { ...PASSAGES.baltic.weather } };
 
 function showPassageSetup() {
+  if (!passageCfg.seed) passageCfg.seed = 1 + Math.floor(Math.random() * 1e9); // układ znaków i trasy jest losowany przy każdym rejsie
   const cfg = passageCfg;
   const w = cfg.weather;
   app.innerHTML = '';
@@ -147,7 +148,7 @@ function showPassageSetup() {
   const drawCards = () => {
     cards.innerHTML = '';
     for (const P of Object.values(PASSAGES)) {
-      const H = buildPassage(P.id);
+      const H = buildPassage(P.id, cfg.seed);
       const cv = h('canvas', { width: 640, height: 190, style: { width: '100%', borderRadius: '10px', display: 'block' } });
       const R = H.route, xs = R.map((p) => p.x), zs = R.map((p) => p.z);
       const fake = { H, route: R, marks: H.marks.map((m) => ({ ...m, state: 'pending' })), boat: { x: R[0].x, z: R[0].z, th: 0, speed: 0, vx: 0, vz: 0 }, next: 1, blind: (cfg.assist || 'bearing') === 'bearing' };
@@ -193,10 +194,12 @@ function showPassageSetup() {
 }
 
 function savePassageCfg() {
-  try { localStorage.setItem(PASSAGE_KEY, JSON.stringify(passageCfg)); } catch (e) { /* ignoruj */ }
+  try { localStorage.setItem(PASSAGE_KEY, JSON.stringify({ ...passageCfg, seed: null })); } catch (e) { /* ignoruj */ }
 }
 
-function startPassage() {
+function startPassage(seed) {
+  const sd = seed || passageCfg.seed || 1 + Math.floor(Math.random() * 1e9);
+  passageCfg.seed = null;
   savePassageCfg();
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
@@ -204,8 +207,8 @@ function startPassage() {
   const spec = BOATS[passageCfg.boatId];
   const equip = defaultEquipment(spec);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'passage', assist: passageCfg.assist || 'bearing', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
-  window.__sim = new PassageScreen(root, config, { restart: () => startPassage(), exit: () => showPassageSetup() });
+  const config = { mode: 'passage', seed: sd, assist: passageCfg.assist || 'bearing', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
+  window.__sim = new PassageScreen(root, config, { restart: () => startPassage(sd), exit: () => showPassageSetup() });
 }
 
 // ---------- Język i ustawienia ----------
