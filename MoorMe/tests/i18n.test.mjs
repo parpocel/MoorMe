@@ -3,6 +3,8 @@ import { generateHarbor, PORTS, METHODS, ROLE_NAMES, berthOptions } from '../src
 import { LINE_STATE_LABEL, TENDING_LABEL } from '../src/js/physics/lines.js';
 import { KEYS, LINES } from '../src/js/ui/help.js';
 import { setLang, t, getLang } from '../src/js/i18n.js';
+import { MARK_TYPES, PASSAGES, buildPassage, RULE_TEXT } from '../src/js/data/passage.js';
+import { PASSAGE_KEYS, PASSAGE_TEXT } from '../src/js/ui/help.js';
 
 let fails = 0;
 const check = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fails++; };
@@ -25,7 +27,19 @@ for (const port of Object.keys(PORTS)) {
     generateHarbor({ port, zone: o.zone, method: o.method, side: 'port', boatSpec: BOATS.C46, seed: 3 }).bollards.forEach((b) => add(b.label));
   }
 }
-const missing = [...strs].filter((s) => t(s) === s || PL.test(t(s)));
+// tryb rejsu
+Object.values(MARK_TYPES).forEach((m) => add(m.name));
+Object.values(RULE_TEXT).forEach(add);
+for (const p of Object.values(PASSAGES)) {
+  add(p.name); add(p.desc);
+  const H = buildPassage(p.id);
+  H.marks.forEach((m) => add(m.label));
+  H.route.forEach((r) => add(r.name));
+}
+PASSAGE_KEYS.forEach(([, d]) => add(d));
+PASSAGE_TEXT.forEach(([k, d]) => { add(k + '.'); add(d); });
+const SAME = new Set(['Start', 'WP2', 'WP6', 'WP7']); // te same po polsku i angielsku
+const missing = [...strs].filter((s) => (t(s) === s && !SAME.has(s)) || PL.test(t(s)));
 check(missing.length === 0, `wszystkie nazwy, opisy, pomoc i etykiety mają tłumaczenie (${strs.size} tekstów)${missing.length ? ': ' + missing.slice(0, 5).join(' | ') : ''}`);
 
 const samples = [
@@ -43,7 +57,13 @@ const samples = [
   ['Kuba (kapitan) · Wojtek · Bartek', 'Kuba (skipper) · Wojtek · Bartek'],
   ['  Czas płynie (1 s = 1 min)', '  Time flows (1 s = 1 min)'],
   ['Zacumowano!', 'Moored!'],
-  ['10 kn (3°B)', '10 kn (Bft 3)']
+  ['10 kn (3°B)', '10 kn (Bft 3)'],
+  ['Skręć w prawo o 12°', 'Turn to starboard by 12°'],
+  ['35 m w lewo od toru', '35 m to port of the track'],
+  ['Waypoint osiągnięty: WP1 – wejście w tor', 'Waypoint reached: WP1 – entering the channel'],
+  ['Znak minięty z niewłaściwej strony: Znak boczny lewy (czerwony)', 'Mark passed on the wrong side: Port-hand mark (red)'],
+  ['Do WP3 – kanał', 'To WP3 – the channel'],
+  ['zderzenia 2', 'collisions 2']
 ];
 for (const [pl, en] of samples) check(t(pl) === en, `${JSON.stringify(pl)} -> ${JSON.stringify(t(pl))}`);
 

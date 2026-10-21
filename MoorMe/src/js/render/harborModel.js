@@ -1009,38 +1009,54 @@ const WAVES = [
 ];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export class Water {
-  constructor(scene) {
-    const size = 520, seg = 150;
+  // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
+  constructor(scene, opts = {}) {
+    this.follow = !!opts.follow;
+    const size = 520, seg = this.follow ? 110 : 150; // na otwartym morzu większe trójkąty (styl low-poly)
+    this.waveGain = this.follow ? 3.0 : 1.9;
+    this.size = size; this.seg = seg;
+    this.ox = 0; this.oz = 0;
+    this.drift = { x: 0, y: 0 };
     const geo = new THREE.PlaneGeometry(size, size, seg, seg);
     geo.rotateX(-Math.PI / 2);
-    geo.translate(0, 0, 100);
+    if (!this.follow) geo.translate(0, 0, 100);
     this.geo = geo;
     this.base = geo.attributes.position.array.slice();
     // stonowana tekstura zmarszczek + łagodny połysk (Phong z ciemnym odblaskiem)
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, map: this.tex, bumpMap: this.tex, bumpScale: 1.1, specular: 0x24343c, shininess: 55, transparent: true, opacity: 0.94, vertexColors: true });
+    // styl low-poly: płaskie cieniowanie trójkątów, bez tekstur – fasety fal widać dzięki oświetleniu
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x6d93b0, shininess: 38, transparent: true, opacity: 0.97, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
-    matW.onBeforeCompile = (sh) => {
+    const fadeEdge = this.follow;
+    const patch = (fade) => (sh) => {
       sh.uniforms.uSky = this.skyU;
+      sh.vertexShader = sh.vertexShader
+        .replace('void main() {', 'varying vec2 vLocal;\nvoid main() {')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\n vLocal = position.xz;');
       sh.fragmentShader = sh.fragmentShader
-        .replace('void main() {', 'uniform vec3 uSky;\nvoid main() {')
+        .replace('void main() {', 'uniform vec3 uSky;\nvarying vec2 vLocal;\nvoid main() {')
         .replace('#include <dithering_fragment>', `
-          float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 3.0);
-          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.7, 0.0, 0.6));
+          float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.42, 0.0, 0.42));
+          ${fade ? 'gl_FragColor.a *= 1.0 - smoothstep(150.0, 252.0, max(abs(vLocal.x), abs(vLocal.y)));' : ''}
           #include <dithering_fragment>`);
     };
+    matW.onBeforeCompile = patch(fadeEdge);
+    this.patchWater = patch;
     this.sceneRef = scene;
     // kolor wierzchołków: ciemniejsza głęboka woda, jaśniejsza przy brzegu (uzupełniane w setHarbor)
     const vc = new Float32Array(geo.attributes.position.count * 3).fill(1);
+    if (this.follow) for (let i = 0; i < vc.length; i += 3) { vc[i] = 0.06; vc[i + 1] = 0.19; vc[i + 2] = 0.40; }
     geo.setAttribute('color', new THREE.BufferAttribute(vc, 3));
+    if (this.follow) this.baseCol = vc.slice();
     this.mesh = new THREE.Mesh(geo, matW);
     scene.add(this.mesh);
     // cienie odbiera osobna, płaska płaszczyzna – cienie nie „falują” razem z siatką fal
     const sg = new THREE.PlaneGeometry(size, size);
     sg.rotateX(-Math.PI / 2);
-    sg.translate(0, 0, 100);
+    if (!this.follow) sg.translate(0, 0, 100);
     this.shadowPlane = new THREE.Mesh(sg, new THREE.ShadowMaterial({ opacity: 0.34, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
     this.shadowPlane.receiveShadow = true;
     this.shadowPlane.renderOrder = 2;
@@ -1051,14 +1067,26 @@ export class Water {
       tex.repeat.set(size / (k ? 9 : 14), size / (k ? 9 : 14));
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.55, depthWrite: false, fog: true, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
       m.renderOrder = 1;
+      m.visible = false; // bez drobnych zmarszczek – gładkie fasety low-poly
       scene.add(m);
-      return { tex, mat: m.material, k };
+      return { tex, mat: m.material, k, mesh: m, period: k ? 9 : 14, drift: { x: 0, y: 0 } };
     });
     // otwarte morze poza portem
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(3000, 3000), new THREE.MeshLambertMaterial({ color: 0x2a7b98 }));
+    // daleko: ta sama tekstura co przy jachcie, więc granica siatki fal jest niewidoczna (mipmapy dają średni kolor wody)
+    let farMat;
+    if (this.follow) {
+      this.farTex = this.tex.clone();
+      this.farTex.needsUpdate = true;
+      this.farTex.repeat.set(24000 / 22, 24000 / 22);
+      this.farTex.anisotropy = 16;
+      farMat = new THREE.MeshPhongMaterial({ color: 0x123c66, flatShading: true, specular: 0x6d93b0, shininess: 38 });
+      farMat.onBeforeCompile = this.patchWater(false);
+    } else farMat = new THREE.MeshLambertMaterial({ color: 0x2a7b98 });
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 3000, this.follow ? 24000 : 3000), farMat);
     far.rotation.x = -Math.PI / 2;
     far.position.y = -0.7; // poniżej dołków fal (inaczej prześwituje przez wodę)
     scene.add(far);
+    this.far = far;
     this.t = 0;
   }
   // Barwa zależna od odległości od brzegu (płycizna jaśniejsza i bardziej zielona, głębia ciemniejsza)
@@ -1073,7 +1101,7 @@ export class Water {
       return Math.hypot(px - (ax + dx * k), pz - (az + dz * k));
     };
     const col = this.geo.attributes.color;
-    const deep = new THREE.Color(0x6aa8bd), shallow = new THREE.Color(0xd2f1e8), mid = new THREE.Color(0xffffff);
+    const deep = new THREE.Color(0x3d79b0), shallow = new THREE.Color(0xa9dcd8), mid = new THREE.Color(0x6fa9d0);
     const c = new THREE.Color();
     for (let i = 0; i < col.count; i++) {
       const x = this.base[i * 3], z = this.base[i * 3 + 2];
@@ -1107,46 +1135,55 @@ export class Water {
     if (out) { out.gx = gx; out.gz = gz; }
     return h;
   }
-  update(dt, windKn, windDir) {
+  update(dt, windKn, windDir, cx = 0, cz = 0) {
     this.t += dt;
     const fc = this.sceneRef.fog && this.sceneRef.fog.color;
     if (fc) this.skyU.value.copy(fc).multiplyScalar(1.08);
-    // tekstura dryfuje powoli z wiatrem
+    if (this.follow) {
+      // siatka przesuwa się skokami co oczko, więc wierzchołki zawsze leżą na tej samej kratce świata
+      const cell = this.size / this.seg;
+      this.ox = Math.round(cx / cell) * cell;
+      this.oz = Math.round(cz / cell) * cell;
+      this.mesh.position.set(this.ox, 0, this.oz);
+      this.shadowPlane.position.x = this.ox; this.shadowPlane.position.z = this.oz;
+      this.far.position.x = this.ox; this.far.position.z = this.oz;
+      for (const rp of this.ripples) rp.mesh.position.set(this.ox, 0, this.oz);
+    }
+    // tekstura dryfuje powoli z wiatrem (+ zakotwiczenie w świecie, gdy siatka podąża za jachtem)
     const drift = (0.004 + Math.min(windKn, 35) * 0.0006) * dt;
-    this.tex.offset.x += Math.sin(windDir) * drift;
-    this.tex.offset.y += Math.cos(windDir) * drift;
+    this.drift.x += Math.sin(windDir) * drift;
+    this.drift.y += Math.cos(windDir) * drift;
+    this.tex.offset.x = this.drift.x + (this.follow ? this.ox / 22 : 0);
+    this.tex.offset.y = this.drift.y - (this.follow ? this.oz / 22 : 0);
+    if (this.farTex) { this.farTex.offset.x = this.drift.x + this.ox / 22; this.farTex.offset.y = this.drift.y - this.oz / 22; }
     // warstwy zmarszczek: różne kierunki, prędkości i pulsowanie krycia
     const wsp = 0.02 + Math.min(windKn, 35) * 0.0012;
     this.ripples.forEach((rp, i) => {
       const dir = windDir + (i ? 1.1 : -0.7);
-      rp.tex.offset.x += Math.sin(dir) * wsp * (i ? 1.4 : 0.8) * dt;
-      rp.tex.offset.y += Math.cos(dir) * wsp * (i ? 1.4 : 0.8) * dt;
+      rp.drift.x += Math.sin(dir) * wsp * (i ? 1.4 : 0.8) * dt;
+      rp.drift.y += Math.cos(dir) * wsp * (i ? 1.4 : 0.8) * dt;
+      rp.tex.offset.x = rp.drift.x + (this.follow ? this.ox / rp.period : 0);
+      rp.tex.offset.y = rp.drift.y - (this.follow ? this.oz / rp.period : 0);
       rp.mat.opacity = 0.15 + 0.08 * Math.sin(this.t * (0.5 + i * 0.37) + i * 2);
     });
     const p = this.geo.attributes.position.array;
-    const n = this.geo.attributes.normal.array;
-    const a = (0.04 + Math.min(windKn, 35) * 0.0045) * 1.9; // wyższe fale – wyraźniejsza bryła wody
+    const a = (0.04 + Math.min(windKn, 35) * 0.0045) * this.waveGain; // wyższe fale – wyraźniejsza bryła wody
     this.shadowPlane.position.y = a * 1.4; // na wysokości typowych grzbietów fal
     const g = {};
     const cl = this.baseCol ? this.geo.attributes.color.array : null;
     for (let i = 0; i < p.length; i += 3) {
-      p[i + 1] = this.wave(this.base[i], this.base[i + 2], this.t, a, windDir, g);
-      if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.16; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
-      // normalna z analitycznego gradientu
-      const gx = g.gx * 4.2, gz = g.gz * 4.2; // nachylenie przerysowane, żeby fale były czytelne w oświetleniu
-      const l = 1 / Math.hypot(gx, 1, gz);
-      n[i] = -gx * l; n[i + 1] = l; n[i + 2] = -gz * l;
+      p[i + 1] = this.wave(this.base[i] + this.ox, this.base[i + 2] + this.oz, this.t, a, windDir, g);
+      if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.22; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
     }
     this.geo.attributes.position.needsUpdate = true;
-    this.geo.attributes.normal.needsUpdate = true;
     if (cl) this.geo.attributes.color.needsUpdate = true;
   }
   // wysokość narysowanej powierzchni (do unoszących się obiektów)
   surfaceY(x, z, windKn, windDir) {
-    return this.wave(x, z, this.t, (0.04 + Math.min(windKn, 35) * 0.0045) * 1.9, windDir);
+    return this.wave(x, z, this.t, (0.04 + Math.min(windKn, 35) * 0.0045) * this.waveGain, windDir);
   }
   heightAt(x, z, windKn, windDir) {
     const a = 0.03 + Math.min(windKn, 35) * 0.0032;
-    return this.wave(x, z, this.t, a, windDir) * 2.2; // kołysanie jachtu nieco silniejsze niż rysowana fala
+    return this.wave(x, z, this.t, a, windDir) * (this.follow ? 3.4 : 2.2); // kołysanie jachtu nieco silniejsze niż rysowana fala
   }
 }

@@ -4,6 +4,7 @@ import { Seasick } from './seasick.js';
 import { buildBoat, buildDeckGear, buildFender, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
+import { buildSea } from './seaModel.js';
 import { Atmosphere } from './atmosphere.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
 import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
@@ -13,6 +14,8 @@ export class View3D {
   constructor(container, world) {
     this.container = container;
     this.world = world;
+    this.passage = !!world.isPassage;
+    this.fogScale = this.passage ? 4.5 : 1;
     const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -28,7 +31,7 @@ export class View3D {
     scene.fog = new THREE.Fog(0xb7dcef, 220, 620);
     this.scene = scene;
 
-    const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 2000);
+    const camera = new THREE.PerspectiveCamera(32, 1, 0.5, this.passage ? 9000 : 2000);
     this.camera = camera;
     // mniej światła rozproszonego = wyraźniejsze cienie
     const hemi = new THREE.HemisphereLight(0xdff2ff, 0x4a5a44, 0.8);
@@ -59,13 +62,15 @@ export class View3D {
     }
     skyGeo.setAttribute('color', new THREE.Float32BufferAttribute(skyCol, 3));
     const sky = new THREE.Mesh(skyGeo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, fog: false }));
+    if (this.passage) sky.scale.setScalar(4);
     scene.add(sky);
     this.sky = sky;
 
-    this.water = new Water(scene);
-    this.water.setHarbor(world.H);
-    const hb = buildHarbor(world.H, scene);
+    this.water = new Water(scene, { follow: this.passage });
+    if (!this.passage) this.water.setHarbor(world.H);
+    const hb = this.passage ? buildSea(world.H, scene) : buildHarbor(world.H, scene);
     this.harbor = hb;
+    this.sea = this.passage ? hb : null;
 
     // nasz jacht
     const spec = world.spec;
@@ -169,7 +174,7 @@ export class View3D {
 
     this.seasick = new Seasick(this);
     // życie w porcie: mewy, spacerowicze, motorówka
-    this.life = new HarbourLife(this);
+    this.life = this.passage ? { update() {}, onCry: null } : new HarbourLife(this);
     // pora dnia i pogoda
     this.atmo = new Atmosphere(this, world.cfg.weather || {});
 
@@ -565,7 +570,7 @@ export class View3D {
     const w = this.world, b = w.boat, spec = w.spec;
     const windKn = w.env.windSpeed / 0.5144;
     const windDir = (w.env.windFromDeg + 180) * DEG;
-    this.water.update(dt, windKn, windDir);
+    this.water.update(dt, windKn, windDir, b.x, b.z);
 
     // jacht
     const bob = this.water.heightAt(b.x, b.z, windKn, windDir) * 0.6;
@@ -740,7 +745,9 @@ export class View3D {
       this.camera.lookAt(cam.tx, cam.ty || 0, cam.tz);
     }
     // pora dnia, pogoda, światła (słońce/księżyc podąża za kamerą – cienie)
+    this.sky.position.set(cam.tx, 0, cam.tz);
     this.atmo.update(dt, camDt);
+    if (this.sea) this.sea.update(t, this, windKn, windDir, this.atmo.lightsOn || 0);
     const sh = fpv ? 45 : clamp(cam.dist * 0.7, 30, 120);
     const sc = this.sun.shadow.camera;
     if (Math.abs(sc.right - sh) > 5) { sc.left = -sh; sc.right = sh; sc.top = sh; sc.bottom = -sh; sc.updateProjectionMatrix(); }

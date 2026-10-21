@@ -238,8 +238,65 @@ export const EN = {
   'Załoga zeszła na Y-bom': 'The crew went onto the Y-boom', 'Załoga zeszła na ląd': 'The crew went ashore',
   'Załoga zeszła na Y-bom (sama – do obsługi lin)': 'The crew went onto the Y-boom (by themselves – to handle lines)',
   'Załoga zeszła na ląd (sama – do obsługi lin)': 'The crew went ashore (by themselves – to handle lines)',
-  'Nasza cuma': 'Our line'
+  'Nasza cuma': 'Our line',
+
+  // ---- Tryb rejsu ----
+  'WYBÓR TRYBU': 'CHOOSE A MODE', 'Wybierz tryb gry.': 'Choose a game mode.', 'Zmień tryb': 'Change mode', '← Tryby': '← Modes',
+  'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.': 'Harbour manoeuvres: approaching the quay, lines, springs, lazy lines, Y-booms and piles. Mooring and unmooring in various conditions.',
+  'Rejs wzdłuż wybrzeża': 'Coastal passage',
+  'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.': 'Sail along the coast following waypoints, hold your course and obey the marks: lateral, cardinal, safe water, isolated danger and wrecks.',
+  'rejs wzdłuż wybrzeża': 'coastal passage', 'Wybierz akwen i trasę': 'Choose an area and route', '⛵ Wypłyń': '⛵ Set sail',
+  'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.': 'On passage the yacht runs under engine. You hold the course with the rudder and set speed with the throttle; you may use the autopilot to hold a heading. To save time, speed up the clock (2×–8×) on long legs.',
+  'Kierunek wiatru (skąd wieje)': 'Wind direction (where from)', 'łatwiejszy': 'easier', 'trudniejszy': 'harder',
+  'Bałtyk – piaszczyste wybrzeże z mielizną': 'Baltic – sandy coast with a shoal',
+  'Płaski, piaszczysty brzeg z lasem i wsiami. Na trasie mielizna oznaczona kardynałami, wrak, skała oznaczona znakiem odosobnionego niebezpieczeństwa i strefa regat. Płyniesz z zachodu na wschód do portu za główkami.': 'A flat sandy shore with forest and villages. On the route: a shoal marked by cardinal marks, a wreck, a rock marked with an isolated danger mark and a regatta zone. You sail from west to east to a port behind the pierheads.',
+  'Adriatyk – kanały między wyspami': 'Adriatic – channels between islands',
+  'Skalisty brzeg i wyspy z sosnami i kamiennymi domami. Wąski kanał z kilkoma znakami bocznymi, skała oznaczona znakiem odosobnionego niebezpieczeństwa, kardynał przy wyspie, wrak i płycizna. Trasa prowadzi z zachodu na wschód do portu w głębi zatoki.': 'A rocky shore and islands with pines and stone houses. A narrow channel with several lateral marks, a rock marked with an isolated danger mark, a cardinal mark by an island, a wreck and a bank. The route leads from west to east to a port at the head of the bay.',
+  // znaki
+  'Znak boczny lewy (czerwony)': 'Port-hand mark (red)', 'Znak boczny prawy (zielony)': 'Starboard-hand mark (green)',
+  'Znak kardynalny północny': 'North cardinal mark', 'Znak kardynalny wschodni': 'East cardinal mark', 'Znak kardynalny południowy': 'South cardinal mark', 'Znak kardynalny zachodni': 'West cardinal mark',
+  'Znak wody bezpiecznej': 'Safe water mark', 'Znak odosobnionego niebezpieczeństwa': 'Isolated danger mark', 'Znak nowego niebezpieczeństwa (wrak)': 'Emergency wreck marking buoy', 'Znak szczególny (żółty)': 'Special mark (yellow)',
+  'Pława startowa': 'Starting buoy', 'Mielizna Zachodnia – S': 'West Shoal – S', 'Ławica – W': 'Bank – W', 'Ławica – S': 'Bank – S', 'Ławica – E': 'Bank – E',
+  'Wrak „Maria”': 'Wreck “Maria”', 'Wrak „Galeb”': 'Wreck “Galeb”', 'Skała Rybacka': 'Fisherman\'s Rock', 'Strefa regat': 'Regatta zone', 'Hrid': 'Hrid (rock)', 'Otok Trzeci – N': 'Third Island – N', 'Kabel podwodny': 'Submarine cable', 'Plićak – S': 'Shallow bank – S',
+  'Start': 'Start', 'WP1 – wejście w tor': 'WP1 – entering the channel', 'WP2': 'WP2', 'WP3 – przed mielizną': 'WP3 – before the shoal', 'WP4 – za mielizną': 'WP4 – past the shoal', 'WP5 – trawers wraku': 'WP5 – abeam the wreck',
+  'WP6': 'WP6', 'WP7': 'WP7', 'WP7 – za przylądkiem': 'WP7 – past the headland', 'WP8 – przed główkami': 'WP8 – before the pierheads', 'Meta – port': 'Finish – harbour',
+  'WP2 – za Otokiem Pierwszym': 'WP2 – past First Island', 'WP3 – kanał': 'WP3 – the channel', 'WP4 – północ Otoka Drugiego': 'WP4 – north of Second Island', 'WP5 – nad Otokiem Trzecim': 'WP5 – north of Third Island', 'WP6 – południe Plićaka': 'WP6 – south of the bank',
+  // reguły mijania
+  'zostaw po lewej burcie (znak po bakburcie)': 'leave to port (mark on your port side)', 'zostaw po prawej burcie (znak po sterburcie)': 'leave to starboard (mark on your starboard side)',
+  'miń od północy': 'pass to the north of it', 'miń od wschodu': 'pass to the east of it', 'miń od południa': 'pass to the south of it', 'miń od zachodu': 'pass to the west of it',
+  'trzymaj się blisko (woda bezpieczna)': 'stay close (safe water)', 'nie wpływaj w strefę zagrożenia': 'keep out of the danger zone',
+  // HUD rejsu
+  'Kurs nad dnem (COG)': 'Course over ground (COG)', 'Kurs na waypoint (BRG)': 'Bearing to waypoint (BRG)', 'Odległość': 'Distance', 'Kurs zgodny z BRG': 'Heading matches BRG',
+  'XTE (odchylenie od toru)': 'XTE (cross-track error)', 'Do mety': 'To finish', 'ETA': 'ETA', 'Głębokość': 'Depth',
+  'Błędy:': 'Errors:', 'Autopilot': 'Autopilot', 'AP wył.': 'AP off', 'AP wł.': 'AP on',
+  'Włącz / wyłącz utrzymanie kursu (J)': 'Turn heading hold on / off (J)', 'Zmiana zadanego kursu': 'Change the target heading', '→ kurs na WP': '→ course to WP',
+  'Ustaw zadany kurs na kurs do waypointu': 'Set the target heading to the bearing to the waypoint', 'Autopilot tylko trzyma kurs – o trasie decydujesz Ty.': 'The autopilot only holds a heading – the route is up to you.',
+  'Przybliż': 'Zoom in', 'Oddal': 'Zoom out', 'Mapa: północ u góry / kurs u góry': 'Chart: north up / heading up', '⬆ kurs': '⬆ HDG', '⬆ N': '⬆ N', 'Nazwy ✓': 'Names ✓', 'Nazwy ✗': 'Names ✗', 'Cała trasa': 'Whole route',
+  'Płyń po waypointach (magenta), mijaj znaki z właściwej strony i omijaj mielizny': 'Follow the waypoints (magenta), pass the marks on the correct side and avoid the shoals',
+  'Waypoint osiągnięty': 'Waypoint reached', 'Znak minięty z niewłaściwej strony': 'Mark passed on the wrong side', 'Wpłynąłeś w strefę zagrożenia': 'You entered a danger zone',
+  'Zderzenie ze znakiem nawigacyjnym!': 'Collision with a navigation mark!', 'Wszedłeś na mieliznę!': 'You ran aground!', 'Kontakt z brzegiem!': 'Contact with the shore!', 'Meta! Rejs ukończony': 'Finish! Passage completed',
+  'Autopilot włączony': 'Autopilot engaged', 'Rejs': 'Passage',
+  'znaki': 'marks', 'strefy': 'zones', 'mielizna': 'grounding', 'zderzenia': 'collisions',
+  // wynik i pomoc
+  '⚓ Rejs ukończony!': '⚓ Passage completed!', 'Czas rejsu': 'Passage time', 'Przebyta droga': 'Distance sailed', 'Średnie odchylenie od toru': 'Average cross-track error', 'Znaki minięte poprawnie': 'Marks passed correctly',
+  'Znaki z niewłaściwej strony': 'Marks on the wrong side', 'Wejścia w strefy zagrożeń': 'Danger zone entries', 'Mielizna / brzeg': 'Grounding / shore', 'Zderzenia ze znakami': 'Collisions with marks',
+  'Punkty karne': 'Penalty points', 'Bez punktów karnych – żegluga wzorowa!': 'No penalty points – exemplary seamanship!', 'Zostań na morzu': 'Stay at sea',
+  'Odchylenie od trasy': 'Deviation from the route', 'Czas poza torem (>150 m)': 'Time off the track (>150 m)', 'Znaki minięte z niewłaściwej strony': 'Marks passed on the wrong side', 'Pominięte znaki': 'Missed marks',
+  'Wejścia w strefy zagrożenia': 'Danger zone entries', 'Mielizna i kontakt z brzegiem': 'Grounding and contact with the shore', 'Zbyt długi rejs': 'Passage took too long',
+  'Pomoc – rejs': 'Help – passage', 'Nawigacja i znaki': 'Navigation and marks',
+  'Ster w lewo / w prawo (wyłącza autopilota)': 'Rudder left / right (disengages the autopilot)', 'Autopilot: włącz / wyłącz utrzymanie kursu': 'Autopilot: hold heading on / off', 'Zadany kurs autopilota −1° / +1° (z Shift: ±10°)': 'Autopilot target heading −1° / +1° (with Shift: ±10°)',
+  'Mapa: północ u góry / kurs u góry ': 'Chart: north up / heading up', 'Przybliż / oddal kartplotter (także kółko myszy nad mapą)': 'Zoom the chart plotter in / out (also the mouse wheel over the chart)',
+  'Cel rejsu.': 'Goal.', 'Przepłyń trasę po kolejnych waypointach (magenta na mapie i w 3D) aż do mety. Waypoint zalicza się po zbliżeniu na ok. 60 m. Kurs na najbliższy waypoint (BRG) i odchylenie od toru (XTE) widzisz w panelu po lewej oraz na tarczy kompasu.': 'Sail the route through the waypoints in turn (magenta on the chart and in 3D) up to the finish. A waypoint counts when you get within about 60 m. The bearing to the next waypoint (BRG) and the cross-track error (XTE) are shown in the panel on the left and on the compass dial.',
+  'Trzymanie kursu.': 'Holding the course.', 'Skręcaj tak, aby kurs jachtu zgadzał się z BRG, a XTE było bliskie zera. Wiatr znosi jacht (dryf), więc kurs nad dnem (COG) może różnić się od kursu kompasowego. Autopilot trzyma tylko zadany kurs – o trasie decydujesz Ty.': 'Steer so that the yacht\'s heading matches BRG and XTE stays close to zero. The wind pushes the yacht sideways (leeway), so the course over ground (COG) can differ from the compass heading. The autopilot only holds the target heading – the route is up to you.',
+  'Znaki boczne (IALA A).': 'Lateral marks (IALA A).', 'Płyniesz w kierunku wejścia do portu: czerwona beczka (znak lewy) ma zostać po lewej burcie, zielony stożek (znak prawy) – po prawej. Na mapie czerwony kwadrat i zielony trójkąt.': 'You are heading towards the harbour entrance: the red can (port-hand mark) stays on your port side, the green cone (starboard-hand mark) on your starboard side. On the chart: a red square and a green triangle.',
+  'Znaki kardynalne.': 'Cardinal marks.', 'Żółto-czarne pławy wskazują, po której stronie przeszkody jest bezpieczna woda: północny – miń od północy (dwa stożki w górę), południowy – od południa (dwa w dół), wschodni – od wschodu (stożki podstawami do siebie), zachodni – od zachodu (wierzchołkami do siebie).': 'Yellow-and-black buoys show on which side of a danger the water is safe: north – pass to the north (two cones pointing up), south – to the south (two pointing down), east – to the east (cones base to base), west – to the west (cones point to point).',
+  'Woda bezpieczna.': 'Safe water.', 'Czerwono-biała kula z czerwoną kulką oznacza otwartą, bezpieczną wodę (np. początek toru). Możesz minąć ją z dowolnej strony.': 'A red-and-white sphere with a red ball marks open, safe water (e.g. the start of a channel). You may pass it on either side.',
+  'Odosobnione niebezpieczeństwo.': 'Isolated danger.', 'Czarna pława z czerwonym pasem i dwiema czarnymi kulami stoi na skale lub mieliźnie. Omijaj ją szerokim łukiem (strefa ok. 75 m).': 'A black buoy with a red band and two black spheres stands on a rock or shoal. Give it a wide berth (zone of about 75 m).',
+  'Wrak i znaki szczególne.': 'Wreck and special marks.', 'Niebiesko-żółta pława z krzyżem oznacza nowy wrak – trzymaj się z dala (ok. 120 m). Żółty znak z X wyznacza strefę specjalną (kabel, regaty) – nie wpływaj w nią.': 'A blue-and-yellow buoy with a cross marks a new wreck – keep clear (about 120 m). A yellow mark with an X marks a special area (cable, regatta) – do not enter it.',
+  'Mielizny i brzeg.': 'Shoals and shore.', 'Jasne plamy na wodzie i na mapie to mielizny. Wejście na mieliznę lub na ląd oraz zderzenie ze znakiem to poważne błędy. Głębokość pod stępką widzisz w panelu nawigacyjnym – czerwony ostrzega przed płyciznami.': 'The pale patches on the water and on the chart are shoals. Running aground, hitting the land or colliding with a mark are serious mistakes. The depth is shown in the navigation panel – red warns of shallows.',
+  'Ocena.': 'Scoring.', 'Za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń, mieliznę i zderzenia odejmowane są punkty. Rejs można przyspieszyć przyciskami 2×, 4×, 8×.': 'Points are deducted for deviation from the route, marks passed on the wrong side, missed marks, entering danger zones, groundings and collisions. You can speed the passage up with the 2×, 4×, 8× buttons.'
 };
+
 
 const TPL = (tpl) => (m, T) => tpl.replace(/\{(\d)\}/g, (_, i) => (m[+i] === undefined ? '' : T(m[+i])));
 const R = (re, tpl) => [re, TPL(tpl)];
@@ -326,5 +383,17 @@ export const RULES = [
   R(/^(.+) ZERWANA! \((.+) kN\)$/, '{1} BROKEN! ({2} kN)'),
   R(/^Załoga czeka na kei na powrót jachtu \((.+) m od burty\)$/, 'The crew is waiting on the quay for the yacht to return ({1} m from the side)'),
   R(/^(.+) nie czuje się najlepiej…$/, '{1} is not feeling too well…'),
+  // ---- tryb rejsu ----
+  R(/^Do (.+)$/, 'To {1}'),
+  R(/^Skręć (w prawo|w lewo) o (\d+)°$/, 'Turn {1} by {2}°'),
+  [/^w prawo$/, () => 'to starboard'], [/^w lewo$/, () => 'to port'],
+  R(/^(\d+) m (w prawo|w lewo) od toru$/, '{1} m {2} of the track'),
+  [/^(\d+) \((\d+)\)$/, null],
+  R(/^znaki (\d+)$/, 'marks {1}'), R(/^strefy (\d+)$/, 'zones {1}'), R(/^mielizna (\d+)$/, 'grounding {1}'), R(/^zderzenia (\d+)$/, 'collisions {1}'),
+  R(/^Rejs: (.+)$/, 'Passage: {1}'),
+  R(/^Autopilot włączony: kurs (\d+)°$/, 'Autopilot engaged: heading {1}°'),
+  R(/^(\d+) waypointów$/, '{1} waypoints'), R(/^(\d+) znaków$/, '{1} marks'),
+  R(/^(.+) nm \(trasa: (.+) nm\)$/, '{1} nm (route: {2} nm)'),
+  R(/^−(\d+(?:\.\d+)?)$/, '−{1}'),
   R(/^([^:]+): (.+)$/, '{1}: {2}')
 ];

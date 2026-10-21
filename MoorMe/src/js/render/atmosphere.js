@@ -191,8 +191,10 @@ export class Atmosphere {
     this.scene.background = bot;
     this.scene.fog.color.copy(bot);
     const fogK = night > 0.5 && this.sky === 'clear' ? 0.8 : 1;
-    this.scene.fog.near = sky.fog[0] * fogK;
-    this.scene.fog.far = sky.fog[1] * fogK;
+    // w rejsie nocą widoczność spada do kilkuset metrów – z daleka widać tylko światła pław (sprite'y bez mgły)
+    const fs = 1 + ((this.view.fogScale || 1) - 1) * (1 - 0.86 * night);
+    this.scene.fog.near = sky.fog[0] * fogK * fs;
+    this.scene.fog.far = sky.fog[1] * fogK * fs;
 
     // słońce albo księżyc (to samo światło kierunkowe – cienie także nocą)
     const cam = v.cam;
@@ -231,6 +233,7 @@ export class Atmosphere {
 
     // światła: nawigacyjne, latarnie, okna – włączają się o zmierzchu (i w mgle/deszczu trochę wcześniej)
     const lightsOn = clamp(night * 1.3 + (sky.grey > 0.5 ? 0.25 : 0) - 0.05, 0, 1);
+    this.lightsOn = lightsOn;
     const bt = this.world.boat;
     const movingNow = Math.hypot(bt.vx || 0, bt.vz || 0) > 0.25 || Math.abs(bt.throttle || 0) > 0.05;
     this.mv += ((movingNow ? 1 : 0) - this.mv) * clamp(camDt * 3, 0, 1);

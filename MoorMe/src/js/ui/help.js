@@ -28,3 +28,34 @@ export function buildHelpContent() {
     ...LINES.map(([t, d]) => h('div.hint', {}, h('b', {}, t + '. '), d))
   ];
 }
+
+// ---------- Pomoc do trybu rejsu ----------
+export const PASSAGE_KEYS = [
+  ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo (wyłącza autopilota)'], ['R', 'Ster na zero'],
+  ['J', 'Autopilot: włącz / wyłącz utrzymanie kursu'], [', / .', 'Zadany kurs autopilota −1° / +1° (z Shift: ±10°)'],
+  ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal kartplotter (także kółko myszy nad mapą)'],
+  ['O', 'Pogoda i pora dnia'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (izo, blisko, z góry, za rufą, kapitan)'],
+  ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
+];
+
+export const PASSAGE_TEXT = [
+  ['Cel rejsu', 'Przepłyń trasę po kolejnych waypointach (magenta na mapie i w 3D) aż do mety. Waypoint zalicza się po zbliżeniu na ok. 60 m. Kurs na najbliższy waypoint (BRG) i odchylenie od toru (XTE) widzisz w panelu po lewej oraz na tarczy kompasu.'],
+  ['Trzymanie kursu', 'Skręcaj tak, aby kurs jachtu zgadzał się z BRG, a XTE było bliskie zera. Wiatr znosi jacht (dryf), więc kurs nad dnem (COG) może różnić się od kursu kompasowego. Autopilot trzyma tylko zadany kurs – o trasie decydujesz Ty.'],
+  ['Znaki boczne (IALA A)', 'Płyniesz w kierunku wejścia do portu: czerwona beczka (znak lewy) ma zostać po lewej burcie, zielony stożek (znak prawy) – po prawej. Na mapie czerwony kwadrat i zielony trójkąt.'],
+  ['Znaki kardynalne', 'Żółto-czarne pławy wskazują, po której stronie przeszkody jest bezpieczna woda: północny – miń od północy (dwa stożki w górę), południowy – od południa (dwa w dół), wschodni – od wschodu (stożki podstawami do siebie), zachodni – od zachodu (wierzchołkami do siebie).'],
+  ['Woda bezpieczna', 'Czerwono-biała kula z czerwoną kulką oznacza otwartą, bezpieczną wodę (np. początek toru). Możesz minąć ją z dowolnej strony.'],
+  ['Odosobnione niebezpieczeństwo', 'Czarna pława z czerwonym pasem i dwiema czarnymi kulami stoi na skale lub mieliźnie. Omijaj ją szerokim łukiem (strefa ok. 75 m).'],
+  ['Wrak i znaki szczególne', 'Niebiesko-żółta pława z krzyżem oznacza nowy wrak – trzymaj się z dala (ok. 120 m). Żółty znak z X wyznacza strefę specjalną (kabel, regaty) – nie wpływaj w nią.'],
+  ['Mielizny i brzeg', 'Jasne plamy na wodzie i na mapie to mielizny. Wejście na mieliznę lub na ląd oraz zderzenie ze znakiem to poważne błędy. Głębokość pod stępką widzisz w panelu nawigacyjnym – czerwony ostrzega przed płyciznami.'],
+  ['Ocena', 'Za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń, mieliznę i zderzenia odejmowane są punkty. Rejs można przyspieszyć przyciskami 2×, 4×, 8×.']
+];
+
+export function buildPassageHelpContent() {
+  return [
+    h('h3', { class: 'help-h' }, 'Sterowanie'),
+    h('div.help-grid', {}, PASSAGE_KEYS.map(([k, d]) => [h('kbd', {}, k), h('span', {}, d)])),
+    h('h3', { class: 'help-h' }, 'Nawigacja i znaki'),
+    ...PASSAGE_TEXT.map(([t, d]) => h('div.hint', {}, h('b', {}, t + '. '), d))
+  ];
+}
+

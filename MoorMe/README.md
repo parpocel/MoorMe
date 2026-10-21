@@ -11,7 +11,24 @@ Modele jachtów oparto na danych Bavarii C34, C46 i C50.
    Wybierz wtedy „Więcej informacji”, a potem „Uruchom mimo to”.
 3. Instalator pozwala wybrać folder instalacji. Tworzy skróty na pulpicie i w menu Start.
 
-## Jak to działa
+## Tryby gry
+
+Po uruchomieniu otwiera się okno wyboru trybu:
+
+- **Cumowanie** – manewry w porcie (opis niżej).
+- **Rejs wzdłuż wybrzeża** – płyniesz po morzu po waypointach i stosujesz się do znaków nawigacyjnych IALA (region A).
+
+### Rejs wzdłuż wybrzeża
+
+- **Akweny:** Bałtyk (piaszczysty brzeg, mielizna, wrak, strefa regat) i Adriatyk (wyspy, kanał, skała, wrak, płycizna). Każdy ma trasę ok. 4,3–4,4 nm z 9 waypointami i 14–16 znakami.
+- **Cel:** przepłyń po kolejnych waypointach (magenta) do mety. Waypoint zalicza się w promieniu ok. 60 m. Panel nawigacyjny pokazuje kurs na waypoint (BRG), odległość, odchylenie od toru (XTE), ETA, głębokość i najbliższe znaki wraz z regułą mijania. Kurs na waypoint jest też zaznaczony na tarczy kompasu.
+- **Znaki:** boczne (czerwony po lewej burcie, zielony po prawej), kardynalne N/E/S/W (miń od odpowiedniej strony), woda bezpieczna, odosobnione niebezpieczeństwo, wrak (nowe niebezpieczeństwo) i znaki szczególne. Znaki mają poprawne kolory, topmarki i charakterystyki świateł (np. VQ, Fl(2)).
+- **Kartplotter:** mapa 2D z lądem, mieliznami, trasą, znakami i pozycją jachtu; przybliżanie, orientacja „północ u góry / kurs u góry”, nazwy znaków, widok całej trasy.
+- **Autopilot** (J, `,` `.`) tylko trzyma zadany kurs – o trasie decydujesz Ty.
+- **Noc:** w trybie nocnym z daleka widać wyłącznie światła pław i latarni, a trasa znika z widoku 3D (zostaje na kartplotterze).
+- **Ocena:** punkty karne za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń (odosobnione niebezpieczeństwo, wrak, znak szczególny), mieliznę/brzeg i zderzenia ze znakami. Czas można przyspieszyć do 8×.
+
+## Jak to działa (cumowanie)
 
 Na ekranie startowym są dwie drogi:
 
@@ -105,10 +122,10 @@ Dane jachtów są orientacyjne i służą ćwiczeniu. To nie jest dokumentacja p
 
 Aplikacja używa Electron i Three.js, bez frameworka UI. Kod leży w `src/js`:
 
-- `physics/`: model jachtu, liny, świat symulacji z kontaktami, załogą i oceną. Nie zależy od grafiki, więc testy działają w Node;
+- `physics/`: model jachtu, liny, świat symulacji z kontaktami, załogą i oceną oraz `passage.js` (tryb rejsu: nawigacja, ocena znaków). Nie zależy od grafiki, więc testy działają w Node;
 - `render/`: proceduralne modele low-poly (jacht, port, woda) oraz widok 3D z kamerą;
 - `ui/`: kreator, edytor pokładu i panel symulacji;
-- `data/`: dane jachtów i generator portów.
+- `data/`: dane jachtów, generator portów i akweny rejsu (`passage.js`).
 
 ```bash
 npm install

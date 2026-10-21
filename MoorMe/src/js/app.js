@@ -10,6 +10,9 @@ import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
 import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
+import { PassageScreen } from './ui/passageUI.js';
+import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
+import { drawChart } from './ui/chart.js';
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 function sceneryEl() {
@@ -24,6 +27,8 @@ const icon = {
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
   help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
   gear: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
+  anchor: '<svg width="34" height="34" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2" fill="none" stroke="#d2695f" stroke-width="2"/><path d="M12 7.5V20M7.5 11h9M4.5 14.5c.6 3.2 3.7 5.5 7.5 5.5s6.9-2.3 7.5-5.5" fill="none" stroke="#d2695f" stroke-width="2" stroke-linecap="round"/></svg>',
+  sail: '<svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 3v14M12 4c4 2.5 6 6 6.5 11H12zM11 6C8 8.5 6.5 11.5 6 15h5z" fill="#3f8a72" stroke="#3f8a72" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 18.5h16l-2.2 3H6.2z" fill="#2f4468"/></svg>',
   down: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6" fill="none" stroke="#4a5a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
 };
 const raw = (html) => { const d = document.createElement('span'); d.style.display = 'contents'; d.innerHTML = html; return d; };
@@ -101,9 +106,103 @@ function showTitle() {
         btn('.sec.rnd', icon.dice, 'Random', null, () => showRandom(), { title: 'Losowe zadanie w losowych warunkach' }),
         btn('.sec.fast', icon.fast, 'Szybki start', 'ostatnie ustawienia', () => startSim(), saved ? {} : { disabled: true, title: 'Najpierw ustaw i uruchom symulację' })),
       btn('.help', icon.help, 'Pomoc – sterowanie i praca na cumach', null, () => showHelp()),
-      btn('.help', icon.gear, 'Ustawienia', null, () => showSettings()),
+      btn('.help', icon.gear, 'Ustawienia', null, () => showSettings(() => showTitle())),
+      btn('.help', icon.chev2 || icon.down, 'Zmień tryb', null, () => showModeSelect()),
       h('div.title-note', {}, raw(icon.down), h('span', {}, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne'))));
   app.appendChild(s);
+}
+
+// ---------- Wybór trybu (okno startowe) ----------
+function showModeSelect() {
+  app.innerHTML = '';
+  const card = (cls, ic, title, text, onclick) => h('button.mode-card' + cls, { onclick },
+    h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
+  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
+    h('div.title-card', { style: { width: 'min(900px, 94vw)' } },
+      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'WYBÓR TRYBU')),
+      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
+      h('p.desc', {}, 'Wybierz tryb gry.'),
+      h('div.mode-cards', {},
+        card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
+        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup())),
+      h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
+}
+
+// ---------- Rejs: ustawienia ----------
+const PASSAGE_KEY = 'moorme.passage.v1';
+function loadPassageCfg() {
+  try {
+    const s = JSON.parse(localStorage.getItem(PASSAGE_KEY));
+    if (s && PASSAGES[s.passageId] && BOATS[s.boatId]) return s;
+  } catch (e) { /* brak zapisu */ }
+  return null;
+}
+let passageCfg = loadPassageCfg() || { passageId: 'baltic', boatId: 'C34', weather: { ...PASSAGES.baltic.weather } };
+
+function showPassageSetup() {
+  const cfg = passageCfg;
+  const w = cfg.weather;
+  app.innerHTML = '';
+  const cards = h('div.passage-cards');
+  const drawCards = () => {
+    cards.innerHTML = '';
+    for (const P of Object.values(PASSAGES)) {
+      const H = buildPassage(P.id);
+      const cv = h('canvas', { width: 640, height: 190, style: { width: '100%', borderRadius: '10px', display: 'block' } });
+      const R = H.route, xs = R.map((p) => p.x), zs = R.map((p) => p.z);
+      const fake = { H, route: R, marks: H.marks.map((m) => ({ ...m, state: 'pending' })), boat: { x: R[0].x, z: R[0].z, th: 0, speed: 0, vx: 0, vz: 0 }, next: 1 };
+      const cxm = (Math.min(...xs) + Math.max(...xs)) / 2, czm = (Math.min(...zs) + Math.max(...zs)) / 2;
+      const range = Math.max((Math.max(...xs) - Math.min(...xs)) * 1.12, (Math.max(...zs) - Math.min(...zs)) * 1.12 * (640 / 190));
+      drawChart(cv.getContext('2d'), 640, 190, { cx: cxm, cz: czm, scale: 640 / range, headUp: false, world: fake, labels: false });
+      cards.appendChild(h('div.card', { class: cfg.passageId === P.id ? 'selected' : '', onclick: () => { if (cfg.passageId !== P.id) { cfg.passageId = P.id; Object.assign(w, PASSAGES[P.id].weather); } showPassageSetup(); } },
+        h('h3', {}, P.name), cv,
+        h('div.small.muted', { style: { margin: '8px 0 6px' } }, P.desc),
+        h('div', {}, h('span.chip', {}, `${(routeLength(R) / 1852).toFixed(1)} nm`), h('span.chip', {}, `${R.length - 1} waypointów`), h('span.chip', {}, `${H.marks.length} znaków`), h('span.chip.lvl', {}, P.difficulty > 1 ? 'trudniejszy' : 'łatwiejszy'))));
+    }
+  };
+  drawCards();
+
+  const slider = (min, max, step, val, fmt, on) => {
+    const out = h('b', {}, fmt(val));
+    const inp = h('input', { type: 'range', min, max, step, value: val });
+    inp.addEventListener('input', () => { on(+inp.value); out.textContent = fmt(+inp.value); });
+    return h('div.row', {}, inp, out);
+  };
+  const fmtH = (hh) => `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.round((hh % 1) * 60)).padStart(2, '0')}${hh < 5 || hh > 21 ? ' (noc)' : hh < 7.5 ? ' (świt)' : hh > 18.5 ? ' (zmierzch)' : ''}`;
+  const boatSeg = seg(Object.values(BOATS).map((b) => ({ value: b.id, label: `${b.name} (${b.loa.toFixed(1)} m)` })), cfg.boatId, (v) => { cfg.boatId = v; });
+  const body = h('div', {},
+    h('h2', { style: { marginBottom: '10px' } }, 'Wybierz akwen i trasę'),
+    cards,
+    h('div.two-col', { style: { marginTop: '18px' } },
+      h('div.panel', {}, h('h2', {}, 'Jacht'), boatSeg,
+        h('div.hint', {}, 'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.')),
+      h('div.panel', {}, h('h2', {}, 'Pogoda'),
+        h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, 30, 1, w.windKn, (v) => `${v} kn`, (v) => { w.windKn = v; })),
+        h('div.field', {}, h('label', {}, 'Kierunek wiatru (skąd wieje)'), slider(0, 355, 5, w.windFrom, (v) => `${v}°`, (v) => { w.windFrom = v; })),
+        h('div.field', {}, h('label', {}, 'Porywistość'), slider(0, 1, 0.05, w.gust, (v) => `${Math.round(v * 100)}%`, (v) => { w.gust = v; })),
+        h('div.field', {}, h('label', {}, 'Prąd'), slider(0, 2, 0.1, w.currentKn || 0, (v) => `${v.toFixed(1)} kn`, (v) => { w.currentKn = v; w.currentTo = 90; })),
+        h('div.field', {}, h('label', {}, 'Pora dnia'), seg([{ value: 11, label: '☀ Dzień' }, { value: 19.3, label: '🌇 Zmierzch' }, { value: 23.5, label: '🌙 Noc – widać tylko światła' }], [11, 19.3, 23.5].includes(w.hour) ? w.hour : null, (v) => { w.hour = v; showPassageSetup(); }), slider(0, 23.75, 0.25, w.hour, fmtH, (v) => { w.hour = v; })),
+        h('div.field', {}, h('label', {}, 'Niebo'), seg([{ value: 'clear', label: '☀ Słonecznie' }, { value: 'cloudy', label: '☁ Pochmurno' }, { value: 'rain', label: '🌧 Deszcz' }, { value: 'fog', label: '🌫 Mgła' }], w.sky || 'clear', (v) => { w.sky = v; })))));
+  app.appendChild(h('div.screen', {}, sceneryEl(),
+    h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'rejs wzdłuż wybrzeża')),
+    h('div.screen-body', {}, body),
+    h('div.screen-footer', {}, h('button.btn', { onclick: () => { savePassageCfg(); showModeSelect(); } }, '← Tryby'), h('button.btn.primary.big', { onclick: () => startPassage() }, '⛵ Wypłyń'))));
+}
+
+function savePassageCfg() {
+  try { localStorage.setItem(PASSAGE_KEY, JSON.stringify(passageCfg)); } catch (e) { /* ignoruj */ }
+}
+
+function startPassage() {
+  savePassageCfg();
+  app.innerHTML = '';
+  const root = h('div', { style: { position: 'absolute', inset: 0 } });
+  app.appendChild(root);
+  const spec = BOATS[passageCfg.boatId];
+  const equip = defaultEquipment(spec);
+  equip.bowThruster = 'none'; equip.sternThruster = false;
+  const config = { mode: 'passage', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
+  window.__sim = new PassageScreen(root, config, { restart: () => startPassage(), exit: () => showPassageSetup() });
 }
 
 // ---------- Język i ustawienia ----------
@@ -128,12 +227,12 @@ function showLangPicker() {
       h('div.title-note', {}, h('span', {}, 'Język możesz później zmienić w Ustawieniach. / You can change the language later in Settings.')))));
 }
 
-function showSettings() {
+function showSettings(back = () => showModeSelect()) {
   app.innerHTML = '';
   app.appendChild(h('div.screen', {}, sceneryEl(),
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),
     h('div.screen-body', {}, h('div.help-card', {}, h('h2', { style: { marginBottom: '8px' } }, 'Język / Language'), langButtons())),
-    h('div.screen-footer', {}, h('button.btn', { onclick: () => showTitle() }, '← Menu'), h('span'))));
+    h('div.screen-footer', {}, h('button.btn', { onclick: () => back() }, '← Menu'), h('span'))));
 }
 
 // ---------- Pomoc ----------
@@ -580,4 +679,4 @@ installDomTranslator(document.body);
 document.documentElement.lang = getLang();
 document.title = t('MoorMe – symulator cumowania');
 // test dymny (CI) pomija wybór języka
-if (!hasSavedLang() && !location.search.includes('smoke')) showLangPicker(); else showTitle();
+if (!hasSavedLang() && !location.search.includes('smoke')) showLangPicker(); else if (location.search.includes('smoke')) showTitle(); else showModeSelect();

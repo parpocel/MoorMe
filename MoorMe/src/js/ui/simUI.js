@@ -16,15 +16,7 @@ export class SimScreen {
     this.config = config;
     this.cb = callbacks;
     this.spec = BOATS[config.boatId];
-    this.harbor = generateHarbor(harborOpts(config, this.spec));
-    this.world = new World({
-      spec: this.spec,
-      equip: JSON.parse(JSON.stringify(config.equip)),
-      harbor: this.harbor,
-      weather: config.weather,
-      scenario: config.scenario,
-      start: config.start
-    });
+    this.initWorld(config);
     this.paused = false;
     this.timeScale = 1;
     this.keys = new Set();
@@ -48,6 +40,22 @@ export class SimScreen {
     this.running = true;
     this.frame = this.frame.bind(this);
     requestAnimationFrame(this.frame);
+    this.introLog(config);
+  }
+
+  // Hooki dla trybów (cumowanie / rejs)
+  initWorld(config) {
+    this.harbor = generateHarbor(harborOpts(config, this.spec));
+    this.world = new World({
+      spec: this.spec,
+      equip: JSON.parse(JSON.stringify(config.equip)),
+      harbor: this.harbor,
+      weather: config.weather,
+      scenario: config.scenario,
+      start: config.start
+    });
+  }
+  introLog(config) {
     this.pushLog({ msg: config.scenario === 'moor' ? `Cel: zacumuj – ${METHODS[config.method].name.toLowerCase()}` : 'Cel: odcumuj i wyjdź ze stanowiska', type: 'info' });
     if (config.scenario === 'unmoor') this.pushLog({ msg: 'Liny założone na biegowo, jedna osoba załogi na kei.', type: 'info' });
   }
@@ -227,6 +235,7 @@ export class SimScreen {
     panel.appendChild(mkThr('bow', 'Dziobowy', 'Q', 'E', eq.bowThruster !== 'none'));
     panel.appendChild(mkThr('stern', 'Rufowy', 'Z', 'C', !!eq.sternThruster));
 
+    if (w.isPassage) return panel;
     // odbijacze i załoga
     panel.appendChild(h('h4', { style: { marginTop: '10px' } }, 'Odbijacze'));
     const fr = h('div.seg');
@@ -804,7 +813,13 @@ export class SimScreen {
     gh += `<div class="small muted" style="margin-top:6px">Uderzenia kadłubem: <b style="color:${s.hullHits ? '#ff5a5a' : 'inherit'}">${s.hullHits}</b><span> · </span><span>mocne w odbijacz: ${s.hardFender}</span>${s.breaks ? `<span> · </span><span>zerwane liny: ${s.breaks}</span>` : ''}</div>`;
     if (w.engineDead) gh += `<div style="color:#ff5a5a;font-weight:700;margin-top:4px">Silnik: lina w śrubie!</div>`;
     this.goal.innerHTML = gh;
+    this.updateControls();
+  }
 
+  // Panele sterowania (silnik, ster, stery strumieniowe), log, kompas
+  updateControls() {
+    const w = this.world, b = w.boat;
+    const rpmDisp = b.gear === 0 && b.rpm < 0.32 ? 800 : Math.round(800 + clamp((b.rpm - 0.3) / 0.7, 0, 1) * 2400);
     // silnik
     this.thrKnob.style.top = `${(1 - (b.throttle + 1) / 2) * 100}%`;
     this.rpmVal.textContent = w.engineDead ? 'STOP' : `${rpmDisp}`;
@@ -830,7 +845,7 @@ export class SimScreen {
       bt.heat.style.width = `${b[kind + 'Heat'] * 100}%`;
       bt.heat.style.background = b[kind + 'Trip'] ? '#ff5a5a' : b[kind + 'Heat'] > 0.7 ? '#ffb347' : '#2fb3e8';
     }
-    this.crewBtn.textContent = w.crew.ashore ? '⤴ Załoga na pokład (L)' : '⤵ Zejdź na ląd (L)';
+    if (this.crewBtn) this.crewBtn.textContent = w.crew.ashore ? '⤴ Załoga na pokład (L)' : '⤵ Zejdź na ląd (L)';
     this.followBtn.classList.toggle('on', this.view.cam.follow);
     // log – wygaszanie
     const now = performance.now();
