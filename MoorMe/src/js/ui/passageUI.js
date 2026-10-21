@@ -26,7 +26,8 @@ export class PassageScreen extends SimScreen {
       spec: this.spec,
       equip: JSON.parse(JSON.stringify(config.equip)),
       passageId: config.passageId,
-      weather: config.weather
+      weather: config.weather,
+      blind: config.assist !== 'full'
     });
     this.chart = { range: 1800, headUp: false, labels: true };
   }
@@ -36,7 +37,7 @@ export class PassageScreen extends SimScreen {
   introLog(config) {
     const P = this.world.H;
     this.pushLog({ msg: `Rejs: ${P.name}`, type: 'info' });
-    this.pushLog({ msg: 'Płyń po waypointach (magenta), mijaj znaki z właściwej strony i omijaj mielizny', type: 'info' });
+    this.pushLog({ msg: this.world.blind ? 'Płyń na port według BRG. Rozpoznawaj znaki po światłach i mijaj je z właściwej strony' : 'Płyń po waypointach (magenta), mijaj znaki z właściwej strony i omijaj mielizny', type: 'info' });
   }
 
   build() {
@@ -102,12 +103,12 @@ export class PassageScreen extends SimScreen {
     this.chartCv = h('canvas', { width: 420, height: 300 });
     this.chartCv.addEventListener('wheel', (e) => { e.preventDefault(); this.zoomChart(e.deltaY > 0 ? 1.25 : 0.8); }, { passive: false });
     this.chartBtnOrient = h('button.btn.xs', { onclick: () => { this.chart.headUp = !this.chart.headUp; this.updateChartButtons(); }, title: 'Mapa: północ u góry / kurs u góry' }, '');
-    this.chartBtnLabels = h('button.btn.xs', { onclick: () => { this.chart.labels = !this.chart.labels; this.updateChartButtons(); } }, '');
+    this.chartBtnLabels = this.world.blind ? null : h('button.btn.xs', { onclick: () => { this.chart.labels = !this.chart.labels; this.updateChartButtons(); } }, '');
     chart.append(this.chartCv, h('div.chart-bar', {},
       h('button.btn.xs', { onclick: () => this.zoomChart(0.7), title: 'Przybliż' }, '＋'),
       h('button.btn.xs', { onclick: () => this.zoomChart(1.4), title: 'Oddal' }, '－'),
       this.chartBtnOrient, this.chartBtnLabels,
-      h('button.btn.xs', { onclick: () => { this.chart.range = Math.max(900, this.world.H.routeLength * 1.15); this.chart.full = true; } }, 'Cała trasa')));
+      this.world.blind ? null : h('button.btn.xs', { onclick: () => { this.chart.range = Math.max(900, this.world.H.routeLength * 1.15); this.chart.full = true; } }, 'Cała trasa')));
     sim.appendChild(chart);
     this.updateChartButtons();
 
@@ -132,7 +133,7 @@ export class PassageScreen extends SimScreen {
     this.apHdg = h('div.big-num', { style: { textAlign: 'center', margin: '8px 0 4px' } }, '---°');
     const row = h('div', { style: { display: 'flex', gap: '4px', justifyContent: 'center' } },
       ...[[-10, '−10'], [-1, '−1'], [1, '+1'], [10, '+10']].map(([d, l]) => h('button.btn.xs', { onclick: () => { this.world.adjustAutopilot(d); }, title: 'Zmiana zadanego kursu' }, l)));
-    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: 'Ustaw zadany kurs na kurs do waypointu' }, '→ kurs na WP'),
+    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: this.world.blind ? 'Ustaw zadany kurs na kurs do portu' : 'Ustaw zadany kurs na kurs do waypointu' }, this.world.blind ? '→ kurs na port' : '→ kurs na WP'),
       h('div.small.muted', { style: { marginTop: '6px', maxWidth: '170px' } }, 'Autopilot tylko trzyma kurs – o trasie decydujesz Ty.'));
     return panel;
   }
@@ -150,7 +151,7 @@ export class PassageScreen extends SimScreen {
 
   updateChartButtons() {
     this.chartBtnOrient.textContent = this.chart.headUp ? '⬆ kurs' : '⬆ N';
-    this.chartBtnLabels.textContent = this.chart.labels ? 'Nazwy ✓' : 'Nazwy ✗';
+    if (this.chartBtnLabels) this.chartBtnLabels.textContent = this.chart.labels ? 'Nazwy ✓' : 'Nazwy ✗';
   }
 
   // ---------- Klawiatura ----------
@@ -231,18 +232,19 @@ export class PassageScreen extends SimScreen {
     const nextMarks = w.marks
       .filter((m) => m.state === 'pending' && Math.hypot(m.x - b.x, m.z - b.z) < 700 && (m.required || m.rule === 'avoid'))
       .sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z)).slice(0, 3);
-    let gh = `<div style="font-weight:700;margin-bottom:2px">Do ${wp.name || 'WP' + n.next} <span class="muted">(${n.next}/${w.route.length - 1})</span></div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="small muted">Kurs na waypoint (BRG)</div><div class="big-num" style="color:#ff7ae0">${pad3(n.brg)}°</div></div>
+    const blind = w.blind;
+    let gh = `<div style="font-weight:700;margin-bottom:2px">${blind ? 'Do portu' : `Do ${wp.name || 'WP' + n.next} <span class="muted">(${n.next}/${w.route.length - 1})</span>`}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="small muted">${blind ? 'Kurs na port (BRG)' : 'Kurs na waypoint (BRG)'}</div><div class="big-num" style="color:#ff7ae0">${pad3(n.brg)}°</div></div>
       <div style="text-align:right"><div class="small muted">Odległość</div><div class="big-num">${fmtDist(n.dtw)}</div></div></div>
       <div class="small" style="margin:4px 0 0;color:${Math.abs(err) < 5 ? '#7ff0b5' : '#ffd166'}">${Math.abs(err) < 3 ? 'Kurs zgodny z BRG' : `Skręć ${err > 0 ? 'w prawo' : 'w lewo'} o ${Math.abs(err).toFixed(0)}°`}</div>
-      <div class="xte"><i style="left:${xteBar}%"></i></div>
+      ${blind ? '' : `<div class="xte"><i style="left:${xteBar}%"></i></div>`}
       <div class="kv">
-        <span class="muted">XTE (odchylenie od toru)</span><b style="color:${Math.abs(n.xte) > 100 ? '#ff7a7a' : 'inherit'}">${Math.abs(n.xte).toFixed(0)} m ${xteSide}</b>
-        <span class="muted">Do mety</span><b>${fmtDist(n.remaining)}</b>
+        ${blind ? '' : `<span class="muted">XTE (odchylenie od toru)</span><b style="color:${Math.abs(n.xte) > 100 ? '#ff7a7a' : 'inherit'}">${Math.abs(n.xte).toFixed(0)} m ${xteSide}</b>
+        <span class="muted">Do mety</span><b>${fmtDist(n.remaining)}</b>`}
         <span class="muted">ETA</span><b>${fmtTime(n.eta)}</b>
         <span class="muted">Głębokość</span><b style="color:${shallow ? '#ff5a5a' : 'inherit'}">${depth.toFixed(1)} m${shallow ? ' ⚠' : ''}</b>
       </div>`;
-    if (nextMarks.length) {
+    if (!blind && nextMarks.length) {
       gh += '<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.12);padding-top:5px">';
       for (const m of nextMarks) {
         gh += `<div class="small" style="margin:3px 0"><b>${m.label}</b> <span class="muted">${fmtDist(Math.hypot(m.x - b.x, m.z - b.z))}</span><br><span class="muted">${RULE_TEXT[m.rule]}</span></div>`;
@@ -270,7 +272,7 @@ export class PassageScreen extends SimScreen {
     this.updateControls();
     this.drawPlotter();
     this.updateMarkTags();
-    this.view.sea.setNext(n.next);
+    if (!w.blind) this.view.sea.setNext(n.next);
   }
 
   drawPlotter() {
@@ -283,13 +285,14 @@ export class PassageScreen extends SimScreen {
       cx = (Math.min(...xs) + Math.max(...xs)) / 2; cz = (Math.min(...zs) + Math.max(...zs)) / 2;
       range = Math.max(Math.max(...xs) - Math.min(...xs), (Math.max(...zs) - Math.min(...zs)) * (cv.width / cv.height)) * 1.12;
     }
-    drawChart(ctx, cv.width, cv.height, { cx, cz, scale: cv.width / range, headUp: this.chart.headUp && !this.chart.full, world: w, labels: this.chart.labels, night: (this.view.atmo.lightsOn || 0) > 0.5 });
+    drawChart(ctx, cv.width, cv.height, { cx, cz, scale: cv.width / range, headUp: this.chart.headUp && !this.chart.full, world: w, labels: this.chart.labels && !w.blind, night: (this.view.atmo.lightsOn || 0) > 0.5 });
   }
 
   // Etykiety znaków w widoku 3D (bliskie i z oczekującą oceną)
   updateMarkTags() {
     const w = this.world, b = w.boat, v = this.view;
     const fpv = v.cam.mode === 'fpv';
+    if (w.blind) return; // znaki rozpoznaje się po światłach – bez nazw
     for (const m of w.marks) {
       const d = Math.hypot(m.x - b.x, m.z - b.z);
       let el = this.markTagEls.get(m.id);

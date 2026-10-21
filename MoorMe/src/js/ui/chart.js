@@ -91,7 +91,7 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.strokeStyle = '#7a6a3c'; ctx.lineWidth = 1.3; ctx.stroke();
   }
   // wraki
-  for (const wr of P.wrecks) {
+  for (const wr of (w.blind ? [] : P.wrecks)) {
     const x = X(wr.x, wr.z), y = Y(wr.x, wr.z);
     ctx.strokeStyle = '#17506a'; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(x - 6, y - 4); ctx.lineTo(x + 6, y + 4); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x - 6, y + 4); ctx.stroke();
@@ -103,8 +103,9 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.strokeStyle = '#a21'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
   }
 
-  // trasa
+  // trasa, strefy, znaki i waypointy – tylko w trybie z pełną pomocą
   const R = w.route;
+  if (!w.blind) {
   ctx.setLineDash([9, 6]);
   ctx.strokeStyle = 'rgba(210,40,170,0.9)'; ctx.lineWidth = 2;
   ctx.beginPath();
@@ -150,6 +151,8 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.fillStyle = i === nx ? '#fff' : '#a0187f'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center';
     ctx.fillText(i === R.length - 1 ? 'M' : String(i), x, y + 3);
   });
+
+  }
 
   // wektor kursu nad dnem (2 min) i jacht
   const bx = X(b.x, b.z), by = Y(b.x, b.z);

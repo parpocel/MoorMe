@@ -150,14 +150,14 @@ function showPassageSetup() {
       const H = buildPassage(P.id);
       const cv = h('canvas', { width: 640, height: 190, style: { width: '100%', borderRadius: '10px', display: 'block' } });
       const R = H.route, xs = R.map((p) => p.x), zs = R.map((p) => p.z);
-      const fake = { H, route: R, marks: H.marks.map((m) => ({ ...m, state: 'pending' })), boat: { x: R[0].x, z: R[0].z, th: 0, speed: 0, vx: 0, vz: 0 }, next: 1 };
+      const fake = { H, route: R, marks: H.marks.map((m) => ({ ...m, state: 'pending' })), boat: { x: R[0].x, z: R[0].z, th: 0, speed: 0, vx: 0, vz: 0 }, next: 1, blind: (cfg.assist || 'bearing') === 'bearing' };
       const cxm = (Math.min(...xs) + Math.max(...xs)) / 2, czm = (Math.min(...zs) + Math.max(...zs)) / 2;
       const range = Math.max((Math.max(...xs) - Math.min(...xs)) * 1.12, (Math.max(...zs) - Math.min(...zs)) * 1.12 * (640 / 190));
       drawChart(cv.getContext('2d'), 640, 190, { cx: cxm, cz: czm, scale: 640 / range, headUp: false, world: fake, labels: false });
       cards.appendChild(h('div.card', { class: cfg.passageId === P.id ? 'selected' : '', onclick: () => { if (cfg.passageId !== P.id) { cfg.passageId = P.id; Object.assign(w, PASSAGES[P.id].weather); } showPassageSetup(); } },
         h('h3', {}, P.name), cv,
         h('div.small.muted', { style: { margin: '8px 0 6px' } }, P.desc),
-        h('div', {}, h('span.chip', {}, `${(routeLength(R) / 1852).toFixed(1)} nm`), h('span.chip', {}, `${R.length - 1} waypointów`), h('span.chip', {}, `${H.marks.length} znaków`), h('span.chip.lvl', {}, P.difficulty > 1 ? 'trudniejszy' : 'łatwiejszy'))));
+        h('div', {}, h('span.chip', {}, `${(routeLength(R) / 1852).toFixed(1)} nm`), ...((cfg.assist || 'bearing') === 'bearing' ? [] : [h('span.chip', {}, `${R.length - 1} waypointów`), h('span.chip', {}, `${H.marks.length} znaków`)]), h('span.chip.lvl', {}, P.difficulty > 1 ? 'trudniejszy' : 'łatwiejszy'))));
     }
   };
   drawCards();
@@ -169,12 +169,15 @@ function showPassageSetup() {
     return h('div.row', {}, inp, out);
   };
   const fmtH = (hh) => `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.round((hh % 1) * 60)).padStart(2, '0')}${hh < 5 || hh > 21 ? ' (noc)' : hh < 7.5 ? ' (świt)' : hh > 18.5 ? ' (zmierzch)' : ''}`;
+  const assistSeg = seg([{ value: 'bearing', label: '🧭 Tylko BRG na port' }, { value: 'full', label: '🗺 Trasa i waypointy' }], cfg.assist || 'bearing', (v) => { cfg.assist = v; showPassageSetup(); });
   const boatSeg = seg(Object.values(BOATS).map((b) => ({ value: b.id, label: `${b.name} (${b.loa.toFixed(1)} m)` })), cfg.boatId, (v) => { cfg.boatId = v; });
   const body = h('div', {},
     h('h2', { style: { marginBottom: '10px' } }, 'Wybierz akwen i trasę'),
     cards,
     h('div.two-col', { style: { marginTop: '18px' } },
       h('div.panel', {}, h('h2', {}, 'Jacht'), boatSeg,
+        h('h2', { style: { marginTop: '14px' } }, 'Nawigacja'), assistSeg,
+        h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na kartplotterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
         h('div.hint', {}, 'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.')),
       h('div.panel', {}, h('h2', {}, 'Pogoda'),
         h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, 30, 1, w.windKn, (v) => `${v} kn`, (v) => { w.windKn = v; })),
@@ -201,7 +204,7 @@ function startPassage() {
   const spec = BOATS[passageCfg.boatId];
   const equip = defaultEquipment(spec);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'passage', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
+  const config = { mode: 'passage', assist: passageCfg.assist || 'bearing', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
   window.__sim = new PassageScreen(root, config, { restart: () => startPassage(), exit: () => showPassageSetup() });
 }
 

@@ -520,7 +520,7 @@ export function buildSea(H, scene) {
         dotLight(hd.sprite, cam.distanceTo(hd.sprite.position), on, lightsOn);
       }
       beam.material.opacity = 0.16 + 0.08 * Math.sin(t * 2);
-      routeGroup.visible = lightsOn < 0.35; // nocą trasa widoczna tylko na kartplotterze
+      routeGroup.visible = !H.blind && lightsOn < 0.35; // nocą trasa widoczna tylko na kartplotterze
       for (const sm of shoalMats) sm.color.setHex(0xcfe9d2).multiplyScalar(1 - 0.88 * lightsOn);
     }
   };

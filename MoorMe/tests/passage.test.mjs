@@ -122,5 +122,17 @@ for (const id of Object.keys(PASSAGES)) {
   check(w.pstats.groundings >= 1, `wejście na mieliznę jest wykryte (${w.pstats.groundings})`);
   check(Number.isFinite(w.boat.x) && Math.hypot(w.boat.vx, w.boat.vz) < 20, 'symulacja po kontakcie z mielizną jest stabilna');
 }
+// 4) tryb „tylko BRG na port”
+{
+  const spec = BOATS.C34;
+  const w = new PassageWorld({ spec, equip: defaultEquipment(spec), passageId: 'baltic', weather: { windKn: 0, windFrom: 0, gust: 0 }, random: rng(2), blind: true });
+  const goal = w.route[w.route.length - 1];
+  w.step(0.2); w.step(0.2);
+  const want = bearing(goal.x - w.boat.x, goal.z - w.boat.z);
+  check(w.blind && Math.abs(w.nav.brg - want) < 0.5 && w.nav.next === w.route.length - 1, `blind: BRG na port ${w.nav.brg.toFixed(0)}° zgodny z pozycją mety`);
+  w.boat.reset(goal.x, goal.z + 100, -Math.PI / 2); w.boat.vx = 0; w.boat.vz = -2; w.boat.throttle = 0.3;
+  for (let i = 0; i < 60 * 60 && !w.result; i++) w.step(1 / 60);
+  check(!!w.result, 'blind: rejs kończy się po dotarciu do portu');
+}
 if (fails) process.exit(1);
 console.log('Wszystko OK');

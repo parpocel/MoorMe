@@ -28,11 +28,14 @@ export class PassageWorld extends World {
     const H = cfg.harbor || buildPassage(cfg.passageId);
     super({ ...cfg, harbor: H, scenario: 'passage', start: cfg.start || { x: H.start.x, z: H.start.z, compass: H.start.compass, speedKn: 0 } });
     this.isPassage = true;
+    this.blind = !!cfg.blind; // bez trasy i waypointów: tylko BRG na port, znaki rozpoznawane po światłach
+    H.blind = this.blind;
     this.fenderOut = { port: false, starboard: false, stern: false };
     this.route = H.route;
     this.next = 1; // indeks waypointu, do którego płyniemy
     this.autopilot = { on: false, hdg: H.start.compass };
-    this.nav = { next: 1, dtw: 0, brg: 0, xte: 0, along: 0, legLen: 0, legBrg: 0, eta: 0, remaining: H.routeLength, cog: 0, sog: 0, depth: 0 };
+    if (this.blind) this.next = H.route.length - 1;
+    this.nav = { next: this.next, dtw: 0, brg: 0, xte: 0, along: 0, legLen: 0, legBrg: 0, eta: 0, remaining: H.routeLength, cog: 0, sog: 0, depth: 0 };
     this.pstats = { xteSum: 0, xteTime: 0, offTime: 0, wrongSide: 0, missed: 0, avoid: 0, markHits: 0, groundings: 0, wpReached: 0, dist: 0 };
     this.breakdown = null;
     this._navAcc = 0;
@@ -60,6 +63,8 @@ export class PassageWorld extends World {
     this._shoals = this.obstacles.filter((o) => o.kind === 'shoal').map((o) => ({ ...o, depth: (H.shoals.find((q) => q.poly === o.poly) || { depth: 1 }).depth }));
     this.updateNav(0.1);
   }
+
+  markName(m) { return this.blind ? m.typeName : m.label; }
 
   setupDefaultLines() { /* w rejsie nie ma cum */ }
 
@@ -121,6 +126,19 @@ export class PassageWorld extends World {
     if (this.result) return;
     const b = this.boat, R = this.route, ps = this.pstats;
     const px = b.x, pz = b.z;
+    if (this.blind) {
+      const goal = R[R.length - 1], n = this.nav;
+      const dtw = Math.hypot(goal.x - px, goal.z - pz);
+      n.next = R.length - 1; n.dtw = dtw; n.remaining = dtw; n.xte = 0;
+      n.brg = bearingDeg(goal.x - px, goal.z - pz);
+      n.sog = b.speed / KN;
+      n.cog = b.speed > 0.3 ? bearingDeg(b.vx, b.vz) : thetaToCompass(b.th);
+      n.eta = dtw / Math.max(0.5, b.speed);
+      if (dtw < 60) { ps.wpReached++; this.finishPassage(); return; }
+      this.updateMarks(px, pz, dt);
+      this.updateContact(dt);
+      return;
+    }
     // waypoint i odcinek
     for (let guard = 0; guard < 3 && !this.result; guard++) {
       const k = this.next, wp = R[k], pr = R[k - 1];
@@ -167,7 +185,7 @@ export class PassageWorld extends World {
           m.inZone = true;
           ps.avoid++;
           m.state = 'violated';
-          this.log(`Wpłynąłeś w strefę zagrożenia: ${m.label}`, 'bad');
+          this.log(`Wpłynąłeś w strefę zagrożenia: ${this.markName(m)}`, 'bad');
         } else if (m.inZone && d > m.radius + 20) m.inZone = false;
         if (m.state === 'pending' && d < m.gate) { m.minD = Math.min(m.minD, d); }
         else if (m.state === 'pending' && m.minD < Infinity && d > m.gate + 20) m.state = 'ok';
@@ -196,7 +214,7 @@ export class PassageWorld extends World {
     m.state = ok ? 'ok' : 'wrong';
     if (!ok) {
       this.pstats.wrongSide++;
-      this.log(`Znak minięty z niewłaściwej strony: ${m.label}`, 'bad');
+      this.log(`Znak minięty z niewłaściwej strony: ${this.markName(m)}`, 'bad');
     }
   }
 
