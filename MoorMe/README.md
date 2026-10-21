@@ -20,7 +20,7 @@ Po uruchomieniu otwiera się okno wyboru trybu:
 
 ### Rejs wzdłuż wybrzeża
 
-- **Akweny:** Bałtyk (piaszczysty brzeg, mielizna, wrak, strefa regat) i Adriatyk (wyspy, kanał, skała, wrak, płycizna). Każdy ma trasę ok. 4,3–4,4 nm z 17 waypointami i gęstym oznakowaniem (ok. 52–56 znaków, przerwy do ok. 300 m), więc trzeba reagować co chwilę.
+- **Akweny:** Bałtyk (piaszczysty brzeg, mielizna, wrak, strefa regat) i Adriatyk (wyspy, kanał, skała, wrak, płycizna). Każdy ma trasę ok. 1,7–1,8 nm (ok. 15–20 min żeglugi) z 15 waypointami. Po drodze tylko znaki kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, wraki i znaki szczególne; tor ze znakami bocznymi (czerwone/zielone) zaczyna się dopiero przy wejściu do portu.
 - **Cel:** przepłyń po kolejnych waypointach (magenta) do mety. Waypoint zalicza się w promieniu ok. 60 m. Panel nawigacyjny pokazuje kurs na waypoint (BRG), odległość, odchylenie od toru (XTE), ETA, głębokość i najbliższe znaki wraz z regułą mijania. Kurs na waypoint jest też zaznaczony na tarczy kompasu.
 - **Znaki:** boczne (czerwony po lewej burcie, zielony po prawej), kardynalne N/E/S/W (miń od odpowiedniej strony), woda bezpieczna, odosobnione niebezpieczeństwo, wrak (nowe niebezpieczeństwo) i znaki szczególne. Znaki mają poprawne kolory, topmarki i charakterystyki świateł (np. VQ, Fl(2)).
 - **Kartplotter:** mapa 2D z lądem, mieliznami, trasą, znakami i pozycją jachtu; przybliżanie, orientacja „północ u góry / kurs u góry”, nazwy znaków, widok całej trasy.

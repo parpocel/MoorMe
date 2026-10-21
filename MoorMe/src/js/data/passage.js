@@ -6,8 +6,8 @@ import { compassVec, distToPoly } from '../math.js';
 // 'N'|'E'|'S'|'W' – znak kardynalny: mijamy go od tej strony, 'near' – znak wody bezpiecznej (trzymaj się go blisko),
 // 'avoid' – niebezpieczeństwo: nie wpływaj w strefę o promieniu radius.
 export const MARK_TYPES = {
-  lateralPort: { id: 'lateralPort', name: 'Znak boczny lewy (czerwony)', rule: 'port', gate: 260, color: 0xd62828, flash: 'R' },
-  lateralStbd: { id: 'lateralStbd', name: 'Znak boczny prawy (zielony)', rule: 'starboard', gate: 260, color: 0x1f9d55, flash: 'G' },
+  lateralPort: { id: 'lateralPort', name: 'Znak boczny lewy (czerwony)', rule: 'port', gate: 100, color: 0xd62828, flash: 'R' },
+  lateralStbd: { id: 'lateralStbd', name: 'Znak boczny prawy (zielony)', rule: 'starboard', gate: 100, color: 0x1f9d55, flash: 'G' },
   cardN: { id: 'cardN', name: 'Znak kardynalny północny', rule: 'N', gate: 300, flash: 'VQ' },
   cardE: { id: 'cardE', name: 'Znak kardynalny wschodni', rule: 'E', gate: 300, flash: 'VQ3' },
   cardS: { id: 'cardS', name: 'Znak kardynalny południowy', rule: 'S', gate: 300, flash: 'VQ6' },
@@ -49,7 +49,7 @@ const DEFS = {
   baltic: {
     id: 'baltic',
     name: 'Bałtyk – piaszczyste wybrzeże z mielizną',
-    desc: 'Płaski, piaszczysty brzeg z lasem i wsiami. Na trasie gęsto rozstawione znaki boczne, mielizna oznaczona kardynałami, wrak, kilka skał z znakami odosobnionego niebezpieczeństwa i strefy regat. Płyniesz z zachodu na wschód do portu za główkami.',
+    desc: 'Płaski, piaszczysty brzeg z lasem i wsiami. Po drodze same znaki kardynalne i inne znaki nawigacyjne – mielizna oznaczona kardynałami, wrak, kilka skał z znakami odosobnionego niebezpieczeństwa i strefy regat. Tor ze znakami bocznymi zaczyna się dopiero przy wejściu do portu. Płyniesz z zachodu na wschód do portu za główkami.',
     style: 'baltic',
     difficulty: 1,
     depthMax: 20,
@@ -75,13 +75,12 @@ const DEFS = {
     lighthouses: [{ x: 5200, z: -200, color: 0xd62828, name: 'Latarnia Przylądek' }],
     villages: [{ x: 1300, z: -330, n: 8 }, { x: 3600, z: -380, n: 6 }, { x: 5900, z: -300, n: 10 }, { x: 6760, z: -400, n: 12 }],
     start: { x: -1200, z: 30, compass: 90 },
-    gates: { from: 0, to: 15, step: 280, half: 75 },
+    gates: { from: 14, to: 16, step: 180, half: 70 },
     route: [
       { x: -1200, z: 30, name: 'Start' }, { x: -700, z: 30, name: 'WP1 – wejście w tor' }, { x: -250, z: 100, name: 'WP2' }, { x: 250, z: 40, name: 'WP3' },
       { x: 750, z: 130, name: 'WP4' }, { x: 1250, z: 60, name: 'WP5' }, { x: 1700, z: 140, name: 'WP6' }, { x: 2300, z: 100, name: 'WP7 – przed mielizną' },
       { x: 2900, z: 160, name: 'WP8 – za mielizną' }, { x: 3350, z: 70, name: 'WP9' }, { x: 3750, z: 170, name: 'WP10 – trawers wraku' }, { x: 4300, z: 110, name: 'WP11' },
-      { x: 4800, z: 200, name: 'WP12' }, { x: 5250, z: 90, name: 'WP13 – za przylądkiem' }, { x: 5750, z: 210, name: 'WP14' }, { x: 6150, z: 120, name: 'WP15' },
-      { x: 6460, z: 50, name: 'WP16 – przed główkami' }, { x: 6460, z: -190, name: 'Meta – port' }
+      { x: 4800, z: 200, name: 'WP12' }, { x: 5250, z: 90, name: 'WP13 – za przylądkiem' }, { x: 6460, z: 440, name: 'WP14 – tor wejściowy' }, { x: 6460, z: 150, name: 'WP15 – przed główkami' }, { x: 6460, z: -190, name: 'Meta – port' }
     ],
     marks: [
       { type: 'safe', x: -1000, z: -10, name: 'Pława startowa' },
@@ -95,14 +94,13 @@ const DEFS = {
       { type: 'isolated', x: 4300, z: -40, name: 'Skała Rybacka' },
       { type: 'safe', x: 4800, z: 150, name: 'Pława torowa' },
       { type: 'special', x: 5000, z: 40, name: 'Strefa regat' },
-      { type: 'isolated', x: 5500, z: 320, name: 'Skała Torowa' },
-      { type: 'lateralPort', x: 6390, z: -60 }, { type: 'lateralStbd', x: 6530, z: -60 }
+      { type: 'isolated', x: 5500, z: 320, name: 'Skała Torowa' }
     ]
   },
   adriatic: {
     id: 'adriatic',
     name: 'Adriatyk – kanały między wyspami',
-    desc: 'Skalisty brzeg i wyspy z sosnami i kamiennymi domami. Wąski kanał oznakowany gęsto znakami bocznymi, kilka skał z znakami odosobnionego niebezpieczeństwa po obu stronach toru, kardynały, wrak i płycizny. Trasa prowadzi z zachodu na wschód do portu w głębi zatoki.',
+    desc: 'Skalisty brzeg i wyspy z sosnami i kamiennymi domami. Po drodze same znaki kardynalne i inne znaki nawigacyjne – kilka skał z znakami odosobnionego niebezpieczeństwa po obu stronach toru, kardynały, wrak i płycizny. Tor ze znakami bocznymi zaczyna się dopiero przy wejściu do portu. Trasa prowadzi z zachodu na wschód do portu w głębi zatoki.',
     style: 'med',
     difficulty: 2,
     depthMax: 70,
@@ -119,7 +117,7 @@ const DEFS = {
       { name: 'Otok Drugi', poly: ell(2300, 300, 380, 260, -0.2), h: 78 },
       { name: 'Otok Trzeci', poly: ell(3600, 20, 130, 90, 0.5), h: 26 },
       { name: 'Otok Czwarty', poly: ell(4900, 320, 320, 230, 0.1), h: 62 },
-      { name: 'Hrid Mały', poly: ell(1600, -40, 55, 40, 0, 10), h: 9 }
+      { name: 'Hrid Mały', poly: ell(1500, -160, 55, 40, 0, 10), h: 9 }
     ],
     shoals: [
       { name: 'Hrid', poly: ell(3000, -120, 30, 26, 0, 10), depth: 0.5 },
@@ -129,34 +127,49 @@ const DEFS = {
       { name: 'Hrid Kanał', poly: ell(2500, -330, 20, 18, 0, 10), depth: 0.5 },
       { name: 'Plićak Mały', poly: ell(4600, 110, 60, 40, 0, 12), depth: 1.1 }
     ],
-    wrecks: [{ name: 'Wrak „Galeb”', x: 4350, z: 100, rot: -0.4 }],
+    wrecks: [{ name: 'Wrak „Galeb”', x: 4350, z: 125, rot: -0.4 }],
     lighthouses: [{ x: 3560, z: -20, color: 0xd62828, name: 'Latarnia Trzeci' }],
     villages: [{ x: 6760, z: -480, n: 12 }, { x: 2300, z: 40, n: 5 }, { x: 4900, z: 110, n: 6 }],
     start: { x: -1200, z: -20, compass: 90 },
-    gates: { from: 0, to: 15, step: 280, half: 75 },
+    gates: { from: 14, to: 16, step: 180, half: 70 },
     route: [
       { x: -1200, z: -20, name: 'Start' }, { x: -700, z: 0, name: 'WP1 – wejście w tor' }, { x: -250, z: 60, name: 'WP2' }, { x: 300, z: 160, name: 'WP3' },
-      { x: 800, z: 210, name: 'WP4 – za Otokiem Pierwszym' }, { x: 1300, z: 130, name: 'WP5' }, { x: 1800, z: 60, name: 'WP6 – kanał' }, { x: 2200, z: -150, name: 'WP7 – północ Otoka Drugiego' },
+      { x: 800, z: 210, name: 'WP4 – za Otokiem Pierwszym' }, { x: 1300, z: 150, name: 'WP5' }, { x: 1800, z: 105, name: 'WP6 – kanał' }, { x: 2200, z: -150, name: 'WP7 – północ Otoka Drugiego' },
       { x: 2800, z: -230, name: 'WP8' }, { x: 3300, z: -250, name: 'WP9' }, { x: 3900, z: -230, name: 'WP10 – nad Otokiem Trzecim' }, { x: 4400, z: -120, name: 'WP11' },
-      { x: 4900, z: -30, name: 'WP12' }, { x: 5300, z: 10, name: 'WP13' }, { x: 5900, z: 0, name: 'WP14 – południe Plićaka' }, { x: 6200, z: -30, name: 'WP15' },
-      { x: 6460, z: -20, name: 'WP16 – przed główkami' }, { x: 6460, z: -340, name: 'Meta – port' }
+      { x: 4900, z: -30, name: 'WP12' }, { x: 5300, z: 10, name: 'WP13' }, { x: 6460, z: 360, name: 'WP14 – tor wejściowy' }, { x: 6460, z: 60, name: 'WP15 – przed główkami' }, { x: 6460, z: -340, name: 'Meta – port' }
     ],
     marks: [
       { type: 'safe', x: -1000, z: -50, name: 'Pława startowa' },
       { type: 'isolated', x: -100, z: -60, name: 'Hrid Zachodni' },
       { type: 'isolated', x: 500, z: 330, name: 'Hrid Prvi' },
-      { type: 'cardS', x: 1600, z: 30, name: 'Hrid Mały – S' },
+      { type: 'cardE', x: 1700, z: -160, name: 'Hrid Mały – E' },
       { type: 'isolated', x: 2500, z: -330, name: 'Hrid Kanał' },
       { type: 'isolated', x: 3000, z: -120, name: 'Hrid' },
       { type: 'cardN', x: 3600, z: -120, name: 'Otok Trzeci – N' },
-      { type: 'wreck', x: 4350, z: 40, name: 'Wrak „Galeb”' },
+      { type: 'wreck', x: 4350, z: 65, name: 'Wrak „Galeb”' },
       { type: 'cardN', x: 4600, z: 60, name: 'Plićak Mały – N' },
       { type: 'special', x: 5300, z: -230, name: 'Kabel podwodny' },
       { type: 'cardS', x: 5600, z: -105, name: 'Plićak – S' },
-      { type: 'lateralPort', x: 6390, z: -150 }, { type: 'lateralStbd', x: 6530, z: -150 }
     ]
   }
 };
+
+// Skraca akwen wzdłuż osi x (trasa ok. 15 min żeglugi) – zachowuje kształt w osi z
+const XK = 0.28;
+function compact(d) {
+  const X = (x) => Math.round(x * XK);
+  const P = (poly) => poly.map(([x, z]) => [x * XK, z]);
+  d.bounds = { ...d.bounds, minX: X(d.bounds.minX), maxX: X(d.bounds.maxX) };
+  d.coasts.forEach((c) => { c.pts = c.pts.map(([x, z]) => [X(x), z]); });
+  // główki portu zachowują szerokość wejścia (±100 m od osi toru)
+  const xe = X(d.route[d.route.length - 1].x);
+  d.moles = d.moles.map((m, i) => { const z0 = m[0][1], z1 = m[2][1]; return i === 0 ? R4(xe - 160, z0, xe - 100, z1) : R4(xe + 100, z0, xe + 160, z1); });
+  d.islands.forEach((i) => { i.poly = P(i.poly); });
+  d.shoals.forEach((i) => { i.poly = P(i.poly); });
+  [...d.wrecks, ...d.lighthouses, ...d.villages, d.start, ...d.route, ...d.marks].forEach((o) => { o.x = X(o.x); });
+  d.marks.forEach((m) => { if (m.type === 'lateralPort') m.x = xe - 60; if (m.type === 'lateralStbd') m.x = xe + 60; });
+}
+Object.values(DEFS).forEach(compact);
 
 export const PASSAGES = Object.fromEntries(Object.entries(DEFS).map(([k, d]) => [k, { id: d.id, name: d.name, desc: d.desc, difficulty: d.difficulty, style: d.style, weather: d.weather }]));
 
@@ -182,6 +195,15 @@ export function coastZ(pts, x) {
   return pts[pts.length - 1][1];
 }
 
+function routeDist(R, x, z) {
+  let best = Infinity;
+  for (let i = 0; i < R.length - 1; i++) {
+    const a = R[i], b = R[i + 1], dx = b.x - a.x, dz = b.z - a.z, t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz)));
+    best = Math.min(best, Math.hypot(x - a.x - dx * t, z - a.z - dz * t));
+  }
+  return best;
+}
+
 export function routeLength(route) {
   let L = 0;
   for (let i = 1; i < route.length; i++) L += Math.hypot(route[i].x - route[i - 1].x, route[i].z - route[i - 1].z);
@@ -203,19 +225,19 @@ export function buildPassage(id) {
   if (d.gates) {
     const { from, to, step, half } = d.gates;
     const R0 = d.route;
-    const nearStruct = (x, z) => structures.some((st) => (st.kind === 'shoal' || st.kind === 'land' || st.kind === 'breakwater') && distToPoly(st.poly, x, z).dist < 70);
+    const nearStruct = (x, z) => structures.some((st) => (st.kind === 'shoal' || st.kind === 'land' || st.kind === 'breakwater') && distToPoly(st.poly, x, z).dist < 25);
     const tooClose = (x, z) => handMarks.concat(gen).some((q) => {
       const T = MARK_TYPES[q.type];
-      return Math.hypot(q.x - x, q.z - z) < (T.radius ? T.radius + 70 : 110);
+      return Math.hypot(q.x - x, q.z - z) < (T.radius ? T.radius + 70 : 90);
     });
     for (let i = from; i <= to && i < R0.length - 1; i++) {
       const A = R0[i], B = R0[i + 1], dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz);
       const ux = dx / L, uz = dz / L, nx = uz, nz = -ux; // lewa burta toru
       let k = 0;
-      for (let sdist = 80; sdist < L - 80; sdist += step / 2, k++) {
+      for (let sdist = i === from ? 110 : 40; sdist < L - 30; sdist += step / 2, k++) {
         const side = k % 2 === 0 ? 1 : -1; // 1: po lewej (czerwony), -1: po prawej (zielony)
         const x = A.x + ux * sdist + nx * half * side, z = A.z + uz * sdist + nz * half * side;
-        if (nearStruct(x, z) || tooClose(x, z)) continue;
+        if (nearStruct(x, z) || tooClose(x, z) || routeDist(R0, x, z) < half - 15) continue;
         gen.push({ type: side > 0 ? 'lateralPort' : 'lateralStbd', x: Math.round(x), z: Math.round(z) });
       }
     }

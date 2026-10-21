@@ -33,10 +33,11 @@ for (const id of Object.keys(PASSAGES)) {
       const px = a.x + dx * t, pz = a.z + dz * t, d = Math.hypot(m.x - px, m.z - pz);
       if (!best || d < best.d) best = { d, px, pz, cross: dx * (m.z - pz) - dz * (m.x - px) };
     }
+    if (process.env.DBG2) console.log(m.type, m.x, m.z, best.d.toFixed(0), best.cross.toFixed(0));
     if (m.rule === 'port' && !(best.cross < 0)) bad++;
     if (m.rule === 'starboard' && !(best.cross > 0)) bad++;
-    if (m.required && ['N', 'E', 'S', 'W'].includes(m.rule) && !inCardinalSector(m.rule, bearing(best.px - m.x, best.pz - m.z))) bad++;
-    if (m.rule === 'avoid' && best.d < m.radius + 25) bad++;
+    if (m.required && ['N', 'E', 'S', 'W'].includes(m.rule) && !inCardinalSector(m.rule, bearing(best.px - m.x, best.pz - m.z))) { bad++; console.log('  zły sektor:', m.label, m.x, m.z, bearing(best.px - m.x, best.pz - m.z).toFixed(0)); }
+    if (m.rule === 'avoid' && best.d < m.radius + 25) { bad++; console.log('  za blisko strefy:', m.label, best.d.toFixed(0)); }
   }
   check(bad === 0, `${id}: trasa mija wszystkie znaki z właściwej strony i poza strefami zagrożeń`);
   // gęstość oznakowania: pozycje znaków wzdłuż trasy – największa przerwa między kolejnymi znakami
@@ -51,9 +52,13 @@ for (const id of Object.keys(PASSAGES)) {
     }
     return best.s;
   }).sort((p, q) => p - q);
+  const along0 = (m) => { let best = null; for (let i = 0; i < R.length - 1; i++) { const a = R[i], b = R[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz, tt = Math.max(0, Math.min(1, ((m.x - a.x) * dx + (m.z - a.z) * dz) / L2)); const d = Math.hypot(m.x - (a.x + dx * tt), m.z - (a.z + dz * tt)); if (!best || d < best.d) best = { d, s: cum[i] + tt * Math.sqrt(L2) }; } return best.s; };
   let maxGap = 0;
   for (let i = 1; i < along.length; i++) maxGap = Math.max(maxGap, along[i] - along[i - 1]);
-  check(w.marks.length >= 40 && maxGap <= 360, `${id}: gęste oznakowanie – ${w.marks.length} znaków, największa przerwa wzdłuż trasy ${maxGap.toFixed(0)} m`);
+  const lat = w.marks.filter((m) => m.rule === 'port' || m.rule === 'starboard');
+  const latFrom = Math.min(...lat.map((m) => w.marks.indexOf(m) && along0(m)));
+  check(w.marks.length >= 14 && lat.length >= 4 && lat.length <= 14 && latFrom >= 0.6 * cum[cum.length - 1], `${id}: ${w.marks.length} znaków, w tym ${lat.length} bocznych dopiero od ${(100 * latFrom / cum[cum.length - 1]).toFixed(0)}% trasy; największa przerwa ${maxGap.toFixed(0)} m`);
+  check(maxGap <= 800, `${id}: przerwa między znakami nie większa niż 800 m`);
 }
 
 // 2) przejazd trasy z autopilotem prowadzonym po waypointach
@@ -70,7 +75,7 @@ function sail(id, weather, maxT = 3600) {
       // prosta nawigacja: kurs na waypoint z korektą na XTE
       const n = w.nav;
       const corr = Math.max(-30, Math.min(30, (n.xte / 8)));
-      w.setAutopilot(true, n.brg - 0 * corr);
+      w.setAutopilot(true, n.brg - 1 * corr);
     }
     w.step(1 / 60);
     t += 1 / 60;
@@ -80,6 +85,7 @@ function sail(id, weather, maxT = 3600) {
 }
 for (const id of Object.keys(PASSAGES)) {
   const { w, t, log, maxX } = sail(id, { windKn: 8, windFrom: 270, gust: 0.2, currentKn: 0 });
+  if (process.env.DBG) console.log(w.marks.filter((m) => m.state === 'wrong').map((m) => `${m.x},${m.z} leg ${JSON.stringify(m.legDir)} minD ${m.minD} at ${JSON.stringify(m.atMin)}`).join('\n'), log.filter((l) => /niewłaściwej|strefy/.test(l)).join('\n'));
   check(!!w.result, `${id}: rejs ukończony w ${(t / 60).toFixed(0)} min symulacji (waypointów: ${w.pstats.wpReached})`);
   if (w.result) {
     check(w.pstats.groundings === 0 && w.pstats.markHits === 0, `${id}: bez mielizny i zderzeń ze znakami (${w.pstats.groundings}/${w.pstats.markHits})`);
@@ -95,8 +101,8 @@ for (const id of Object.keys(PASSAGES)) {
   // czerwony znak po złej stronie: płyniemy na wschód na północ od czerwonej (znak zostaje po prawej)
   let w = mk();
   const red = w.marks.find((m) => m.rule === 'port');
-  w.boat.reset(red.x - 200, red.z - 25, 0);
-  w.boat.vx = 2.8; w.boat.vz = 0; w.boat.throttle = 0.5;
+  w.boat.reset(red.x - 25, red.z + 200, -Math.PI / 2);
+  w.boat.vx = 0; w.boat.vz = -2.8; w.boat.throttle = 0.5;
   for (let i = 0; i < 60 * 150; i++) w.step(1 / 60);
   check(w.pstats.wrongSide >= 1, `czerwony znak minięty po złej stronie jest wykryty (${w.pstats.wrongSide})`);
   // strefa niebezpieczeństwa (wrak)
