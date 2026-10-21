@@ -198,14 +198,14 @@ export function buildMarkMesh(type) {
       g.add(cyl(0.7, 0.7, 1.6, RED, 12, 0.45));
       g.add(cyl(0.06, 0.06, 1.3, BLACK, 5, 2.0));
       g.add(cyl(0.28, 0.28, 0.55, RED, 10, 3.2));
-      lightY = 4.0; lightColor = 0xff3030;
+      lightY = 4.0; lightColor = 0xff1008;
       break;
     case 'lateralStbd': // zielony stożek
       floatBase(GREEN, 0.9);
       g.add(cone(0.95, 2.2, GREEN, 0.45));
       g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
       g.add(cone(0.3, 0.6, GREEN, 3.4));
-      lightY = 4.3; lightColor = 0x30ff70;
+      lightY = 4.3; lightColor = 0x00d848;
       break;
     case 'cardN': case 'cardS': case 'cardE': case 'cardW': {
       floatBase(YELLOW, 0.85);
@@ -262,7 +262,7 @@ export function buildMarkMesh(type) {
       const h1 = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.12, 0.12), M(YELLOW)); h1.position.y = 3.4;
       const v1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.9, 0.12), M(YELLOW)); v1.position.y = 3.4;
       g.add(h1, v1);
-      lightY = 4.2; lightColor = 0x5aa0ff;
+      lightY = 4.2; lightColor = 0x1f6bff;
       break;
     }
     case 'special': // żółta beczka z krzyżem X
@@ -273,7 +273,7 @@ export function buildMarkMesh(type) {
         bar.rotation.z = r; bar.position.y = 2.9;
         g.add(bar);
       }
-      lightY = 3.8; lightColor = 0xffd23a;
+      lightY = 3.8; lightColor = 0xffb800;
       break;
     default:
       floatBase(WHITE, 0.8);
@@ -456,7 +456,7 @@ export function buildSea(H, scene) {
   H.moles.forEach((poly, i) => {
     const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
     const hx = (Math.min(...xs) + Math.max(...xs)) / 2, hz = Math.max(...zs);
-    const col = i === 0 ? 0xff3030 : 0x30ff70;
+    const col = i === 0 ? 0xff1008 : 0x00d848;
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 6, 8), M(i === 0 ? RED : GREEN));
     post.position.set(hx, 5.5, hz - 3);
     group.add(post);
@@ -510,7 +510,7 @@ export function buildSea(H, scene) {
         const sp = mesh.userData.light;
         let on = lightsOn > 0.05 ? m.pattern(t + mesh.userData.phase) : 0;
         let col = mesh.userData.lightColor;
-        if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x5aa0ff : 0xffd23a;
+        if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x1f6bff : 0xffb800;
         sp.material.color.setHex(col);
         sp.getWorldPosition(tmp);
         dotLight(sp, cam.distanceTo(tmp), on, lightsOn);
