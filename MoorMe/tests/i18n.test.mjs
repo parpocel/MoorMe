@@ -39,7 +39,7 @@ for (const p of Object.values(PASSAGES)) {
 PASSAGE_KEYS.forEach(([, d]) => add(d));
 PASSAGE_TEXT.forEach(([k, d]) => { add(k + '.'); add(d); });
 const SAME = new Set(['Start', 'WP2', 'WP6', 'WP7']); // te same po polsku i angielsku
-const missing = [...strs].filter((s) => (t(s) === s && !SAME.has(s)) || PL.test(t(s)));
+const missing = [...strs].filter((s) => (t(s) === s && !SAME.has(s) && !/^WP\d+$/.test(s)) || PL.test(t(s)));
 check(missing.length === 0, `wszystkie nazwy, opisy, pomoc i etykiety mają tłumaczenie (${strs.size} tekstów)${missing.length ? ': ' + missing.slice(0, 5).join(' | ') : ''}`);
 
 const samples = [

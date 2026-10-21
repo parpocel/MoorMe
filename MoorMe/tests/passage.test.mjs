@@ -39,6 +39,21 @@ for (const id of Object.keys(PASSAGES)) {
     if (m.rule === 'avoid' && best.d < m.radius + 25) bad++;
   }
   check(bad === 0, `${id}: trasa mija wszystkie znaki z właściwej strony i poza strefami zagrożeń`);
+  // gęstość oznakowania: pozycje znaków wzdłuż trasy – największa przerwa między kolejnymi znakami
+  const cum = [0];
+  for (let i = 1; i < R.length; i++) cum.push(cum[i - 1] + Math.hypot(R[i].x - R[i - 1].x, R[i].z - R[i - 1].z));
+  const along = w.marks.filter((m) => m.dRoute < 200).map((m) => {
+    let best = null;
+    for (let i = 0; i < R.length - 1; i++) {
+      const a = R[i], b = R[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz, tt = Math.max(0, Math.min(1, ((m.x - a.x) * dx + (m.z - a.z) * dz) / L2));
+      const d = Math.hypot(m.x - (a.x + dx * tt), m.z - (a.z + dz * tt));
+      if (!best || d < best.d) best = { d, s: cum[i] + tt * Math.sqrt(L2) };
+    }
+    return best.s;
+  }).sort((p, q) => p - q);
+  let maxGap = 0;
+  for (let i = 1; i < along.length; i++) maxGap = Math.max(maxGap, along[i] - along[i - 1]);
+  check(w.marks.length >= 40 && maxGap <= 360, `${id}: gęste oznakowanie – ${w.marks.length} znaków, największa przerwa wzdłuż trasy ${maxGap.toFixed(0)} m`);
 }
 
 // 2) przejazd trasy z autopilotem prowadzonym po waypointach
