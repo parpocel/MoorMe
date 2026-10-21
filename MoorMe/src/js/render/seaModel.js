@@ -510,13 +510,24 @@ export function buildSea(H, scene) {
         mesh.rotation.x = Math.sin(t * 0.9 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         mesh.rotation.z = Math.cos(t * 0.7 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         const sp = mesh.userData.light;
-        // nocą z daleka widać tylko światło; z bliska (do ~200 m) delikatny kontur bryły znaku
+        // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~260 m, pełny kształt dopiero z bliska (~80 m)
         const dn = cam.distanceTo(mesh.position);
-        const hideBody = lightsOn > 0.3 && dn > 200;
-        if (mesh.userData.hidden !== hideBody) { mesh.userData.hidden = hideBody; mesh.traverse((o) => { if (o.isMesh) o.visible = !hideBody; }); }
-        if (!hideBody) {
-          const glowK = lightsOn * clamp((200 - dn) / 120, 0.25, 1) * 0.28;
-          mesh.traverse((o) => { if (o.isMesh && o.material && o.material.emissive) { if (!o.userData.base) o.userData.base = o.material.color.clone(); o.material.emissive.copy(o.userData.base).lerp(new THREE.Color(0x6a7a90), 0.25); o.material.emissiveIntensity = glowK; } });
+        const vis = lightsOn > 0.3 ? clamp((260 - dn) / 180, 0, 1) : 1;
+        if (mesh.userData.vis !== vis) {
+          mesh.userData.vis = vis;
+          const glowK = lightsOn * 0.28 * (0.4 + 0.6 * vis);
+          mesh.traverse((o) => {
+            if (!o.isMesh || !o.material) return;
+            o.visible = vis > 0.02;
+            o.material.transparent = vis < 1;
+            o.material.opacity = vis;
+            o.material.depthWrite = vis > 0.6;
+            if (o.material.emissive) {
+              if (!o.userData.base) o.userData.base = o.material.color.clone();
+              o.material.emissive.copy(o.userData.base).lerp(new THREE.Color(0x6a7a90), 0.25);
+              o.material.emissiveIntensity = lightsOn > 0.3 ? glowK : 0;
+            }
+          });
         }
         let on = lightsOn > 0.05 ? m.pattern(t + mesh.userData.phase) : 0;
         let col = mesh.userData.lightColor;
