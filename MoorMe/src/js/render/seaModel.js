@@ -508,9 +508,14 @@ export function buildSea(H, scene) {
         mesh.rotation.x = Math.sin(t * 0.9 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         mesh.rotation.z = Math.cos(t * 0.7 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         const sp = mesh.userData.light;
-        // nocą z daleka widać tylko światło, nie bryłę znaku
-        const hideBody = lightsOn > 0.3 && cam.distanceTo(mesh.position) > 90;
+        // nocą z daleka widać tylko światło; z bliska (do ~200 m) delikatny kontur bryły znaku
+        const dn = cam.distanceTo(mesh.position);
+        const hideBody = lightsOn > 0.3 && dn > 200;
         if (mesh.userData.hidden !== hideBody) { mesh.userData.hidden = hideBody; mesh.traverse((o) => { if (o.isMesh) o.visible = !hideBody; }); }
+        if (!hideBody) {
+          const glowK = lightsOn * clamp((200 - dn) / 120, 0.25, 1) * 0.28;
+          mesh.traverse((o) => { if (o.isMesh && o.material && o.material.emissive) { if (!o.userData.base) o.userData.base = o.material.color.clone(); o.material.emissive.copy(o.userData.base).lerp(new THREE.Color(0x6a7a90), 0.25); o.material.emissiveIntensity = glowK; } });
+        }
         let on = lightsOn > 0.05 ? m.pattern(t + mesh.userData.phase) : 0;
         let col = mesh.userData.lightColor;
         if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x1f6bff : 0xffb800;
