@@ -144,6 +144,15 @@ export class View3D {
     this.mate2.position.set(0.16 * L, sheerHeight(spec, 0.16 * L) - 0.05, halfBeamAt(spec, 0.16 * L) * 0.8); // burta przy nadbudówce
     this.mate2.rotation.y = 0.3;
     this.boat.userData.heel.add(this.mate1, this.mate2);
+    if (world.isPassage) {
+      // w rejsie cała załoga siedzi w kokpicie
+      const sy = sheerHeight(spec, xs) + 0.05;
+      this.deckhandTarget.set(xs + 0.12 * L, sy, spec.beam * 0.2);
+      this.deckhand.position.copy(this.deckhandTarget);
+      this.deckhand.rotation.y = -Math.PI / 2 - 0.5;
+      this.mate2.position.set(xs + 0.2 * L, sy, -spec.beam * 0.22);
+      this.mate2.rotation.y = -Math.PI / 2 + 0.3;
+    }
     // małe etykiety z imionami nad głowami
     this.tags = document.createElement('div');
     this.tags.className = 'crew-tags';
