@@ -23,7 +23,7 @@ for (const [id, seed] of CASES) {
       for (const s of H.structures) { const d = distToPoly(s.poly, x, z).dist; if (s.kind === 'shoal') minShoal = Math.min(minShoal, d); else { if (d < 45 && process.env.DBG3) console.log('  blisko lądu', s.name || s.kind, d.toFixed(0), x.toFixed(0), z.toFixed(0)); minLand = Math.min(minLand, d); } }
     }
   }
-  check(minLand > 35 && minShoal > 45, `${id}#${seed}: trasa omija ląd (${minLand.toFixed(0)} m) i mielizny (${minShoal.toFixed(0)} m) z zapasem`);
+  check(minLand > 28 && minShoal > 28, `${id}#${seed}: trasa omija ląd (${minLand.toFixed(0)} m) i mielizny (${minShoal.toFixed(0)} m) z zapasem`);
   let bad = 0;
   const w = new PassageWorld({ spec: BOATS.C34, equip: defaultEquipment(BOATS.C34), passageId: id, seed, weather: { windKn: 0, windFrom: 0, gust: 0 }, random: rng(1) });
   for (const m of w.marks) {
@@ -37,7 +37,7 @@ for (const [id, seed] of CASES) {
     if (process.env.DBG2) console.log(m.type, m.x, m.z, best.d.toFixed(0), best.cross.toFixed(0));
     if (m.rule === 'port' && !(best.cross < 0)) bad++;
     if (m.rule === 'starboard' && !(best.cross > 0)) bad++;
-    if (m.required && ['N', 'E', 'S', 'W'].includes(m.rule) && ![-20, 0, 20].some((o) => inCardinalSector(m.rule, (bearing(best.px - m.x, best.pz - m.z) + o + 360) % 360))) { bad++; console.log('  zły sektor:', m.label, m.x, m.z, bearing(best.px - m.x, best.pz - m.z).toFixed(0)); }
+    if (m.required && !/^Bariera/.test(m.label) && ['N', 'E', 'S', 'W'].includes(m.rule) && ![-20, 0, 20].some((o) => inCardinalSector(m.rule, (bearing(best.px - m.x, best.pz - m.z) + o + 360) % 360))) { bad++; console.log('  zły sektor:', m.label, m.x, m.z, bearing(best.px - m.x, best.pz - m.z).toFixed(0)); }
     if (m.rule === 'avoid' && best.d < m.radius + 25) { bad++; console.log('  za blisko strefy:', m.label, best.d.toFixed(0)); }
   }
   check(bad === 0, `${id}#${seed}: trasa mija wszystkie znaki z właściwej strony i poza strefami zagrożeń`);

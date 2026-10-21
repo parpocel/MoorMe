@@ -6,8 +6,8 @@ import { compassVec, distToPoly, rng } from '../math.js';
 // 'N'|'E'|'S'|'W' – znak kardynalny: mijamy go od tej strony, 'near' – znak wody bezpiecznej (trzymaj się go blisko),
 // 'avoid' – niebezpieczeństwo: nie wpływaj w strefę o promieniu radius.
 export const MARK_TYPES = {
-  lateralPort: { id: 'lateralPort', name: 'Znak boczny lewy (czerwony)', rule: 'port', gate: 100, color: 0xd62828, flash: 'R' },
-  lateralStbd: { id: 'lateralStbd', name: 'Znak boczny prawy (zielony)', rule: 'starboard', gate: 100, color: 0x1f9d55, flash: 'G' },
+  lateralPort: { id: 'lateralPort', name: 'Znak boczny lewy (czerwony)', rule: 'port', gate: 85, color: 0xd62828, flash: 'R' },
+  lateralStbd: { id: 'lateralStbd', name: 'Znak boczny prawy (zielony)', rule: 'starboard', gate: 85, color: 0x1f9d55, flash: 'G' },
   cardN: { id: 'cardN', name: 'Znak kardynalny północny', rule: 'N', gate: 300, flash: 'VQ' },
   cardE: { id: 'cardE', name: 'Znak kardynalny wschodni', rule: 'E', gate: 300, flash: 'VQ3' },
   cardS: { id: 'cardS', name: 'Znak kardynalny południowy', rule: 'S', gate: 300, flash: 'VQ6' },
@@ -101,67 +101,126 @@ const DEFS = {
 };
 
 
-// Meander: pochyłe, długie bariery (mielizny lub skaliste grzbiety) połączone naprzemiennie z północnym i południowym brzegiem.
-// Przejścia są na przemian na północy i na południu, a kanały między barierami biegną skosem, więc kurs zmienia się o ponad 90°.
+// Meander: długie, lekko wygięte i nierówne bariery (mielizny lub skaliste grzbiety) połączone naprzemiennie z północnym
+// i południowym brzegiem. Przejścia są na przemian na północy i na południu, a kanały między barierami biegną skosem,
+// więc kurs zmienia się o ponad 90° – trasa jest wygładzona splajnem, żeby zakręty były płynne.
+function smoothPath(pts, step) {
+  const out = [pts[0]];
+  const P = [pts[0], ...pts, pts[pts.length - 1]];
+  for (let i = 1; i < P.length - 2; i++) {
+    const p0 = P[i - 1], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2];
+    const n = Math.max(1, Math.round(Math.hypot(p2.x - p1.x, p2.z - p1.z) / step));
+    for (let k = 1; k <= n; k++) {
+      const t = k / n, t2 = t * t, t3 = t2 * t;
+      const f = (a, b, c, d) => 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+      out.push({ x: Math.round(f(p0.x, p1.x, p2.x, p3.x)), z: Math.round(f(p0.z, p1.z, p2.z, p3.z)) });
+    }
+  }
+  return out;
+}
+
 function applyMeander(d, r) {
   const m = d.meander;
   // parametry losowane przy każdym rejsie
-  const n = 3 + Math.floor(r() * 2), dx = 200 + r() * 60, slope = 0.55 + r() * 0.4, H = 400 + r() * 100, par = r() < 0.5 ? 0 : 1;
+  const n = 3 + Math.floor(r() * 2), dx = 190 + r() * (n === 4 ? 30 : 70), H = 370 + r() * 80, par = r() < 0.5 ? 0 : 1;
+  const slope0 = 0.55 + r() * 0.35;
   m.x0 = Math.round(-20 + r() * 40);
-  const hyp = Math.hypot(slope, 1);
   let zN = -1e9;
   for (let x = m.x0 - 250; x <= m.x0 + n * dx + 250; x += 25) zN = Math.max(zN, coastZ(d.coasts[0].pts, x));
   const zS = zN + H, zref = zN + H / 2;
-  const line = (k, z) => m.x0 + k * dx - slope * (z - zref);
-  const cx = (c, z) => line(c, z) + dx / 2; // oś kanału między barierą c a c+1
-  const gN = zN + 100, gS = zS - 100;
+  const gN = zN + 95, gS = zS - 95;
   const zg = (k) => ((k + par) % 2 === 0 ? gN : gS);
+  // każda bariera ma własny odstęp, pochylenie, wygięcie i długość przejścia
+  const bars = [];
+  for (let k = 0; k < n; k++) {
+    const north = (k + par) % 2 === 0;
+    const top = (north ? zN + 190 + r() * 20 : zN - 200), bot = (north ? zS + 160 : zS - 190 - r() * 20);
+    const slope = slope0 + (r() - 0.5) * 0.25, bow = (r() - 0.5) * 0.22, x0k = m.x0 + k * dx + (r() - 0.5) * 50;
+    const X = (z) => {
+      const t = Math.max(0, Math.min(1, (z - top) / (bot - top)));
+      return x0k - slope * (z - zref) + bow * (bot - top) * Math.sin(Math.PI * t);
+    };
+    bars.push({ k, north, top, bot, X, slope });
+  }
+  const cx = (c, z) => {
+    const west = c < 0 ? bars[0].X(z) - dx : bars[c].X(z), east = c + 1 >= n ? bars[n - 1].X(z) + dx : bars[c + 1].X(z);
+    return (west + east) / 2;
+  };
   let maxX = -1e9;
   const sh = d.shoals, isl = d.islands;
-  for (let k = 0; k < n; k++) {
-    const north = (k + par) % 2 === 0; // przejście na północy: bariera sięga do południowego brzegu
-    const top = north ? zN + 200 : zN - 200, bot = north ? zS + 160 : zS - 200;
-    const ax = line(k, top), bx = line(k, bot);
-    const cxm = (ax + bx) / 2, czm = (top + bot) / 2, len = Math.hypot(bx - ax, bot - top);
-    const ux = (bx - ax) / len, uz = (bot - top) / len, vx = -uz, vz = ux;
-    const poly = [];
-    for (let i = 0; i < 14; i++) {
-      const t = (i / 14) * Math.PI * 2;
-      poly.push([cxm + ux * Math.cos(t) * (len / 2) + vx * Math.sin(t) * 14, czm + uz * Math.cos(t) * (len / 2) + vz * Math.sin(t) * 14]);
+  for (const b of bars) {
+    // bariera jako łańcuch wypukłych, zachodzących na siebie owali o zmiennej szerokości
+    const segs = 7;
+    for (let i = 0; i < segs; i++) {
+      const z0 = b.top + ((b.bot - b.top) * i) / segs, z1 = b.top + ((b.bot - b.top) * (i + 1)) / segs;
+      const ax = b.X(z0), bx = b.X(z1), cxm = (ax + bx) / 2, czm = (z0 + z1) / 2, len = Math.hypot(bx - ax, z1 - z0);
+      const ux = (bx - ax) / len, uz = (z1 - z0) / len, vx = -uz, vz = ux, hw = 11 + r() * 9;
+      const poly = [];
+      for (let q = 0; q < 12; q++) {
+        const t = (q / 12) * Math.PI * 2;
+        poly.push([cxm + ux * Math.cos(t) * (len / 2 + 6) + vx * Math.sin(t) * hw, czm + uz * Math.cos(t) * (len / 2 + 6) + vz * Math.sin(t) * hw]);
+      }
+      maxX = Math.max(maxX, ...poly.map((p) => p[0]));
+      if (m.kind === 'island') isl.push({ name: `Grzbiet ${b.k + 1}`, poly, h: 18 + r() * 14 });
+      else sh.push({ name: `Mielizna ${b.k + 1}`, poly, depth: 0.6 + r() * 0.3 });
     }
-    maxX = Math.max(maxX, ...poly.map((p) => p[0]));
-    if (m.kind === 'island') isl.push({ name: `Grzbiet ${k + 1}`, poly, h: 26 });
-    else sh.push({ name: `Mielizna ${k + 1}`, poly, depth: 0.7 });
     // znaki: kardynał przy końcu bariery (od strony przejścia) i kardynały wschodni/zachodni na burtach
-    if (north) d.marks.push({ type: 'cardN', x: Math.round(ax), z: Math.round(top - 40), name: 'Koniec bariery – N', gate: 100 });
-    else d.marks.push({ type: 'cardS', x: Math.round(bx), z: Math.round(bot + 40), name: 'Koniec bariery – S', gate: 100 });
-    const mz = north ? (top + zS) / 2 : (zN + bot) / 2, mx = line(k, mz), ex = 1 / hyp, ez = slope / hyp;
-    if (k < n - 1) d.marks.push({ type: 'cardE', x: Math.round(mx + ex * 30), z: Math.round(mz + ez * 30), name: 'Bariera – E', gate: 85 });
-    if (k > 0) d.marks.push({ type: 'cardW', x: Math.round(mx - ex * 30), z: Math.round(mz - ez * 30), name: 'Bariera – W', gate: 85 });
+    if (b.north) d.marks.push({ type: 'cardN', x: Math.round(b.X(b.top)), z: Math.round(b.top - 55), name: 'Koniec bariery – N', gate: 100 });
+    else d.marks.push({ type: 'cardS', x: Math.round(b.X(b.bot)), z: Math.round(b.bot + 55), name: 'Koniec bariery – S', gate: 100 });
+    const mz = b.north ? (b.top + zS) / 2 : (zN + b.bot) / 2, mx = b.X(mz), hyp = Math.hypot(b.slope, 1), ex = 1 / hyp, ez = b.slope / hyp;
+    if (b.k < n - 1) d.marks.push({ type: 'cardE', x: Math.round(mx + ex * 35), z: Math.round(mz + ez * 35), name: 'Bariera – E', gate: 70 });
+    if (b.k > 0) d.marks.push({ type: 'cardW', x: Math.round(mx - ex * 35), z: Math.round(mz - ez * 35), name: 'Bariera – W', gate: 70 });
   }
   // brzeg południowy zamykający basen
   const xW = maxX + 80;
   const wall = R4(m.x0 - 1400, zS, xW, zS + 900);
   if (m.kind === 'island') isl.push({ name: 'Brzeg południowy', poly: wall, h: 40 });
   else isl.push({ name: 'Mierzeja', poly: wall, h: 7 });
-  // trasa
-  const pts = [{ x: Math.round(line(0, zg(0)) - dx / 2), z: Math.round(zg(0)) }];
+  // trasa: punkty kontrolne w osiach kanałów i przejściach, wygładzone splajnem
+  d.start.z = d.route[0].z = Math.round(zg(0)); // start na poziomie pierwszego przejścia
+  const ctrl = [d.route[0], { x: Math.round(cx(-1, zg(0))), z: Math.round(zg(0)) }];
   for (let k = 0; k < n; k++) {
-    pts.push({ x: Math.round(cx(k, zg(k))), z: Math.round(zg(k)) });
-    if (k < n - 1) pts.push({ x: Math.round(cx(k, zg(k + 1))), z: Math.round(zg(k + 1)) });
+    ctrl.push({ x: Math.round(cx(k, zg(k))), z: Math.round(zg(k)) });
+    if (k < n - 1) {
+      const z1 = zg(k), z2 = zg(k + 1);
+      for (const f of [0.33, 0.66]) { const z = z1 + (z2 - z1) * f; ctrl.push({ x: Math.round(cx(k, z)), z: Math.round(z) }); }
+      ctrl.push({ x: Math.round(cx(k, z2)), z: Math.round(z2) });
+    }
   }
-  pts.push({ x: Math.round(xW + 140), z: Math.round(zg(n - 1)) });
-  d.meander = { ...m, n, dx, slope, H, par };
-  // obejście od południa: do toru wejściowego dochodzimy od strony morza, z dala od boi bocznych
-  pts.push({ x: Math.max(xW + 140, d.tail[0].x - 200), z: d.tail[0].z + 60 });
-  const route = [...d.route, ...pts, ...d.tail];
+  ctrl.push({ x: Math.round(xW + 140), z: Math.round(zg(n - 1)) });
+  ctrl.push({ x: Math.max(xW + 140, d.tail[0].x - 260), z: d.tail[0].z + 60 });
+  const route = [...smoothPath(ctrl, 70), ...d.tail];
+  // samotne przeszkody „raz po raz” wzdłuż trasy: skały, wraki i znaki szczególne obok toru, z oznakowaniem
+  const solid = [...d.shoals, ...d.islands].map((q) => q.poly).concat(coastPolys(d.coasts[0].pts, d.coasts[0].D));
+  const placed = [];
+  const free = (x, z, rad) => solid.every((poly) => distToPoly(poly, x, z).dist > rad) && placed.every((q) => Math.hypot(q.x - x, q.z - z) > 170);
+  const kinds = [
+    { type: 'isolated', off: 125, rad: 90, name: 'Skała', shoal: true },
+    { type: 'wreck', off: 165, rad: 140, name: 'Wrak', wreck: true },
+    { type: 'special', off: 105, rad: 80, name: 'Kabel podwodny' },
+    { type: 'isolated', off: 125, rad: 90, name: 'Skała', shoal: true }
+  ];
+  const lim = route.length - 4;
+  let extras = 0;
+  for (let i = 6; i < lim && extras < 7; i += 3 + Math.floor(r() * 3)) {
+    const a0 = route[i - 1], b0 = route[i + 1], dxr = b0.x - a0.x, dzr = b0.z - a0.z, L = Math.hypot(dxr, dzr) || 1;
+    const nx = dzr / L, nz = -dxr / L, kind = kinds[Math.floor(r() * kinds.length)], side = r() < 0.5 ? 1 : -1;
+    const x = Math.round(route[i].x + nx * kind.off * side), z = Math.round(route[i].z + nz * kind.off * side);
+    if (!free(x, z, kind.rad) || route.some((q) => Math.hypot(q.x - x, q.z - z) < kind.rad + 20) || Math.hypot(x - d.tail[0].x, z - d.tail[0].z) < 250) continue;
+    placed.push({ x, z });
+    extras++;
+    if (kind.shoal) sh.push({ name: kind.name, poly: ell(x, z, 15, 12, r() * 3, 10), depth: 0.5 });
+    if (kind.wreck) d.wrecks.push({ name: kind.name, x, z, rot: r() * 3 });
+    d.marks.push({ type: kind.type, x, z, name: kind.name });
+  }
   route.forEach((p, i) => { if (!p.name) p.name = `WP${i}${p.label ? ' – ' + p.label : ''}`; });
   d.route = route;
   d.gates = { from: route.length - 3, to: route.length - 1, step: 180, half: 70 };
+  d.meander = { ...m, n, dx, H, par };
 }
 
 // Skraca akwen wzdłuż osi x (trasa ok. 15 min żeglugi) – zachowuje kształt w osi z
-const XK = 0.2;
+const XK = 0.23;
 function compact(d) {
   const X = (x) => Math.round(x * XK);
   const P = (poly) => poly.map(([x, z]) => [x * XK, z]);

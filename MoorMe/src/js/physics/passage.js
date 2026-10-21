@@ -14,10 +14,11 @@ const ngon = (cx, cz, r, n) => Array.from({ length: n }, (_, i) => [cx + Math.co
 const bearingDeg = (dx, dz) => ((Math.atan2(dx, -dz) * 180) / Math.PI + 360) % 360;
 
 // Kąt (w stopniach, kompas) od znaku do jachtu mieści się w sektorze kardynalnym?
-const SECTOR = { N: [315, 45], E: [45, 135], S: [135, 225], W: [225, 315] };
+const SECTOR = { N: 0, E: 90, S: 180, W: 270 };
+const SECTOR_HALF = 65; // z zakrętami toru znak mija się pod kątem, więc sektory są szersze niż 90°
 export function inCardinalSector(rule, brgFromMark) {
-  const [a, b] = SECTOR[rule];
-  return a < b ? brgFromMark >= a && brgFromMark <= b : brgFromMark >= a || brgFromMark <= b;
+  const d = Math.abs(((brgFromMark - SECTOR[rule] + 540) % 360) - 180);
+  return d <= SECTOR_HALF;
 }
 
 export class PassageWorld extends World {
@@ -51,7 +52,7 @@ export class PassageWorld extends World {
         if (d < dRoute) { dRoute = d; const l = Math.sqrt(L2); legDir = { x: dx / l, z: dz / l }; }
       }
       const lateral = m.rule === 'port' || m.rule === 'starboard';
-      const cardinal = !!SECTOR[m.rule];
+      const cardinal = SECTOR[m.rule] !== undefined;
       return { ...m, dRoute, legDir, required: lateral || (cardinal && dRoute < 160), state: 'pending', minD: Infinity, atMin: null, inside: false, inZone: false };
     });
     for (const m of this.marks) {
@@ -208,7 +209,7 @@ export class PassageWorld extends World {
     if (m.rule === 'port' || m.rule === 'starboard') {
       const cross = m.legDir.x * (m.z - p.z) - m.legDir.z * (m.x - p.x); // < 0: znak po lewej burcie
       ok = (cross < 0 ? 'port' : 'starboard') === m.rule;
-    } else if (SECTOR[m.rule]) {
+    } else if (SECTOR[m.rule] !== undefined) {
       ok = inCardinalSector(m.rule, bearingDeg(p.x - m.x, p.z - m.z));
     }
     m.state = ok ? 'ok' : 'wrong';
