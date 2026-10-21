@@ -110,17 +110,19 @@ for (const [id, seed] of Object.keys(PASSAGES).flatMap((i) => [1, 2, 3].map((sd)
   check(w.pstats.wrongSide >= 1, `czerwony znak minięty po złej stronie jest wykryty (${w.pstats.wrongSide})`);
   // strefa niebezpieczeństwa (wrak)
   w = mk();
-  const wr = w.marks.find((m) => m.type === 'wreck');
-  w.boat.reset(wr.x - 150, wr.z + 20, 0); w.boat.vx = 2.8; w.boat.throttle = 0.5;
+  const wr = w.marks.find((m) => m.rule === 'avoid'); // skała, wrak albo znak szczególny (losowe)
+  w.boat.reset(wr.x - wr.radius - 80, wr.z + 10, 0); w.boat.vx = 2.8; w.boat.throttle = 0.5;
   for (let i = 0; i < 60 * 100; i++) w.step(1 / 60);
-  check(w.pstats.avoid >= 1, `wejście w strefę wraku jest wykryte (${w.pstats.avoid})`);
+  check(w.pstats.avoid >= 1, `wejście w strefę zagrożenia jest wykryte (${w.pstats.avoid})`);
   // mielizna: głębokość i grounding
   w = mk();
-  const bank = w.H.shoals[0];
+  const zc = (q) => q.poly.reduce((a, p) => a + p[1], 0) / q.poly.length;
+  const bank = [...w.H.shoals].sort((a, b) => Math.abs(zc(a) - w.H.start.z) - Math.abs(zc(b) - w.H.start.z))[0]; // odcinek bariery na wysokości startu
   const cx = bank.poly.reduce((a, p) => a + p[0], 0) / bank.poly.length, cz = bank.poly.reduce((a, p) => a + p[1], 0) / bank.poly.length;
   check(w.depthAt(cx, cz) < spec.draft, `głębokość na mieliźnie (${w.depthAt(cx, cz).toFixed(1)} m) mniejsza niż zanurzenie`);
-  check(w.depthAt(0, 150) > 8, `na torze jest głęboko (${w.depthAt(0, 150).toFixed(0)} m)`);
-  w.boat.reset(cx - 400, cz, 0); w.boat.vx = 2.8; w.boat.throttle = 0.6;
+  const st0 = w.H.start;
+  check(w.depthAt(st0.x, st0.z) > 3, `na starcie jest głęboko (${w.depthAt(st0.x, st0.z).toFixed(0)} m)`);
+  w.boat.reset(cx - 120, cz, 0); w.boat.vx = 2.8; w.boat.throttle = 0.6;
   for (let i = 0; i < 60 * 200; i++) w.step(1 / 60);
   check(w.pstats.groundings >= 1, `wejście na mieliznę jest wykryte (${w.pstats.groundings})`);
   check(Number.isFinite(w.boat.x) && Math.hypot(w.boat.vx, w.boat.vz) < 20, 'symulacja po kontakcie z mielizną jest stabilna');
