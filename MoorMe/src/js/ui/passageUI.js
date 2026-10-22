@@ -188,7 +188,7 @@ export class PassageScreen extends SimScreen {
   }
 
   frame(now) {
-    if (!this.running) return;
+    if (!this.running || !this.frameGate(now)) return;
     const dt = Math.min((now - this.last) / 1000, 0.1);
     this.last = now;
     if (!this.paused) {

@@ -16,6 +16,11 @@ import { SoundsScreen } from './ui/soundsUI.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
+import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, GFX_PRESETS } from './settings.js';
+import { FLAGS, FLAG_CODES, flagCanvas } from './render/flags.js';
+import { setIalaRegion } from './data/passage.js';
+
+setIalaRegion(getSettings().iala);
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 window.__sceneryEl = () => sceneryEl();
@@ -276,11 +281,63 @@ function showLangPicker() {
       h('div.title-note', {}, h('span', {}, 'Język możesz później zmienić w Ustawieniach. / You can change the language later in Settings.')))));
 }
 
+const COUNTRY = { DE: 'Niemcy', PL: 'Polska', NL: 'Holandia', FR: 'Francja', IT: 'Włochy', BE: 'Belgia', IE: 'Irlandia', ES: 'Hiszpania', PT: 'Portugalia', HR: 'Chorwacja', LT: 'Litwa', LV: 'Łotwa', EE: 'Estonia', BG: 'Bułgaria', RO: 'Rumunia', UA: 'Ukraina', MT: 'Malta', SE: 'Szwecja', DK: 'Dania', NO: 'Norwegia', FI: 'Finlandia', IS: 'Islandia', GR: 'Grecja', GB: 'Wielka Brytania' };
+
 function showSettings(back = () => showModeSelect()) {
+  const st = getSettings();
   app.innerHTML = '';
-  app.appendChild(h('div.screen', {}, sceneryEl(),
+  const row = (label, ...ctl) => h('div.set-row', {}, h('label', {}, label), h('div.set-ctl', {}, ...ctl));
+  const text = (val, on, opts = {}) => h('input.set-in', { type: 'text', value: val || '', maxlength: opts.max || 18, placeholder: opts.ph || '', oninput: (e) => on(e.target.value) });
+  const segRow = (opts, val, on) => seg(opts.map(([value, label]) => ({ value, label })), val, on);
+  const rerender = () => showSettings(back);
+
+  // jacht i załoga
+  const flagPrev = h('span.set-flag', {}, flagCanvas(st.flag, 42, 28));
+  const flagSel = h('select.set-in', { onchange: (e) => { const code = e.target.value; const ports = FLAGS[code].ports; const keepPort = Object.values(FLAGS).every((f) => !f.ports.includes(getSettings().homePort)); saveSettings({ flag: code, homePort: keepPort ? getSettings().homePort : ports[0] }); rerender(); } },
+    ...FLAG_CODES.map((c) => h('option', { value: c, selected: c === st.flag ? true : null }, `${t(COUNTRY[c] || c)} (${c})`)));
+  const boat = h('div.help-card.set-card', {},
+    h('h2', {}, 'Jacht i załoga'),
+    row('Nazwa jachtu', text(st.boatName, (v) => saveSettings({ boatName: v.toUpperCase() }), { max: 18 })),
+    row('Port macierzysty', text(st.homePort, (v) => saveSettings({ homePort: v }), { max: 18 })),
+    row('Bandera', flagPrev, flagSel),
+    row('Kapitan', text(st.captain, (v) => saveSettings({ captain: v }), { max: 14 })),
+    ...[0, 1, 2].map((k) => row(`Załoga ${k + 1}`, text(st.crew[k], (v) => { const c = [...getSettings().crew]; c[k] = v; saveSettings({ crew: c }); }, { max: 14, ph: t('losowo') }))),
+    h('p.small.muted', {}, 'Puste pole – imię zostanie wylosowane. Zmiany obowiązują od następnej symulacji.'));
+
+  // oznakowanie
+  const iala = h('div.help-card.set-card', {},
+    h('h2', {}, 'Oznakowanie nawigacyjne'),
+    row('System IALA', segRow([['A', 'IALA A'], ['B', 'IALA B']], st.iala || 'A', (v) => { saveSettings({ iala: v }); setIalaRegion(v); rerender(); })),
+    h('p.small.muted', {}, (st.iala || 'A') === 'B'
+      ? 'Region B (obie Ameryki, Japonia, Korea, Filipiny): znak lewy – zielona beczka, znak prawy – czerwony stożek.'
+      : 'Region A (Europa, Afryka, Australia, większość Azji): znak lewy – czerwona beczka, znak prawy – zielony stożek.'));
+
+  // grafika
+  const g = st.gfx;
+  const setG = (patch) => { saveSettings({ gfx: { ...patch, preset: 'custom' } }); rerender(); };
+  const scaleOut = h('b', {}, `${Math.round((g.scale || 1) * 100)}%`);
+  const scaleIn = h('input', { type: 'range', min: 0.5, max: 1, step: 0.05, value: g.scale || 1, oninput: (e) => { scaleOut.textContent = `${Math.round(e.target.value * 100)}%`; }, onchange: (e) => setG({ scale: +e.target.value }) });
+  const gfx = h('div.help-card.set-card', {},
+    h('h2', {}, 'Grafika'),
+    row('Jakość', segRow([['high', 'Wysoka'], ['medium', 'Średnia'], ['low', 'Niska (starsze komputery)'], ['custom', 'Własna']], g.preset, (v) => { if (GFX_PRESETS[v]) setGfxPreset(v); else saveSettings({ gfx: { preset: 'custom' } }); rerender(); })),
+    row('Rozdzielczość renderowania', h('div.set-range', {}, scaleIn, scaleOut)),
+    row('Cienie', segRow([['soft', 'Miękkie'], ['basic', 'Proste'], ['off', 'Wyłączone']], g.shadows, (v) => setG({ shadows: v }))),
+    row('Wygładzanie krawędzi', segRow([['on', 'Wł.'], ['off', 'Wył.']], g.antialias ? 'on' : 'off', (v) => setG({ antialias: v === 'on' }))),
+    row('Szczegóły wody', segRow([['high', 'Wysokie'], ['medium', 'Średnie'], ['low', 'Niskie']], g.water, (v) => setG({ water: v }))),
+    row('Limit klatek', segRow([[60, '60 kl./s'], [30, '30 kl./s']], g.fps, (v) => setG({ fps: v }))),
+    row('Licznik FPS', segRow([['on', 'Pokaż'], ['off', 'Ukryj']], g.showFps ? 'on' : 'off', (v) => { saveSettings({ gfx: { showFps: v === 'on' } }); rerender(); })),
+    h('p.small.muted', {}, 'Na starszym komputerze wybierz „Niska”: mniejsza rozdzielczość, bez cieni i wygładzania, prostsza woda i 30 klatek na sekundę. Zmiany działają od następnej symulacji.'));
+
+  // ekran
+  const screen = h('div.help-card.set-card', {},
+    h('h2', {}, 'Ekran'),
+    row('Pełny ekran', h('button.btn', { onclick: () => { toggleFullscreen(); setTimeout(rerender, 300); } }, isFullscreen() ? '⛶ Wyłącz pełny ekran' : '⛶ Włącz pełny ekran'), h('span.small.muted', { style: { marginLeft: '10px' } }, 'albo klawisz F11')));
+
+  app.appendChild(h('div.screen.settings', {}, sceneryEl(),
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),
-    h('div.screen-body', {}, h('div.help-card', {}, h('h2', { style: { marginBottom: '8px' } }, 'Język / Language'), langButtons())),
+    h('div.screen-body', {}, h('div.set-wrap', {},
+      h('div.help-card.set-card', {}, h('h2', { style: { marginBottom: '8px' } }, 'Język / Language'), langButtons()),
+      boat, iala, gfx, screen)),
     h('div.screen-footer', {}, h('button.btn', { onclick: () => back() }, '← Menu'), h('span'))));
 }
 

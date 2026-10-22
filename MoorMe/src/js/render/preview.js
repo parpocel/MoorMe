@@ -1,4 +1,5 @@
 // Podgląd 3D w kreatorze (jacht albo cały port) – lekki, osobny renderer z powolnym obrotem kamery
+import { boatIdentity } from '../settings.js';
 import * as THREE from 'three';
 import { buildBoat } from './boatModel.js';
 import { buildHarbor } from './harborModel.js';
@@ -93,7 +94,7 @@ export class Preview3D {
 
   setBoat(spec) {
     this.clear();
-    const boat = buildBoat(spec, { color: 0xffffff, stripe: 0xffffff, name: 'ANNELIESE', sub: 'Bregge', split: true, flag: 'DE' });
+    const boat = buildBoat(spec, { color: 0xffffff, stripe: 0xffffff, ...boatIdentity(), split: true });
     boat.userData.heel.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     this.content.add(this.water(spec.loa * 3), boat);
     this.target.set(0, spec.freeboard + 2.2, 0);
@@ -114,7 +115,7 @@ export class Preview3D {
     water.position.y = -0.05;
     this.content.add(water);
     while (parent.children.length) this.content.add(parent.children[0]);
-    const boat = buildBoat(spec, { color: 0xffffff, stripe: 0xffffff, name: 'ANNELIESE', sub: 'Bregge', split: true, flag: 'DE' });
+    const boat = buildBoat(spec, { color: 0xffffff, stripe: 0xffffff, ...boatIdentity(), split: true });
     boat.position.set(H.berth.x, 0, H.berth.z);
     boat.rotation.y = -H.berth.th;
     this.content.add(boat);

@@ -1,6 +1,6 @@
 // Scena rejsu: wybrzeże i wyspy (low-poly), znaki nawigacyjne IALA, wrak, latarnie, trasa i waypointy.
 import * as THREE from 'three';
-import { coastZ } from '../data/passage.js';
+import { coastZ, lateralColors, MARK_TYPES } from '../data/passage.js';
 import { rng, clamp } from '../math.js';
 
 // ---------- Szum wartościowy (deterministyczny) ----------
@@ -195,20 +195,24 @@ export function buildMarkMesh(type) {
   let lightY = 4.2, lightColor = 0xffffff;
   const floatBase = (color, r = 0.8) => g.add(cyl(r, r * 1.05, 0.7, color, 12, -0.25));
   switch (type) {
-    case 'lateralPort': // czerwona beczka
-      floatBase(RED, 0.9);
-      g.add(cyl(0.7, 0.7, 1.6, RED, 12, 0.45));
+    case 'lateralPort': { // beczka: czerwona (IALA A) / zielona (IALA B)
+      const c = lateralColors().port;
+      floatBase(c, 0.9);
+      g.add(cyl(0.7, 0.7, 1.6, c, 12, 0.45));
       g.add(cyl(0.06, 0.06, 1.3, BLACK, 5, 2.0));
-      g.add(cyl(0.28, 0.28, 0.55, RED, 10, 3.2));
-      lightY = 4.0; lightColor = 0xff1008;
+      g.add(cyl(0.28, 0.28, 0.55, c, 10, 3.2));
+      lightY = 4.0; lightColor = c === RED ? 0xff1008 : 0x00e81c;
       break;
-    case 'lateralStbd': // zielony stożek
-      floatBase(GREEN, 0.9);
-      g.add(cone(0.95, 2.2, GREEN, 0.45));
+    }
+    case 'lateralStbd': { // stożek: zielony (IALA A) / czerwony (IALA B)
+      const c = lateralColors().stbd;
+      floatBase(c, 0.9);
+      g.add(cone(0.95, 2.2, c, 0.45));
       g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
-      g.add(cone(0.3, 0.6, GREEN, 3.4));
-      lightY = 4.3; lightColor = 0x00e81c;
+      g.add(cone(0.3, 0.6, c, 3.4));
+      lightY = 4.3; lightColor = c === RED ? 0xff1008 : 0x00e81c;
       break;
+    }
     case 'cardN': case 'cardS': case 'cardE': case 'cardW': {
       floatBase(YELLOW, 0.85);
       const bands = { cardN: [BLACK, YELLOW], cardS: [YELLOW, BLACK], cardE: [BLACK, YELLOW, BLACK], cardW: [YELLOW, BLACK, YELLOW] }[type];
@@ -452,15 +456,16 @@ export function buildSea(H, scene) {
     mesh.userData.mark = m;
     mesh.userData.phase = r() * 6;
     dyn.add(mesh);
-    marks.push({ def: m, mesh, pattern: PATTERNS[m.type.startsWith('lateralPort') ? 'R' : m.type.startsWith('lateralStbd') ? 'G' : m.flash] || PATTERNS.VQ });
+    marks.push({ def: m, mesh, pattern: PATTERNS[m.type.startsWith('lateralPort') ? MARK_TYPES.lateralPort.flash : m.type.startsWith('lateralStbd') ? MARK_TYPES.lateralStbd.flash : m.flash] || PATTERNS.VQ });
   }
   // światła główek portu (lewa czerwona, prawa zielona przy wejściu od południa)
   const heads = [];
   H.moles.forEach((poly, i) => {
     const xs = poly.map((p) => p[0]), zs = poly.map((p) => p[1]);
     const hx = (Math.min(...xs) + Math.max(...xs)) / 2, hz = Math.max(...zs);
-    const col = i === 0 ? 0xff1008 : 0x00e81c;
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 6, 8), M(i === 0 ? RED : GREEN));
+    const hc = i === 0 ? lateralColors().port : lateralColors().stbd;
+    const col = hc === RED ? 0xff1008 : 0x00e81c;
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 6, 8), M(hc));
     post.position.set(hx, 5.5, hz - 3);
     group.add(post);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));

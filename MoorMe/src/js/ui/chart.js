@@ -1,5 +1,6 @@
 // Kartplotter: mapa 2D akwenu z trasą, znakami IALA, mieliznami i pozycją jachtu.
 import { DEG } from '../math.js';
+import { lateralColors } from '../data/passage.js';
 import { t } from '../i18n.js';
 
 const STATE_COLOR = { ok: '#2faa5c', wrong: '#e03a3a', violated: '#e03a3a', missed: '#e0a13a' };
@@ -17,10 +18,10 @@ export function drawMarkSymbol(ctx, type, r) {
   const Y = '#f2c230', B = '#15181c';
   switch (type) {
     case 'lateralPort':
-      ctx.fillStyle = '#d62828'; ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6); ctx.strokeRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
+      ctx.fillStyle = '#' + lateralColors().port.toString(16).padStart(6, '0'); ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6); ctx.strokeRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
       break;
     case 'lateralStbd':
-      ctx.fillStyle = '#1f9d55'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#' + lateralColors().stbd.toString(16).padStart(6, '0'); ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
       break;
     case 'cardN': stripes([B, Y]); break;
     case 'cardS': stripes([Y, B]); break;

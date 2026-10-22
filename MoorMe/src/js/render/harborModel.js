@@ -1046,7 +1046,7 @@ export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = this.follow ? 110 : 150; // na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 110 : 150) * (opts.detail || 1)); // na otwartym morzu większe trójkąty (styl low-poly)
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;

@@ -345,3 +345,13 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks .pb-hint { margin: 2px 0 4px; }
 .navtasks .pb canvas { display: block; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.25); }
 .navtasks .pb-readout { font-family: Consolas, 'Courier New', monospace; font-size: 13px; font-weight: 700; margin-top: 4px; color: #2f4468; min-height: 18px; }
+.settings .set-wrap { display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
+.settings .set-card { padding: 20px 30px; }
+.settings .set-card h2 { margin-bottom: 10px; }
+.settings .set-row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 12px; margin: 8px 0; }
+.settings .set-row > label { font-weight: 700; color: #2f4468; }
+.settings .set-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.settings .set-in { padding: 7px 10px; font-size: 15px; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.3); font-family: inherit; min-width: 220px; background: #fff; color: #1b1f24; }
+.settings .set-flag canvas { display: block; border: 1px solid rgba(0, 0, 0, 0.25); border-radius: 3px; }
+.settings .set-range { display: flex; align-items: center; gap: 10px; width: 320px; }
+#fps-counter { position: absolute; left: 50%; transform: translateX(-50%); top: 74px; z-index: 500; font: 700 12px Consolas, monospace; color: #fff; background: rgba(0, 0, 0, 0.45); padding: 2px 6px; border-radius: 4px; pointer-events: none; }

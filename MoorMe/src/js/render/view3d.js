@@ -9,6 +9,7 @@ import { Atmosphere } from './atmosphere.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
 import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
 import { TARGET_DY } from '../physics/world.js';
+import { getSettings, boatIdentity, crewNames } from '../settings.js';
 
 export class View3D {
   constructor(container, world) {
@@ -16,13 +17,16 @@ export class View3D {
     this.world = world;
     this.passage = !!world.isPassage;
     this.fogScale = this.passage ? 4.5 : 1;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    const gfx = getSettings().gfx;
+    this.gfx = gfx;
+    const renderer = new THREE.WebGLRenderer({ antialias: !!gfx.antialias, powerPreference: 'high-performance' });
+    renderer.setPixelRatio(Math.max(0.4, Math.min(window.devicePixelRatio || 1, 2) * (gfx.scale || 1)));
+    renderer.shadowMap.enabled = gfx.shadows !== 'off';
+    renderer.shadowMap.type = gfx.shadows === 'basic' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.05;
+    renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%'; // przy rozdzielczości < 100% bufor jest mniejszy niż okno
     container.appendChild(renderer.domElement);
     this.renderer = renderer;
 
@@ -40,7 +44,8 @@ export class View3D {
     const sun = new THREE.DirectionalLight(0xfff0d8, 2.6);
     sun.castShadow = true;
     const maxTex = renderer.capabilities.maxTextureSize || 4096;
-    sun.shadow.mapSize.set(Math.min(4096, maxTex), Math.min(4096, maxTex));
+    const shSize = Math.min(gfx.shadows === 'basic' ? 2048 : 4096, maxTex);
+    sun.shadow.mapSize.set(shSize, shSize);
     const sc = sun.shadow.camera;
     sc.left = -45; sc.right = 45; sc.top = 45; sc.bottom = -45; sc.near = 1; sc.far = 300;
     sun.shadow.bias = -0.0004;
@@ -66,7 +71,7 @@ export class View3D {
     scene.add(sky);
     this.sky = sky;
 
-    this.water = new Water(scene, { follow: this.passage });
+    this.water = new Water(scene, { follow: this.passage, detail: { high: 1, medium: 0.7, low: 0.45 }[gfx.water] || 1 });
     if (!this.passage) this.water.setHarbor(world.H);
     const hb = this.passage ? buildSea(world.H, scene) : buildHarbor(world.H, scene);
     this.harbor = hb;
@@ -74,7 +79,7 @@ export class View3D {
 
     // nasz jacht
     const spec = world.spec;
-    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive, color: 0xffffff, stripe: 0xffffff, name: 'ANNELIESE', sub: 'Bregge', split: true, flag: 'DE' });
+    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive, color: 0xffffff, stripe: 0xffffff, ...boatIdentity(), split: true });
     this.boat.userData.heel.add(buildDeckGear(spec, world.equip.deck));
     scene.add(this.boat);
 
@@ -133,9 +138,7 @@ export class View3D {
     this.shoreCrew.visible = false;
     scene.add(this.shoreCrew);
     // kapitan Kuba + trzech losowych członków załogi (dwóch stoi/siedzi na pokładzie, jeden to „deckhand”, który schodzi na ląd)
-    const pool = ['Wojtek', 'Bartek', 'Babcia', 'Piotrek', 'Piotrek', 'Kinga', 'Dominika', 'Maciej'];
-    const pick = pool.map((n, i) => [Math.random(), n]).sort((a, b) => a[0] - b[0]).slice(0, 3).map((x) => x[1]);
-    this.crewNames = ['Kuba', ...pick];
+    this.crewNames = crewNames(); // z ustawień (puste pola – losowo)
     const L = spec.loa;
     this.mate1 = buildPerson(0x457b9d);
     this.mate2 = buildPerson(0x2a9d8f);

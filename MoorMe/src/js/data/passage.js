@@ -18,6 +18,18 @@ export const MARK_TYPES = {
   special: { id: 'special', name: 'Znak szczególny (żółty)', rule: 'avoid', radius: 55, gate: 160, flash: 'FLY' }
 };
 
+// System oznakowania IALA: region A (Europa, Afryka, Australia, większość Azji) – lewe czerwone, prawe zielone;
+// region B (obie Ameryki, Japonia, Korea, Filipiny) – kolory i światła odwrócone, kształty bez zmian (lewe – beczki, prawe – stożki).
+export const IALA = { region: 'A' };
+export function setIalaRegion(r) {
+  IALA.region = r === 'B' ? 'B' : 'A';
+  const b = IALA.region === 'B';
+  Object.assign(MARK_TYPES.lateralPort, { color: b ? 0x1f9d55 : 0xd62828, flash: b ? 'G' : 'R', name: b ? 'Znak boczny lewy (zielony)' : 'Znak boczny lewy (czerwony)' });
+  Object.assign(MARK_TYPES.lateralStbd, { color: b ? 0xd62828 : 0x1f9d55, flash: b ? 'R' : 'G', name: b ? 'Znak boczny prawy (czerwony)' : 'Znak boczny prawy (zielony)' });
+}
+// kolory znaków bocznych w aktualnym regionie: { port, stbd } (0xRRGGBB)
+export const lateralColors = () => (IALA.region === 'B' ? { port: 0x1f9d55, stbd: 0xd62828 } : { port: 0xd62828, stbd: 0x1f9d55 });
+
 export const RULE_TEXT = {
   port: 'zostaw po lewej burcie (znak po bakburcie)',
   starboard: 'zostaw po prawej burcie (znak po sterburcie)',

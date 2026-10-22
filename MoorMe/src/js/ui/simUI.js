@@ -755,8 +755,21 @@ export class SimScreen {
   }
 
   // ---------- Pętla ----------
+  // limit klatek i licznik FPS (ustawienia grafiki); false = pomiń tę klatkę
+  frameGate(now) {
+    const gfx = this.view.gfx || {};
+    if (gfx.fps && gfx.fps < 60 && now - (this.lastDraw || 0) < 1000 / gfx.fps - 4) { requestAnimationFrame(this.frame); return false; }
+    this.lastDraw = now;
+    if (gfx.showFps) {
+      if (!this.fpsEl) { this.fpsEl = document.createElement('div'); this.fpsEl.id = 'fps-counter'; this.sim.appendChild(this.fpsEl); this.fpsN = 0; this.fpsT = now; }
+      this.fpsN++;
+      if (now - this.fpsT > 500) { this.fpsEl.textContent = `${Math.round((this.fpsN * 1000) / (now - this.fpsT))} FPS`; this.fpsN = 0; this.fpsT = now; }
+    }
+    return true;
+  }
+
   frame(now) {
-    if (!this.running) return;
+    if (!this.running || !this.frameGate(now)) return;
     const dt = Math.min((now - this.last) / 1000, 0.1);
     this.last = now;
     if (!this.paused) {

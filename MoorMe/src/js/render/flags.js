@@ -85,3 +85,11 @@ export function flagMaterial(code) {
   cache.set(code, m);
   return m;
 }
+
+// podgląd bandery (np. w ustawieniach)
+export function flagCanvas(code, W = 48, H = 32) {
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  drawFlag(c.getContext('2d'), W, H, FLAGS[code] || FLAGS.DE);
+  return c;
+}
