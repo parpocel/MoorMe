@@ -477,3 +477,17 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .safety .vhf-step { margin-top: 8px; font-weight: 800; color: #c2410c; }
 
 .tbtn.quit span:not(.ic) { color: #b8453b; }
+
+/* zadania z mapą: mapa na cały ekran, karta z zadaniem przesuwana po mapie */
+.navtasks.desk .nt-desk.full { display: block; position: relative; padding: 10px 14px 12px; overflow: hidden; }
+.navtasks.desk .nt-desk.full > .chart-sheet { margin: 0; height: 100%; box-sizing: border-box; overflow: hidden; }
+.navtasks.desk .nt-card.paper.float { position: fixed; z-index: 50; width: min(440px, 92vw); max-height: calc(100vh - 80px); overflow: auto; padding: 14px 18px; transform: rotate(-0.8deg); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45), 0 2px 5px rgba(0, 0, 0, 0.3); }
+.navtasks.desk .nt-card.float.drag { transform: rotate(0.4deg) scale(1.01); box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5); opacity: 0.96; }
+.navtasks.desk .nt-card.float .nt-head { cursor: grab; user-select: none; gap: 8px; touch-action: none; }
+.navtasks.desk .nt-card.float.drag .nt-head { cursor: grabbing; }
+.navtasks.desk .nt-card.float .nt-score { margin-left: auto; }
+.navtasks.desk .nt-card.float .nt-text { font-size: 15px; line-height: 1.5; }
+.navtasks.desk .nt-card.float.min > :not(.nt-head) { display: none; }
+.navtasks.desk .nt-card.float.min .nt-head { margin-bottom: 0; }
+.navtasks .nt-grip { font-size: 18px; color: #8a94a6; line-height: 1; }
+.navtasks .nt-min { min-width: 28px; }

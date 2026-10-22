@@ -7,7 +7,7 @@ import { t as tr } from '../i18n.js';
 import { rng } from '../math.js';
 
 const D2R = Math.PI / 180;
-const W = 740, H = 520, M = 54; // rozmiar płótna i szerokość marginesu ze skalą
+const W0 = 740, H0 = 520, M = 54; // domyślny rozmiar płótna i szerokość marginesu ze skalą
 const pad2 = (n) => String(n).padStart(2, '0');
 const norm = (a) => ((a % 360) + 360) % 360;
 const fmtMin = (m) => (Math.abs(m - Math.round(m)) < 1e-6 ? `${pad2(Math.round(m))}'` : `${m.toFixed(1).replace('.', ',')}'`);
@@ -44,8 +44,13 @@ const polyDist = (poly, p) => (inPoly(poly, p.x, p.y) ? 0 : Math.min(...poly.map
 
 export class PlotBoard {
   /** plot: { pts: [{ label, lat, lon, light? }], sol: { lines: [{ p, brg }], segs: [{ p, brg, dist }], point }, variation?, seed? } */
-  constructor(plot) {
+  /** opts.size – { w, h }: rozmiar płótna (np. mapa na cały ekran); domyślnie 740 × 520 */
+  constructor(plot, opts = {}) {
     this.plot = plot;
+    this.fill = !!opts.size;
+    this.W = Math.round(opts.size ? Math.max(560, opts.size.w) : W0);
+    this.H = Math.round(opts.size ? Math.max(380, opts.size.h) : H0);
+    this.offY = opts.offset || 0; // ile pikseli wysokości okna zajmuje reszta interfejsu (przy zmianie rozmiaru okna mapa zachowuje proporcje)
     this.items = []; // { kind: 'line'|'seg'|'pt'|'circle'|'meas', ... }
     this.vec = plot.mode === 'vector'; // trójkąt prędkości: wektory w węzłach odkładane dla 1 h (1 kn = 1 Mm)
     this.unit = this.vec ? 'kn' : 'Mm';
@@ -58,7 +63,7 @@ export class PlotBoard {
     this.cl = Math.cos(lat0 * D2R);
     const xs = all.map((p) => p.lon * 60 * this.cl), ys = all.map((p) => p.lat * 60);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-    const iw = W - 2 * M, ih = H - 2 * M;
+    const iw = this.W - 2 * M, ih = this.H - 2 * M;
     const span = Math.max((Math.max(...xs) - Math.min(...xs)) / iw, (Math.max(...ys) - Math.min(...ys)) / ih) * 1.5;
     this.k = 1 / Math.max(span, 5 / ih); // px na milę (co najmniej ok. 5 Mm na wysokość)
     this.cx = cx; this.cy = cy;
@@ -70,21 +75,21 @@ export class PlotBoard {
   // lat/lon <-> mile (x na wschód, y na północ) <-> piksele
   toNm(p) { return { x: p.lon * 60 * this.cl, y: p.lat * 60 }; }
   toLL(n) { return { lat: n.y / 60, lon: n.x / 60 / this.cl }; }
-  px(n) { return { x: W / 2 + (n.x - this.cx) * this.k, y: H / 2 - (n.y - this.cy) * this.k }; }
-  nm(px, py) { return { x: this.cx + (px - W / 2) / this.k, y: this.cy - (py - H / 2) / this.k }; }
+  px(n) { return { x: this.W / 2 + (n.x - this.cx) * this.k, y: this.H / 2 - (n.y - this.cy) * this.k }; }
+  nm(px, py) { return { x: this.cx + (px - this.W / 2) / this.k, y: this.cy - (py - this.H / 2) / this.k }; }
 
   // powiększenie i przesuwanie mapy (w granicach arkusza wyjściowego)
   static ZMAX = 8;
-  setZoom(z, at = { x: W / 2, y: H / 2 }) {
+  setZoom(z, at = { x: this.W / 2, y: this.H / 2 }) {
     z = Math.max(1, Math.min(PlotBoard.ZMAX, z));
     const a = this.nm(at.x, at.y);
     this.zoom = z; this.k = this.k0 * z;
-    this.cx = a.x - (at.x - W / 2) / this.k; this.cy = a.y + (at.y - H / 2) / this.k;
+    this.cx = a.x - (at.x - this.W / 2) / this.k; this.cy = a.y + (at.y - this.H / 2) / this.k;
     this.clampView(); this.updateZoomUI(); this.draw();
   }
   panBy(dx, dy) { this.cx -= dx / this.k; this.cy += dy / this.k; this.clampView(); this.draw(); }
   clampView() {
-    const ex = (W / 2 - M) * (1 / this.k0 - 1 / this.k), ey = (H / 2 - M) * (1 / this.k0 - 1 / this.k);
+    const ex = (this.W / 2 - M) * (1 / this.k0 - 1 / this.k), ey = (this.H / 2 - M) * (1 / this.k0 - 1 / this.k);
     this.cx = Math.max(this.cx0 - ex, Math.min(this.cx0 + ex, this.cx));
     this.cy = Math.max(this.cy0 - ey, Math.min(this.cy0 + ey, this.cy));
   }
@@ -98,9 +103,9 @@ export class PlotBoard {
   }
   fitCanvas() {
     const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    const w = this.big ? this.cv.getBoundingClientRect().width || W : W;
-    this.res = Math.min(4, dpr * Math.max(1, w / W));
-    this.cv.width = Math.round(W * this.res); this.cv.height = Math.round(H * this.res);
+    const w = this.big ? this.cv.getBoundingClientRect().width || this.W : this.W;
+    this.res = Math.min(4, dpr * Math.max(1, w / this.W));
+    this.cv.width = Math.round(this.W * this.res); this.cv.height = Math.round(this.H * this.res);
     this.draw();
   }
 
@@ -109,7 +114,7 @@ export class PlotBoard {
     const r = rng(this.plot.seed || 7), P = this.toNm(this.plot.sol.point), objs = this.plot.pts.map((p) => this.toNm(p));
     const fix = !!this.plot.sol.lines;
     const track = fix ? objs.map((o) => [o, P]) : this.vec ? this.plot.sol.vectors.map((v) => [this.toNm(v.from), this.toNm(v.to)]) : [[objs[0], P]];
-    const lo = this.nm(M, H - M), hi = this.nm(W - M, M);
+    const lo = this.nm(M, this.H - M), hi = this.nm(this.W - M, M);
     const blob = (c, R) => {
       const ph = [r() * 6, r() * 6, r() * 6, r() * 6], a = [0.16 + r() * 0.1, 0.09 + r() * 0.07, 0.05, 0.03];
       return Array.from({ length: 56 }, (_, i) => { const t = (i / 56) * Math.PI * 2, rr = R * (1 + a[0] * Math.sin(2 * t + ph[0]) + a[1] * Math.sin(3 * t + ph[1]) + a[2] * Math.sin(5 * t + ph[2]) + a[3] * Math.sin(9 * t + ph[3])); return { x: c.x + Math.cos(t) * rr, y: c.y + Math.sin(t) * rr }; });
@@ -146,7 +151,7 @@ export class PlotBoard {
       sound.push({ ...q, d: Math.round(Math.min(48, 2 + dl * 11 + r() * 4)) });
     }
     // róża kompasowa w najbardziej „pustym” rogu
-    const cands = [[150, 150], [W - 150, 150], [150, H - 150], [W - 150, H - 150], [W / 2, H / 2 + 120], [W / 2, 140]].map(([x, y]) => ({ x, y }));
+    const cands = [[150, 150], [this.W - 150, 150], [150, this.H - 150], [this.W - 150, this.H - 150], [this.W / 2, this.H / 2 + 120], [this.W / 2, 140]].map(([x, y]) => ({ x, y }));
     const score = (c) => Math.min(...objs.concat([P]).map((o) => { const q = this.px(o); return Math.hypot(q.x - c.x, q.y - c.y); }), ...lands.map((l) => { const q = this.px(l.c); return Math.hypot(q.x - c.x, q.y - c.y) - l.R * this.k; }));
     this.rose = cands.sort((a, b) => score(b) - score(a))[0];
     this.lands = lands; this.sound = sound;
@@ -154,7 +159,7 @@ export class PlotBoard {
 
   build() {
     const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    this.cv = h('canvas.pb-cv', { width: W * dpr, height: H * dpr, style: { aspectRatio: `${W} / ${H}`, cursor: 'crosshair', touchAction: 'none' } });
+    this.cv = h('canvas.pb-cv', { width: this.W * dpr, height: this.H * dpr, style: { aspectRatio: `${this.W} / ${this.H}`, cursor: 'crosshair', touchAction: 'none' } });
     this.res = dpr;
     this.angIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '000', style: { width: '64px' } });
     this.distIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0,0', style: { width: '64px' } });
@@ -169,10 +174,11 @@ export class PlotBoard {
       this.cv.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
     };
     this.zoomLbl = h('span.pb-zoom', {}, '1×');
-    this.bigBtn = h('button.btn.xs', { onclick: () => this.setBig(!this.big) }, '⛶ Duża mapa');
+    this.bigBtn = h('button.btn.xs', { onclick: () => this.setBig(!this.big), style: this.fill ? { display: 'none' } : {} }, '⛶ Duża mapa');
+    if (this.fill) Object.assign(this.cv.style, { maxWidth: 'none', width: `min(100%, calc((100vh - ${this.offY}px) * ${(this.W / this.H).toFixed(4)}))`, margin: '0 auto' });
     renderTools();
     this.hint = h('div.small.muted.pb-hint');
-    this.el = h('div.pb', {},
+    this.el = h('div.pb', { class: this.fill ? 'pb-fill' : '' },
       h('div.pb-bar', {}, this.toolBtns),
       h('div.pb-bar', {},
         h('label.pb-in', {}, h('span', {}, 'Kąt'), this.angIn, '°'),
@@ -188,7 +194,7 @@ export class PlotBoard {
           this.bigBtn)),
       this.hint, this.cv, this.readout);
     this.updateHint();
-    const pos = (e) => { const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H }; };
+    const pos = (e) => { const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * this.W, y: ((e.clientY - r.top) / r.height) * this.H }; };
     // przesuwanie: narzędzie „Przesuń”, prawy lub środkowy przycisk myszy; dwa palce – szczypanie
     const touches = new Map();
     let pinch = null;
@@ -380,16 +386,16 @@ export class PlotBoard {
   draw() {
     const ctx = this.cv.getContext('2d');
     ctx.setTransform(this.res, 0, 0, this.res, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#fbf7ec'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#f4f9fc'; ctx.fillRect(M, M, W - 2 * M, H - 2 * M);
+    ctx.clearRect(0, 0, this.W, this.H);
+    ctx.fillStyle = '#fbf7ec'; ctx.fillRect(0, 0, this.W, this.H);
+    ctx.fillStyle = '#f4f9fc'; ctx.fillRect(M, M, this.W - 2 * M, this.H - 2 * M);
     ctx.save();
-    ctx.beginPath(); ctx.rect(M, M, W - 2 * M, H - 2 * M); ctx.clip();
+    ctx.beginPath(); ctx.rect(M, M, this.W - 2 * M, this.H - 2 * M); ctx.clip();
     this.drawChart(ctx);
     ctx.restore();
     this.drawScales(ctx);
     ctx.save();
-    ctx.beginPath(); ctx.rect(M, M, W - 2 * M, H - 2 * M); ctx.clip();
+    ctx.beginPath(); ctx.rect(M, M, this.W - 2 * M, this.H - 2 * M); ctx.clip();
     // obiekty: latarnie (symbol mapowy z błyskiem) albo pozycja wyjściowa
     for (const p of this.plot.pts) {
       const q = this.px(this.toNm(p));
@@ -557,9 +563,9 @@ export class PlotBoard {
 
   // podziałka minut na brzegach (etykiety w stopniach i minutach) i siatka
   drawScales(ctx) {
-    const iw = W - 2 * M, ih = H - 2 * M;
-    const latMin = this.nm(0, H - M).y, latMax = this.nm(0, M).y; // w minutach szerokości
-    const lonMin = this.nm(M, 0).x / this.cl, lonMax = this.nm(W - M, 0).x / this.cl; // w minutach długości
+    const iw = this.W - 2 * M, ih = this.H - 2 * M;
+    const latMin = this.nm(0, this.H - M).y, latMax = this.nm(0, M).y; // w minutach szerokości
+    const lonMin = this.nm(M, 0).x / this.cl, lonMax = this.nm(this.W - M, 0).x / this.cl; // w minutach długości
     const pick = (pxPerMin) => [0.5, 1, 2, 5, 10, 15, 30].find((s) => s * pxPerMin >= 46) || 30;
     const latStep = pick(this.k), lonStep = pick(this.k * this.cl);
     const sub = (s) => (s <= 1 ? 0.1 : s <= 2 ? 0.5 : 1);
@@ -571,37 +577,37 @@ export class PlotBoard {
     const yOf = (m) => this.px({ x: 0, y: m }).y;
     const s1 = sub(latStep);
     // pas naprzemiennych pól co 1' (jak na brzegu mapy morskiej)
-    for (let m = Math.floor(latMin); m <= latMax; m += 1) { const y0 = yOf(m), y1 = yOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillStyle = '#1b1f24'; ctx.fillRect(M - 10, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); ctx.fillRect(W - M + 6, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); } }
+    for (let m = Math.floor(latMin); m <= latMax; m += 1) { const y0 = yOf(m), y1 = yOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillStyle = '#1b1f24'; ctx.fillRect(M - 10, Math.max(M - 10, y1), 4, Math.min(this.H - M + 10, y0) - Math.max(M - 10, y1)); ctx.fillRect(this.W - M + 6, Math.max(M - 10, y1), 4, Math.min(this.H - M + 10, y0) - Math.max(M - 10, y1)); } }
     ctx.fillStyle = '#1b1f24';
     for (let i = Math.ceil(latMin / s1 - 1e-9); i * s1 <= latMax; i++) {
       const m = Math.round(i * s1 * 1000) / 1000, y = yOf(m), major = Math.abs(m / latStep - Math.round(m / latStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
-      ctx.beginPath(); ctx.moveTo(M - len, y); ctx.lineTo(M, y); ctx.moveTo(W - M, y); ctx.lineTo(W - M + len, y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(M - len, y); ctx.lineTo(M, y); ctx.moveTo(this.W - M, y); ctx.lineTo(this.W - M + len, y); ctx.stroke();
       if (major) {
-        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
+        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(this.W - M, y); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
         const [d, mm] = latLabel(m);
         ctx.textAlign = 'right'; ctx.fillText(d, M - 13, y - 1); ctx.fillText(mm, M - 13, y + 11);
-        ctx.textAlign = 'left'; ctx.fillText(d, W - M + 13, y - 1); ctx.fillText(mm, W - M + 13, y + 11);
+        ctx.textAlign = 'left'; ctx.fillText(d, this.W - M + 13, y - 1); ctx.fillText(mm, this.W - M + 13, y + 11);
       }
     }
     const xOf = (m) => this.px({ x: m * this.cl, y: 0 }).x;
     const s2 = sub(lonStep);
-    for (let m = Math.floor(lonMin); m <= lonMax; m += 1) { const x0 = xOf(m), x1 = xOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillRect(Math.max(M - 10, x0), M - 10, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); ctx.fillRect(Math.max(M - 10, x0), H - M + 6, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); } }
+    for (let m = Math.floor(lonMin); m <= lonMax; m += 1) { const x0 = xOf(m), x1 = xOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillRect(Math.max(M - 10, x0), M - 10, Math.min(this.W - M + 10, x1) - Math.max(M - 10, x0), 4); ctx.fillRect(Math.max(M - 10, x0), this.H - M + 6, Math.min(this.W - M + 10, x1) - Math.max(M - 10, x0), 4); } }
     ctx.textAlign = 'center';
     for (let i = Math.ceil(lonMin / s2 - 1e-9); i * s2 <= lonMax; i++) {
       const m = Math.round(i * s2 * 1000) / 1000, x = xOf(m), major = Math.abs(m / lonStep - Math.round(m / lonStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
-      ctx.beginPath(); ctx.moveTo(x, M - len); ctx.lineTo(x, M); ctx.moveTo(x, H - M); ctx.lineTo(x, H - M + len); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, M - len); ctx.lineTo(x, M); ctx.moveTo(x, this.H - M); ctx.lineTo(x, this.H - M + len); ctx.stroke();
       if (major) {
-        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(x, M); ctx.lineTo(x, H - M); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
+        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(x, M); ctx.lineTo(x, this.H - M); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
         const [d, mm] = lonLabel(m);
-        ctx.fillText(`${d}${mm}`, x, M - 15); ctx.fillText(`${d}${mm}`, x, H - M + 24);
+        ctx.fillText(`${d}${mm}`, x, M - 15); ctx.fillText(`${d}${mm}`, x, this.H - M + 24);
       }
     }
     ctx.textAlign = 'left';
     ctx.font = 'bold 10px Segoe UI, sans-serif'; ctx.fillStyle = '#5a6b80';
-    ctx.fillText(tr('szer. N'), 4, M - 16); ctx.fillText(tr('dł. E'), W - M + 12, H - 6);
-    ctx.fillText(tr('Głębokości w metrach'), M, H - 6);
+    ctx.fillText(tr('szer. N'), 4, M - 16); ctx.fillText(tr('dł. E'), this.W - M + 12, this.H - 6);
+    ctx.fillText(tr('Głębokości w metrach'), M, this.H - 6);
     ctx.restore();
   }
 }
