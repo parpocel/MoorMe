@@ -183,7 +183,7 @@ export class PlotBoard {
     this.edgeBtn = h('button.btn.xs', { onclick: () => this.drawAlongPlotter() }, '📐 Kreśl wzdłuż krawędzi');
     const renderTools = () => {
       this.toolBtns.innerHTML = '';
-      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; renderTools(); this.updateHint(); this.draw(); } }, n));
+      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; this.drag = null; renderTools(); this.updateHint(); this.draw(); } }, n));
       this.edgeBtn.style.display = this.tool === 'plotter' ? '' : 'none';
       this.cv.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
     };
@@ -256,7 +256,10 @@ export class PlotBoard {
     }, { passive: false });
     if (typeof window !== 'undefined') {
       window.addEventListener('resize', () => { if (this.big && this.el.isConnected) this.fitCanvas(); });
-      window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.big && this.el.isConnected) this.setBig(false); });
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape' || !this.el.isConnected) return;
+        if (this.drag) { this.drag = null; this.draw(); } else if (this.big) this.setBig(false);
+      });
     }
     this.draw();
   }
@@ -272,12 +275,12 @@ export class PlotBoard {
     }
     this.hint.textContent = tr({
       pan: 'Przeciągnij mapę, aby ją przesunąć. Kółko myszy lub szczypanie – powiększenie (także przyciski + i −); prawy przycisk myszy przesuwa mapę przy każdym narzędziu.',
-      drag: 'Przeciągnij od punktu, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
+      drag: 'Przeciągnij od punktu albo kliknij początek i koniec, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
       bearing: 'Wpisz kąt (np. namiar rzeczywisty) i kliknij obiekt – przez punkt zostanie wykreślona linia pozycyjna.',
       course: 'Wpisz kurs i drogę, potem kliknij punkt startu – odłożony zostanie odcinek z punktem końcowym.',
       plotter: 'Kliknij, aby położyć trójkąt; przeciągnij go, by przesunąć, a za uchwyt (kółko) – by obrócić (także kółko myszy, z Shift ±10°). Kąt krawędzi trafia do pola „Kąt”.',
       parallel: 'Kliknij istniejącą linię, a potem punkt – przez punkt zostanie wykreślona linia równoległa.',
-      dividers: 'Przeciągnij cyrklem między dwoma punktami, aby zmierzyć odległość w milach (trafia do pola „Droga”).',
+      dividers: 'Przeciągnij cyrklem albo kliknij dwa punkty, aby zmierzyć odległość (trafia do pola „Droga”). Na skali szerokości przy lewym lub prawym brzegu 1\' = 1 Mm – cyrkiel przyciąga się tam do podziałki co 0,1\'.',
       circle: 'Wpisz odległość w polu „Droga” i kliknij środek – powstanie okrąg pozycyjny (np. odległość od latarni).',
       point: 'Kliknij, aby postawić punkt i odczytać jego współrzędne.'
     }[this.tool]);
@@ -293,6 +296,7 @@ export class PlotBoard {
     return out.concat(this.crossings());
   }
   snap(p, r = 11) {
+    if (this.tool === 'dividers' && (p.x < M || p.x > this.W - M)) { const q = this.nm(p.x, p.y); return { x: q.x, y: Math.round(q.y * 10) / 10, snapped: true, scale: true }; }
     let best = null, bd = r;
     for (const n of this.snapTargets()) { const q = this.px(n), d = Math.hypot(q.x - p.x, q.y - p.y); if (d < bd) { bd = d; best = n; } }
     return best ? { ...best, snapped: true } : this.nm(p.x, p.y);
@@ -332,7 +336,11 @@ export class PlotBoard {
 
   down(p) {
     const n = this.snap(p);
-    if (this.tool === 'drag' || this.tool === 'dividers') { this.drag = { a: n, b: n }; return; }
+    if (this.tool === 'drag' || this.tool === 'dividers') {
+      // drugi klik w trybie „klik – klik”: koniec linii / drugie ramię cyrkla
+      if (this.drag && this.drag.click) { this.drag.b = n.scale && this.drag.a.scale ? { ...n, x: this.drag.a.x } : n; this.drag.click = false; this.drag.second = true; return; }
+      this.drag = { a: n, b: n }; return;
+    }
     if (this.tool === 'point') { this.add({ kind: 'pt', x: n.x, y: n.y }); this.draw(); return; }
     if (this.tool === 'plotter') {
       if (this.plotter) {
@@ -373,17 +381,21 @@ export class PlotBoard {
       const q = this.nm(p.x - this.pdrag.ox, p.y - this.pdrag.oy), s = this.snap({ x: p.x - this.pdrag.ox, y: p.y - this.pdrag.oy });
       Object.assign(this.plotter, s.snapped ? { x: s.x, y: s.y } : q); this.draw(); return;
     }
-    if (this.drag) this.drag.b = this.snap(p);
+    if (this.drag) {
+      this.drag.b = this.snap(p);
+      if (this.drag.a.scale && this.drag.b.scale) this.drag.b.x = this.drag.a.x; // na skali mierzymy tylko w pionie
+    }
     this.hover = this.snap(p, 9);
     this.draw();
   }
   up() {
     this.pdrag = null;
     const d = this.drag;
-    this.drag = null;
-    if (!d) return;
+    if (!d || d.click) return;
     const len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
-    if (len * this.k < 6) return this.draw();
+    // krótkie kliknięcie bez przeciągania: pierwszy punkt ustawiony, drugi wskazuje się kolejnym kliknięciem
+    if (len * this.k < 6) { if (d.second) this.drag = null; else d.click = true; return this.draw(); }
+    this.drag = null;
     if (this.tool === 'dividers') {
       this.add({ kind: 'meas', a: { x: d.a.x, y: d.a.y }, b: { x: d.b.x, y: d.b.y }, len });
       this.distIn.value = nm2(len);
@@ -455,7 +467,7 @@ export class PlotBoard {
         const c = this.px(it);
         ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(c.x, c.y, it.r * this.k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         this.label(ctx, c.x + it.r * this.k * 0.71 + 4, c.y - it.r * this.k * 0.71, `${nm2(it.r)} ${this.unit}`);
-      } else if (it.kind === 'meas') this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.55);
+      } else if (it.kind === 'meas') { /* cyrkiel rysowany niżej, bez przycięcia do ramki */ }
       else { const q = this.px(it); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); const ll = this.toLL(it); this.label(ctx, q.x + 7, q.y - 6, `${fmtLat(ll.lat)} ${fmtLon(ll.lon)}`); }
       ctx.restore();
       this.lc = null;
@@ -465,15 +477,22 @@ export class PlotBoard {
     // w trakcie przeciągania: linia albo cyrkiel
     if (this.drag) {
       const a = this.px(this.drag.a), b = this.px(this.drag.b), d = this.drag, len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
-      if (this.tool === 'dividers') this.drawDividers(ctx, a, b, len, 1);
-      else {
+      if (this.tool === 'dividers') { /* niżej */ } else {
         ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         if (len > 0.01) this.label(ctx, b.x + 12, b.y - 10, `${deg3(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R)} · ${nm2(len)} ${this.unit}`);
       }
     }
     if (this.plotter) this.drawPlotter(ctx);
-    if (this.hover && this.hover.snapped) { const q = this.px(this.hover); ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 6, q.y - 6, 12, 12); }
+    if (this.hover && this.hover.snapped && !this.hover.scale) { const q = this.px(this.hover); ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 6, q.y - 6, 12, 12); }
     ctx.restore();
+    // cyrkiel – także na skali szerokości przy brzegu mapy (1' szerokości = 1 Mm)
+    this.items.forEach((it) => { if (it.kind === 'meas') { this.lc = it.color; this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.8); this.lc = null; } });
+    if (this.drag && this.tool === 'dividers') {
+      const d = this.drag, len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y), a = this.px(d.a);
+      if (d.click && len * this.k < 6) { ctx.fillStyle = '#1f93c9'; ctx.beginPath(); ctx.arc(a.x, a.y, 4, 0, Math.PI * 2); ctx.fill(); }
+      else this.drawDividers(ctx, a, this.px(d.b), len, 1);
+    }
+    if (this.hover && this.hover.scale) { const q = this.px(this.hover); ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(q.x - 12, q.y); ctx.lineTo(q.x + 12, q.y); ctx.stroke(); }
     // odczyt współrzędnych kursora / punktu
     const pt = this.drag ? this.drag.b : this.hover;
     if (pt) { const ll = this.toLL(pt); this.readout.textContent = `${pt.snapped ? '◆ ' : ''}${fmtLat(ll.lat)}   ${fmtLon(ll.lon)}${this.plotter && this.tool === 'plotter' ? `   📐 ${deg3(this.plotter.ang)}` : ''}`; }
@@ -525,7 +544,10 @@ export class PlotBoard {
 
   drawDividers(ctx, a, b, len, alpha) {
     const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, hgt = Math.min(70, L * 0.45);
-    const hx = mx, hy = my - hgt;
+    // przegub prostopadle do rozwarcia: przy poziomym pomiarze do góry, przy pionowym (np. na skali) – w stronę mapy
+    let nx = -dy / L, ny = dx / L;
+    if (Math.abs(dy) > Math.abs(dx) ? nx * (this.W / 2 - mx) < 0 : ny > 0) { nx = -nx; ny = -ny; }
+    const hx = mx + nx * hgt, hy = my + ny * hgt;
     ctx.save(); ctx.globalAlpha = alpha;
     ctx.strokeStyle = '#6b7380'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(hx, hy); ctx.lineTo(b.x, b.y); ctx.stroke();
     ctx.fillStyle = '#3a3f47'; ctx.beginPath(); ctx.arc(hx, hy, 4.5, 0, Math.PI * 2); ctx.fill();

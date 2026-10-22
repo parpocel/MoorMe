@@ -303,6 +303,8 @@ export const EN = {
   'Zasięg widoczności świateł': 'Range of lights',
   'Wszystkie rodzaje (losowo)': 'All kinds (random)',
   'Rodzaj zadania:': 'Exercise type:',
+  "Przeciągnij cyrklem albo kliknij dwa punkty, aby zmierzyć odległość (trafia do pola „Droga”). Na skali szerokości przy lewym lub prawym brzegu 1' = 1 Mm – cyrkiel przyciąga się tam do podziałki co 0,1'.": "Drag the dividers or click two points to measure a distance (it goes to the “Distance” field). On the latitude scale at the left or right edge 1' = 1 NM – there the dividers snap to the 0.1' graduations.",
+  "Przeciągnij od punktu albo kliknij początek i koniec, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.": "Drag from a point, or click the start and the end, to draw a line – its direction and length are shown. Lines snap to objects and intersections.",
   'Bałtyk – piaszczyste wybrzeże z mielizną': 'Baltic – sandy coast with a shoal',
   'Płaski, piaszczysty brzeg z lasem i wsiami. Na trasie mielizna oznaczona kardynałami, wrak, skała oznaczona znakiem odosobnionego niebezpieczeństwa i strefa regat. Płyniesz z zachodu na wschód do portu za główkami.': 'A flat sandy shore with forest and villages. On the route: a shoal marked by cardinal marks, a wreck, a rock marked with an isolated danger mark and a regatta zone. You sail from west to east to a port behind the pierheads.',
   'Adriatyk – kanały między wyspami': 'Adriatic – channels between islands',
