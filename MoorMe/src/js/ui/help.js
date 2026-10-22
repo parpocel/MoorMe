@@ -7,7 +7,7 @@ export const KEYS = [
   ['K / klik knagi', 'Nowa lina myszą: knaga → (kluza/półkluza) → poler'], ['Klik na linę', 'Menu okrągłe: wybieraj, wybierz, luzuj, luz, knaguj, oddaj (przytrzymaj wybieraj/luzuj – działa tylko podczas trzymania)'],
   ['O', 'Pogoda i pora dnia'], ['1 – 9', 'Wybierz linę'], ['B', 'Załóż wybraną linę / podejmij muring'], ['T (przytrzymaj)', 'Wybieraj linę'], ['U', 'Wybierz – wybieraj aż lina się napnie'], ['G (przytrzymaj)', 'Luzuj linę'], ['Y', 'Knaguj (zablokuj długość)'], ['N', 'Oddaj linę'],
   ['L', 'Załoga: zejdź na ląd / wróć na pokład'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (izo, blisko, z góry, za rufą, kapitan)'], ['Widok kapitana', 'Przeciągnij myszą – rozglądanie się, kółko – przybliżenie'],
-  ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
+  ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['Touchpad', 'Dwa palce – obrót kamery, szczypanie – zoom, przeciągnięcie – przesuwanie (z Shift/Alt – obrót)'], ['F11', 'Pełny ekran']
 ];
 
 export const LINES = [
@@ -35,7 +35,7 @@ export const PASSAGE_KEYS = [
   ['J', 'Autopilot: włącz / wyłącz utrzymanie kursu'], [', / .', 'Zadany kurs autopilota −1° / +1° (z Shift: ±10°)'],
   ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal kartplotter (także kółko myszy nad mapą)'],
   ['O', 'Pogoda i pora dnia'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (izo, blisko, z góry, za rufą, kapitan)'],
-  ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['F11', 'Pełny ekran']
+  ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['Touchpad', 'Dwa palce – obrót kamery, szczypanie – zoom, przeciągnięcie – przesuwanie (z Shift/Alt – obrót)'], ['F11', 'Pełny ekran']
 ];
 
 export const PASSAGE_TEXT = [

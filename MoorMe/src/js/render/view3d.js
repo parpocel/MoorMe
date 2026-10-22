@@ -278,6 +278,7 @@ export class View3D {
     let drag = null;
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' && e.isPrimary === false) return; // drugi palec – gest (niżej)
       drag = { x: e.clientX, y: e.clientY, button: e.button, moved: false };
       el.setPointerCapture(e.pointerId);
     });
@@ -289,14 +290,9 @@ export class View3D {
       drag.x = e.clientX; drag.y = e.clientY;
       if (this.cam.mode === 'fpv') {
         // widok kapitana: przeciąganie obraca głowę
-        if (drag.moved) {
-          this.cam.fpvYaw -= dx * 0.004;
-          this.cam.fpvPitch = clamp(this.cam.fpvPitch - dy * 0.003, -1.1, 0.9);
-        }
-      } else if (drag.button === 2 || (drag.button === 0 && e.shiftKey)) {
-        this.cam.mode = 'free';
-        this.cam.az -= dx * 0.006;
-        this.cam.el = clamp(this.cam.el + dy * 0.004, 12 * DEG, 88 * DEG);
+        if (drag.moved) this.orbitBy(dx, dy);
+      } else if (drag.button === 2 || (drag.button === 0 && (e.shiftKey || e.altKey))) {
+        this.orbitBy(dx, dy);
       } else if (drag.button === 0 || drag.button === 1) {
         // przesuwanie widoku
         const s = this.cam.dist * 0.0016;
@@ -313,11 +309,54 @@ export class View3D {
       }
       drag = null;
     });
+    // kółko myszy = zoom; touchpad: przesunięcie dwoma palcami = obrót kamery, „szczypanie” (ctrl+wheel) = zoom
+    let padUntil = 0;
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if (this.cam.mode === 'fpv') { this.cam.fov = clamp((this.cam.fov || 62) * Math.exp(e.deltaY * 0.001), 25, 85); return; }
-      this.cam.dist = clamp(this.cam.dist * Math.exp(e.deltaY * 0.0012), 12, 320);
+      const px = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      const dx = e.deltaX * px, dy = e.deltaY * px, now = performance.now();
+      const pinch = e.ctrlKey;
+      // ruch z touchpada: małe/ułamkowe kroki albo składowa pozioma; seria zdarzeń zachowuje klasyfikację
+      if (!pinch && e.deltaMode === 0 && (dx !== 0 || Math.abs(dy) < 40 || !Number.isInteger(dy))) padUntil = now + 250;
+      const pad = !pinch && now < padUntil;
+      if (pad) { this.orbitBy(-dx * 0.9, -dy * 0.9); return; }
+      this.zoomBy(dy * (pinch ? 0.012 : 0.0012));
     }, { passive: false });
+    // ekran dotykowy: dwa palce – szczypanie = zoom, przesuw = obrót
+    const touches = new Map();
+    let pinchD = 0, pinchC = null;
+    el.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') { touches.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (touches.size === 2) { drag = null; const [a, b] = [...touches.values()]; pinchD = Math.hypot(a.x - b.x, a.y - b.y); pinchC = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; } } });
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch' || !touches.has(e.pointerId)) return;
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size !== 2) return;
+      drag = null;
+      const [a, b] = [...touches.values()], d = Math.hypot(a.x - b.x, a.y - b.y), c = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      if (pinchD > 0) this.zoomBy(-Math.log(d / pinchD));
+      if (pinchC) this.orbitBy(c.x - pinchC.x, c.y - pinchC.y);
+      pinchD = d; pinchC = c;
+    });
+    const endTouch = (e) => { touches.delete(e.pointerId); if (touches.size < 2) { pinchD = 0; pinchC = null; } };
+    el.addEventListener('pointerup', endTouch);
+    el.addEventListener('pointercancel', endTouch);
+  }
+
+  // obrót kamery o (dx, dy) pikseli – w widoku kapitana rozglądanie się
+  orbitBy(dx, dy) {
+    if (this.cam.mode === 'fpv') {
+      this.cam.fpvYaw -= dx * 0.004;
+      this.cam.fpvPitch = clamp(this.cam.fpvPitch - dy * 0.003, -1.1, 0.9);
+      return;
+    }
+    this.cam.mode = 'free';
+    this.cam.az -= dx * 0.006;
+    this.cam.el = clamp(this.cam.el + dy * 0.004, 12 * DEG, 88 * DEG);
+  }
+  // zoom: k > 0 oddala (logarytmicznie)
+  zoomBy(k) {
+    k = clamp(k, -0.5, 0.5);
+    if (this.cam.mode === 'fpv') { this.cam.fov = clamp((this.cam.fov || 62) * Math.exp(k * 0.85), 25, 85); return; }
+    this.cam.dist = clamp(this.cam.dist * Math.exp(k), 12, 320);
   }
 
   updateMouse(e) {
