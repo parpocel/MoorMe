@@ -27,6 +27,17 @@ function createWindow() {
   Menu.setApplicationMenu(null);
   ipcMain.handle('fullscreen:set', (_e, on) => { win.setFullScreen(on); return on; });
   ipcMain.handle('fullscreen:get', () => win.isFullScreen());
+  // skala interfejsu: „auto” – według rozmiaru okna (projekt pod 1600×900), albo stała wartość z ustawień
+  let uiScale = 'auto';
+  const applyZoom = () => {
+    const [w, h] = win.getContentSize();
+    const auto = Math.max(1, Math.min(2, Math.min(w / 1600, h / 900)));
+    const f = uiScale === 'auto' ? auto : Math.max(0.75, Math.min(2.5, Number(uiScale) || 1));
+    win.webContents.setZoomFactor(Math.round(f * 100) / 100);
+  };
+  ipcMain.handle('ui:scale', (_e, v) => { uiScale = v; applyZoom(); return true; });
+  for (const ev of ['resize', 'enter-full-screen', 'leave-full-screen', 'maximize', 'unmaximize']) win.on(ev, applyZoom);
+  win.webContents.on('did-finish-load', applyZoom);
   win.loadFile(path.join(__dirname, 'src', 'index.html'), process.env.MOORME_SMOKE_OUT ? { query: { smoke: '1' } } : undefined);
 
   // Test dymny (CI): MOORME_SMOKE_OUT=plik.png – zrzut ekranu po starcie i zamknięcie

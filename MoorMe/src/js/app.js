@@ -18,13 +18,14 @@ import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
-import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, refreshFullscreen, GFX_PRESETS } from './settings.js';
+import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, refreshFullscreen, applyUiScale, GFX_PRESETS } from './settings.js';
 import { FLAGS, FLAG_CODES, flagCanvas } from './render/flags.js';
 import { setIalaRegion } from './data/passage.js';
 import { menuMusic } from './menuMusic.js';
 
 setIalaRegion(getSettings().iala);
 refreshFullscreen();
+applyUiScale();
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 window.__sceneryEl = () => sceneryEl();
@@ -423,7 +424,9 @@ function showSettings(back = () => showModeSelect()) {
   refreshFullscreen().then((on) => { fsBtn.textContent = fsLabel(on); });
   const screen = h('div.help-card.set-card', {},
     h('h2', {}, 'Ekran'),
-    row('Pełny ekran', fsBtn, h('span.small.muted', { style: { marginLeft: '10px' } }, 'albo klawisz F11')));
+    row('Pełny ekran', fsBtn, h('span.small.muted', { style: { marginLeft: '10px' } }, 'albo klawisz F11')),
+    window.moorme ? row('Skala interfejsu', segRow([['auto', 'Automatyczna'], ['1', '100%'], ['1.25', '125%'], ['1.5', '150%'], ['1.75', '175%']], String(st.uiScale || 'auto'), (v) => { saveSettings({ uiScale: v }); applyUiScale(); rerender(); })) : null,
+    window.moorme ? h('p.small.muted', {}, 'Automatyczna skala powiększa interfejs na dużych ekranach i w trybie pełnoekranowym.') : null);
 
   app.appendChild(h('div.screen.settings', {}, sceneryEl(),
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),

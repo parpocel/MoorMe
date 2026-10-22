@@ -18,6 +18,7 @@ const DEFAULTS = {
   mmsi: '261012345',
   music: true,
   musicVol: 0.5,
+  uiScale: 'auto',
   captain: 'Kuba',
   crew: ['', '', ''], // puste = losowe imię z puli
   gfx: { preset: 'high', ...GFX_PRESETS.high, showFps: false }
@@ -73,4 +74,9 @@ export async function toggleFullscreen() {
   if (typeof document === 'undefined') return;
   if (document.fullscreenElement) document.exitFullscreen?.();
   else document.documentElement.requestFullscreen?.().catch(() => {});
+}
+
+// skala interfejsu (w aplikacji – powiększenie okna Electron, ostre także w 3D)
+export function applyUiScale() {
+  if (typeof window !== 'undefined' && window.moorme && window.moorme.setUiScale) window.moorme.setUiScale(getSettings().uiScale || 'auto');
 }
