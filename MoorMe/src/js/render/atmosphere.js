@@ -106,6 +106,7 @@ export class Atmosphere {
     this.sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, color: 0xffe2b0, fog: false, transparent: true, depthWrite: false, opacity: 0 }));
     this.sunDisk.scale.set(260, 260, 1);
     this.scene.add(this.sunDisk);
+    this.buildClouds();
   }
 
   buildRain() {
@@ -214,8 +215,9 @@ export class Atmosphere {
     top = lerpC(top, grey, sky.grey); bot = lerpC(bot, grey.clone().offsetHSL(0, 0, 0.06), sky.grey);
     if (this.blackSky) { top = lerpC(top, C(0x000000), night); bot = lerpC(bot, C(0x010203), night); }
     if (this.sky === 'fog') { bot = lerpC(bot, lerpC(C(0xc9ced2), C(0x2a3038), night), 0.85); top = lerpC(top, bot, 0.6); }
-    this.paintSky(top, bot);
+    this.paintSky(top, bot, az, dusk);
     this.scene.background = bot;
+    this.updateClouds(camDt, this.view.camera.position, night, dusk, sky);
     this.scene.fog.color.copy(bot);
     const fogK = night > 0.5 && this.sky === 'clear' ? 0.8 : 1;
     // w rejsie nocą widoczność spada do kilkuset metrów – z daleka widać tylko światła pław (sprite'y bez mgły)
@@ -321,15 +323,76 @@ export class Atmosphere {
     if (this.rain.visible) this.updateRain(dt, cam);
   }
 
-  paintSky(top, bot) {
-    const key = top.getHex() * 7 + bot.getHex();
+  // chmury low-poly: kilka spłaszczonych brył w każdej, wokół kamery, dryfują z wiatrem
+  buildClouds() {
+    const r = (() => { let a = 12345; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; })();
+    this.cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x000000, flatShading: true, transparent: true, opacity: 0.95, fog: false, depthWrite: false });
+    this.clouds = [];
+    const g = new THREE.Group();
+    for (let i = 0; i < 40; i++) {
+      const c = new THREE.Group(), size = 35 + r() * 85, n = 4 + Math.floor(r() * 4);
+      for (let k = 0; k < n; k++) {
+        const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), this.cloudMat);
+        const sc = size * (0.45 + r() * 0.55);
+        m.scale.set(sc, sc * (0.42 + r() * 0.2), sc * (0.7 + r() * 0.3));
+        m.position.set((r() - 0.5) * size * 1.6, (r() - 0.2) * size * 0.25, (r() - 0.5) * size * 0.6);
+        m.rotation.y = r() * 3;
+        c.add(m);
+      }
+      const far = this.view.passage ? 2200 : 950; // w porcie kopuła nieba ma promień 1200 m
+      const a = r() * Math.PI * 2, d = 300 + r() * (far - 300);
+      c.userData = { ox: Math.cos(a) * d, oz: Math.sin(a) * d, y: 170 + r() * 170, k: r(), size };
+      c.renderOrder = -5;
+      g.add(c);
+      this.clouds.push(c);
+    }
+    this.cloudGroup = g;
+    this.scene.add(g);
+    this.cloudDrift = { x: 0, z: 0 };
+  }
+
+  updateClouds(dt, cam, night, dusk, sky) {
+    const n = { clear: 14, cloudy: 34, rain: 40, fog: 0 }[this.sky] ?? 14;
+    const show = !this.blackSky && n > 0;
+    this.cloudGroup.visible = show;
+    if (!show) return;
+    const wv = this.world && this.world.env ? this.world.env.windVec() : { x: 2, z: 0 };
+    this.cloudDrift.x += wv.x * dt * 0.6; this.cloudDrift.z += wv.z * dt * 0.6;
+    const span = this.view.passage ? 4400 : 1900;
+    // kolor: biel w dzień, brzoskwinia o zachodzie, szarość przy złej pogodzie, granat nocą
+    const base = lerpC(lerpC(C(0xffffff), C(0xffc9a8), dusk), C(0x8b939c), sky.grey);
+    this.cloudMat.color.copy(lerpC(base, C(0x1a2233), night));
+    // samo światło słońca nisko nad horyzontem oświetla chmury od spodu – dodajemy własną poświatę (biel w dzień, róż i pomarańcz o zachodzie)
+    this.cloudMat.emissive.copy(lerpC(C(0xb4c0d0), C(0xff9f7a), dusk)).multiplyScalar((0.42 + 0.4 * dusk) * (1 - night) * (1 - 0.5 * sky.grey));
+    this.cloudMat.opacity = 0.92 - night * 0.55;
+    const big = this.sky === 'clear' ? 0.8 : 1.25;
+    this.clouds.forEach((c, i) => {
+      const u = c.userData;
+      c.visible = i < n;
+      if (!c.visible) return;
+      let x = u.ox + this.cloudDrift.x, z = u.oz + this.cloudDrift.z;
+      x = ((x % span) + span * 1.5) % span - span / 2; z = ((z % span) + span * 1.5) % span - span / 2;
+      const dd = Math.hypot(x, z), lim = span / 2 - 50; if (dd > lim) { x *= lim / dd; z *= lim / dd; }
+      c.position.set(cam.x + x, u.y * (this.sky === 'clear' ? 1 : 0.85), cam.z + z);
+      c.scale.setScalar(big);
+    });
+  }
+
+  paintSky(top, bot, az = 0, dusk = 0) {
+    const key = top.getHex() * 7 + bot.getHex() + Math.round(az * 20) * 13 + Math.round(dusk * 20);
     if (key === this._skyKey) return;
     this._skyKey = key;
     const geo = this.view.sky.geometry;
     const pos = geo.attributes.position, col = geo.attributes.color;
+    const glow = C(0xffb27a), sx = Math.sin(az), sz = -Math.cos(az);
     for (let i = 0; i < pos.count; i++) {
-      const t = clamp(pos.getY(i) / 1200, 0, 1);
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i), L = Math.hypot(x, y, z) || 1;
+      const t = clamp(y / 1200, 0, 1);
       const c = bot.clone().lerp(top, Math.pow(t, 0.6));
+      // ciepła poświata przy horyzoncie od strony słońca (zachód / wschód)
+      const toward = Math.max(0, (x * sx + z * sz) / L);
+      const k = dusk * Math.pow(toward, 3) * (1 - t) * 0.75;
+      if (k > 0.001) c.lerp(glow, k);
       col.setXYZ(i, c.r, c.g, c.b);
     }
     col.needsUpdate = true;
