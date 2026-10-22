@@ -37,12 +37,13 @@ export const fmtLat = (lat) => { const [d, m] = dm(lat); return `${d}°${num(m)}
 export const fmtLon = (lon) => { const [d, m] = dm(lon); return `${String(d).padStart(3, '0')}°${num(m)}'${lon >= 0 ? 'E' : 'W'}`; };
 const latMin = (lat) => dm(lat)[1], lonMin = (lon) => dm(lon)[1];
 
+const sn = (x, dec) => num(x, dec).replace('-', '−');
 // Deklinacja z mapy: wartość z roku bazowego i roczna zmiana
 function declination(r, year) {
   const base = rf(r, -6, 7, 2), y0 = ri(r, 2012, 2022), ch = rf(r, -0.2, 0.2, 20);
   const d = Math.round((base + (year - y0) * ch) * 2) / 2;
   const fmtDM = (v) => { const a = Math.abs(v), dd = Math.floor(a + 1e-9), mm = Math.round((a - dd) * 60); return `${dd}°${String(mm).padStart(2, '0')}'${v >= 0 ? 'E' : 'W'}`; };
-  return { d, text: `${fmtDM(base)} (${y0}), ${L('zmiana roczna', 'annual change')} ${fmtDM(ch)}`, steps: `d = ${num(base, 1)}° + (${year} − ${y0}) · ${num(ch, 2)}° = ${num(base + (year - y0) * ch, 2)}° ≈ ${signed(d, 1)}` };
+  return { d, text: `${fmtDM(base)} ${L('w roku', 'in')} ${y0}, ${L('zmiana roczna', 'annual change')} ${fmtDM(ch)}`, steps: `d = ${sn(base, 1)}° + (${year} − ${y0}) · (${sn(ch, 2)}°) = ${sn(base + (year - y0) * ch, 2)}° ≈ ${signed(d, 1)} ${L('(zaokrąglamy do 0,5°)', '(rounded to 0.5°)')}` };
 }
 
 // Tabela dewiacji (δ w funkcji KK), co 45°
@@ -97,7 +98,7 @@ const BASE_GEN = {
     const dev = Math.round(tab.at(KK) * 10) / 10;
     return {
       cat: 'table',
-      text: L(`Trzeba płynąć kursem rzeczywistym KR = ${deg3(KR)}. Deklinacja: ${dec.text}. Dewiację odczytaj z tabeli (interpoluj liniowo). Jaki kurs kompasowy podać sternikowi?`, `You need to steer a true course KR = ${deg3(KR)}. Variation: ${dec.text}. Read the deviation from the table (interpolate linearly). What compass course do you give the helmsman?`),
+      text: L(`Jest rok ${YEAR}. Trzeba płynąć kursem rzeczywistym KR = ${deg3(KR)}. Deklinacja z mapy: ${dec.text} – przelicz ją na rok ${YEAR}. Dewiację odczytaj z tabeli (interpoluj liniowo). Jaki kurs magnetyczny i kompasowy podać sternikowi?`, `The year is ${YEAR}. You need to steer a true course KR = ${deg3(KR)}. Variation from the chart: ${dec.text} – update it to ${YEAR}. Read the deviation from the table (interpolate linearly). Which magnetic and compass course do you give the helmsman?`),
       table: { head: ['KK', 'δ'], rows: tab.rows.map(([k, v]) => [deg3(k), signed(v)]) },
       answers: [ans('KM', 'KM', KM, 'deg', 1), ans('KK', 'KK', KK, 'deg', 1)],
       steps: [dec.steps, `KM = KR − d = ${deg3(KR)} − (${plus(dec.d, 1)}) = ${deg3(KM)}`, L(`δ zależy od KK, więc liczymy kolejnymi przybliżeniami: δ(KM) ≈ ${plus(tab.at(KM), 1)} → KK ≈ ${deg3(KM - tab.at(KM))}`, `δ depends on KK, so iterate: δ(KM) ≈ ${plus(tab.at(KM), 1)} → KK ≈ ${deg3(KM - tab.at(KM))}`), `δ(KK) ≈ ${plus(dev, 1)} → KK = KM − δ = ${deg3(KK)}`]
