@@ -6,6 +6,7 @@ import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
 import { Atmosphere } from './atmosphere.js';
+import { wheelClassifier } from './wheel.js';
 import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
 import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
 import { TARGET_DY } from '../physics/world.js';
@@ -310,17 +311,14 @@ export class View3D {
       drag = null;
     });
     // kółko myszy = zoom; touchpad: przesunięcie dwoma palcami = obrót kamery, „szczypanie” (ctrl+wheel) = zoom
-    let padUntil = 0;
+    const wheelKind = wheelClassifier();
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
       const px = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
-      const dx = e.deltaX * px, dy = e.deltaY * px, now = performance.now();
-      const pinch = e.ctrlKey;
-      // ruch z touchpada: małe/ułamkowe kroki albo składowa pozioma; seria zdarzeń zachowuje klasyfikację
-      if (!pinch && e.deltaMode === 0 && (dx !== 0 || Math.abs(dy) < 40 || !Number.isInteger(dy))) padUntil = now + 250;
-      const pad = !pinch && now < padUntil;
-      if (pad) { this.orbitBy(-dx * 0.9, -dy * 0.9); return; }
-      this.zoomBy(dy * (pinch ? 0.012 : 0.0012));
+      const dx = e.deltaX * px, dy = e.deltaY * px, kind = wheelKind(e);
+      // ruch z touchpada (małe, ułamkowe kroki albo składowa pozioma) obraca kamerę; kółko i szczypanie – zoom
+      if (kind === 'pad') { this.orbitBy(-dx * 0.9, -dy * 0.9); return; }
+      this.zoomBy(dy * (kind === 'pinch' ? 0.012 : 0.0012));
     }, { passive: false });
     // ekran dotykowy: dwa palce – szczypanie = zoom, przesuw = obrót
     const touches = new Map();

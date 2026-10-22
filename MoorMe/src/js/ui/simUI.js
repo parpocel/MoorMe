@@ -601,6 +601,7 @@ export class SimScreen {
   }
 
   onViewHover(p) {
+    if (!this.tooltip) return; // tryby bez dymka (światła, dźwięki, rejs)
     if (!p || this.radial) { this.tooltip.style.display = 'none'; return; }
     if (p.line) {
       const m = this.view.mousePx;

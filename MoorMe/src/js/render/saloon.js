@@ -4,6 +4,7 @@
 // Osie: x – do dziobu, y – w górę, z – na prawą burtę. Jednostki: metry.
 import * as THREE from 'three';
 import { getSettings } from '../settings.js';
+import { wheelClassifier } from './wheel.js';
 import { procedureCard } from '../data/safety.js';
 
 const WOOD = 0xa8693f, WOOD_D = 0x7d4a2a, CUSH = 0x2f4468, HEAD = 0xf1ede4, LINING = 0xe6dfd2, ALU = 0xc9ced6;
@@ -417,7 +418,8 @@ export class SaloonView {
 
   initControls() {
     const el = this.renderer.domElement;
-    let drag = null, padUntil = 0;
+    let drag = null;
+    const wheelKind = wheelClassifier();
     el.addEventListener('contextmenu', (e) => e.preventDefault());
     el.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false }; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', (e) => {
@@ -432,9 +434,8 @@ export class SaloonView {
     el.addEventListener('pointerleave', () => { this.mouseIn = false; });
     el.addEventListener('wheel', (e) => {
       e.preventDefault();
-      const now = performance.now(), dx = e.deltaX, dy = e.deltaY;
-      if (!e.ctrlKey && e.deltaMode === 0 && (dx !== 0 || Math.abs(dy) < 40 || !Number.isInteger(dy))) padUntil = now + 250;
-      if (!e.ctrlKey && now < padUntil) this.orbit(-dx * 0.9, -dy * 0.9);
+      const dx = e.deltaX, dy = e.deltaY;
+      if (wheelKind(e) === 'pad') this.orbit(-dx * 0.9, -dy * 0.9);
       else this.zoom(dy * (e.ctrlKey ? 0.012 : 0.0012));
     }, { passive: false });
   }
