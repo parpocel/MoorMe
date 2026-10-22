@@ -153,3 +153,10 @@ Po wybraniu trybu wybierasz porę:
 
 Typy losowane są „talią”: każdy pojawia się raz w rundzie, w losowej kolejności, więc żaden (np. statek na kotwicy) nie powtarza się zbyt często.
 
+## Sygnały dźwiękowe
+
+Kolejny tryb (karta „Sygnały dźwiękowe”). Z łodzi wiosłowej słychać sygnały statków (MPZZM/COLREG, część D), odtwarzane w stereo z kierunku, z którego płynie dźwięk. Sygnały to buczek (krótki ok. 1 s, długi 4,5 s), dzwon i gong. Każdy sygnał trzeba rozpoznać spośród 5 odpowiedzi; „Odtwórz ponownie” powtarza sygnał. Po odpowiedzi wyświetla się tylko wynik, poprawna odpowiedź i zapis sygnału (• — 🔔 ◎).
+
+- **Dobra widoczność** (statek widać na horyzoncie): • w prawo, •• w lewo, ••• wstecz, ••••• wątpliwość, —— • / —— •• wyprzedzanie w wąskim przejściu z prawej/lewej burty, — • — • zgoda, — zakręt.
+- **Mgła** (statku nie widać): — w drodze z szybkością, — — zatrzymany, — • • specjalne statki, — • • • holowany, •••• pilot, dzwon (kotwica < 100 m), dzwon + gong (kotwica ≥ 100 m), 3 uderzenia + dzwon + 3 uderzenia (mielizna), • — • ostrzeżenie statku na kotwicy.
+

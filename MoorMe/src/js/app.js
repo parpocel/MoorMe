@@ -12,6 +12,7 @@ import { Preview3D } from './render/preview.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
+import { SoundsScreen } from './ui/soundsUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
 
@@ -24,6 +25,7 @@ function sceneryEl() {
 const icon = {
   play: '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="#fff7f1"/></svg>',
   chev: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#fff7f1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  horn: '<svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 10h3l6-4v12l-6-4H4z" fill="#2f4468"/><path d="M16 8.5c1.6 1.6 1.6 5.4 0 7M18.5 6c3 3 3 9 0 12" fill="none" stroke="#d2695f" stroke-width="1.8" stroke-linecap="round"/></svg>',
   bulb: '<svg width="30" height="30" viewBox="0 0 24 24"><circle cx="6" cy="14" r="2.6" fill="#d62828"/><circle cx="12" cy="7" r="2.6" fill="#f2c230"/><circle cx="18" cy="14" r="2.6" fill="#1f9d55"/><circle cx="12" cy="18.5" r="2.2" fill="#8aa0c0"/></svg>',
   dice: '<svg width="26" height="26" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#d2695f" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="15.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="8.5" cy="15.5" r="1.6" fill="#d2695f"/></svg>',
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
@@ -127,7 +129,8 @@ function showModeSelect() {
       h('div.mode-cards', {},
         card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
         card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup()),
-        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsSetup())),
+        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsSetup()),
+        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => startSounds())),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
 }
 
@@ -211,6 +214,16 @@ function showLightsSetup() {
         card('.lights', '🌙 Noc – światła', 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', () => startLights(false)),
         card('.sail', '☀ Dzień – znaki dzienne', 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', () => startLights(true))),
       h('div.tbtn-row', {}, h('button.btn', { onclick: () => showModeSelect() }, '← Tryby')))));
+}
+
+function startSounds() {
+  app.innerHTML = '';
+  const root = h('div', { style: { position: 'absolute', inset: 0 } });
+  app.appendChild(root);
+  const equip = defaultEquipment(BOATS.C34);
+  equip.bowThruster = 'none'; equip.sternThruster = false;
+  const config = { mode: 'sounds', boatId: 'C34', equip, day: true, weather: { windKn: 5, windFrom: 250, gust: 0.1, currentKn: 0, currentTo: 90, hour: 12, sky: 'clear' } };
+  window.__sim = new SoundsScreen(root, config, { restart: () => startSounds(), exit: () => showModeSelect() });
 }
 
 function startLights(day = false) {

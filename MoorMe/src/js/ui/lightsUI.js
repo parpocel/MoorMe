@@ -63,6 +63,10 @@ export function buildRowboat() {
   g.add(hull);
   const wood = new THREE.MeshStandardMaterial({ color: 0xb08050, roughness: 0.85, flatShading: true });
   // pawęż, ławki i burtnice
+  // dziobnica zamyka styk burt na dziobie
+  const stem = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.62, 0.1), wood);
+  stem.position.set(half - 0.03, 0.2, 0);
+  g.add(stem);
   const transom = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, hb(-half + 0.1) * 2 + 0.1), wood);
   transom.position.set(-half + 0.03, 0.14, 0);
   g.add(transom);
@@ -175,7 +179,7 @@ function hullMesh(type, L) {
   else box(L * 0.18, 7, B * 0.85, -L * 0.36, 6, sup);
   return g;
 }
-class ShipShapesLayer {
+export class ShipShapesLayer {
   constructor(scene) { this.scene = scene; this.group = null; this.vessel = null; }
   set(v) {
     this.clear();
