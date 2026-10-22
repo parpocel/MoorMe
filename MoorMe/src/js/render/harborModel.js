@@ -480,21 +480,55 @@ function pine(r, x, z, y) {
 }
 function palm(r, x, z, y) {
   const g = new THREE.Group();
-  const h = 5 + r() * 2;
-  const t = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.26, h, 6), mat(0x8a7456));
-  t.position.y = h / 2;
-  g.add(t);
-  for (let k = 0; k < 7; k++) {
-    const leaf = box(2.6, 0.05, 0.45, 0x4e8a3a, 1.2, h, 0);
-    const pv = new THREE.Group();
-    pv.add(leaf);
-    pv.position.y = 0;
-    pv.rotation.y = (k / 7) * Math.PI * 2;
-    pv.rotation.z = -0.35;
-    const holder = new THREE.Group();
-    holder.add(pv);
-    holder.position.y = 0;
-    g.add(holder);
+  const h = 5.5 + r() * 2.5, lean = (r() - 0.5) * 0.9, dir = r() * Math.PI * 2;
+  const bark = mat(0x8a7456, { rough: 1 }), ring = mat(0x6f5c43, { rough: 1 });
+  // wygięty pień z pierścieni (lekki łuk)
+  const segs = 7;
+  let px = 0, pz = 0;
+  const top = new THREE.Vector3();
+  for (let k = 0; k < segs; k++) {
+    const t0 = k / segs, t1 = (k + 1) / segs;
+    const off0 = lean * t0 * t0 * h * 0.35, off1 = lean * t1 * t1 * h * 0.35;
+    const a0 = new THREE.Vector3(Math.cos(dir) * off0, t0 * h, Math.sin(dir) * off0), a1 = new THREE.Vector3(Math.cos(dir) * off1, t1 * h, Math.sin(dir) * off1);
+    const len = a0.distanceTo(a1), rad = 0.26 - 0.1 * t1;
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad + 0.04, len * 1.02, 7), k % 2 ? bark : ring);
+    seg.position.copy(a0).add(a1).multiplyScalar(0.5);
+    seg.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), a1.clone().sub(a0).normalize());
+    g.add(seg);
+    top.copy(a1);
+    px = a1.x; pz = a1.z;
+  }
+  void px; void pz;
+  // liście: łukowato opadające, z listkami po bokach
+  const leafMat = mat(0x4f8f3c, { rough: 0.9 }), leafDark = mat(0x3c7330, { rough: 0.9 });
+  const nLeaves = 9;
+  for (let k = 0; k < nLeaves; k++) {
+    const frond = new THREE.Group();
+    const L = 2.6 + r() * 0.8, parts = 5;
+    for (let s = 0; s < parts; s++) {
+      const t = s / parts, droop = -0.15 - t * 0.55;
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(L / parts, 0.04, 0.06), leafDark);
+      const cx = Math.cos(droop * 0.5) * (t + 0.5 / parts) * L, cy = Math.sin(-0.2 - t * t * 0.9) * L * 0.5 * t;
+      rib.position.set(cx, cy, 0);
+      rib.rotation.z = droop;
+      frond.add(rib);
+      const w = (0.55 - t * 0.35);
+      for (const side of [-1, 1]) {
+        const pin = new THREE.Mesh(new THREE.BoxGeometry(L / parts * 0.9, 0.02, w), leafMat);
+        pin.position.set(cx, cy - 0.04, side * w * 0.45);
+        pin.rotation.set(side * 0.5, 0, droop);
+        frond.add(pin);
+      }
+    }
+    frond.position.copy(top);
+    frond.rotation.y = (k / nLeaves) * Math.PI * 2 + r() * 0.3;
+    frond.rotation.z = 0.25 + r() * 0.35;
+    g.add(frond);
+  }
+  for (let k = 0; k < 3; k++) {
+    const nut = new THREE.Mesh(new THREE.SphereGeometry(0.13, 6, 5), mat(0x6b4f2a));
+    nut.position.set(top.x + Math.cos(k * 2.1) * 0.22, top.y - 0.25, top.z + Math.sin(k * 2.1) * 0.22);
+    g.add(nut);
   }
   g.position.set(x, y, z);
   return g;
@@ -688,7 +722,7 @@ function sceneryMed(group, r, lamps) {
   for (let x = -120; x < 170; x += 29) group.add(bench(x, -9.5, 1.0));
   // miasteczko na tarasach wzgórza
   for (let row = 0; row < 5; row++) {
-    const y = 1.0 + row * 3.4;
+    const y = 1.6 + row * 3.4; // pierwszy taras wyżej niż nabrzeże (1,0 m) – bez współpłaszczyznowych powierzchni (migotania)
     const z0 = -16 - row * 11;
     // mur oporowy tarasu
     group.add(box(330, y + 3, 11, 0xcbbd9e, 15, (y - 3) / 2, z0 - 5.5));
@@ -698,7 +732,7 @@ function sceneryMed(group, r, lamps) {
       group.add(house(r, x, z0 - 4 - r() * 2, y, 0, pal));
     }
   }
-  group.add(bellTower(-55, -66, 1.0 + 4 * 3.4));
+  group.add(bellTower(-55, -66, 1.6 + 4 * 3.4));
   // budynek mariny z tablicą
   group.add(box(14, 4, 8, 0xf5f5f0, 88, 3, -12));
   group.add(box(15, 0.4, 9, 0xd0d0d0, 88, 5.2, -12));

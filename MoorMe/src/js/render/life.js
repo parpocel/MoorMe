@@ -28,13 +28,27 @@ function buildGull() {
     pivot.position.set(s * 0.09, 0.06, 0.02);
     const inner = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.025, 0.2), grey);
     inner.position.x = s * 0.17;
+    // zewnętrzna część skrzydła na własnym przegubie – w szybowaniu lekko opada („mewie” skrzydło)
+    const outer = new THREE.Group();
+    outer.position.x = s * 0.33;
     const tip = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.02, 0.14), grey);
-    tip.position.x = s * 0.47;
+    tip.position.x = s * 0.14;
     const black = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.022, 0.12), dark);
-    black.position.x = s * 0.62;
-    pivot.add(inner, tip, black);
+    black.position.x = s * 0.29;
+    outer.add(tip, black);
+    pivot.add(inner, outer);
     g.add(pivot);
-    wings.push({ pivot, s });
+    // skrzydło złożone: przylega do boku tułowia pod kątem, końcówki krzyżują się nad ogonem
+    const folded = new THREE.Group();
+    const fw = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.1, 0.38), grey);
+    const fb = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.09, 0.12), dark);
+    fb.position.set(0, 0.01, -0.25);
+    folded.add(fw, fb);
+    folded.position.set(s * 0.115, 0.05, -0.07);
+    folded.rotation.set(0.14, s * 0.1, s * 0.5);
+    folded.visible = false;
+    g.add(folded);
+    wings.push({ pivot, outer, folded, s });
   }
   // nogi (widoczne na siedząco)
   const legs = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.03), yellow);
@@ -58,10 +72,14 @@ function buildCat(color) {
     const ear = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.07, 4), fur); ear.position.set(s * 0.045, 0.35, 0.24); g.add(ear);
     const eye = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.02, 0.01), dark); eye.position.set(s * 0.035, 0.29, 0.31); g.add(eye);
   }
+  // ogon przypięty do tułowia – porusza się razem z nim (siad, skok), dwa segmenty: od zadu w górę i lekko w tył
   const tail = new THREE.Group();
-  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.32), fur); tb.position.z = -0.16; tail.add(tb);
-  tail.position.set(0, 0.26, -0.19); tail.rotation.x = -0.6;
-  g.add(tail);
+  const tb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.18), fur); tb.position.z = -0.09; tail.add(tb);
+  const tip = new THREE.Group(); tip.position.z = -0.17; tail.add(tip);
+  const tt = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.035, 0.16), fur); tt.position.z = -0.08; tip.add(tt);
+  tip.rotation.x = -0.7;
+  tail.position.set(0, 0.04, -0.18); tail.rotation.x = -0.25;
+  body.add(tail);
   const legs = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
     const l = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.13, 0.045), fur); l.position.set(sx * 0.055, 0.065, sz * 0.13); g.add(l); legs.push(l);
@@ -178,7 +196,7 @@ export class HarbourLife {
     const boatFast = this.world.boat.speed > 1.3;
     g.flap += dt;
     const w = g.mesh.userData.wings;
-    if (g.state !== 'perch') for (const { pivot } of w) { pivot.rotation.y = 0; pivot.scale.x = 1; }
+    if (g.state !== 'perch') for (const { pivot, folded } of w) { pivot.rotation.y = 0; pivot.scale.x = 1; pivot.visible = true; folded.visible = false; }
     const target = g.tmp;
     if (g.state === 'fly') {
       // krążenie (ze zmiennym środkiem, który dryfuje z wiatrem)
@@ -197,7 +215,12 @@ export class HarbourLife {
         }
       }
       const glide = Math.sin(g.flap * 0.7) > 0.3;
-      for (const { pivot, s } of w) pivot.rotation.z = glide ? s * 0.08 : s * Math.sin(g.flap * 11) * 0.7;
+      for (const { pivot, outer, s } of w) {
+        const fl = Math.sin(g.flap * 11);
+        pivot.rotation.z = glide ? s * 0.24 : s * (0.15 + fl * 0.7); // ramię uniesione pod kątem
+        pivot.rotation.y = -s * 0.18; // lekko odchylone do tyłu
+        outer.rotation.z = glide ? -s * 0.42 : -s * fl * 0.35; // końcówka opada w szybowaniu, nadąża za machnięciem
+      }
     } else if (g.state === 'approach') {
       g.perch.get(target);
       const d = target.distanceTo(g.pos);
@@ -215,10 +238,9 @@ export class HarbourLife {
       g.mesh.position.copy(g.pos);
       // składa skrzydła, rozgląda się
       // skrzydła złożone wzdłuż tułowia
-      for (const { pivot, s } of w) { pivot.rotation.set(0, s * 1.45, s * 0.12); pivot.scale.x = 0.62; }
-      // po locie Euler z lookAt bywa odwrócony (x/z ≈ π) – siedząca mewa ma stać prosto, więc zostawiamy tylko kurs
+      for (const { pivot, folded } of w) { pivot.visible = false; folded.visible = true; }
+      // po locie Euler z lookAt bywa odwrócony (x/z ≈ π) – siedząca mewa ma stać prosto i nie obracać się
       if (g.yaw === undefined) { const fw = new THREE.Vector3(0, 0, 1).applyQuaternion(g.mesh.quaternion); g.yaw = Math.atan2(fw.x, fw.z); }
-      g.yaw += Math.sin(g.flap * 0.8) * dt * 0.6;
       g.mesh.rotation.set(0, g.yaw, 0);
       g.timer -= dt;
       if (this.r() < dt * 0.05 && this.onCry) this.onCry(g.pos);

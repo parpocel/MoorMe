@@ -5,6 +5,7 @@ import { cachedMaterials, sheerHeight } from './boatModel.js';
 import { hullExtents, halfBeamAt } from '../data/boats.js';
 import { LINE_MATS } from './boatModel.js';
 import { clamp, DEG, rng } from '../math.js';
+import { SECTORS } from '../data/shipLights.js';
 
 export const SKIES = {
   clear: { name: 'Słonecznie', sun: 1, hemi: 1, grey: 0, fog: [220, 620], rain: 0 },
@@ -119,13 +120,14 @@ export class Atmosphere {
     const pbx = xb - 0.05 * L, py = sheerHeight(spec, pbx) + 0.66;
     const add = (parent, color, size, x, y, z) => { const s = glow(color, size); s.material.map = dotTexture(); s.material.depthTest = false; s.userData.dot = true; s.position.set(x, y, z); parent.add(s); this.glows.push(s); return s; };
     // światła nawigacyjne (burtowe i rufowe) palą się tylko w ruchu – zacumowany jacht ma je wyłączone
-    add(heel, 0xff2a2a, 1.4, pbx, py, -halfBeamAt(spec, pbx) + 0.08).userData.mode = 'moving'; // lewa – czerwone
-    add(heel, 0x22ff66, 1.4, pbx, py, halfBeamAt(spec, pbx) - 0.08).userData.mode = 'moving'; // prawa – zielone
-    add(heel, 0xffffff, 1.3, xs + 0.1, sheerHeight(spec, xs) + 0.9, 0).userData.mode = 'moving'; // rufowe
+    const sec = (s, k) => { s.userData.sector = k; return s; }; // sektory jak w MPZZM: burtowe 112,5°, rufowe 135°, masztowe 225°
+    sec(add(heel, 0xff2a2a, 1.4, pbx, py, -halfBeamAt(spec, pbx) + 0.08), 'port').userData.mode = 'moving'; // lewa – czerwone
+    sec(add(heel, 0x22ff66, 1.4, pbx, py, halfBeamAt(spec, pbx) - 0.08), 'stbd').userData.mode = 'moving'; // prawa – zielone
+    sec(add(heel, 0xffffff, 1.3, xs + 0.1, sheerHeight(spec, xs) + 0.9, 0), 'stern').userData.mode = 'moving'; // rufowe
     // światło kotwiczne (topowe, dookólne) – gdy jacht stoi; światło silnikowe (białe, w połowie masztu) – w ruchu
     add(heel, 0xffffff, 1.6, 0.1 * L, v.boat.userData.mastTop + 0.2, 0).userData.mode = 'anchor';
     const sp = v.boat.userData.steamPos;
-    add(heel, 0xfff6e0, 1.5, sp[0], sp[1], sp[2]).userData.mode = 'moving';
+    sec(add(heel, 0xfff6e0, 1.5, sp[0], sp[1], sp[2]), 'mast').userData.mode = 'moving';
     // światło salingowe oświetlające pokład (prawdziwe źródło światła)
     this.deckLight = new THREE.PointLight(0xfff1d6, 0, 14, 1.6);
     const perch = v.boat.userData.perches && v.boat.userData.perches[0];
@@ -258,8 +260,13 @@ export class Atmosphere {
     const moored = this.world.lines.some((l) => l.state === 'attached' && !l.isMooring);
     this.free += ((moored ? 0 : 1) - this.free) * clamp(camDt * 3, 0, 1);
     const wp = new THREE.Vector3();
+    // kąt, pod jakim kamera widzi jacht (od dziobu, + na prawą burtę) – światła świecą tylko w swoich sektorach
+    const cp = this.view.camera.position, th = bt.th || 0;
+    const ddx = cp.x - bt.x, ddz = cp.z - bt.z;
+    const relCam = Math.atan2(ddx * -Math.sin(th) + ddz * Math.cos(th), ddx * Math.cos(th) + ddz * Math.sin(th)) / DEG;
     for (const g of this.glows) {
       let k = lightsOn;
+      if (g.userData.sector && !SECTORS[g.userData.sector](relCam)) k = 0;
       if (g.userData.mode === 'moving') k *= this.mv;
       else if (g.userData.mode === 'anchor') k *= (1 - this.mv) * this.free; // kotwiczne: tylko gdy jacht nie stoi przy kei
       g.visible = k > 0.02;
