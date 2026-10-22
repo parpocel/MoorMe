@@ -1,6 +1,6 @@
 // Moduł „Zadania nawigacyjne”: losowe zadania z przeliczania kursów i namiarów, prądu, pozycji z namiarów i zliczenia.
 import { h } from './dom.js';
-import { CATEGORIES, makeTask, checkAnswer, fmtAnswer, deg3 } from '../data/navTasks.js';
+import { CATEGORIES, makeTaskDeck, checkAnswer, fmtAnswer, answerUnit, answerPlaceholder, deg3 } from '../data/navTasks.js';
 import { rng } from '../math.js';
 import { t as tr } from '../i18n.js';
 import { PlotBoard } from './plotBoard.js';
@@ -70,20 +70,24 @@ export function showNavTasks(app, { onExit }) {
   const mapSize = () => ({ w: window.innerWidth - 52, h: window.innerHeight - MAP_OFF });
   // karta z zadaniem leży na mapie i można ją przesuwać (pozycja zapamiętana)
   try { state.cardPos = JSON.parse(localStorage.getItem('moorme.ntCard') || 'null'); } catch (e) { state.cardPos = null; }
-  const newTask = () => { state.task = makeTask(r, state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot, { size: mapSize(), offset: MAP_OFF }) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
+  const deck = makeTaskDeck(r); // każdy rodzaj zadania raz na cykl – bez powtórek
+  const newTask = () => { state.task = deck.next(state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot, { size: mapSize(), offset: MAP_OFF }) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
 
   function render() {
     ui.innerHTML = '';
     const t = state.task;
-    const cats = h('div.nt-cats', {},
-      h('button.btn.sm', { class: state.cat === null ? 'on' : '', onclick: () => { state.cat = null; newTask(); } }, 'Wszystkie'),
-      ...Object.entries(CATEGORIES).map(([k, n]) => h('button.btn.sm', { class: state.cat === k ? 'on' : '', onclick: () => { state.cat = k; newTask(); } }, n)));
+    // rodzaj zadania: lista rozwijana (kategorii jest dużo – pasek zostaje w jednym wierszu)
+    const sel = h('select.nt-catsel', { onchange: (e) => { state.cat = e.target.value || null; newTask(); } },
+      h('option', { value: '' }, tr('Wszystkie rodzaje (losowo)')),
+      ...Object.entries(CATEGORIES).map(([k, n]) => h('option', { value: k }, tr(n))));
+    sel.value = state.cat || '';
+    const cats = h('label.nt-cats', {}, h('span.muted', {}, 'Rodzaj zadania:'), sel);
     const fields = h('div.nt-fields');
     const res = {};
     for (const a of t.answers) {
-      const inp = h('input', { type: 'text', inputmode: 'decimal', value: state.inputs[a.key] || '', placeholder: a.kind === 'deg' ? '000' : '0,0', oninput: (e) => { state.inputs[a.key] = e.target.value; } });
+      const inp = h('input', { type: 'text', value: state.inputs[a.key] || '', placeholder: answerPlaceholder(a), inputmode: a.kind === 'hm' || a.kind === 'sdeg' ? 'text' : 'decimal', oninput: (e) => { state.inputs[a.key] = e.target.value; } });
       if (state.checked) inp.disabled = true;
-      const unit = a.kind === 'deg' ? '°' : a.kind === 'kn' ? 'kn' : a.kind === 'nm' ? 'Mm' : "'";
+      const unit = answerUnit(a);
       const ok = state.checked && checkAnswer(a, state.inputs[a.key]);
       res[a.key] = ok;
       fields.appendChild(h('div.nt-field', { class: state.checked ? (ok ? 'ok' : 'bad') : '' },

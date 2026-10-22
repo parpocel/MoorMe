@@ -495,3 +495,6 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks .pb-colors { display: inline-flex; gap: 4px; align-items: center; }
 .navtasks .pb-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(47, 68, 104, 0.35); cursor: pointer; padding: 0; }
 .navtasks .pb-color.on { box-shadow: 0 0 0 2px #1b1f24; transform: scale(1.12); }
+
+.navtasks .nt-cats { align-items: center; gap: 8px; font-weight: 700; }
+.navtasks .nt-catsel { font: 700 14px 'Nunito', sans-serif; color: #2f4468; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(47, 68, 104, 0.3); background: #fff; cursor: pointer; min-width: 260px; }

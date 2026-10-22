@@ -54,7 +54,7 @@ export class PlotBoard {
     this.items = []; // { kind: 'line'|'seg'|'pt'|'circle'|'meas', ... }
     this.vec = plot.mode === 'vector'; // trójkąt prędkości: wektory w węzłach odkładane dla 1 h (1 kn = 1 Mm)
     this.unit = this.vec ? 'kn' : 'Mm';
-    this.tool = plot.sol.segs || this.vec ? 'course' : 'bearing';
+    this.tool = plot.sol.segs || plot.sol.vectors ? 'course' : 'bearing';
     this.showSol = false;
     this.hover = null; this.drag = null; this.plotter = null; this.sel = null;
     // zasięg mapy: obiekty + rozwiązanie z zapasem, proporcje płótna
@@ -116,7 +116,7 @@ export class PlotBoard {
   genChart() {
     const r = rng(this.plot.seed || 7), P = this.toNm(this.plot.sol.point), objs = this.plot.pts.map((p) => this.toNm(p));
     const fix = !!this.plot.sol.lines;
-    const track = fix ? objs.map((o) => [o, P]) : this.vec ? this.plot.sol.vectors.map((v) => [this.toNm(v.from), this.toNm(v.to)]) : [[objs[0], P]];
+    const track = fix ? objs.map((o) => [o, P]) : this.plot.sol.vectors ? this.plot.sol.vectors.map((v) => [this.toNm(v.from), this.toNm(v.to)]) : [[objs[0], P]];
     const lo = this.nm(M, this.H - M), hi = this.nm(this.W - M, M);
     const blob = (c, R) => {
       const ph = [r() * 6, r() * 6, r() * 6, r() * 6], a = [0.16 + r() * 0.1, 0.09 + r() * 0.07, 0.05, 0.03];
@@ -147,11 +147,14 @@ export class PlotBoard {
     for (const l of lands) l.c10 = l.poly.map((v) => ({ x: l.c.x + (v.x - l.c.x) * (1 + 0.7 / l.R), y: l.c.y + (v.y - l.c.y) * (1 + 0.7 / l.R) }));
     // głębokości na wodzie (płyciej przy lądzie)
     const sound = [], step = Math.max(0.35, 42 / this.k);
+    const f1 = 0.4 + r() * 0.5, f2 = 0.3 + r() * 0.5, f3 = 0.8 + r() * 0.6, p1 = r() * 6, p2 = r() * 6, p3 = r() * 6;
     for (let y = lo.y + step * 0.6; y < hi.y; y += step) for (let x = lo.x + step * 0.5; x < hi.x; x += step) {
       const q = { x: x + (r() - 0.5) * step * 0.7, y: y + (r() - 0.5) * step * 0.7 };
       if (lands.some((l) => inPoly(l.poly, q.x, q.y)) || objs.concat([P]).some((o) => Math.hypot(o.x - q.x, o.y - q.y) < step * 0.6)) continue;
       const dl = lands.length ? Math.min(...lands.map((l) => polyDist(l.poly, q))) : 3;
-      sound.push({ ...q, d: Math.round(Math.min(48, 2 + dl * 11 + r() * 4)) });
+      // dno: płycej przy lądzie, dalej łagodne garby i rynny (żeby na otwartym morzu nie było samych „48”)
+      const deep = 34 + 12 * Math.sin(q.x * f1 + p1) * Math.cos(q.y * f2 + p2) + 7 * Math.sin((q.x + q.y) * f3 + p3);
+      sound.push({ ...q, d: Math.max(1, Math.round(Math.min(deep + r() * 3, 2 + dl * 11 + r() * 4))) });
     }
     // róża kompasowa w najbardziej „pustym” rogu
     const cands = [[150, 150], [this.W - 150, 150], [150, this.H - 150], [this.W - 150, this.H - 150], [this.W / 2, this.H / 2 + 120], [this.W / 2, 140]].map(([x, y]) => ({ x, y }));
@@ -421,13 +424,14 @@ export class PlotBoard {
       const s = this.plot.sol;
       ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(46,157,98,0.9)'; ctx.lineWidth = 2;
       for (const l of s.lines || []) this.strokeLine(ctx, { ...this.toNm(l.p), dx: Math.sin(l.brg * D2R), dy: Math.cos(l.brg * D2R) });
+      for (const c of s.circles || []) { const q = this.px(this.toNm(c.p)); ctx.beginPath(); ctx.arc(q.x, q.y, c.r * this.k, 0, Math.PI * 2); ctx.stroke(); }
       for (const v of s.vectors || []) {
         const a = this.px(this.toNm(v.from)), b = this.px(this.toNm(v.to)), len = Math.hypot(b.x - a.x, b.y - a.y) / this.k;
         const n = this.toNm(v.to), m = this.toNm(v.from), ang = norm(Math.atan2(n.x - m.x, n.y - m.y) / D2R);
         ctx.strokeStyle = v.main ? 'rgba(46,157,98,1)' : 'rgba(46,157,98,0.8)'; ctx.lineWidth = v.main ? 2.6 : 2;
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         ctx.setLineDash([]); this.arrowHead(ctx, a, b); ctx.setLineDash([7, 5]);
-        this.label(ctx, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 4, `${tr(v.label)}: ${deg3(ang)} · ${nm2(len)} kn`);
+        this.label(ctx, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 4, `${tr(v.label)}: ${deg3(ang)} · ${nm2(len)} ${v.unit || 'kn'}`);
       }
       for (const g of s.segs || []) { const a = this.px(this.toNm(g.p)), b = this.px(this.toNm(s.point)); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
       ctx.setLineDash([]);

@@ -11,8 +11,11 @@ export const CATEGORIES = {
   current: 'Prąd',
   steer: 'Kurs z poprawką na prąd',
   bearing: 'Namiary',
-  fix: 'Pozycja z dwóch namiarów',
-  dr: 'Zliczenie drogi'
+  fix: 'Pozycja z namiarów',
+  dr: 'Zliczenie drogi',
+  tsd: 'Czas, prędkość, droga',
+  abeam: 'Namiar podwójny i trawers',
+  range: 'Zasięg widoczności świateł'
 };
 
 const D2R = Math.PI / 180;
@@ -75,7 +78,7 @@ function vectorPlot(r, legs, labels, total) {
   return { mode: 'vector', pts: [{ label: 'O', ...O }], sol: { vectors, point: end }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) };
 }
 
-export const GENERATORS = {
+const BASE_GEN = {
   compass(r) {
     const KK = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r, YEAR);
     const KM = norm(KK + dev), KR = norm(KM + dec.d);
@@ -193,6 +196,201 @@ export const GENERATORS = {
   }
 };
 
+// ---------- warianty zadań (wariant 0 to zadanie bazowe powyżej) ----------
+const move = (p, brg, dist) => { const cl = Math.cos(p.lat * D2R); return { lat: p.lat + (Math.cos(brg * D2R) * dist) / 60, lon: p.lon + (Math.sin(brg * D2R) * dist) / 60 / cl }; };
+const rhumb = (a, b) => { const cl = Math.cos(((a.lat + b.lat) / 2) * D2R), dx = (b.lon - a.lon) * 60 * cl, dy = (b.lat - a.lat) * 60; return { brg: course([dy, dx]), dist: Math.hypot(dx, dy) }; };
+const startPos = (r) => ({ lat: BASE.lat + rf(r, -0.08, 0.06, 600), lon: BASE.lon + rf(r, -0.12, 0.08, 600) });
+export const fmtTime = (m) => { m = ((Math.round(m) % 1440) + 1440) % 1440; return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; };
+const sgn1 = (a) => `${a >= 0 ? '+' : '−'}${num(Math.abs(a), 1)}°`;
+const side = (s) => (s > 0 ? L('prawej burty', 'starboard') : L('lewej burty', 'port'));
+
+const VAR_GEN = {
+  compass: [
+    // odwrotnie: z KR do KK
+    (r) => {
+      const KR = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r, YEAR), KM = norm(KR - dec.d), KK = norm(KM - dev);
+      return {
+        cat: 'compass',
+        text: L(`Z mapy wykreślono kurs rzeczywisty KR = ${deg3(KR)}. Deklinacja: ${dec.text}. Dewiacja na tym kursie δ = ${signed(dev)}. Jaki kurs magnetyczny i kompasowy podasz sternikowi w roku ${YEAR}?`, `The true course laid off on the chart is KR = ${deg3(KR)}. Variation: ${dec.text}. Deviation on this heading δ = ${signed(dev)}. Which magnetic and compass course do you give the helmsman in ${YEAR}?`),
+        answers: [ans('KM', 'KM', KM, 'deg', 1), ans('KK', 'KK', KK, 'deg', 1)],
+        steps: [dec.steps, `KM = KR − d = ${deg3(KR)} − (${plus(dec.d, 1)}) = ${deg3(KM)}`, `KK = KM − δ = ${deg3(KM)} − (${plus(dev)}) = ${deg3(KK)}`, L('Od kursu rzeczywistego do kompasowego poprawki odejmujemy (ze znakiem).', 'Going from true to compass, subtract the corrections (with their signs).')]
+      };
+    },
+    // dewiacja z nabieżnika
+    (r) => {
+      const NRn = ri(r, 0, 359), d = rf(r, -6, 6, 2), dev = ri(r, -7, 7), KK = norm(NRn + ri(r, -40, 40)), NK = norm(Math.round(NRn - d - dev)), p = norm(NRn - NK + 180) - 180, devC = Math.round((p - d) * 10) / 10;
+      return {
+        cat: 'compass',
+        text: L(`Płynąc kursem KK = ${deg3(KK)}, przeciąłeś linię nabieżnika o kierunku z mapy ${deg3(NRn)}. W chwili, gdy znaki nabieżnika były w linii, namiar kompasowy wynosił NK = ${deg3(NK)}. Deklinacja d = ${signed(d, 1)}. Oblicz poprawkę całkowitą i dewiację na tym kursie (E dodatnio, W ujemnie).`, `Steering KK = ${deg3(KK)} you crossed a transit whose charted direction is ${deg3(NRn)}. When the marks were in line the compass bearing was NK = ${deg3(NK)}. Variation d = ${signed(d, 1)}. Find the total correction and the deviation on this heading (E positive, W negative).`),
+        answers: [ans('p', L('Poprawka p', 'Correction p'), p, 'sdeg', 0.6), ans('dev', 'δ', devC, 'sdeg', 0.6)],
+        steps: [`p = NR − NK = ${deg3(NRn)} − ${deg3(NK)} = ${sgn1(p)}`, `δ = p − d = ${sgn1(p)} − (${plus(d, 1)}) = ${sgn1(devC)} (${signed(devC, 1)})`, L('Nabieżnik daje namiar rzeczywisty bez pomiaru pozycji – najprostszy sposób sprawdzenia dewiacji.', 'A transit gives a true bearing without needing a position – the simplest way to check deviation.')]
+      };
+    }
+  ],
+  leeway: [
+    (r) => {
+      const KDw = ri(r, 0, 359), dev = ri(r, -5, 5), d = rf(r, -6, 6, 2), s1 = r() < 0.5 ? 1 : -1, beta = ri(r, 3, 12) * s1, windFrom = norm(KDw - beta + s1 * -ri(r, 50, 130));
+      const KR = norm(KDw - beta), KK = norm(KR - dev - d);
+      return {
+        cat: 'leeway',
+        text: L(`Chcesz przejść po wodzie linią KDw = ${deg3(KDw)}. Wiatr wieje z kierunku ${deg3(windFrom)} i znosi jacht o ${Math.abs(beta)}°. δ = ${signed(dev)}, d = ${signed(d, 1)}. Jaki kurs rzeczywisty i kompasowy trzymać?`, `You want to make good KDw = ${deg3(KDw)} through the water. The wind blows from ${deg3(windFrom)} with ${Math.abs(beta)}° of leeway. δ = ${signed(dev)}, d = ${signed(d, 1)}. Which true and compass course do you steer?`),
+        answers: [ans('KR', 'KR', KR, 'deg', 1), ans('KK', 'KK', KK, 'deg', 1)],
+        steps: [L(`Wiatr z ${s1 > 0 ? 'lewej' : 'prawej'} burty znosi w ${s1 > 0 ? 'prawo' : 'lewo'}: β = ${signedLR(beta)}, więc trzeba trzymać ${s1 > 0 ? 'lewiej' : 'prawiej'} (pod wiatr)`, `Wind on the ${s1 > 0 ? 'port' : 'starboard'} side gives leeway to ${s1 > 0 ? 'starboard' : 'port'}: β = ${signedLR(beta)}, so steer ${s1 > 0 ? 'to port' : 'to starboard'} of the track (into the wind)`),
+          `KR = KDw − β = ${deg3(KDw)} − (${plus(beta)}) = ${deg3(KR)}`, `KK = KR − δ − d = ${deg3(KR)} − (${plus(dev)}) − (${plus(d, 1)}) = ${deg3(KK)}`]
+      };
+    }
+  ],
+  current: [
+    // prąd z pozycji zliczonej i obserwowanej
+    (r) => {
+      const O = startPos(r), KR = ri(r, 0, 359), V = rf(r, 4, 7, 2), hrs = [1.5, 2, 2.5, 3][ri(r, 0, 3)], set = ri(r, 0, 359), c = rf(r, 0.5, 2, 10);
+      const DR = move(O, KR, V * hrs), F = move(DR, set, c * hrs), t0 = ri(r, 8, 12) * 60, cr = rhumb(DR, F);
+      return {
+        cat: 'current',
+        text: L(`O ${fmtTime(t0)} jacht był na pozycji ${fmtLat(O.lat)}, ${fmtLon(O.lon)}. Płynął KR = ${deg3(KR)} z prędkością po wodzie ${num(V)} kn, bez dryfu. O ${fmtTime(t0 + hrs * 60)} pozycja obserwowana: ${fmtLat(F.lat)}, ${fmtLon(F.lon)}. Wyznacz kierunek i prędkość prądu.`, `At ${fmtTime(t0)} the yacht was at ${fmtLat(O.lat)}, ${fmtLon(O.lon)}. She steered KR = ${deg3(KR)} at ${num(V)} kn through the water, no leeway. At ${fmtTime(t0 + hrs * 60)} the observed position was ${fmtLat(F.lat)}, ${fmtLon(F.lon)}. Find the set and rate of the current.`),
+        answers: [ans('set', L('Kierunek prądu', 'Set'), cr.brg, 'deg', 3), ans('c', L('Prędkość prądu', 'Rate'), cr.dist / hrs, 'kn', 0.15)],
+        steps: [L(`Pozycja zliczona: z punktu startu odłóż KR ${deg3(KR)} i drogę ${num(V)} · ${num(hrs, 1)} h = ${num(V * hrs, 2)} Mm → ${fmtLat(DR.lat)}, ${fmtLon(DR.lon)}`, `DR position: from the start lay off KR ${deg3(KR)} and ${num(V)} · ${num(hrs, 1)} h = ${num(V * hrs, 2)} NM → ${fmtLat(DR.lat)}, ${fmtLon(DR.lon)}`),
+          L(`Prąd to wektor od pozycji zliczonej do obserwowanej: ${deg3(cr.brg)}, ${num(cr.dist, 2)} Mm w ${num(hrs, 1)} h`, `The current is the vector from the DR to the observed position: ${deg3(cr.brg)}, ${num(cr.dist, 2)} NM in ${num(hrs, 1)} h`),
+          L(`Prędkość prądu = ${num(cr.dist, 2)} / ${num(hrs, 1)} = ${num(cr.dist / hrs, 2)} kn`, `Rate = ${num(cr.dist, 2)} / ${num(hrs, 1)} = ${num(cr.dist / hrs, 2)} kn`)],
+        plot: { pts: [{ label: fmtTime(t0), ...O }, { label: `${L('obs.', 'obs.')} ${fmtTime(t0 + hrs * 60)}`, ...F }], sol: { vectors: [{ from: O, to: DR, label: L('po wodzie', 'through water'), unit: 'Mm' }, { from: DR, to: F, label: L('prąd', 'current'), unit: 'Mm', main: true }], point: F }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
+      };
+    }
+  ],
+  steer: [
+    // kurs na prąd i czas dojścia
+    (r) => {
+      const O = startPos(r), KDd = ri(r, 0, 359), V = rf(r, 4.5, 7, 2), set = ri(r, 0, 359), c = rf(r, 0.6, 2, 10), D = rf(r, 6, 18, 2), t0 = ri(r, 7 * 12, 13 * 12) * 5;
+      const alpha = Math.asin(Math.max(-0.95, Math.min(0.95, (c * Math.sin((set - KDd) * D2R)) / V))) / D2R;
+      const KR = norm(KDd - alpha), w = vec(KR, V), cv = vec(set, c), SOG = Math.hypot(w[0] + cv[0], w[1] + cv[1]), ETA = t0 + (D / SOG) * 60;
+      return {
+        cat: 'steer',
+        text: L(`Jest ${fmtTime(t0)}. Główki portu leżą ${num(D)} Mm od jachtu w kierunku ${deg3(KDd)}. Prędkość po wodzie ${num(V)} kn, prąd ${deg3(set)} / ${num(c)} kn, bez dryfu. Jaki KR trzymać, jaka będzie SOG i o której wejdziesz do portu?`, `It is ${fmtTime(t0)}. The harbour entrance lies ${num(D)} NM away, bearing ${deg3(KDd)}. Speed through the water ${num(V)} kn, current ${deg3(set)} / ${num(c)} kn, no leeway. Which KR do you steer, what will the SOG be and when do you reach the entrance?`),
+        answers: [ans('KR', 'KR', KR, 'deg', 1.5), ans('SOG', 'SOG', SOG, 'kn', 0.15), ans('ETA', L('Godzina', 'Time'), ETA, 'hm', 4)],
+        steps: [L(`sin α = c · sin(kierunek prądu − KDd) / V → α = ${num(alpha, 1)}°, KR = KDd − α = ${deg3(KR)}`, `sin α = c · sin(set − KDd) / V → α = ${num(alpha, 1)}°, KR = KDd − α = ${deg3(KR)}`),
+          L(`SOG = ${num(SOG, 2)} kn (trójkąt prędkości)`, `SOG = ${num(SOG, 2)} kn (velocity triangle)`), L(`Czas = ${num(D)} / ${num(SOG, 2)} = ${num(D / SOG, 2)} h = ${Math.round((D / SOG) * 60)} min → ${fmtTime(ETA)}`, `Time = ${num(D)} / ${num(SOG, 2)} = ${num(D / SOG, 2)} h = ${Math.round((D / SOG) * 60)} min → ${fmtTime(ETA)}`)],
+        diagram: { kind: 'current', KDw: KR, V, set, c, KDd: course([w[0] + cv[0], w[1] + cv[1]]), SOG },
+        plot: vectorPlot(r, [cv, w], [L('prąd', 'current'), L('po wodzie (KR)', 'through water (KR)')], L('nad dnem (KDd)', 'over ground (KDd)'))
+      };
+    }
+  ],
+  bearing: [
+    // kąt kursowy → namiar rzeczywisty
+    (r) => {
+      const KR = ri(r, 0, 359), q = ri(r, 10, 170), s1 = r() < 0.5 ? 1 : -1, NR = norm(KR + s1 * q), NZ = norm(NR + 180);
+      return {
+        cat: 'bearing',
+        text: L(`Płyniesz KR = ${deg3(KR)}. Latarnię widać w kącie kursowym ${q}° ${side(s1)}. Oblicz namiar rzeczywisty latarni i namiar zwrotny (z latarni na jacht).`, `You are steering KR = ${deg3(KR)}. A lighthouse is seen ${q}° on the ${side(s1)} bow. Find its true bearing and the reciprocal (from the lighthouse to the yacht).`),
+        answers: [ans('NR', 'NR', NR, 'deg', 1), ans('NZ', L('Namiar zwrotny', 'Reciprocal'), NZ, 'deg', 1)],
+        steps: [L(`Kąt kursowy prawej burty dodajemy do kursu, lewej – odejmujemy: NR = ${deg3(KR)} ${s1 > 0 ? '+' : '−'} ${q}° = ${deg3(NR)}`, `Add a starboard relative bearing to the course, subtract a port one: NR = ${deg3(KR)} ${s1 > 0 ? '+' : '−'} ${q}° = ${deg3(NR)}`), L(`Namiar zwrotny = NR ± 180° = ${deg3(NZ)}`, `Reciprocal = NR ± 180° = ${deg3(NZ)}`)]
+      };
+    },
+    // namiar rzeczywisty z mapy → namiar kompasowy do obserwacji (np. namiar bezpieczeństwa)
+    (r) => {
+      const NR = ri(r, 0, 359), KK = ri(r, 0, 359), dev = ri(r, -6, 6), d = rf(r, -6, 6, 2), NK = norm(NR - dev - d);
+      return {
+        cat: 'bearing',
+        text: L(`Na mapie wykreśliłeś namiar bezpieczeństwa: dopóki latarnia jest na namiarze rzeczywistym mniejszym niż ${deg3(NR)}, omijasz mieliznę. Płyniesz KK = ${deg3(KK)}, δ = ${signed(dev)}, d = ${signed(d, 1)}. Jaki namiar kompasowy odpowiada tej granicy?`, `You have drawn a clearing bearing: while the lighthouse bears less than ${deg3(NR)} true you are clear of the shoal. You are steering KK = ${deg3(KK)}, δ = ${signed(dev)}, d = ${signed(d, 1)}. Which compass bearing corresponds to this limit?`),
+        answers: [ans('NK', 'NK', NK, 'deg', 1)],
+        steps: [L(`Poprawka dla kursu jachtu p = δ + d = ${plus(dev + d, 1)}`, `Correction for the yacht's heading p = δ + d = ${plus(dev + d, 1)}`), `NK = NR − p = ${deg3(NR)} − (${plus(dev + d, 1)}) = ${deg3(NK)}`]
+      };
+    }
+  ],
+  fix: [
+    // namiar i odległość z radaru od jednego obiektu
+    (r) => {
+      const P = { lat: BASE.lat + rf(r, -0.1, 0.1, 600), lon: BASE.lon + rf(r, -0.15, 0.15, 600) }, b = ri(r, 0, 359), dist = rf(r, 1.5, 5, 10);
+      const A = move(P, b, dist), dev = ri(r, -4, 4), d = rf(r, -5, 5, 2), p = dev + d, NK = norm(Math.round(b - p)), NR = norm(NK + p), sol = move(A, NR + 180, dist);
+      return {
+        cat: 'fix',
+        text: L(`Latarnia A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): namiar kompasowy NK = ${deg3(NK)}, odległość z radaru ${num(dist)} Mm. Poprawka: δ = ${signed(dev)}, d = ${signed(d, 1)}. Wyznacz pozycję jachtu.`, `Lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): compass bearing NK = ${deg3(NK)}, radar range ${num(dist)} NM. Corrections: δ = ${signed(dev)}, d = ${signed(d, 1)}. Fix the yacht's position.`),
+        answers: [ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(sol.lat)}°`, latMin(sol.lat), 'min', 0.25), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(sol.lon)).padStart(3, '0')}°`, lonMin(sol.lon), 'min', 0.35)],
+        steps: [`NR = ${deg3(NK)} ${plus(p, 1)} = ${deg3(NR)}`, L(`Z latarni wykreśl linię w kierunku zwrotnym ${deg3(NR + 180)} i okrąg o promieniu ${num(dist)} Mm (narzędzie „Okrąg”)`, `From the lighthouse draw the reciprocal ${deg3(NR + 180)} and a circle of radius ${num(dist)} NM (the “Circle” tool)`), L(`Pozycja: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
+        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR }], circles: [{ p: A, r: dist }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
+      };
+    }
+  ],
+  dr: [
+    // kurs i odległość między dwoma punktami
+    (r) => {
+      const A = startPos(r), B = move(A, ri(r, 0, 359), rf(r, 3, 9, 10)), rb = rhumb(A, B), SOG = rf(r, 4, 7, 2), t0 = ri(r, 8 * 12, 14 * 12) * 5, ETA = t0 + (rb.dist / SOG) * 60;
+      return {
+        cat: 'dr',
+        text: L(`Jacht jest w punkcie A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}), cel B: ${fmtLat(B.lat)}, ${fmtLon(B.lon)}. Wyznacz kurs drogi nad dnem i odległość do celu. Jest ${fmtTime(t0)}, SOG ${num(SOG)} kn – o której dopłyniesz?`, `The yacht is at A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}), the destination B is ${fmtLat(B.lat)}, ${fmtLon(B.lon)}. Find the course over ground and the distance. It is ${fmtTime(t0)} and SOG is ${num(SOG)} kn – when will you arrive?`),
+        answers: [ans('KDd', 'KDd', rb.brg, 'deg', 1.5), ans('dist', L('Odległość', 'Distance'), rb.dist, 'nm', 0.1), ans('ETA', L('Godzina', 'Time'), ETA, 'hm', 3)],
+        steps: [L(`Δφ = ${num((B.lat - A.lat) * 60, 2)}', odejście = Δλ · cos φ = ${num(Math.sin(rb.brg * D2R) * rb.dist, 2)} Mm`, `Δφ = ${num((B.lat - A.lat) * 60, 2)}', departure = Δλ · cos φ = ${num(Math.sin(rb.brg * D2R) * rb.dist, 2)} NM`),
+          L(`KDd = ${deg3(rb.brg)}, odległość = ${num(rb.dist, 2)} Mm (na mapie: linia od A do B i cyrkiel na skali szerokości)`, `KDd = ${deg3(rb.brg)}, distance = ${num(rb.dist, 2)} NM (on the chart: a line from A to B and dividers on the latitude scale)`),
+          L(`Czas = ${num(rb.dist, 2)} / ${num(SOG)} = ${Math.round((rb.dist / SOG) * 60)} min → ${fmtTime(ETA)}`, `Time = ${num(rb.dist, 2)} / ${num(SOG)} = ${Math.round((rb.dist / SOG) * 60)} min → ${fmtTime(ETA)}`)],
+        plot: { pts: [{ label: 'A', ...A }, { label: 'B', ...B }], sol: { segs: [{ p: A, brg: rb.brg, dist: rb.dist }], point: B }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
+      };
+    }
+  ]
+};
+
+// nowe kategorie: wszystkie warianty tutaj
+const NEW_GEN = {
+  tsd: [
+    (r) => {
+      const D = rf(r, 8, 40, 2), SOG = rf(r, 3.5, 7.5, 2), t0 = ri(r, 6 * 12, 15 * 12) * 5, T = t0 + (D / SOG) * 60;
+      return { cat: 'tsd', text: L(`Do portu zostało ${num(D)} Mm. Jest ${fmtTime(t0)}, jacht płynie z SOG ${num(SOG)} kn. O której wejdziesz do portu?`, `${num(D)} NM to go to the harbour. It is ${fmtTime(t0)} and the yacht makes ${num(SOG)} kn over the ground. When will you arrive?`),
+        answers: [ans('ETA', L('Godzina', 'Time'), T, 'hm', 2)],
+        steps: [L(`Czas = droga / prędkość = ${num(D)} / ${num(SOG)} = ${num(D / SOG, 2)} h = ${Math.floor(D / SOG)} h ${Math.round(((D / SOG) % 1) * 60)} min`, `Time = distance / speed = ${num(D)} / ${num(SOG)} = ${num(D / SOG, 2)} h = ${Math.floor(D / SOG)} h ${Math.round(((D / SOG) % 1) * 60)} min`), `${fmtTime(t0)} + ${Math.round((D / SOG) * 60)} min = ${fmtTime(T)}`] };
+    },
+    (r) => {
+      const D = rf(r, 6, 30, 2), t0 = ri(r, 7 * 12, 14 * 12) * 5, mins = ri(r, 18, 60) * 5, V = D / (mins / 60);
+      return { cat: 'tsd', text: L(`Most zwodzony otwiera się o ${fmtTime(t0 + mins)}, a do niego jest ${num(D)} Mm. Jest ${fmtTime(t0)}. Z jaką średnią prędkością nad dnem musisz płynąć, żeby zdążyć dokładnie na otwarcie?`, `The bascule bridge opens at ${fmtTime(t0 + mins)} and it is ${num(D)} NM away. It is ${fmtTime(t0)}. Which average speed over the ground do you need to arrive exactly at the opening?`),
+        answers: [ans('V', 'SOG', V, 'kn', 0.1)],
+        steps: [L(`Czas = ${fmtTime(t0 + mins)} − ${fmtTime(t0)} = ${mins} min = ${num(mins / 60, 2)} h`, `Time = ${fmtTime(t0 + mins)} − ${fmtTime(t0)} = ${mins} min = ${num(mins / 60, 2)} h`), L(`Prędkość = droga / czas = ${num(D)} / ${num(mins / 60, 2)} = ${num(V, 2)} kn`, `Speed = distance / time = ${num(D)} / ${num(mins / 60, 2)} = ${num(V, 2)} kn`)] };
+    },
+    (r) => {
+      const SOG = rf(r, 3, 8, 2), mins = ri(r, 4, 30) * 5, t0 = ri(r, 7 * 12, 15 * 12) * 5, D = (SOG * mins) / 60;
+      return { cat: 'tsd', text: L(`Log był zepsuty. O ${fmtTime(t0)} jacht minął pławę, o ${fmtTime(t0 + mins)} następną; GPS pokazywał cały czas SOG ${num(SOG)} kn. Jaka jest odległość między pławami?`, `The log was broken. At ${fmtTime(t0)} the yacht passed a buoy, at ${fmtTime(t0 + mins)} the next one; the GPS showed SOG ${num(SOG)} kn all the time. What is the distance between the buoys?`),
+        answers: [ans('D', L('Droga', 'Distance'), D, 'nm', 0.06)],
+        steps: [L(`Czas = ${mins} min = ${num(mins / 60, 3)} h`, `Time = ${mins} min = ${num(mins / 60, 3)} h`), L(`Droga = ${num(SOG)} · ${num(mins / 60, 3)} = ${num(D, 2)} Mm (reguła: w 6 min jacht przepływa 1/10 swojej prędkości)`, `Distance = ${num(SOG)} · ${num(mins / 60, 3)} = ${num(D, 2)} NM (rule: in 6 min a yacht covers 1/10 of its speed)`)] };
+    }
+  ],
+  abeam: [
+    // namiar czteropunktowy: 45° → 90°
+    (r) => {
+      const KR = ri(r, 0, 359), SOG = rf(r, 4, 7, 2), mins = ri(r, 4, 14) * 5, t0 = ri(r, 8 * 12, 15 * 12) * 5, s1 = r() < 0.5 ? 1 : -1, d = (SOG * mins) / 60, NR = norm(KR + s1 * 90);
+      return { cat: 'abeam', text: L(`Płyniesz KR = ${deg3(KR)}, SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0)} latarnia jest w kącie kursowym 45° ${side(s1)}, o ${fmtTime(t0 + mins)} na trawersie. W jakiej odległości od latarni jesteś na trawersie i jaki jest wtedy jej namiar rzeczywisty?`, `You are steering KR = ${deg3(KR)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0)} a lighthouse is 45° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is abeam. How far off are you when abeam and what is its true bearing then?`),
+        answers: [ans('d', L('Odległość', 'Distance'), d, 'nm', 0.08), ans('NR', 'NR', NR, 'deg', 1)],
+        steps: [L('Trójkąt 45°–90°–45° jest równoramienny: odległość na trawersie = droga przebyta między namiarami.', 'The 45°–90°–45° triangle is isosceles: the distance abeam equals the distance run between the bearings.'), L(`Droga = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} Mm`, `Run = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} NM`), L(`Na trawersie NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`, `Abeam NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`)] };
+    },
+    // podwojenie kąta kursowego: 30° → 60°
+    (r) => {
+      const SOG = rf(r, 4, 7, 2), mins = ri(r, 4, 14) * 5, s1 = r() < 0.5 ? 1 : -1, a = [20, 25, 30, 35][ri(r, 0, 3)], run = (SOG * mins) / 60, abeam = run * Math.sin(2 * a * D2R), t0 = ri(r, 8 * 12, 15 * 12) * 5;
+      return { cat: 'abeam', text: L(`SOG ${num(SOG)} kn, kurs stały, bez prądu. O ${fmtTime(t0)} latarnia jest w kącie kursowym ${a}° ${side(s1)}, o ${fmtTime(t0 + mins)} w kącie ${2 * a}°. Jaka jest odległość od latarni w chwili drugiego namiaru i w jakiej odległości miniesz ją na trawersie?`, `SOG ${num(SOG)} kn, steady course, no current. At ${fmtTime(t0)} a lighthouse is ${a}° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is ${2 * a}°. How far is the lighthouse at the second bearing and how far off will you pass it abeam?`),
+        answers: [ans('d2', L('Odległość przy 2. namiarze', 'Distance at 2nd bearing'), run, 'nm', 0.08), ans('dab', L('Odległość na trawersie', 'Distance abeam'), abeam, 'nm', 0.1)],
+        steps: [L(`Podwojenie kąta kursowego (${a}° → ${2 * a}°): trójkąt jest równoramienny, więc odległość przy drugim namiarze = droga przebyta = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} Mm`, `Doubling the angle on the bow (${a}° → ${2 * a}°): the triangle is isosceles, so the distance at the second bearing = run = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} NM`), L(`Na trawersie: d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} Mm`, `Abeam: d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} NM`)] };
+    }
+  ],
+  range: [
+    // zasięg geograficzny i widoczność światła
+    (r) => {
+      const h = ri(r, 12, 75), H = rf(r, 1.5, 4, 2), Rn = ri(r, 8, 22), Dg = 2.08 * (Math.sqrt(h) + Math.sqrt(H)), vis = Math.min(Dg, Rn);
+      return { cat: 'range', text: L(`Latarnia: wysokość światła ${h} m n.p.m., zasięg nominalny ${Rn} Mm. Oko obserwatora ${num(H)} m nad wodą, dobra widoczność. Oblicz zasięg geograficzny światła i odległość, z której je zobaczysz.`, `Lighthouse: light ${h} m above sea level, nominal range ${Rn} NM. Height of eye ${num(H)} m, good visibility. Find the geographic range of the light and the distance at which you will see it.`),
+        answers: [ans('Dg', L('Zasięg geograficzny', 'Geographic range'), Dg, 'nm', 0.3), ans('vis', L('Widać z', 'Seen from'), vis, 'nm', 0.3)],
+        steps: [`Dg = 2,08 · (√h + √H) = 2,08 · (√${h} + √${num(H)}) = 2,08 · (${num(Math.sqrt(h), 2)} + ${num(Math.sqrt(H), 2)}) = ${num(Dg, 1)} Mm`, L(`Światło widać z mniejszej z odległości: zasięg geograficzny ${num(Dg, 1)} Mm i nominalny ${Rn} Mm → ${num(vis, 1)} Mm${Dg < Rn ? ' (ogranicza horyzont – najpierw zobaczysz łunę)' : ' (ogranicza siła światła)'}`, `The light is seen from the smaller of the geographic range ${num(Dg, 1)} NM and the nominal range ${Rn} NM → ${num(vis, 1)} NM${Dg < Rn ? ' (limited by the horizon – you may see the loom first)' : ' (limited by the intensity of the light)'}`)] };
+    },
+    // kiedy światło wyłoni się zza horyzontu
+    (r) => {
+      const h = ri(r, 20, 70), H = rf(r, 1.5, 3.5, 2), Dg = 2.08 * (Math.sqrt(h) + Math.sqrt(H)), D0 = Math.round((Dg + rf(r, 3, 12, 2)) * 10) / 10, SOG = rf(r, 4, 7, 2), t0 = ri(r, 19 * 12, 22 * 12) * 5, T = t0 + ((D0 - Dg) / SOG) * 60;
+      return { cat: 'range', text: L(`Nocą płyniesz prosto na latarnię (wysokość światła ${h} m, zasięg nominalny 25 Mm). Oko ${num(H)} m nad wodą. O ${fmtTime(t0)} odległość z pozycji GPS wynosi ${num(D0)} Mm, SOG ${num(SOG)} kn. O której światło pojawi się nad horyzontem?`, `At night you are heading straight for a lighthouse (light ${h} m high, nominal range 25 NM). Height of eye ${num(H)} m. At ${fmtTime(t0)} the GPS distance is ${num(D0)} NM, SOG ${num(SOG)} kn. When will the light rise above the horizon?`),
+        answers: [ans('Dg', L('Zasięg geograficzny', 'Geographic range'), Dg, 'nm', 0.3), ans('T', L('Godzina', 'Time'), T, 'hm', 5)],
+        steps: [`Dg = 2,08 · (√${h} + √${num(H)}) = ${num(Dg, 1)} Mm`, L(`Do przepłynięcia: ${num(D0)} − ${num(Dg, 1)} = ${num(D0 - Dg, 1)} Mm, czas = ${num(D0 - Dg, 1)} / ${num(SOG)} = ${Math.round(((D0 - Dg) / SOG) * 60)} min → ${fmtTime(T)}`, `Distance to go: ${num(D0)} − ${num(Dg, 1)} = ${num(D0 - Dg, 1)} NM, time = ${num(D0 - Dg, 1)} / ${num(SOG)} = ${Math.round(((D0 - Dg) / SOG) * 60)} min → ${fmtTime(T)}`)] };
+    }
+  ]
+};
+
+// GENERATORS[kategoria](r, wariant) – wariant 0 to zadanie bazowe; bez wariantu: 0
+export const GENERATORS = {};
+export const VARIANTS = {};
+for (const c of Object.keys(CATEGORIES)) {
+  const list = NEW_GEN[c] || [BASE_GEN[c], ...(VAR_GEN[c] || [])];
+  VARIANTS[c] = list.length;
+  GENERATORS[c] = (r, v = 0) => { const tk = list[Math.max(0, Math.min(list.length - 1, v))](r); tk.variant = v; return tk; };
+}
+
 // Przecięcie dwóch linii namiarów (płaska aproksymacja w milach morskich)
 export function intersect(A, NR1, B, NR2) {
   const cl = Math.cos(((A.lat + B.lat) / 2) * D2R);
@@ -207,18 +405,58 @@ export function intersect(A, NR1, B, NR2) {
   return { lat: A.lat + y / 60, lon: A.lon + x / 60 / cl };
 }
 
-export function makeTask(r, cat) {
+export function makeTask(r, cat, variant) {
   const cats = Object.keys(GENERATORS);
   const c = cat && GENERATORS[cat] ? cat : cats[Math.floor(r() * cats.length)];
-  return GENERATORS[c](r);
+  return GENERATORS[c](r, variant ?? Math.floor(r() * VARIANTS[c]));
 }
+
+// Talia zadań: każdy rodzaj zadania (kategoria + wariant) raz na cykl, w losowej kolejności, bez powtórki pod rząd
+export function makeTaskDeck(r) {
+  const decks = {};
+  let last = null;
+  const keys = (cat) => (cat ? [cat] : Object.keys(CATEGORIES)).flatMap((c) => Array.from({ length: VARIANTS[c] }, (_, v) => `${c}:${v}`));
+  return {
+    next(cat) {
+      const id = cat || '*';
+      let d = decks[id];
+      if (!d || !d.length) {
+        d = decks[id] = keys(cat).map((k) => [r(), k]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+        if (d.length > 1 && d[d.length - 1] === last) d.unshift(d.pop());
+      }
+      last = d.pop();
+      const [c, v] = last.split(':');
+      return GENERATORS[c](r, Number(v));
+    },
+    count: (cat) => keys(cat).length
+  };
+}
+
+// czas „gg:mm” (także „ggmm” albo „gg.mm”) → minuty od północy
+const parseHM = (s) => {
+  const t = String(s).trim().replace(/[^\d:.,]/g, '');
+  const m = t.match(/^(\d{1,2})[:.,](\d{2})$/) || t.match(/^(\d{1,2})(\d{2})$/);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+};
+// poprawka ze znakiem: „+3”, „-2,5”, „2W”, „3,5°E”
+const parseSigned = (s) => {
+  const t = String(s).trim().toUpperCase().replace('−', '-');
+  const v = parseFloat(t.replace(',', '.').replace(/[^\d.\-+]/g, ''));
+  if (!Number.isFinite(v)) return NaN;
+  return /W/.test(t) && v > 0 ? -v : v;
+};
 
 // Sprawdzenie odpowiedzi (kąty z zawinięciem 360°)
 export function checkAnswer(a, input) {
-  const v = parseFloat(String(input).replace(',', '.').replace('°', ''));
+  if (a.kind === 'hm') { const m = parseHM(input); return Number.isFinite(m) && Math.abs(((m - a.value + 720 + 1440 * 2) % 1440) - 720) <= a.tol + 1e-9; }
+  const v = a.kind === 'sdeg' ? parseSigned(input) : parseFloat(String(input).replace(',', '.').replace('°', ''));
   if (!Number.isFinite(v)) return false;
   return a.kind === 'deg' ? Math.abs(angDiff(v, a.value)) <= a.tol + 1e-9 : Math.abs(v - a.value) <= a.tol + 1e-9;
 }
 export function fmtAnswer(a) {
+  if (a.kind === 'hm') return fmtTime(a.value);
+  if (a.kind === 'sdeg') return `${a.value < 0 ? '-' : '+'}${num(Math.abs(a.value), 1)}°${a.value < 0 ? 'W' : 'E'}`;
   return a.kind === 'deg' ? deg3(a.value) : a.kind === 'kn' ? `${num(a.value, 1)} kn` : a.kind === 'nm' ? `${num(a.value, 2)} Mm` : `${num(a.value, 1)}'`;
 }
+export const answerUnit = (a) => ({ deg: '°', sdeg: '°', kn: 'kn', nm: 'Mm', hm: '', min: "'" }[a.kind] ?? '');
+export const answerPlaceholder = (a) => ({ deg: '000', sdeg: '+0,0', hm: L('gg:mm', 'hh:mm') }[a.kind] || '0,0');

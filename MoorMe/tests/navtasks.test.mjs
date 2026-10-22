@@ -1,4 +1,4 @@
-import { GENERATORS, CATEGORIES, makeTask, checkAnswer, fmtAnswer, intersect, norm, angDiff } from '../src/js/data/navTasks.js';
+import { GENERATORS, VARIANTS, CATEGORIES, makeTask, makeTaskDeck, checkAnswer, fmtAnswer, intersect, norm, angDiff } from '../src/js/data/navTasks.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -8,14 +8,14 @@ const D2R = Math.PI / 180;
 const r = rng(17);
 
 // 1) każdy typ zadania generuje sensowne liczby
-for (const c of Object.keys(GENERATORS)) {
+for (const c of Object.keys(GENERATORS)) for (let v = 0; v < VARIANTS[c]; v++) {
   let ok = true;
   for (let i = 0; i < 50; i++) {
-    const tk = GENERATORS[c](r);
+    const tk = GENERATORS[c](r, v);
     if (!tk.text || !tk.answers.length || !tk.steps.length || tk.answers.some((a) => !Number.isFinite(a.value))) ok = false;
-    for (const a of tk.answers) if (!checkAnswer(a, String(a.value)) || !checkAnswer(a, fmtAnswer(a).replace(/[^\d,.\-]/g, ''))) ok = false;
+    for (const a of tk.answers) if ((a.kind !== 'hm' && !checkAnswer(a, String(a.value))) || !checkAnswer(a, fmtAnswer(a).replace(/[^\d,.\-]/g, ''))) ok = false;
   }
-  check(ok && CATEGORIES[c], `${c}: 50 zadań z poprawnymi, sprawdzalnymi odpowiedziami`);
+  check(ok && CATEGORIES[c], `${c}/${v}: 50 zadań z poprawnymi, sprawdzalnymi odpowiedziami`);
 }
 // 2) sprawdzanie kątów z zawinięciem 360°
 check(checkAnswer({ kind: 'deg', value: 359.6, tol: 1 }, '000') && !checkAnswer({ kind: 'deg', value: 10, tol: 1 }, '12') && checkAnswer({ kind: 'kn', value: 5.62, tol: 0.15 }, '5,6'), 'tolerancja i zawinięcie kątów');
@@ -80,9 +80,25 @@ check(checkAnswer({ kind: 'deg', value: 359.6, tol: 1 }, '000') && !checkAnswer(
   }
   check(worst < 0.2, `mapka wektorowa (prąd): wypadkowa = KDd i SOG, wektor po wodzie = KR i V (max ${worst.toFixed(3)})`);
 }
+// 5d) różnorodność: talia daje każdy rodzaj zadania raz na cykl; nowe typy odpowiedzi
+{
+  const deck = makeTaskDeck(rng(5)), N = deck.count(), seen = new Set();
+  for (let i = 0; i < N; i++) { const tk = deck.next(); seen.add(`${tk.cat}:${tk.variant}`); }
+  check(N >= 24 && seen.size === N, `talia zadań: ${N} różnych rodzajów zadań, każdy raz na cykl`);
+  check(checkAnswer({ kind: 'hm', value: 14 * 60 + 35, tol: 2 }, '14:36') && checkAnswer({ kind: 'hm', value: 1439, tol: 3 }, '00:01') && checkAnswer({ kind: 'hm', value: 605, tol: 1 }, '1005') && !checkAnswer({ kind: 'hm', value: 600, tol: 2 }, '10:30'), 'godzina gg:mm (także przez północ i bez dwukropka)');
+  check(checkAnswer({ kind: 'sdeg', value: -2.5, tol: 0.5 }, '2,5W') && checkAnswer({ kind: 'sdeg', value: -2.5, tol: 0.5 }, '−2,5') && checkAnswer({ kind: 'sdeg', value: 3, tol: 0.5 }, '+3') && !checkAnswer({ kind: 'sdeg', value: -3, tol: 0.5 }, '3E'), 'poprawka ze znakiem (+/−, E/W)');
+  // namiar podwójny: odległość na trawersie zgodna z geometrią
+  let worst = 0;
+  for (let i = 0; i < 50; i++) {
+    const tk = GENERATORS.abeam(r, 1), a = Number(tk.text.match(/(\d+)°/)[1]), run = tk.answers[0].value, ab = tk.answers[1].value;
+    // trójkąt: kąty a, 180 − 2a, a → odległość przy 2. namiarze = run; trawers = run · sin 2a
+    worst = Math.max(worst, Math.abs(ab - run * Math.sin(2 * a * D2R)));
+  }
+  check(worst < 1e-9, 'podwojenie kąta kursowego: trawers = d · sin 2α');
+}
 // 6) wersja angielska treści
 setLang('en');
-const tk = makeTask(rng(3), 'current');
+const tk = GENERATORS.current(rng(3));
 check(/^The yacht steers/.test(tk.text) && Object.values(CATEGORIES).every((c) => t(c) !== c), 'zadania i kategorie po angielsku');
 setLang('pl');
 if (fails) process.exit(1);
