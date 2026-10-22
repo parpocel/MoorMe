@@ -160,3 +160,18 @@ Kolejny tryb (karta „Sygnały dźwiękowe”). Z łodzi wiosłowej słychać s
 - **Dobra widoczność** (statek widać na horyzoncie): • w prawo, •• w lewo, ••• wstecz, ••••• wątpliwość, —— • / —— •• wyprzedzanie w wąskim przejściu z prawej/lewej burty, — • — • zgoda, — zakręt.
 - **Mgła** (statku nie widać): — w drodze z szybkością, — — zatrzymany, — • • specjalne statki, — • • • holowany, •••• pilot, dzwon (kotwica < 100 m), dzwon + gong (kotwica ≥ 100 m), 3 uderzenia + dzwon + 3 uderzenia (mielizna), • — • ostrzeżenie statku na kotwicy.
 
+## Zadania nawigacyjne
+
+Tryb z losowo generowanymi zadaniami do rozwiązania na kartce, z kalkulatorem albo na mapie. Odpowiedź wpisujesz w pola, a „Sprawdź” ocenia każdą wartość z tolerancją (kąty ±1–1,5°, prędkość ±0,15 kn, minuty pozycji ±0,2–0,35'). „Pokaż rozwiązanie” wyświetla obliczenia krok po kroku; dla zadań z prądem i z pozycją jest też rysunek (trójkąt prędkości, linie namiarów). Kategorie:
+
+- **Kursy:** KK → KM → KR z dewiacją i deklinacją z mapy (z aktualizacją rocznej zmiany do bieżącego roku);
+- **Tabela dewiacji:** KR → KK z interpolacją i iteracją, bo dewiacja zależy od kursu kompasowego;
+- **Dryf:** strona wiatru, β, KDw;
+- **Prąd:** KDd i SOG z trójkąta prędkości;
+- **Kurs z poprawką na prąd:** jaki KR/KK trzymać, żeby iść po zadanej KDd, i jaka będzie SOG;
+- **Namiary:** NK → NR, namiar zwrotny, kąt kursowy;
+- **Pozycja z dwóch namiarów:** latarnie podane współrzędnymi;
+- **Zliczenie drogi:** droga i pozycja zliczona po czasie.
+
+Konwencja: poprawki na E i dryf w prawo są dodatnie.
+

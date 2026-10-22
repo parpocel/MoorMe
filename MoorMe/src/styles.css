@@ -292,7 +292,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .xte::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255, 255, 255, 0.45); }
 .xte i { position: absolute; top: -3px; width: 8px; height: 18px; background: #ffd166; border-radius: 4px; transform: translateX(-50%); }
 .mode-cards { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px; margin: 18px 0 6px; }
-.mode-card { border: 0; border-radius: 18px; padding: 20px 22px; text-align: left; cursor: pointer; font-family: inherit; color: #2f4468; transition: transform 0.08s, filter 0.15s; display: flex; flex-direction: column; gap: 8px; min-height: 190px; }
+.mode-card { border: 0; border-radius: 18px; padding: 16px 18px; text-align: left; cursor: pointer; font-family: inherit; color: #2f4468; transition: transform 0.08s, filter 0.15s; display: flex; flex-direction: column; gap: 6px; min-height: 150px; }
 .mode-card:hover { filter: brightness(1.04); transform: translateY(-2px); }
 .mode-card h3 { font-size: 22px; margin: 0; }
 .mode-card p { margin: 0; font-size: 14.5px; line-height: 1.45; color: #4a5a7d; font-weight: 600; }
@@ -314,3 +314,26 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 #hud-quiz .quiz-verdict.bad { color: #ff8a8a; }
 .passage-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
 .chip.lvl { background: rgba(47, 68, 104, 0.12); }
+
+/* zadania nawigacyjne */
+.navtasks .nt-wrap { max-width: 900px; margin: 0 auto; }
+.navtasks .nt-cats { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
+.navtasks .nt-card { padding: 20px 22px; }
+.navtasks .nt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.navtasks .nt-text { font-size: 16px; line-height: 1.55; margin: 6px 0 12px; }
+.navtasks .nt-table { max-width: 360px; margin-bottom: 12px; }
+.navtasks .nt-fields { display: flex; flex-wrap: wrap; gap: 10px 22px; margin: 10px 0; }
+.navtasks .nt-field { display: flex; align-items: center; gap: 6px; }
+.navtasks .nt-field label { font-weight: 800; min-width: 40px; }
+.navtasks .nt-field input { width: 88px; padding: 7px 9px; font-size: 16px; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.3); font-family: inherit; }
+.navtasks .nt-field.ok input { border-color: #2e9d62; background: #e8f7ee; }
+.navtasks .nt-field.bad input { border-color: #d0453b; background: #fbecea; }
+.navtasks .nt-res { font-weight: 800; }
+.navtasks .nt-field.ok .nt-res { color: #2e9d62; }
+.navtasks .nt-field.bad .nt-res { color: #d0453b; }
+.navtasks .nt-btns { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.navtasks .nt-sol { margin-top: 14px; display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.navtasks .nt-sol ol { flex: 1; min-width: 300px; line-height: 1.6; margin: 0; padding-left: 20px; }
+.navtasks .nt-sol canvas { border-radius: 10px; border: 1px solid rgba(47, 68, 104, 0.2); }
+.navtasks .quiz-verdict.ok { color: #2e9d62; font-weight: 800; font-size: 17px; }
+.navtasks .quiz-verdict.bad { color: #d0453b; font-weight: 800; font-size: 17px; }
