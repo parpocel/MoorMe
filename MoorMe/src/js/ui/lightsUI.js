@@ -341,7 +341,7 @@ export class LightsScreen extends PassageScreen {
     q.result.brg1 = this.vesselBearing();
     this.scoreStreak(q.result.okType && q.result.okAspect && q.result.passOk);
     q.phase = 'feedback';
-    this.pushLog({ msg: q.result.passOk ? 'Dobrze!' : PASS_SIDES[real], type: q.result.passOk ? 'good' : 'bad' });
+    this.pushLog({ msg: q.result.passOk ? 'Dobrze!' : PASS_SIDES[real], type: q.result.passOk ? 'good' : 'bad' }); // tylko wynik
     this.renderQuiz();
   }
 
@@ -392,8 +392,7 @@ export class LightsScreen extends PassageScreen {
       return;
     }
     if (q.phase === 'observe' || q.phase === 'pass') {
-      el.appendChild(h('div.quiz-verdict.ok', {}, '✓ Statek idzie prosto na nas!'));
-      el.appendChild(h('div.small', { style: { margin: '4px 0' } }, 'Obserwuj namiar na jego światła. Jeśli przesuwa się w stronę dziobu – przejdzie przed dziobem; w stronę rufy – za rufą; stały namiar oznacza kolizję.'));
+      el.appendChild(h('div.quiz-verdict.ok', {}, '✓ Dobrze – statek idzie prosto na nas'));
       el.appendChild(h('div.small', {}, h('span.muted', {}, 'Namiar na początku:'), ' ', h('b', {}, `${pad3(q.brg0)}°`), '  ', h('span.muted', {}, 'teraz:'), ' ', h('b', { class: 'live-brg' }, `${pad3(this.vesselBearing())}°`)));
       if (q.phase === 'observe') {
         el.appendChild(h('div.quiz-title', { style: { marginTop: '8px' } }, h('span', {}, 'Obserwuj jeszcze:'), ' ', h('span', { class: 'obs-t' }, `${Math.ceil(q.obsT)} s`)));
@@ -406,19 +405,17 @@ export class LightsScreen extends PassageScreen {
       }
       return;
     }
-    // informacja zwrotna
+    // informacja zwrotna: tylko czy dobrze, a jeśli nie – poprawna odpowiedź
     const r = q.result, V = anyVessel(v.type);
-    const allOk = r.okType && r.okAspect && (!r.passAsked || r.passOk);
-    el.appendChild(h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad' }, r.skipped ? 'Odpowiedź:' : allOk ? '✓ Dobrze!' : r.okType && r.okAspect ? '✓ Typ i strona dobrze, ✗ przejście źle' : r.okType ? (v.gear ? '✓ Typ dobrze, ✗ strona statku lub sieci źle' : '✓ Typ dobrze, ✗ strona statku źle') : '✗ Źle'));
-    el.appendChild(h('div', { style: { fontWeight: 700, margin: '4px 0' } }, V.name));
-    el.appendChild(h('div.small', {}, V.explain));
-    if (v.moving && !this.day) el.appendChild(h('div.small', { style: { marginTop: '6px' } }, h('span.muted', {}, 'Widzisz:'), ' ', h('b', {}, ASPECTS[r.realAspect])));
-    if (r.passAsked) {
-      el.appendChild(h('div.small', { style: { marginTop: '4px', color: r.passOk ? '#7ff0b5' : '#ff8a8a' } }, r.passOk ? '✓ ' : '✗ ', PASS_SIDES[r.passTruth]));
-      el.appendChild(h('div.small.muted', {}, h('span', {}, 'Namiar:'), ' ', h('b', {}, `${pad3(q.brg0)}° → ${pad3(r.brg1)}°`)));
+    const allOk = !r.skipped && r.okType && r.okAspect && (!r.passAsked || r.passOk);
+    el.appendChild(h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad' }, allOk ? '✓ Dobrze!' : '✗ Źle'));
+    if (!allOk) {
+      const line = (k, val) => el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, k), ' ', h('b', {}, val)));
+      if (r.skipped || !r.okType) line('Poprawna odpowiedź:', V.name);
+      if (v.moving && !this.day && (r.skipped || q.aspectPick !== r.realAspect)) line('Widzisz:', ASPECTS[r.realAspect]);
+      if (v.gear && (r.skipped || q.gearPick !== v.gearSide)) line('Sieci:', GEAR_SIDES[v.gearSide]);
+      if (r.passAsked && !r.passOk) line('Przejście:', PASS_SIDES[r.passTruth]);
     }
-    if (v.gear) el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, 'Sieci:'), ' ', h('b', {}, GEAR_SIDES[v.gearSide])));
-    el.appendChild(h('div.small.muted', { style: { marginTop: '4px' } }, h('span', {}, 'Odległość:'), ' ', h('b', {}, `${(Math.hypot(v.x - this.world.boat.x, v.z - this.world.boat.z) / NM).toFixed(2)} nm`)));
     el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => this.next() }, 'Następny statek →'));
   }
 
