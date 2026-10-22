@@ -140,7 +140,7 @@ Workflow GitHub Actions (`.github/workflows/build-windows.yml` w katalogu głów
 
 ## Rozpoznawanie świateł
 
-Trzeci tryb (karta „Rozpoznawanie świateł” w oknie wyboru trybu). Jest noc, a jacht płynie autopilotem stałym kursem 090°. Patrzysz z pozycji kapitana i rozglądasz się, przeciągając myszą (kółko przybliża). Co kilka sekund na lewej albo prawej burcie, w odległości 0,25–0,65 nm, pojawia się statek widoczny wyłącznie po światłach (MPZZM/COLREG, część C). Trzeba rozpoznać:
+Trzeci tryb (karta „Rozpoznawanie świateł” w oknie wyboru trybu). Jest noc (czarne niebo, przygaszony księżyc), a zwykła łódź wiosłowa – bez masztu i olinowania, które zasłaniałyby widok – płynie stałym kursem 090°. Patrzysz z pozycji wioślarza i rozglądasz się, przeciągając myszą (kółko przybliża). Co kilka sekund na lewej albo prawej burcie, w odległości 0,25–0,65 nm, pojawia się statek widoczny wyłącznie po światłach (MPZZM/COLREG, część C). Trzeba rozpoznać:
 
 - **co to za jednostka i co robi** – 6 odpowiedzi do wyboru, a w katalogu jest 13 typów: statek o napędzie mechanicznym < 50 m i ≥ 50 m, jednostka żaglowa, statek na kotwicy < 50 m i ≥ 50 m, trałowiec, statek rybacki, niezdolny do manewrowania, o ograniczonej zdolności manewrowania, ograniczony zanurzeniem, holujący (z holowaną jednostką), pilotowy i statek na mieliźnie;
 - **którą stronę statku widzisz** – dziób, prawą burtę, lewą burtę albo rufę (dla statków w ruchu).

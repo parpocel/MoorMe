@@ -58,7 +58,7 @@ export class Atmosphere {
     this.world = view.world;
     this.scene = view.scene;
     this.hour = typeof weather.hour === 'number' ? weather.hour : 14;
-    this.blackSky = !!weather.blackSky; // tryb świateł: czarne niebo bez gwiazd i księżyca
+    this.blackSky = !!weather.blackSky; // tryb świateł: czarne niebo bez gwiazd, przygaszony księżyc
     this.sky = SKIES[weather.sky] ? weather.sky : 'clear';
     this.timeFlows = false;
     this.timeRate = 60; // 1 s rzeczywista = 1 min w symulacji
@@ -228,7 +228,7 @@ export class Atmosphere {
     sun.position.set(cam.tx + dir.x * 130, dir.y * 130, cam.tz + dir.z * 130);
     sun.target.position.set(cam.tx, 0, cam.tz);
     this.moon.position.set(cam.tx - 0.45 * 900, 0.75 * 900, cam.tz + 0.5 * 900);
-    this.moon.material.opacity = this.blackSky ? 0 : night * (1 - sky.grey);
+    this.moon.material.opacity = night * (1 - sky.grey) * (this.blackSky ? 0.45 : 1); // w trybie świateł księżyc przygaszony
     this.moon.visible = night > 0.05;
 
     v.hemi.color.copy(lerpC(C(0xdff2ff), C(0x2c3a5c), night));

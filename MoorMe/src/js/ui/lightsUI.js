@@ -39,6 +39,61 @@ function dotTexture() {
   return dotTex;
 }
 
+// Zwykła łódź wiosłowa (bez masztu i olinowania – nic nie zasłania widoku); poziom wody y = 0, dziób w stronę +x
+export function buildRowboat() {
+  const g = new THREE.Group();
+  const N = 14, half = 1.9;
+  const hb = (x) => 0.72 * Math.pow(Math.max(0, 1 - Math.pow((x + 0.15) / (half + 0.1), 2)), 0.55); // połowa szerokości
+  const sheer = (x) => 0.34 + 0.12 * Math.pow(Math.abs(x) / half, 2); // linia burty wznosi się ku końcom
+  const pos = [], idx = [];
+  // przekroje: [burta L, dno L, dno P, burta P]
+  for (let i = 0; i <= N; i++) {
+    const x = -half + (2 * half * i) / N, b = Math.max(hb(x), 0.02);
+    pos.push(x, sheer(x), -b, x, -0.14, -b * 0.55, x, -0.14, b * 0.55, x, sheer(x), b);
+  }
+  for (let i = 0; i < N; i++) {
+    const a = i * 4, c = (i + 1) * 4;
+    for (let k = 0; k < 3; k++) idx.push(a + k, c + k, c + k + 1, a + k, c + k + 1, a + k + 1);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const hull = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x7a4b2a, roughness: 0.8, flatShading: true, side: THREE.DoubleSide }));
+  g.add(hull);
+  const wood = new THREE.MeshStandardMaterial({ color: 0xb08050, roughness: 0.85, flatShading: true });
+  // pawęż, ławki i burtnice
+  const transom = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, hb(-half + 0.1) * 2 + 0.1), wood);
+  transom.position.set(-half + 0.03, 0.14, 0);
+  g.add(transom);
+  for (const x of [-1.05, 0.05, 0.95]) {
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, hb(x) * 2 - 0.06), wood);
+    seat.position.set(x, 0.18, 0);
+    g.add(seat);
+  }
+  for (const s of [-1, 1]) {
+    for (let i = 0; i < N; i++) {
+      const x0 = -half + (2 * half * i) / N, x1 = x0 + (2 * half) / N, xm = (x0 + x1) / 2;
+      const rail = new THREE.Mesh(new THREE.BoxGeometry((2 * half) / N + 0.02, 0.05, 0.06), wood);
+      rail.position.set(xm, sheer(xm) + 0.02, s * Math.max(hb(xm), 0.02));
+      rail.rotation.y = -s * Math.atan2(hb(x1) - hb(x0), x1 - x0);
+      g.add(rail);
+    }
+    // wiosło oparte o dulkę, pióro nad wodą
+    const oar = new THREE.Group();
+    const loom = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.6, 6), wood);
+    loom.rotation.z = Math.PI / 2;
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.14), wood);
+    blade.position.x = 1.45;
+    oar.add(loom, blade);
+    oar.position.set(-0.2, sheer(-0.2) + 0.08, s * (hb(-0.2) + 0.55));
+    oar.rotation.y = s * 1.35;
+    oar.rotation.z = -0.12;
+    g.add(oar);
+  }
+  return g;
+}
+
 // Światła jednego statku w scenie 3D (punkty o stałej wielkości kątowej, widoczne tylko w swoich sektorach)
 class ShipLightsLayer {
   constructor(scene) {
@@ -81,7 +136,7 @@ class ShipLightsLayer {
       sp.visible = visibleLights([l], rel).length > 0;
       // jasność maleje z odległością, wielkość punktu stała kątowo
       sp.material.opacity = clamp(1.2 - d / 4500, 0.5, 1);
-      sp.scale.setScalar(clamp(d * 0.005, 0.25, 30));
+      sp.scale.setScalar(clamp(d * 0.0075, 0.3, 40));
     }
   }
 }
@@ -96,8 +151,8 @@ export class LightsScreen extends PassageScreen {
       weather: config.weather,
       blind: true
     });
-    this.world.boat.throttle = 0.45;
-    this.world.boat.vx = 2.4;
+    this.world.boat.throttle = 0.22; // spokojne tempo łodzi
+    this.world.boat.vx = 1.4;
     this.world.setAutopilot(true, 90);
     this.chart = { range: 1800, headUp: false, labels: false };
     this.rand = rng(config.seed || 1 + Math.floor(Math.random() * 1e9));
@@ -105,7 +160,7 @@ export class LightsScreen extends PassageScreen {
   }
 
   introLog() {
-    this.pushLog({ msg: 'Rozpoznawanie świateł: jacht płynie stałym kursem 090°. Rozglądaj się (przeciągnij myszą) i rozpoznaj statki po światłach.', type: 'info' });
+    this.pushLog({ msg: 'Rozpoznawanie świateł: łódź wiosłowa płynie stałym kursem 090°. Rozglądaj się (przeciągnij myszą) i rozpoznaj statki po światłach.', type: 'info' });
   }
 
   build() {
@@ -119,6 +174,21 @@ export class LightsScreen extends PassageScreen {
     this.quizEl = h('div.hud.glass', { id: 'hud-quiz' });
     this.sim.appendChild(this.quizEl);
     this.layer = new ShipLightsLayer(this.view.scene);
+    // zamiast jachtu – łódź wiosłowa: chowamy kadłub, olinowanie, załogę i światła jachtu
+    const heel = this.view.boat.userData.heel;
+    for (const c of [...this.view.boat.children, ...heel.children]) if (c !== heel) c.visible = false;
+    for (const gl of this.view.atmo.glows || []) gl.userData.dim = 1e-6; // (0 oznaczałoby „domyślnie”)
+    if (this.view.atmo.deckLight) this.view.atmo.deckLight.visible = false;
+    this.rowboat = buildRowboat();
+    heel.add(this.rowboat);
+    // w łodzi jest tylko wioślarz (sternik); resztę załogi jachtu usuwamy ze sceny razem z etykietami
+    for (const p of [this.view.mate1, this.view.mate2, this.view.deckhand, this.view.shoreCrew]) if (p && p.parent) p.parent.remove(p);
+    if (this.view.tags) this.view.tags.style.display = 'none';
+    this.view.helmsman.position.set(-1.0, -0.42, 0); // oczy siedzącego wioślarza ok. 1,2 m nad wodą
+    this.view.helmsman.rotation.y = -Math.PI / 2;
+    // tylko autopilot – silnik i ster są tu zbędne
+    const ctl = this.sim.querySelector('#hud-controls');
+    if (ctl) [...ctl.children].slice(0, 2).forEach((c) => { c.style.display = 'none'; });
     this.view.setView('fpv');
     this._qLast = performance.now();
     this.renderQuiz();
