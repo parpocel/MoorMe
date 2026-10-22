@@ -1,11 +1,13 @@
-// Mapka do kreślenia w zadaniach nawigacyjnych: linie namiarowe, kurs i droga, punkty, przecięcia.
+// Mapka do kreślenia w zadaniach nawigacyjnych: ląd, izobaty, głębokości i róża kompasowa jak na mapie morskiej,
+// a do tego narzędzia: linia, namiar przez punkt, kurs i droga, trójkąt nawigacyjny, linijka równoległa, cyrkiel, okrąg.
 // Na brzegach podziałka szerokości (lewa/prawa) i długości (góra/dół) w stopniach i minutach.
 // Mapa „płaska”: 1' szerokości = 1 Mm, 1' długości = cos φ Mm (jak w obliczeniach zadań).
 import { h } from './dom.js';
 import { t as tr } from '../i18n.js';
+import { rng } from '../math.js';
 
 const D2R = Math.PI / 180;
-const W = 680, H = 470, M = 54; // rozmiar płótna i szerokość marginesu ze skalą
+const W = 740, H = 520, M = 54; // rozmiar płótna i szerokość marginesu ze skalą
 const pad2 = (n) => String(n).padStart(2, '0');
 const norm = (a) => ((a % 360) + 360) % 360;
 const fmtMin = (m) => (Math.abs(m - Math.round(m)) < 1e-6 ? `${pad2(Math.round(m))}'` : `${m.toFixed(1).replace('.', ',')}'`);
@@ -13,24 +15,41 @@ const dmParts = (v) => { const a = Math.abs(v) + 1e-9, d = Math.floor(a); return
 const fmtLat = (lat) => { const [d, m] = dmParts(lat); return `${d}°${m.toFixed(1).replace('.', ',')}'${lat >= 0 ? 'N' : 'S'}`; };
 const fmtLon = (lon) => { const [d, m] = dmParts(lon); return `${String(d).padStart(3, '0')}°${m.toFixed(1).replace('.', ',')}'${lon >= 0 ? 'E' : 'W'}`; };
 const deg3 = (a) => `${String(Math.round(norm(a)) % 360).padStart(3, '0')}°`;
+const nm2 = (v) => v.toFixed(2).replace('.', ',');
 
-// przecięcie dwóch prostych (punkt + kierunek) w układzie mil morskich
+// przecięcie dwóch prostych / odcinków (punkt + kierunek jednostkowy) w układzie mil morskich
 function lineX(a, b) {
   const det = a.dx * b.dy - a.dy * b.dx;
-  if (Math.abs(det) < 1e-9) return null;
+  if (Math.abs(det) < 1e-9) return [];
   const s = ((b.x - a.x) * b.dy - (b.y - a.y) * b.dx) / det, q = ((b.x - a.x) * a.dy - (b.y - a.y) * a.dx) / det;
-  if ((a.seg && (s < -1e-6 || s > a.len + 1e-6)) || (b.seg && (q < -1e-6 || q > b.len + 1e-6))) return null;
-  return { x: a.x + a.dx * s, y: a.y + a.dy * s };
+  if ((a.kind === 'seg' && (s < -1e-6 || s > a.len + 1e-6)) || (b.kind === 'seg' && (q < -1e-6 || q > b.len + 1e-6))) return [];
+  return [{ x: a.x + a.dx * s, y: a.y + a.dy * s }];
 }
+function lineCircle(l, c) {
+  const fx = l.x - c.x, fy = l.y - c.y, b = fx * l.dx + fy * l.dy, cc = fx * fx + fy * fy - c.r * c.r, disc = b * b - cc;
+  if (disc < 0) return [];
+  const out = [];
+  for (const t of [-b - Math.sqrt(disc), -b + Math.sqrt(disc)]) if (l.kind !== 'seg' || (t >= -1e-6 && t <= l.len + 1e-6)) out.push({ x: l.x + l.dx * t, y: l.y + l.dy * t });
+  return out;
+}
+function circleCircle(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
+  if (d < 1e-9 || d > a.r + b.r || d < Math.abs(a.r - b.r)) return [];
+  const l = (a.r * a.r - b.r * b.r + d * d) / (2 * d), hh = Math.sqrt(Math.max(0, a.r * a.r - l * l)), mx = a.x + (dx * l) / d, my = a.y + (dy * l) / d;
+  return [{ x: mx + (-dy * hh) / d, y: my + (dx * hh) / d }, { x: mx - (-dy * hh) / d, y: my - (dx * hh) / d }];
+}
+const inPoly = (poly, x, y) => { let c = false; for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) { const a = poly[i], b = poly[j]; if ((a.y > y) !== (b.y > y) && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) c = !c; } return c; };
+const segDist = (p, a, b) => { const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2)); return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t); };
+const polyDist = (poly, p) => (inPoly(poly, p.x, p.y) ? 0 : Math.min(...poly.map((q, i) => segDist(p, q, poly[(i + 1) % poly.length]))));
 
 export class PlotBoard {
-  /** plot: { pts: [{ label, lat, lon }], sol: { lines: [{ p, brg }], segs: [{ p, brg, dist }], point } } */
+  /** plot: { pts: [{ label, lat, lon, light? }], sol: { lines: [{ p, brg }], segs: [{ p, brg, dist }], point }, variation?, seed? } */
   constructor(plot) {
     this.plot = plot;
-    this.items = []; // { kind: 'line'|'seg'|'pt', x, y, dx, dy, len }
+    this.items = []; // { kind: 'line'|'seg'|'pt'|'circle'|'meas', ... }
     this.tool = plot.sol.segs ? 'course' : 'bearing';
     this.showSol = false;
-    this.hover = null; this.drag = null;
+    this.hover = null; this.drag = null; this.plotter = null; this.sel = null;
     // zasięg mapy: obiekty + rozwiązanie z zapasem, proporcje płótna
     const all = [...plot.pts, plot.sol.point];
     const lat0 = all.reduce((s, p) => s + p.lat, 0) / all.length;
@@ -38,9 +57,10 @@ export class PlotBoard {
     const xs = all.map((p) => p.lon * 60 * this.cl), ys = all.map((p) => p.lat * 60);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
     const iw = W - 2 * M, ih = H - 2 * M;
-    const span = Math.max((Math.max(...xs) - Math.min(...xs)) / iw, (Math.max(...ys) - Math.min(...ys)) / ih) * 1.45;
+    const span = Math.max((Math.max(...xs) - Math.min(...xs)) / iw, (Math.max(...ys) - Math.min(...ys)) / ih) * 1.5;
     this.k = 1 / Math.max(span, 5 / ih); // px na milę (co najmniej ok. 5 Mm na wysokość)
     this.cx = cx; this.cy = cy;
+    this.genChart();
     this.build();
   }
 
@@ -50,6 +70,54 @@ export class PlotBoard {
   px(n) { return { x: W / 2 + (n.x - this.cx) * this.k, y: H / 2 - (n.y - this.cy) * this.k }; }
   nm(px, py) { return { x: this.cx + (px - W / 2) / this.k, y: this.cy - (py - H / 2) / this.k }; }
 
+  // ---------- treść mapy: ląd z latarniami na cyplach, izobaty, głębokości, róża ----------
+  genChart() {
+    const r = rng(this.plot.seed || 7), P = this.toNm(this.plot.sol.point), objs = this.plot.pts.map((p) => this.toNm(p));
+    const fix = !!this.plot.sol.lines;
+    const track = fix ? objs.map((o) => [o, P]) : [[objs[0], P]];
+    const lo = this.nm(M, H - M), hi = this.nm(W - M, M);
+    const blob = (c, R) => {
+      const ph = [r() * 6, r() * 6, r() * 6, r() * 6], a = [0.16 + r() * 0.1, 0.09 + r() * 0.07, 0.05, 0.03];
+      return Array.from({ length: 56 }, (_, i) => { const t = (i / 56) * Math.PI * 2, rr = R * (1 + a[0] * Math.sin(2 * t + ph[0]) + a[1] * Math.sin(3 * t + ph[1]) + a[2] * Math.sin(5 * t + ph[2]) + a[3] * Math.sin(9 * t + ph[3])); return { x: c.x + Math.cos(t) * rr, y: c.y + Math.sin(t) * rr }; });
+    };
+    const lands = [];
+    const clearOf = (poly, keepIn = null) => polyDist(poly, P) > 0.45 && (fix ? true : polyDist(poly, objs[0]) > 0.45) &&
+      track.every(([a, b]) => { const q = poly.filter((v) => segDist(v, a, b) < 0.12); return keepIn ? q.length < 18 : q.length === 0; }) &&
+      lands.every((l) => poly.every((v) => polyDist(l.poly, v) > 0.25));
+    // latarnie stoją na lądzie, na cyplu zwróconym w stronę jachtu
+    if (fix) for (const o of objs) {
+      for (let k = 0; k < 40; k++) {
+        const ux = o.x - P.x, uy = o.y - P.y, L = Math.hypot(ux, uy), rot = (r() - 0.5) * 0.9, dx = (ux / L) * Math.cos(rot) - (uy / L) * Math.sin(rot), dy = (ux / L) * Math.sin(rot) + (uy / L) * Math.cos(rot);
+        const R = 0.55 + r() * 0.9, c = { x: o.x + dx * R * (0.62 + r() * 0.2), y: o.y + dy * R * (0.62 + r() * 0.2) };
+        const poly = blob(c, R);
+        if (inPoly(poly, o.x, o.y) && polyDist(poly, o) === 0 && clearOf(poly, o)) { lands.push({ poly, c, R }); break; }
+      }
+    }
+    // kilka dodatkowych lądów / wysp z dala od toru
+    for (let k = 0, n = 0; k < 60 && n < (fix ? 2 : 3); k++) {
+      const R = 0.35 + r() * 1.1, c = { x: lo.x + r() * (hi.x - lo.x), y: lo.y + r() * (hi.y - lo.y) };
+      const poly = blob(c, R);
+      if (objs.some((o) => inPoly(poly, o.x, o.y)) || !clearOf(poly)) continue;
+      lands.push({ poly, c, R }); n++;
+    }
+    // izobaty 5 i 10 m – obrys lądu powiększony od jego środka
+    for (const l of lands) l.c5 = l.poly.map((v) => ({ x: l.c.x + (v.x - l.c.x) * (1 + 0.28 / l.R), y: l.c.y + (v.y - l.c.y) * (1 + 0.28 / l.R) }));
+    for (const l of lands) l.c10 = l.poly.map((v) => ({ x: l.c.x + (v.x - l.c.x) * (1 + 0.7 / l.R), y: l.c.y + (v.y - l.c.y) * (1 + 0.7 / l.R) }));
+    // głębokości na wodzie (płyciej przy lądzie)
+    const sound = [], step = Math.max(0.35, 42 / this.k);
+    for (let y = lo.y + step * 0.6; y < hi.y; y += step) for (let x = lo.x + step * 0.5; x < hi.x; x += step) {
+      const q = { x: x + (r() - 0.5) * step * 0.7, y: y + (r() - 0.5) * step * 0.7 };
+      if (lands.some((l) => inPoly(l.poly, q.x, q.y)) || objs.concat([P]).some((o) => Math.hypot(o.x - q.x, o.y - q.y) < step * 0.6)) continue;
+      const dl = lands.length ? Math.min(...lands.map((l) => polyDist(l.poly, q))) : 3;
+      sound.push({ ...q, d: Math.round(Math.min(48, 2 + dl * 11 + r() * 4)) });
+    }
+    // róża kompasowa w najbardziej „pustym” rogu
+    const cands = [[150, 150], [W - 150, 150], [150, H - 150], [W - 150, H - 150], [W / 2, H / 2 + 120], [W / 2, 140]].map(([x, y]) => ({ x, y }));
+    const score = (c) => Math.min(...objs.concat([P]).map((o) => { const q = this.px(o); return Math.hypot(q.x - c.x, q.y - c.y); }), ...lands.map((l) => { const q = this.px(l.c); return Math.hypot(q.x - c.x, q.y - c.y) - l.R * this.k; }));
+    this.rose = cands.sort((a, b) => score(b) - score(a))[0];
+    this.lands = lands; this.sound = sound;
+  }
+
   build() {
     const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
     this.cv = h('canvas', { width: W * dpr, height: H * dpr, style: { width: '100%', maxWidth: `${W}px`, aspectRatio: `${W} / ${H}`, cursor: 'crosshair', touchAction: 'none' } });
@@ -58,19 +126,23 @@ export class PlotBoard {
     this.distIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0,0', style: { width: '64px' } });
     this.readout = h('div.pb-readout', {}, '');
     this.toolBtns = h('div.seg.pb-tools');
-    const tools = [['drag', '✎ Linia (przeciągnij)'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga z punktu'], ['point', '• Punkt']];
+    const tools = [['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt']];
+    this.edgeBtn = h('button.btn.xs', { onclick: () => this.drawAlongPlotter() }, '📐 Kreśl wzdłuż krawędzi');
     const renderTools = () => {
       this.toolBtns.innerHTML = '';
-      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; renderTools(); this.updateHint(); } }, n));
+      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; renderTools(); this.updateHint(); this.draw(); } }, n));
+      this.edgeBtn.style.display = this.tool === 'plotter' ? '' : 'none';
     };
     renderTools();
     this.hint = h('div.small.muted.pb-hint');
     this.el = h('div.pb', {},
-      h('div.pb-bar', {}, this.toolBtns,
+      h('div.pb-bar', {}, this.toolBtns),
+      h('div.pb-bar', {},
         h('label.pb-in', {}, h('span', {}, 'Kąt'), this.angIn, '°'),
         h('label.pb-in', {}, h('span', {}, 'Droga'), this.distIn, 'Mm'),
+        this.edgeBtn,
         h('button.btn.xs', { onclick: () => { this.items.pop(); this.draw(); } }, '↶ Cofnij'),
-        h('button.btn.xs', { onclick: () => { this.items = []; this.draw(); } }, 'Wyczyść')),
+        h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.draw(); } }, 'Wyczyść')),
       this.hint, this.cv, this.readout);
     this.updateHint();
     const pos = (e) => { const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H }; };
@@ -78,6 +150,7 @@ export class PlotBoard {
     this.cv.addEventListener('pointermove', (e) => this.move(pos(e)));
     this.cv.addEventListener('pointerup', (e) => this.up(pos(e)));
     this.cv.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.draw(); } });
+    this.cv.addEventListener('wheel', (e) => { if (this.tool === 'plotter' && this.plotter) { e.preventDefault(); this.setPlotterAng(this.plotter.ang + (e.deltaY > 0 ? 1 : -1) * (e.shiftKey ? 10 : 1)); } }, { passive: false });
     this.draw();
   }
 
@@ -86,6 +159,10 @@ export class PlotBoard {
       drag: 'Przeciągnij od punktu, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
       bearing: 'Wpisz kąt (np. namiar rzeczywisty) i kliknij obiekt – przez punkt zostanie wykreślona linia pozycyjna.',
       course: 'Wpisz kurs i drogę, potem kliknij punkt startu – odłożony zostanie odcinek z punktem końcowym.',
+      plotter: 'Kliknij, aby położyć trójkąt; przeciągnij go, by przesunąć, a za uchwyt (kółko) – by obrócić (także kółko myszy, z Shift ±10°). Kąt krawędzi trafia do pola „Kąt”.',
+      parallel: 'Kliknij istniejącą linię, a potem punkt – przez punkt zostanie wykreślona linia równoległa.',
+      dividers: 'Przeciągnij cyrklem między dwoma punktami, aby zmierzyć odległość w milach (trafia do pola „Droga”).',
+      circle: 'Wpisz odległość w polu „Droga” i kliknij środek – powstanie okrąg pozycyjny (np. odległość od latarni).',
       point: 'Kliknij, aby postawić punkt i odczytać jego współrzędne.'
     }[this.tool]);
   }
@@ -94,7 +171,7 @@ export class PlotBoard {
   snapTargets() {
     const out = this.plot.pts.map((p) => this.toNm(p));
     for (const it of this.items) {
-      if (it.kind === 'pt') out.push({ x: it.x, y: it.y });
+      if (it.kind === 'pt' || it.kind === 'circle') out.push({ x: it.x, y: it.y });
       if (it.kind === 'seg') { out.push({ x: it.x, y: it.y }); out.push({ x: it.x + it.dx * it.len, y: it.y + it.dy * it.len }); }
     }
     return out.concat(this.crossings());
@@ -105,16 +182,64 @@ export class PlotBoard {
     return best ? { ...best, snapped: true } : this.nm(p.x, p.y);
   }
   crossings() {
-    const L = this.items.filter((i) => i.kind === 'line' || i.kind === 'seg'), out = [];
-    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) { const x = lineX(L[a], L[b]); if (x) out.push(x); }
+    const L = this.items.filter((i) => i.kind === 'line' || i.kind === 'seg'), C = this.items.filter((i) => i.kind === 'circle'), out = [];
+    for (let a = 0; a < L.length; a++) for (let b = a + 1; b < L.length; b++) out.push(...lineX(L[a], L[b]));
+    for (const l of L) for (const c of C) out.push(...lineCircle(l, c));
+    for (let a = 0; a < C.length; a++) for (let b = a + 1; b < C.length; b++) out.push(...circleCircle(C[a], C[b]));
     return out;
   }
   num(inp) { const v = parseFloat(String(inp.value).replace(',', '.')); return Number.isFinite(v) ? v : null; }
 
+  // trójkąt nawigacyjny: krawędź przez środek w kierunku ang (°), uchwyt obrotu na końcu krawędzi
+  static PL = 120;
+  plotterGeom() {
+    const pl = this.plotter, c = this.px(pl), a = pl.ang * D2R, u = { x: Math.sin(a), y: -Math.cos(a) }, v = { x: Math.cos(a), y: Math.sin(a) };
+    return { c, u, v, handle: { x: c.x + u.x * PlotBoard.PL, y: c.y + u.y * PlotBoard.PL } };
+  }
+  setPlotterAng(a) { this.plotter.ang = norm(Math.round(a * 2) / 2); this.angIn.value = String(this.plotter.ang).replace('.', ','); this.draw(); }
+  drawAlongPlotter() {
+    if (!this.plotter) return;
+    const a = this.plotter.ang;
+    this.items.push({ kind: 'line', x: this.plotter.x, y: this.plotter.y, dx: Math.sin(a * D2R), dy: Math.cos(a * D2R), ang: a });
+    this.draw();
+  }
+  nearestLine(p) {
+    let best = null, bd = 9;
+    this.items.forEach((it, i) => {
+      if (it.kind !== 'line' && it.kind !== 'seg') return;
+      const a = this.px(it.kind === 'seg' ? it : { x: it.x - it.dx * 200, y: it.y - it.dy * 200 }), b = this.px(it.kind === 'seg' ? { x: it.x + it.dx * it.len, y: it.y + it.dy * it.len } : { x: it.x + it.dx * 200, y: it.y + it.dy * 200 });
+      const d = segDist(p, a, b);
+      if (d < bd) { bd = d; best = i; }
+    });
+    return best;
+  }
+
   down(p) {
     const n = this.snap(p);
-    if (this.tool === 'drag') { this.drag = { a: n, b: n }; return; }
+    if (this.tool === 'drag' || this.tool === 'dividers') { this.drag = { a: n, b: n }; return; }
     if (this.tool === 'point') { this.items.push({ kind: 'pt', x: n.x, y: n.y }); this.draw(); return; }
+    if (this.tool === 'plotter') {
+      if (this.plotter) {
+        const g = this.plotterGeom(), lx = (p.x - g.c.x) * g.u.x + (p.y - g.c.y) * g.u.y, ly = (p.x - g.c.x) * g.v.x + (p.y - g.c.y) * g.v.y;
+        if (Math.hypot(p.x - g.handle.x, p.y - g.handle.y) < 16) { this.pdrag = { mode: 'rot' }; return; }
+        if (Math.abs(lx) < PlotBoard.PL && ly > -6 && ly < 78) { this.pdrag = { mode: 'move', ox: p.x - g.c.x, oy: p.y - g.c.y }; return; }
+      }
+      this.plotter = { x: n.x, y: n.y, ang: this.plotter ? this.plotter.ang : (this.num(this.angIn) ?? 0) };
+      this.setPlotterAng(this.plotter.ang);
+      return;
+    }
+    if (this.tool === 'parallel') {
+      if (this.sel === null) { this.sel = this.nearestLine(p); this.draw(); return; }
+      const ref = this.items[this.sel];
+      this.items.push({ kind: 'line', x: n.x, y: n.y, dx: ref.dx, dy: ref.dy, ang: ref.ang });
+      this.angIn.value = String(Math.round(ref.ang * 10) / 10).replace('.', ',');
+      this.sel = null; this.draw(); return;
+    }
+    if (this.tool === 'circle') {
+      const d = this.num(this.distIn);
+      if (d === null || d <= 0) { this.flash(this.distIn); return; }
+      this.items.push({ kind: 'circle', x: n.x, y: n.y, r: d }); this.draw(); return;
+    }
     const ang = this.num(this.angIn);
     if (ang === null) { this.flash(this.angIn); return; }
     const dx = Math.sin(ang * D2R), dy = Math.cos(ang * D2R);
@@ -127,16 +252,27 @@ export class PlotBoard {
     this.draw();
   }
   move(p) {
+    if (this.pdrag && this.plotter) {
+      if (this.pdrag.mode === 'rot') { const g = this.plotterGeom(); this.setPlotterAng(Math.atan2(p.x - g.c.x, -(p.y - g.c.y)) / D2R); return; }
+      const q = this.nm(p.x - this.pdrag.ox, p.y - this.pdrag.oy), s = this.snap({ x: p.x - this.pdrag.ox, y: p.y - this.pdrag.oy });
+      Object.assign(this.plotter, s.snapped ? { x: s.x, y: s.y } : q); this.draw(); return;
+    }
     if (this.drag) this.drag.b = this.snap(p);
     this.hover = this.snap(p, 9);
     this.draw();
   }
   up() {
+    this.pdrag = null;
     const d = this.drag;
     this.drag = null;
     if (!d) return;
     const len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
     if (len * this.k < 6) return this.draw();
+    if (this.tool === 'dividers') {
+      this.items.push({ kind: 'meas', a: { x: d.a.x, y: d.a.y }, b: { x: d.b.x, y: d.b.y }, len });
+      this.distIn.value = nm2(len);
+      return this.draw();
+    }
     this.items.push({ kind: 'seg', x: d.a.x, y: d.a.y, dx: (d.b.x - d.a.x) / len, dy: (d.b.y - d.a.y) / len, len, ang: norm(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R) });
     this.draw();
   }
@@ -150,16 +286,22 @@ export class PlotBoard {
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#fbf7ec'; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#eef6fb'; ctx.fillRect(M, M, W - 2 * M, H - 2 * M);
+    ctx.fillStyle = '#f4f9fc'; ctx.fillRect(M, M, W - 2 * M, H - 2 * M);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(M, M, W - 2 * M, H - 2 * M); ctx.clip();
+    this.drawChart(ctx);
+    ctx.restore();
     this.drawScales(ctx);
     ctx.save();
     ctx.beginPath(); ctx.rect(M, M, W - 2 * M, H - 2 * M); ctx.clip();
-    // obiekty (latarnie / pozycja wyjściowa)
+    // obiekty: latarnie (symbol mapowy z błyskiem) albo pozycja wyjściowa
     for (const p of this.plot.pts) {
       const q = this.px(this.toNm(p));
-      ctx.fillStyle = '#d62828'; ctx.strokeStyle = '#7a1010'; ctx.lineWidth = 1.2;
-      ctx.beginPath(); ctx.moveTo(q.x, q.y - 9); ctx.lineTo(q.x + 6, q.y + 5); ctx.lineTo(q.x - 6, q.y + 5); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 13px Segoe UI, sans-serif'; ctx.fillText(p.label, q.x + 9, q.y - 6);
+      if (p.light) {
+        ctx.fillStyle = 'rgba(200,40,160,0.75)'; ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.quadraticCurveTo(q.x + 22, q.y - 4, q.x + 18, q.y - 16); ctx.quadraticCurveTo(q.x + 8, q.y - 10, q.x, q.y); ctx.fill();
+        ctx.fillStyle = '#1b1f24'; this.star(ctx, q.x, q.y, 6);
+      } else { ctx.strokeStyle = '#1b1f24'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.stroke(); ctx.fillStyle = '#1b1f24'; ctx.beginPath(); ctx.arc(q.x, q.y, 1.8, 0, Math.PI * 2); ctx.fill(); }
+      ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 13px Segoe UI, sans-serif'; ctx.fillText(p.label, q.x + 9, q.y + 16);
     }
     // rozwiązanie
     if (this.showSol) {
@@ -171,35 +313,127 @@ export class PlotBoard {
       const q = this.px(this.toNm(s.point));
       ctx.strokeStyle = '#2e9d62'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(q.x, q.y, 8, 0, Math.PI * 2); ctx.stroke();
     }
-    // linie gracza
-    ctx.strokeStyle = '#2f4468'; ctx.lineWidth = 1.8;
-    for (const it of this.items) {
+    // elementy gracza
+    this.items.forEach((it, i) => {
+      ctx.strokeStyle = i === this.sel ? '#e07b16' : '#2f4468'; ctx.lineWidth = i === this.sel ? 3 : 1.8;
       if (it.kind === 'line') this.strokeLine(ctx, it);
       else if (it.kind === 'seg') {
         const a = this.px(it), b = this.px({ x: it.x + it.dx * it.len, y: it.y + it.dy * it.len });
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         this.arrowHead(ctx, a, b);
-        this.label(ctx, (a.x + b.x) / 2, (a.y + b.y) / 2, `${deg3(it.ang)} · ${it.len.toFixed(2).replace('.', ',')} Mm`);
-      } else { const q = this.px(it); ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); }
-    }
+        this.label(ctx, (a.x + b.x) / 2, (a.y + b.y) / 2, `${deg3(it.ang)} · ${nm2(it.len)} Mm`);
+      } else if (it.kind === 'circle') {
+        const c = this.px(it);
+        ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(c.x, c.y, it.r * this.k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+        this.label(ctx, c.x + it.r * this.k * 0.71 + 4, c.y - it.r * this.k * 0.71, `${nm2(it.r)} Mm`);
+      } else if (it.kind === 'meas') this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.55);
+      else { const q = this.px(it); ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); const ll = this.toLL(it); this.label(ctx, q.x + 7, q.y - 6, `${fmtLat(ll.lat)} ${fmtLon(ll.lon)}`); }
+    });
     // przecięcia
     for (const x of this.crossings()) { const q = this.px(x); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.stroke(); }
-    // linia w trakcie przeciągania
+    // w trakcie przeciągania: linia albo cyrkiel
     if (this.drag) {
-      const a = this.px(this.drag.a), b = this.px(this.drag.b), d = this.drag;
-      ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      const len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
-      if (len > 0.01) this.label(ctx, b.x + 12, b.y - 10, `${deg3(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R)} · ${len.toFixed(2).replace('.', ',')} Mm`);
+      const a = this.px(this.drag.a), b = this.px(this.drag.b), d = this.drag, len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
+      if (this.tool === 'dividers') this.drawDividers(ctx, a, b, len, 1);
+      else {
+        ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        if (len > 0.01) this.label(ctx, b.x + 12, b.y - 10, `${deg3(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R)} · ${nm2(len)} Mm`);
+      }
     }
+    if (this.plotter) this.drawPlotter(ctx);
     if (this.hover && this.hover.snapped) { const q = this.px(this.hover); ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 6, q.y - 6, 12, 12); }
     ctx.restore();
-    // róża kierunków (północ)
-    ctx.fillStyle = '#c0392b'; ctx.font = 'bold 12px Segoe UI, sans-serif'; ctx.fillText('N ↑', W - M - 30, M + 16);
     // odczyt współrzędnych kursora / punktu
     const pt = this.drag ? this.drag.b : this.hover;
-    if (pt) { const ll = this.toLL(pt); this.readout.textContent = `${pt.snapped ? '◆ ' : ''}${fmtLat(ll.lat)}   ${fmtLon(ll.lon)}`; }
+    if (pt) { const ll = this.toLL(pt); this.readout.textContent = `${pt.snapped ? '◆ ' : ''}${fmtLat(ll.lat)}   ${fmtLon(ll.lon)}${this.plotter && this.tool === 'plotter' ? `   📐 ${deg3(this.plotter.ang)}` : ''}`; }
     else this.readout.textContent = tr('Najedź na mapę, aby odczytać pozycję');
   }
+
+  drawChart(ctx) {
+    const path = (poly) => { ctx.beginPath(); poly.forEach((v, i) => { const q = this.px(v); i ? ctx.lineTo(q.x, q.y) : ctx.moveTo(q.x, q.y); }); ctx.closePath(); };
+    // płycizny (do izobaty 5 m) – błękit, dalej biel
+    for (const l of this.lands) { path(l.c10); ctx.fillStyle = '#e3f0f8'; ctx.fill(); }
+    for (const l of this.lands) { path(l.c5); ctx.fillStyle = '#cfe4f2'; ctx.fill(); }
+    ctx.lineWidth = 0.9;
+    for (const l of this.lands) {
+      ctx.strokeStyle = 'rgba(60,110,160,0.55)'; ctx.setLineDash([2, 3]); path(l.c5); ctx.stroke();
+      ctx.setLineDash([7, 3, 1.5, 3]); path(l.c10); ctx.stroke(); ctx.setLineDash([]);
+    }
+    for (const l of this.lands) { path(l.poly); ctx.fillStyle = '#f2e2b0'; ctx.fill(); ctx.strokeStyle = '#5b4a2c'; ctx.lineWidth = 1.3; ctx.stroke(); }
+    // głębokości
+    ctx.fillStyle = 'rgba(40,60,90,0.8)'; ctx.font = 'italic 10px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    for (const s of this.sound) { const q = this.px(s); if (Math.hypot(q.x - this.rose.x, q.y - this.rose.y) < 86) continue; ctx.fillText(String(s.d), q.x, q.y + 3); }
+    ctx.textAlign = 'left';
+    this.drawRose(ctx, this.rose.x, this.rose.y, 70);
+  }
+
+  // róża kompasowa: zewnętrzna – kierunki rzeczywiste, wewnętrzna – magnetyczne (obrócona o deklinację)
+  drawRose(ctx, x, y, R) {
+    const v = this.plot.variation || 0;
+    const ring = (rr, rot, major) => {
+      for (let a = 0; a < 360; a += 5) {
+        const t = (a + rot) * D2R, l = a % 30 === 0 ? 9 : a % 10 === 0 ? 6 : 3;
+        ctx.beginPath(); ctx.moveTo(x + Math.sin(t) * rr, y - Math.cos(t) * rr); ctx.lineTo(x + Math.sin(t) * (rr - l), y - Math.cos(t) * (rr - l)); ctx.stroke();
+        if (major && a % 30 === 0) { ctx.save(); ctx.translate(x + Math.sin(t) * (rr - 17), y - Math.cos(t) * (rr - 17)); ctx.rotate(t); ctx.fillText(String(a).padStart(3, '0'), 0, 3); ctx.restore(); }
+      }
+    };
+    ctx.save();
+    ctx.strokeStyle = 'rgba(176,40,140,0.8)'; ctx.fillStyle = 'rgba(176,40,140,0.9)'; ctx.lineWidth = 0.9; ctx.font = '8px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.stroke();
+    ring(R, 0, true);
+    ctx.beginPath(); ctx.arc(x, y, R * 0.56, 0, Math.PI * 2); ctx.stroke();
+    ring(R * 0.56, v, false);
+    // gwiazda północy i strzałka północy magnetycznej
+    ctx.beginPath(); ctx.moveTo(x, y - R + 2); ctx.lineTo(x + 5, y - R + 14); ctx.lineTo(x - 5, y - R + 14); ctx.closePath(); ctx.fill();
+    const tm = v * D2R; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(tm) * R * 0.5, y - Math.cos(tm) * R * 0.5); ctx.stroke();
+    ctx.font = 'bold 8px Segoe UI, sans-serif';
+    const vv = Math.abs(v), d = Math.floor(vv + 1e-9), m = Math.round((vv - d) * 60);
+    ctx.fillText(`Var ${d}°${pad2(m)}'${v >= 0 ? 'E' : 'W'}`, x, y + 14);
+    ctx.restore();
+  }
+
+  drawDividers(ctx, a, b, len, alpha) {
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, hgt = Math.min(70, L * 0.45);
+    const hx = mx, hy = my - hgt;
+    ctx.save(); ctx.globalAlpha = alpha;
+    ctx.strokeStyle = '#6b7380'; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(hx, hy); ctx.lineTo(b.x, b.y); ctx.stroke();
+    ctx.fillStyle = '#3a3f47'; ctx.beginPath(); ctx.arc(hx, hy, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+    this.label(ctx, hx + 8, hy - 4, `${nm2(len)} Mm`);
+  }
+
+  drawPlotter(ctx) {
+    const g = this.plotterGeom(), Lp = PlotBoard.PL, Wd = 78, { c, u, v } = g;
+    const P = (a, b) => ({ x: c.x + u.x * a + v.x * b, y: c.y + u.y * a + v.y * b });
+    ctx.save();
+    // korpus (przezroczysty plastik) – krawędź robocza przechodzi przez środek
+    const q = [P(-Lp, 0), P(Lp, 0), P(Lp, Wd), P(-Lp, Wd)];
+    ctx.fillStyle = 'rgba(200,225,240,0.38)'; ctx.strokeStyle = 'rgba(40,80,120,0.8)'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); q.forEach((p, i) => (i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y))); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // podziałka na krawędzi
+    ctx.strokeStyle = 'rgba(30,50,80,0.8)'; ctx.lineWidth = 0.8;
+    for (let s = -Lp; s <= Lp; s += 6) { const a = P(s, 0), b = P(s, s % 30 === 0 ? 8 : 4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
+    // kątomierz: łuk ze stopniami ustawionymi względem północy mapy (jak obrotowa róża trójkąta)
+    const R = 62;
+    ctx.fillStyle = 'rgba(30,50,80,0.9)'; ctx.font = '8px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    for (let a = 0; a < 360; a += 5) {
+      const t = a * D2R, dir = { x: Math.sin(t), y: -Math.cos(t) };
+      if (dir.x * v.x + dir.y * v.y < 0.02) continue; // tylko po stronie korpusu
+      const l = a % 30 === 0 ? 9 : a % 10 === 0 ? 6 : 3;
+      ctx.beginPath(); ctx.moveTo(c.x + dir.x * R, c.y + dir.y * R); ctx.lineTo(c.x + dir.x * (R - l), c.y + dir.y * (R - l)); ctx.stroke();
+      if (a % 30 === 0) ctx.fillText(String(a).padStart(3, '0'), c.x + dir.x * (R - 16), c.y + dir.y * (R - 16) + 3);
+    }
+    // środek, uchwyt i odczyt
+    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(c.x - 6, c.y); ctx.lineTo(c.x + 6, c.y); ctx.moveTo(c.x, c.y - 6); ctx.lineTo(c.x, c.y + 6); ctx.stroke();
+    ctx.fillStyle = 'rgba(31,147,201,0.85)'; ctx.beginPath(); ctx.arc(g.handle.x, g.handle.y, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Segoe UI'; ctx.fillText('⟳', g.handle.x, g.handle.y + 3);
+    ctx.restore();
+    const t = P(Lp * 0.45, Wd * 0.72);
+    this.label(ctx, t.x - 16, t.y + 4, `${deg3(this.plotter.ang)} / ${deg3(this.plotter.ang + 180)}`);
+  }
+
+  star(ctx, x, y, r) { ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = (i / 10) * Math.PI * 2 - Math.PI / 2, rr = i % 2 ? r * 0.42 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
 
   strokeLine(ctx, l) {
     const a = this.px({ x: l.x - l.dx * 200, y: l.y - l.dy * 200 }), b = this.px({ x: l.x + l.dx * 200, y: l.y + l.dy * 200 });
@@ -217,7 +451,7 @@ export class PlotBoard {
     ctx.fillStyle = '#2f4468'; ctx.fillText(s, x, y);
   }
 
-  // podziałka minut na brzegach (naprzemienne pola co krok, etykiety w stopniach i minutach)
+  // podziałka minut na brzegach (etykiety w stopniach i minutach) i siatka
   drawScales(ctx) {
     const iw = W - 2 * M, ih = H - 2 * M;
     const latMin = this.nm(0, H - M).y, latMax = this.nm(0, M).y; // w minutach szerokości
@@ -230,37 +464,40 @@ export class PlotBoard {
     ctx.font = '11px Segoe UI, sans-serif'; ctx.fillStyle = '#1b1f24';
     const latLabel = (m) => { const d = Math.floor(m / 60 + 1e-9), mm = m - d * 60; return [`${d}°`, fmtMin(mm)]; };
     const lonLabel = (m) => { const d = Math.floor(m / 60 + 1e-9), mm = m - d * 60; return [`${String(d).padStart(3, '0')}°`, fmtMin(mm)]; };
-    // szerokość – lewa i prawa krawędź
     const yOf = (m) => this.px({ x: 0, y: m }).y;
     const s1 = sub(latStep);
+    // pas naprzemiennych pól co 1' (jak na brzegu mapy morskiej)
+    for (let m = Math.floor(latMin); m <= latMax; m += 1) { const y0 = yOf(m), y1 = yOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillStyle = '#1b1f24'; ctx.fillRect(M - 10, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); ctx.fillRect(W - M + 6, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); } }
+    ctx.fillStyle = '#1b1f24';
     for (let m = Math.ceil(latMin / s1) * s1; m <= latMax; m += s1) {
       const y = yOf(m), major = Math.abs(m / latStep - Math.round(m / latStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
       ctx.beginPath(); ctx.moveTo(M - len, y); ctx.lineTo(M, y); ctx.moveTo(W - M, y); ctx.lineTo(W - M + len, y); ctx.stroke();
       if (major) {
-        ctx.strokeStyle = 'rgba(47,68,104,0.13)'; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
+        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(M, y); ctx.lineTo(W - M, y); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
         const [d, mm] = latLabel(m);
         ctx.textAlign = 'right'; ctx.fillText(d, M - 13, y - 1); ctx.fillText(mm, M - 13, y + 11);
         ctx.textAlign = 'left'; ctx.fillText(d, W - M + 13, y - 1); ctx.fillText(mm, W - M + 13, y + 11);
       }
     }
-    // długość – górna i dolna krawędź
     const xOf = (m) => this.px({ x: m * this.cl, y: 0 }).x;
     const s2 = sub(lonStep);
+    for (let m = Math.floor(lonMin); m <= lonMax; m += 1) { const x0 = xOf(m), x1 = xOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillRect(Math.max(M - 10, x0), M - 10, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); ctx.fillRect(Math.max(M - 10, x0), H - M + 6, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); } }
     ctx.textAlign = 'center';
     for (let m = Math.ceil(lonMin / s2) * s2; m <= lonMax; m += s2) {
       const x = xOf(m), major = Math.abs(m / lonStep - Math.round(m / lonStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
       ctx.beginPath(); ctx.moveTo(x, M - len); ctx.lineTo(x, M); ctx.moveTo(x, H - M); ctx.lineTo(x, H - M + len); ctx.stroke();
       if (major) {
-        ctx.strokeStyle = 'rgba(47,68,104,0.13)'; ctx.beginPath(); ctx.moveTo(x, M); ctx.lineTo(x, H - M); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
+        ctx.strokeStyle = 'rgba(47,68,104,0.16)'; ctx.beginPath(); ctx.moveTo(x, M); ctx.lineTo(x, H - M); ctx.stroke(); ctx.strokeStyle = '#1b1f24';
         const [d, mm] = lonLabel(m);
         ctx.fillText(`${d}${mm}`, x, M - 15); ctx.fillText(`${d}${mm}`, x, H - M + 24);
       }
     }
     ctx.textAlign = 'left';
     ctx.font = 'bold 10px Segoe UI, sans-serif'; ctx.fillStyle = '#5a6b80';
-    ctx.fillText(tr('szer. N'), 4, M - 16); ctx.fillText(tr('dł. E'), W - M + 12, H - M + 40 > H ? H - 4 : H - 6);
+    ctx.fillText(tr('szer. N'), 4, M - 16); ctx.fillText(tr('dł. E'), W - M + 12, H - 6);
+    ctx.fillText(tr('Głębokości w metrach'), M, H - 6);
     ctx.restore();
   }
 }

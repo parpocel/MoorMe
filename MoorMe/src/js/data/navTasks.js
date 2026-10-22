@@ -158,7 +158,7 @@ export const GENERATORS = {
         L(`Linie pozycyjne kreślimy z latarni w kierunkach zwrotnych: ${deg3(NR1 + 180)} od A i ${deg3(NR2 + 180)} od B`, `Plot the position lines from the lighthouses along the reciprocals: ${deg3(NR1 + 180)} from A and ${deg3(NR2 + 180)} from B`),
         L(`Przecięcie linii: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Intersection: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
       diagram: { kind: 'fix', A, B, NR1, NR2, P: sol },
-      plot: { pts: [{ label: 'A', ...A }, { label: 'B', ...B }], sol: { lines: [{ p: A, brg: NR1 }, { p: B, brg: NR2 }], point: sol } }
+      plot: { pts: [{ label: 'A', light: true, ...A }, { label: 'B', light: true, ...B }], sol: { lines: [{ p: A, brg: NR1 }, { p: B, brg: NR2 }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
     };
   },
   dr(r) {
@@ -174,7 +174,7 @@ export const GENERATORS = {
       steps: [L(`Droga = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} Mm`, `Distance = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} NM`),
         L(`Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; odejście = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} Mm`, `Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; departure = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} NM`),
         L(`Δλ = odejście / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`, `Δλ = departure / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`), L(`Pozycja zliczona: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`, `DR position: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`)],
-      plot: { pts: [{ label: '10:00', ...P }], sol: { segs: [{ p: P, brg: KDd, dist }], point: E } }
+      plot: { pts: [{ label: '10:00', ...P }], sol: { segs: [{ p: P, brg: KDd, dist }], point: E }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
     };
   }
 };
