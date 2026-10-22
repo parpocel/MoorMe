@@ -150,7 +150,7 @@ export function spawnVessel(r, observer, opts = {}) {
   // kurs statku: namiar od statku do jachtu minus kąt względny
   const back = (Math.atan2(observer.x - x, -(observer.z - z)) * 180) / Math.PI;
   const hdg = (((back - rel) % 360) + 360) % 360;
-  const speed = v.speed[0] + r() * (v.speed[1] - v.speed[0]);
+  const speed = (v.speed[0] + r() * (v.speed[1] - v.speed[0])) * 0.6; // wolniej niż w realu – więcej czasu na obserwację
   return { type: v.id, name: v.name, L, x, z, hdg, speed: v.moving ? speed : 0, side, lights: v.lights(L, r), moving: v.moving };
 }
 

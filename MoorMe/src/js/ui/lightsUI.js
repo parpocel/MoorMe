@@ -91,6 +91,18 @@ export function buildRowboat() {
     oar.rotation.z = -0.12;
     g.add(oar);
   }
+  // maska: niewidoczna powierzchnia tuż pod burtą zapisuje głębię, więc fale nie rysują się wewnątrz łodzi
+  const shape = new THREE.Shape();
+  for (let i = 0; i <= N; i++) { const x = -half + (2 * half * i) / N; i ? shape.lineTo(x, Math.max(hb(x), 0.02) - 0.03) : shape.moveTo(x, Math.max(hb(x), 0.02) - 0.03); }
+  for (let i = N; i >= 0; i--) { const x = -half + (2 * half * i) / N; shape.lineTo(x, -Math.max(hb(x), 0.02) + 0.03); }
+  const mg = new THREE.ShapeGeometry(shape);
+  mg.rotateX(Math.PI / 2);
+  const mask = new THREE.Mesh(mg, new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
+  mask.position.y = 0.3;
+  mask.renderOrder = -1;
+  g.traverse((o) => { if (o.isMesh && o !== mask) o.renderOrder = -2; }); // najpierw łódź, potem maska, na końcu woda
+  g.add(mask);
+  g.position.y = 0.06;
   return g;
 }
 
@@ -136,7 +148,7 @@ class ShipLightsLayer {
       sp.visible = visibleLights([l], rel).length > 0;
       // jasność maleje z odległością, wielkość punktu stała kątowo
       sp.material.opacity = clamp(1.2 - d / 4500, 0.5, 1);
-      sp.scale.setScalar(clamp(d * 0.0075, 0.3, 40));
+      sp.scale.setScalar(clamp(d * 0.0105, 0.4, 55));
     }
   }
 }
@@ -171,6 +183,8 @@ export class LightsScreen extends PassageScreen {
     if (chart) chart.style.display = 'none';
     // „kurs na port” nie ma tu sensu – jest tylko stały kurs
     for (const b of this.sim.querySelectorAll('#hud-controls .btn.xs')) if (/kurs na/.test(b.textContent)) b.style.display = 'none';
+    this.tape = h('canvas', { id: 'hud-tape', width: 640, height: 40 });
+    this.sim.appendChild(this.tape);
     this.quizEl = h('div.hud.glass', { id: 'hud-quiz' });
     this.sim.appendChild(this.quizEl);
     this.layer = new ShipLightsLayer(this.view.scene);
@@ -306,7 +320,49 @@ export class LightsScreen extends PassageScreen {
     }
   }
 
+  // Podziałka namiaru pod górnym paskiem: kierunek, w który patrzy kamera (i żółty znacznik świateł statku)
+  drawTape() {
+    const cv = this.tape, ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+    const dir = new THREE.Vector3();
+    this.view.camera.getWorldDirection(dir);
+    const brg = ((Math.atan2(dir.x, -dir.z) / DEG) + 360) % 360;
+    const span = 90, px = W / span; // ±45° widoczne
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(10,25,45,0.72)';
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)'; ctx.fillStyle = '#e8f0ff';
+    ctx.textAlign = 'center'; ctx.font = '11px Segoe UI';
+    const NAMES = { 0: 'N', 45: 'NE', 90: 'E', 135: 'SE', 180: 'S', 225: 'SW', 270: 'W', 315: 'NW' };
+    for (let a = Math.floor((brg - span / 2) / 5) * 5; a <= brg + span / 2; a += 5) {
+      const x = W / 2 + (a - brg) * px, aa = ((a % 360) + 360) % 360;
+      const major = aa % 10 === 0;
+      ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x, H - (major ? 12 : 6)); ctx.stroke();
+      if (major) {
+        const lbl = NAMES[aa] || String(aa).padStart(3, '0');
+        ctx.fillStyle = NAMES[aa] ? '#ffd166' : '#e8f0ff';
+        ctx.font = NAMES[aa] ? 'bold 12px Segoe UI' : '11px Segoe UI';
+        ctx.fillText(lbl, x, H - 16);
+      }
+    }
+    // kierunek do świateł statku
+    const v = this.q && this.q.vessel, b = this.world.boat;
+    if (v) {
+      const vb = ((Math.atan2(v.x - b.x, -(v.z - b.z)) / DEG) + 360) % 360;
+      let dd = ((vb - brg + 540) % 360) - 180;
+      const x = W / 2 + clamp(dd, -span / 2, span / 2) * px;
+      ctx.fillStyle = '#ffd166';
+      ctx.beginPath(); ctx.moveTo(x, 2); ctx.lineTo(x - 5, 9); ctx.lineTo(x + 5, 9); ctx.closePath(); ctx.fill();
+    }
+    // wskaźnik środka i odczyt
+    ctx.fillStyle = '#ff5a5a';
+    ctx.beginPath(); ctx.moveTo(W / 2, H); ctx.lineTo(W / 2 - 6, H - 9); ctx.lineTo(W / 2 + 6, H - 9); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(10,25,45,0.95)'; ctx.fillRect(W / 2 - 24, 0, 48, 15);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 12px Segoe UI';
+    ctx.fillText(`${pad3(brg)}°`, W / 2, 12);
+  }
+
   drawCompass() {
+    this.drawTape();
     SimScreen.prototype.drawCompass.call(this);
     // kierunek do świateł na tarczy kompasu (pomaga znaleźć statek)
     const v = this.q && this.q.vessel;

@@ -300,6 +300,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .mode-card.moor { background: #f5dbd2; }
 .mode-card.sail { background: #d5ebe4; }
 .mode-card.lights { background: #d9dcf2; }
+#hud-tape { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); width: 640px; height: 40px; border-radius: 8px; pointer-events: none; z-index: 5; }
 #hud-quiz { top: 130px; left: 12px; padding: 12px 14px; width: 330px; max-height: calc(100vh - 150px); overflow: auto; font-size: 13px; }
 #hud-quiz .quiz-score { font-size: 12px; margin-bottom: 6px; }
 #hud-quiz .quiz-title { font-weight: 800; font-size: 15px; margin: 2px 0 4px; }
