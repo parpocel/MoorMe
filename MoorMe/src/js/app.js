@@ -167,13 +167,13 @@ function showSoundsIntro() {
   menuMusic.start();
   showTrainOrLearn(app, { title: 'Sygnały dźwiękowe', sceneryEl, icons: { train: raw(icon.horn), learn: raw(icon.book) },
     desc: { train: 'Z łodzi na morzu słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: wszystkie sygnały manewrowe, ostrzegawcze i mgłowe z zapisem, osią czasu i odsłuchem.' },
-    onTrain: () => startSounds(), onLearn: () => showSoundsBook(), onExit: () => showModeSelect() });
+    onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), onExit: () => showModeSelect() });
 }
 function showSoundsBook() {
   menuMusic.stop(0.6);
   const audio = new ShipAudio();
   const close = () => { audio.stop(); if (audio.ctx) audio.ctx.close(); };
-  showHandbook(app, { title: 'podręcznik – sygnały dźwiękowe', sections: soundsBook((p) => audio.play(p)), sceneryEl, onExit: () => { close(); showSoundsIntro(); }, onTrain: () => { close(); startSounds(); } });
+  showHandbook(app, { title: 'podręcznik – sygnały dźwiękowe', sections: soundsBook((p) => audio.play(p)), sceneryEl, onExit: () => { close(); showSoundsIntro(); }, onTrain: () => { close(); showSoundsSetup(); } });
 }
 function showSailIntro() {
   menuMusic.start();
@@ -270,15 +270,30 @@ function showLightsSetup() {
       h('div.tbtn-row', {}, h('button.btn', { onclick: () => showModeSelect() }, '← Tryby')))));
 }
 
-function startSounds() {
+function showSoundsSetup() {
+  menuMusic.start();
+  app.innerHTML = '';
+  const card = (cls, ic, title, text, ctxs) => h('button.mode-card' + cls, { onclick: () => startSounds(ctxs) }, h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
+  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
+    h('div.title-card', { style: { width: 'min(1060px, 96vw)' } },
+      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
+      h('p.desc', {}, 'Które sygnały ćwiczysz?'),
+      h('div.mode-cards', {},
+        card('.sail', icon.horn, 'Morze (MPZZM / COLREG)', 'Sygnały manewrowe i ostrzegawcze, sygnały we mgle i wzywanie pomocy na morzu.', ['sight', 'fog']),
+        card('.nav', icon.horn, 'Drogi śródlądowe (CEVNI)', 'Sygnały na rzekach, kanałach i jeziorach – m.in. „uwaga”, „nie mogę manewrować”, zawracanie.', ['inland']),
+        card('.lights', icon.horn, 'Wszystkie', 'Morze i drogi śródlądowe razem – przy każdym sygnale widać, którego zestawu dotyczy.', ['sight', 'fog', 'inland'])),
+      h('div.tbtn-row', {}, h('button.btn', { onclick: () => showSoundsIntro() }, '← Wstecz')))));
+}
+
+function startSounds(ctxs = ['sight', 'fog', 'inland']) {
   menuMusic.stop();
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
   app.appendChild(root);
   const equip = defaultEquipment(BOATS.C34);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'sounds', boatId: 'C34', equip, day: true, weather: { windKn: 5, windFrom: 250, gust: 0.1, currentKn: 0, currentTo: 90, hour: 12, sky: 'clear' } };
-  window.__sim = new SoundsScreen(root, config, { restart: () => startSounds(), exit: () => showSoundsIntro() });
+  const config = { mode: 'sounds', boatId: 'C34', equip, day: true, ctxs, weather: { windKn: 5, windFrom: 250, gust: 0.1, currentKn: 0, currentTo: 90, hour: 12, sky: 'clear' } };
+  window.__sim = new SoundsScreen(root, config, { restart: () => startSounds(ctxs), exit: () => showSoundsIntro() });
 }
 
 function startLights(day = false) {

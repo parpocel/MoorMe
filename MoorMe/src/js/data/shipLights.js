@@ -11,7 +11,7 @@ export const SECTORS = {
   all: () => true // dookólne
 };
 
-export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xffc400 };
+export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xfff000, deck: 0xffd9a0 };
 
 // pomocnicze zestawy świateł
 const sides = (L, y) => [
@@ -50,9 +50,15 @@ export const VESSELS = [
     lights: (L) => [{ x: L * 0.35, y: 7, z: 0, c: 'white', s: 'all' }]
   },
   {
-    id: 'anchorLarge', name: 'Statek na kotwicy (≥ 50 m)', L: [90, 200], speed: [0, 0], moving: false,
-    explain: 'Dwa białe światła dookólne: przednie wyżej, rufowe niżej. Duże statki dodatkowo oświetlają pokład.',
-    lights: (L) => [{ x: L * 0.45, y: 14, z: 0, c: 'white', s: 'all' }, { x: -L * 0.45, y: 8, z: 0, c: 'white', s: 'all' }]
+    id: 'anchorLarge', name: 'Statek na kotwicy (50–100 m)', L: [55, 95], speed: [0, 0], moving: false,
+    explain: 'Dwa białe światła dookólne: przednie wyżej, rufowe niżej.',
+    lights: (L) => [{ x: L * 0.45, y: 12, z: 0, c: 'white', s: 'all' }, { x: -L * 0.45, y: 7, z: 0, c: 'white', s: 'all' }]
+  },
+  {
+    id: 'anchor100', name: 'Statek na kotwicy (≥ 100 m)', L: [120, 250], speed: [0, 0], moving: false,
+    explain: 'Dwa białe światła kotwiczne (przednie wyżej) i oświetlony pokład – statek od 100 m długości musi włączyć światła robocze oświetlające pokład.',
+    lights: (L) => [{ x: L * 0.45, y: 16, z: 0, c: 'white', s: 'all' }, { x: -L * 0.45, y: 9, z: 0, c: 'white', s: 'all' },
+      ...Array.from({ length: 9 }, (_, i) => ({ x: -L * 0.4 + (i * L * 0.8) / 8, y: 6.5 + (i % 2) * 0.6, z: (i % 3 - 1) * 4, c: 'deck', s: 'all' }))]
   },
   {
     id: 'trawling', name: 'Statek trałujący (łowiący włokiem)', L: [20, 40], speed: [3, 5], moving: true,
@@ -112,7 +118,7 @@ export const VESSEL_BY_ID = Object.fromEntries(VESSELS.map((v) => [v.id, v]));
 // Znaki dzienne (czarne kształty na maszcie). shapes: [{ x, y, z, k }], k: ball | coneUp | coneDown | diamond | cylinder | hourglass
 const col = (x, y0, ks) => ks.map((k, i) => ({ x, y: y0 + (ks.length - 1 - i) * 1.6, z: 0, k }));
 export const DAY_VESSELS = [
-  { id: 'dPower', name: 'Statek o napędzie mechanicznym w drodze (bez znaków)', L: [25, 120], speed: [8, 14], moving: true, hull: 'ship',
+  { id: 'dPower', name: 'Statek o napędzie mechanicznym w drodze', L: [25, 120], speed: [8, 14], moving: true, hull: 'ship',
     explain: 'Statek o napędzie mechanicznym w drodze nie nosi w dzień żadnych znaków.', shapes: () => [] },
   { id: 'dAnchor', name: 'Statek na kotwicy', L: [25, 150], speed: [0, 0], moving: false, hull: 'ship',
     explain: 'Jedna czarna kula w przedniej części statku.', shapes: (L) => [{ x: L * 0.4, y: 9, z: 0, k: 'ball' }] },
@@ -140,10 +146,10 @@ export const DAY_BY_ID = Object.fromEntries(DAY_VESSELS.map((v) => [v.id, v]));
 export const anyVessel = (id) => VESSEL_BY_ID[id] || DAY_BY_ID[id];
 
 export const ASPECTS = {
-  bow: 'Dziób – płynie na nas',
-  starboard: 'Prawa burta (zielone)',
-  port: 'Lewa burta (czerwone)',
-  stern: 'Rufa – oddala się',
+  bow: 'Dziób',
+  starboard: 'Prawa burta',
+  port: 'Lewa burta',
+  stern: 'Rufa',
   none: 'Stoi – kierunek nieistotny'
 };
 export const GEAR_SIDES = { port: 'Z lewej burty statku', starboard: 'Z prawej burty statku' };
@@ -216,26 +222,39 @@ export function spawnVessel(r, observer, opts = {}) {
   const hdg = (((back - rel) % 360) + 360) % 360;
   let speed = (v.speed[0] + r() * (v.speed[1] - v.speed[0])) * 0.6; // wolniej niż w realu – więcej czasu na obserwację
   const o = { gearSide: r() < 0.5 ? 'port' : 'starboard' };
-  let pos = { x, z, hdg }, pass = null;
+  let pos = { x, z, hdg }, pass = null, obsT = null;
   if (aspect === 'bow' && observer.speed !== undefined) {
     // statek idący „prosto na nas” (widać oba burtowe): podchodzi z kierunku bliskiego dziobowi i celuje w punkt naszej
     // linii kursu nieco przed albo za nami – po chwili namiar zacznie się przesuwać i będzie wiadomo, gdzie przejdzie
-    speed = Math.max(speed, 6);
+    speed = 9.5 + r() * 2.5; // szybciej – w czasie obserwacji odległość wyraźnie maleje i namiar zaczyna się zmieniać
     const want = r() < 0.5 ? 'ahead' : 'astern', sgn = side === 'port' ? -1 : 1;
-    const oh = (observer.hdg * Math.PI) / 180, fx = Math.sin(oh), fz = -Math.cos(oh);
-    for (let k = 0; k < 400; k++) {
-      const a = ((observer.hdg + sgn * (6 + r() * 14)) * Math.PI) / 180, dd = 650 + r() * 500;
+    const oh = (observer.hdg * Math.PI) / 180, ofx = Math.sin(oh) * observer.speed, ofz = -Math.cos(oh) * observer.speed;
+    // zmiana namiaru do chwili, gdy statek zbliży się na ok. 260 m (tyle trwa obserwacja)
+    const drift = (px, pz, h2) => {
+      const vx = Math.sin((h2 * Math.PI) / 180) * speed * 0.514444, vz = -Math.cos((h2 * Math.PI) / 180) * speed * 0.514444;
+      let x = px, z = pz, ox = observer.x, oz = observer.z, t = 0;
+      const b0 = Math.atan2(px - ox, -(pz - oz));
+      while (Math.hypot(x - ox, z - oz) > 260 && t < 90) { x += vx * 0.5; z += vz * 0.5; ox += ofx * 0.5; oz += ofz * 0.5; t += 0.5; }
+      let d = (Math.atan2(x - ox, -(z - oz)) - b0) * 180 / Math.PI; d = ((d + 540) % 360) - 180;
+      return { d: Math.abs(d), t };
+    };
+    let best = null;
+    for (let k = 0; k < 600; k++) {
+      const a = ((observer.hdg + sgn * (want === 'ahead' ? 4 + r() * 8 : 20 + r() * 60)) * Math.PI) / 180, dd = 460 + r() * 240;
       const px = observer.x + Math.sin(a) * dd, pz = observer.z - Math.cos(a) * dd;
-      const s = -250 + r() * 600, tx = observer.x + fx * s, tz = observer.z + fz * s;
-      const h2 = (((Math.atan2(tx - px, -(tz - pz)) * 180) / Math.PI) + 360) % 360;
+      const los = (((Math.atan2(observer.x - px, -(observer.z - pz)) * 180) / Math.PI) + 360) % 360;
+      const h2 = (los + (r() - 0.5) * 5.6 + 360) % 360; // oba burtowe widoczne: dziób w granicach ±2,8° od nas
       if (Math.abs(relBearing(px, pz, h2, observer.x, observer.z)) > 2.8) continue;
       const p = passSide({ x: px, z: pz, hdg: h2, speed }, observer);
-      if (p.side === 'none' || Math.abs(p.along) < 45 || (p.side !== want && k < 300)) continue;
-      pos = { x: px, z: pz, hdg: h2 }; pass = p.side;
+      if (p.side !== want || Math.abs(p.along) < 40) continue;
+      const dr = drift(px, pz, h2);
+      if (dr.d < (want === 'ahead' ? 1 : 3) || dr.t < 25) continue;
+      best = { pos: { x: px, z: pz, hdg: h2 }, side: p.side, obs: dr.t };
       break;
     }
+    if (best) { pos = best.pos; pass = best.side; obsT = best.obs; }
   }
-  const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
+  const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, obsT, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
   if (opts.day) return { ...base, hull: v.hull, shapes: v.shapes(L, r, o), lights: [] };
   return { ...base, lights: v.lights(L, r, o) };
 }

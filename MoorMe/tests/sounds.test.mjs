@@ -29,5 +29,13 @@ const strs = [...SIGNALS.map((s) => s.name), ...Object.values(CONTEXTS)];
 const missing = strs.filter((s) => t(s) === s || PL.test(t(s)));
 check(missing.length === 0, `sygnały mają tłumaczenie (${strs.length})${missing.length ? ': ' + missing.slice(0, 3).join(' | ') : ''}`);
 setLang('pl');
+// sygnał rozpoznany 3× w sesji już nie wraca; po opanowaniu wszystkich talia jest pusta
+{
+  const { makeSignalDeck: mk } = await import('../src/js/data/soundSignals.js');
+  const d = mk(rng(5), ['inland']);
+  const seen = new Map();
+  for (let i = 0; i < 200; i++) { const id = d(); if (!id) break; seen.set(id, (seen.get(id) || 0) + 1); d.correct(id); }
+  check(d() === null && [...seen.values()].every((n) => n === 3) && d.learnedCount() === d.total(), `opanowane po 3 poprawnych: każdy sygnał ${[...new Set(seen.values())].join('/')}×, potem talia pusta`);
+}
 if (fails) process.exit(1);
 console.log('Wszystko OK');

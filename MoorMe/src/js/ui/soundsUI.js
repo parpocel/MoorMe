@@ -69,8 +69,54 @@ export class ShipAudio {
 export class SoundsScreen extends LightsScreen {
   initWorld(config) {
     super.initWorld({ ...config, day: true });
-    this.signalDeck = makeSignalDeck(this.rand);
+    this.ctxs = config.ctxs || ['sight', 'fog', 'inland'];
+    this.signalDeck = makeSignalDeck(this.rand, this.ctxs);
     this.audio = new ShipAudio();
+  }
+
+  // pozycja i ruch statku zgodne z jego zamiarem (np. wyprzedzający – z tyłu, zmieniający kurs – przed nami i skręca)
+  placeVessel(sig) {
+    const o = this.observer(), sc = sig.scene, r = this.rand;
+    const side = sc.side || (r() < 0.5 ? -1 : 1);
+    const rel = side * (sc.brg[0] + r() * (sc.brg[1] - sc.brg[0])), dist = sc.dist[0] + r() * (sc.dist[1] - sc.dist[0]);
+    const a = ((o.hdg + rel) * Math.PI) / 180;
+    const x = o.x + Math.sin(a) * dist, z = o.z - Math.cos(a) * dist;
+    const toUs = (((Math.atan2(o.x - x, -(o.z - z)) * 180) / Math.PI) + 360) % 360;
+    let hdg;
+    if (sc.hdg === 'same') hdg = o.hdg;
+    else if (sc.hdg === 'toward') hdg = toUs + side * (sc.off || 0);
+    else if (sc.hdg === 'cross') hdg = o.hdg + (rel > 0 ? -90 : 90) + (r() - 0.5) * 30;
+    else if (sc.hdg === 'collision') {
+      // stały namiar: składowa prędkości statku w poprzek linii namiaru znosi naszą
+      const vs = sc.speed * 0.514444, ov = o.speed, los = Math.atan2(o.x - x, -(o.z - z)), oh = (o.hdg * Math.PI) / 180;
+      const lat = ov * Math.sin(oh - los); // nasza prędkość w poprzek linii namiaru
+      hdg = (los + Math.asin(Math.max(-1, Math.min(1, lat / vs)))) * 180 / Math.PI;
+    } else hdg = r() * 360;
+    const v = spawnVessel(r, o, { type: 'dPower', day: true });
+    Object.assign(v, { x, z, hdg: ((hdg % 360) + 360) % 360, speed: sc.speed, side: rel < 0 ? 'port' : 'starboard', moving: sc.speed > 0.2 || !!sc.beh, beh: sc.beh ? { ...sc.beh, t: 0, turned: 0 } : null });
+    v.shapes = [];
+    return v;
+  }
+
+  // manewr statku po sygnale: zwrot albo praca wstecz
+  updateVessel(dt) {
+    const v = this.q.vessel;
+    if (!v || !v.beh) return;
+    const b = v.beh;
+    b.t += dt;
+    if (b.t < b.delay) return;
+    if (b.turn) {
+      const step = Math.sign(b.turn) * Math.min(Math.abs(b.turn) - Math.abs(b.turned), b.rate * dt);
+      if (Math.abs(b.turned) < Math.abs(b.turn)) { v.hdg = (v.hdg + step + 360) % 360; b.turned += step; }
+    }
+    if (b.speedTo !== undefined) v.speed += Math.sign(b.speedTo - v.speed) * Math.min(Math.abs(b.speedTo - v.speed), b.accel * dt);
+  }
+
+  updateHUD() {
+    const now = performance.now(), dt = Math.min((now - (this._vLast || now)) / 1000, 0.1) * (this.paused ? 0 : this.timeScale);
+    this._vLast = now;
+    this.updateVessel(dt);
+    super.updateHUD();
   }
 
   introLog() {
@@ -79,16 +125,17 @@ export class SoundsScreen extends LightsScreen {
 
   spawn() {
     const q = this.q;
-    const sig = SIGNAL_BY_ID[this._forceSignal || this.signalDeck()];
+    const id = this._forceSignal || this.signalDeck();
+    if (!id) { q.phase = 'done'; this.renderQuiz(); return; }
+    const sig = SIGNAL_BY_ID[id];
     q.signal = sig;
     q.options = signalOptions(this.rand, sig.id, 5);
     q.pick = null; q.result = null; q.phase = 'active';
     // w dobrej widoczności widać statek, który daje sygnał; we mgle – tylko go słychać
     this.view.atmo.setSky(sig.ctx === 'fog' ? 'fog' : 'clear');
-    const v = spawnVessel(this.rand, this.observer(), { type: 'dPower', day: true });
-    v.shapes = [];
+    const v = this.placeVessel(sig);
     q.vessel = v;
-    if (sig.ctx === 'sight') this.layer.set(v); else this.layer.clear();
+    if (sig.ctx !== 'fog') this.layer.set(v); else this.layer.clear();
     this.pushLog({ msg: v.side === 'port' ? 'Sygnał z lewej burty!' : 'Sygnał z prawej burty!', type: 'info' });
     this.playSignal();
     this.renderQuiz();
@@ -105,7 +152,7 @@ export class SoundsScreen extends LightsScreen {
 
   check() {
     const q = this.q, ok = q.pick === q.signal.id;
-    q.stats.n++; if (ok) q.stats.ok++;
+    q.stats.n++; if (ok) { q.stats.ok++; this.signalDeck.correct(q.signal.id); }
     this.scoreStreak(ok);
     q.result = { ok };
     q.phase = 'feedback';
@@ -128,6 +175,12 @@ export class SoundsScreen extends LightsScreen {
     el.innerHTML = '';
     const s = q.stats;
     el.appendChild(h('div.quiz-score', {}, h('span.muted', {}, 'Poprawne:'), ' ', h('b', {}, `${s.ok}/${s.n}`), '  ', h('span.muted', {}, 'Seria:'), ' ', h('b', {}, `${s.streak}`), '  ', h('span.muted', {}, 'Najlepsza:'), ' ', h('b', {}, `${s.best}`)));
+    el.appendChild(h('div.small', { style: { margin: '2px 0 4px' } }, h('span.muted', {}, 'Opanowane (3× dobrze):'), ' ', h('b', {}, `${this.signalDeck.learnedCount()}/${this.signalDeck.total()}`)));
+    if (q.phase === 'done') {
+      el.appendChild(h('div.quiz-verdict.ok', {}, '✓ Wszystkie sygnały opanowane!'));
+      el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => { this.signalDeck.reset(); this.next(); } }, 'Zacznij od nowa'));
+      return;
+    }
     if (q.phase === 'wait' || !q.signal) {
       el.appendChild(h('div.quiz-title', {}, 'Nasłuchuj…'));
       return;
@@ -163,8 +216,8 @@ export class SoundsScreen extends LightsScreen {
     const back = h('div.modal-back', { onclick: (e) => { if (e.target === back) back.remove(); } });
     const m = h('div.modal.glass', { style: { width: '820px', maxHeight: '86vh', overflow: 'auto' } },
       h('h2', {}, 'Ściąga – sygnały dźwiękowe'),
-      h('p.small', {}, '• – krótki dźwięk (ok. 1 s), — – długi dźwięk (4–6 s), 🔔 – dzwon, ◎ – gong.'),
-      ...['sight', 'fog'].map((c) => h('div', {}, h('h3', {}, CONTEXTS[c]),
+      h('p.small', {}, '• – krótki dźwięk (ok. 1 s), — – długi dźwięk (4–6 s), · – bardzo krótki (ok. ¼ s), ━ – ciągły, 🔔 – dzwon, ◎ – gong.'),
+      ...['sight', 'fog', 'inland'].map((c) => h('div', {}, h('h3', {}, CONTEXTS[c]),
         h('table.spec-table', {}, ...SIGNALS.filter((s) => s.ctx === c).map((s) => h('tr', {}, h('td', { style: { width: '22%', letterSpacing: '2px', fontWeight: 700 } }, notation(s.p)), h('td', {}, s.name)))))),
       h('div', { style: { textAlign: 'right', marginTop: '10px' } }, h('button.btn.primary', { onclick: () => back.remove() }, 'OK')));
     back.appendChild(m);

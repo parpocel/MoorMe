@@ -140,8 +140,9 @@ class ShipLightsLayer {
       const d = Math.hypot(cam.x - wx, cam.z - wz);
       sp.visible = visibleLights([l], rel).length > 0;
       // jasność maleje z odległością, wielkość punktu stała kątowo
-      sp.material.opacity = clamp(1.2 - d / 4500, 0.5, 1);
-      sp.scale.setScalar(clamp(d * 0.0105, 0.4, 55));
+      const deck = l.c === 'deck'; // oświetlenie pokładu – słabsze i mniejsze niż światła nawigacyjne
+      sp.material.opacity = clamp(1.2 - d / 4500, 0.5, 1) * (deck ? 0.7 : 1);
+      sp.scale.setScalar(clamp(d * 0.0105, 0.4, 55) * (deck ? 0.65 : 1));
     }
   }
 }
@@ -160,23 +161,74 @@ function shapeMesh(k) {
   else if (k === 'cylinder') g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 14), BLACK));
   return g;
 }
-function hullMesh(type, L) {
+// Kadłub w rzucie z góry: ostry dziób (x > 0), pawęż na rufie – wyciągnięty w górę daje burty
+function hullGeom(L, B, H, bowK = 0.2) {
+  const sh = new THREE.Shape(), hl = L / 2, hb = B / 2, xb = hl - L * bowK;
+  sh.moveTo(-hl, -hb * 0.86); sh.lineTo(xb, -hb); sh.quadraticCurveTo(hl - L * bowK * 0.25, -hb * 0.75, hl, 0); sh.quadraticCurveTo(hl - L * bowK * 0.25, hb * 0.75, xb, hb); sh.lineTo(-hl, hb * 0.86); sh.lineTo(-hl, -hb * 0.86);
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: H, bevelEnabled: false, curveSegments: 10 });
+  geo.rotateX(-Math.PI / 2); // kształt w płaszczyźnie XZ, wysokość w górę (y)
+  return geo;
+}
+function hullMesh(type, L, moving) {
   const g = new THREE.Group();
-  const dark = new THREE.MeshStandardMaterial({ color: 0x8b929b, roughness: 0.9, flatShading: true }); // szare – czarne znaki dzienne odcinają się od sylwetki
-  const sup = new THREE.MeshStandardMaterial({ color: 0xa9b0b8, roughness: 0.9, flatShading: true });
-  const box = (w, hh, d, x, y, m = dark) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), m); b.position.set(x, y, 0); g.add(b); return b; };
+  const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, flatShading: true });
+  const hullC = M(0x858c95), deckC = M(0x9aa1a9), supC = M(0xb4bac1), winC = M(0x4a5059), detC = M(0x6c737b), redC = M(0x8f6a66);
+  const box = (w, hh, d, x, y, z = 0, m = supC) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), m); b.position.set(x, y, z); g.add(b); return b; };
+  const cyl = (r1, r2, hh, x, y, z = 0, m = detC) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, hh, 10), m); c.position.set(x, y, z); g.add(c); return c; };
   const B = type === 'yacht' ? 3.4 : Math.max(5, L * 0.16);
+  const hull = (Lh, Bh, Hh, bowK, y0, m) => { const h2 = new THREE.Mesh(hullGeom(Lh, Bh, Hh, bowK), m); h2.position.y = y0; g.add(h2); return h2; };
   if (type === 'yacht') {
-    box(L, 1.2, B, 0, 0.4);
-    const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 14, 6), dark); mast.position.set(0.5, 7.5, 0); g.add(mast);
-    const sail = new THREE.Mesh(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0.6, 1.4, 0), new THREE.Vector3(0.6, 14, 0), new THREE.Vector3(-L * 0.4, 1.6, 0)]), new THREE.MeshStandardMaterial({ color: 0xc9ccd0, side: THREE.DoubleSide }));
-    g.add(sail);
-    return g;
+    hull(L, B, 1.1, 0.35, -0.2, hullC);
+    box(L * 0.35, 0.6, B * 0.55, -L * 0.05, 1.2, 0, supC); // nadbudówka
+    cyl(0.08, 0.1, 14, L * 0.08, 7.8, 0);
+    const tri = (pts, c) => { const geo = new THREE.BufferGeometry().setFromPoints(pts.map(([x, y]) => new THREE.Vector3(x, y, 0))); geo.setIndex([0, 1, 2]); geo.computeVertexNormals(); g.add(new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: c, side: THREE.DoubleSide, roughness: 0.9 }))); };
+    tri([[L * 0.08 - 0.1, 1.6], [L * 0.08 - 0.1, 14.3], [-L * 0.38, 1.8]], 0xd4d7db); // grot
+    tri([[L * 0.1, 13.4], [L * 0.5, 1.3], [L * 0.12, 1.5]], 0xc4c8cd); // fok
+  } else {
+    hull(L, B, 3, type === 'ship' ? 0.16 : 0.25, -0.4, hullC);
+    // linia wodna (pas antyporostowy) i nadburcie
+    hull(L * 1.002, B * 1.01, 0.5, type === 'ship' ? 0.16 : 0.25, -0.45, redC);
+    if (type === 'ship') {
+      box(L * 0.12, 1.4, B * 0.95, L * 0.4, 3.2, 0, hullC); // podniesiony dziób (bak)
+      cyl(0.25, 0.3, 12, L * 0.36, 9, 0); box(0.3, 0.3, B * 0.8, L * 0.36, 11.5, 0, detC); // maszt przedni z salingiem
+      // kontenery w kilku rzędach na pokładzie
+      const cols = [0x8d949c, 0x7f8790, 0x9ba1a8, 0x868d96];
+      for (let i = 0; i < 6; i++) for (let k = 0; k < 2; k++) box(L * 0.08, 2.4, B * 0.42, L * 0.24 - i * L * 0.095, 3.8 + k * 2.45, (k % 2 ? 1 : -1) * B * 0.22, M(cols[(i + k) % 4]));
+      // nadbudówka rufowa z mostkiem i skrzydłami, komin
+      box(L * 0.14, 9, B * 0.8, -L * 0.36, 7, 0, supC);
+      box(L * 0.15, 0.9, B * 1.02, -L * 0.33, 11.2, 0, supC); // mostek ze skrzydłami
+      box(L * 0.151, 0.5, B * 0.78, -L * 0.33, 11.1, 0, winC); // okna mostka
+      for (let k = 0; k < 3; k++) box(L * 0.141, 0.35, B * 0.81, -L * 0.36, 4.6 + k * 2.2, 0, winC);
+      box(L * 0.07, 4, B * 0.32, -L * 0.42, 13.5, 0, detC); box(L * 0.071, 0.8, B * 0.321, -L * 0.42, 14.6, 0, M(0x5f656c));
+    } else if (type === 'trawler') {
+      box(L * 0.18, 1.2, B * 0.9, L * 0.38, 3.0, 0, hullC); // wysoki dziób
+      box(L * 0.24, 3.2, B * 0.62, L * 0.17, 4.2, 0, supC); // sterówka z przodu
+      box(L * 0.245, 0.7, B * 0.63, L * 0.17, 5.2, 0, winC);
+      cyl(0.18, 0.22, 9, L * 0.3, 7.5, 0); // maszt
+      // brama rufowa (A-frame) i bęben włoka
+      for (const z of [-B * 0.4, B * 0.4]) { const leg = cyl(0.2, 0.25, 7, -L * 0.42, 5.5, z); leg.rotation.z = -0.25; }
+      box(0.4, 0.4, B * 0.9, -L * 0.46, 8.6, 0, detC);
+      const drum = cyl(1, 1, B * 0.5, -L * 0.25, 3.6, 0); drum.rotation.x = Math.PI / 2;
+    } else if (type === 'tug') {
+      box(L * 0.2, 1, B * 0.95, L * 0.36, 2.9, 0, hullC); // wyższy dziób
+      box(L * 0.3, 3.2, B * 0.7, L * 0.12, 4.2, 0, supC);
+      box(L * 0.2, 2.2, B * 0.6, L * 0.14, 6.9, 0, supC); // sterówka
+      box(L * 0.201, 0.8, B * 0.61, L * 0.14, 7.4, 0, winC);
+      cyl(0.7, 0.8, 3.5, -L * 0.04, 6.8, 0); // komin
+      box(1, 1.2, 1, -L * 0.2, 3.2, 0, detC); // hak holowniczy
+      for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.3, 6, 10), M(0x3f4449)); f.position.set(L * 0.44 - k * 0.2, 1.6, (k % 2 ? 1 : -1) * B * 0.25); f.rotation.y = Math.PI / 2; g.add(f); }
+    }
   }
-  box(L, 3, B, 0, 1);
-  if (type === 'tug') box(L * 0.3, 4, B * 0.7, L * 0.15, 4.5, sup);
-  else if (type === 'trawler') { box(L * 0.25, 3, B * 0.7, L * 0.25, 4, sup); box(0.4, 6, B * 0.9, -L * 0.42, 5.5); }
-  else box(L * 0.18, 7, B * 0.85, -L * 0.36, 6, sup);
+  // fala dziobowa i kilwater – od razu widać, gdzie jest dziób
+  if (moving) {
+    const foam = new THREE.MeshBasicMaterial({ color: 0xf4f8fb, transparent: true, opacity: 0.75, depthWrite: false });
+    for (const sgn of [-1, 1]) {
+      const w = new THREE.Mesh(new THREE.PlaneGeometry(L * 0.32, Math.max(1, B * 0.18)), foam); w.rotation.x = -Math.PI / 2; w.rotation.z = sgn * 0.42;
+      w.position.set(L * 0.4, 0.12, sgn * B * 0.45); g.add(w);
+    }
+    const wake = new THREE.Mesh(new THREE.PlaneGeometry(L * 0.9, B * 0.8), new THREE.MeshBasicMaterial({ color: 0xe9f1f6, transparent: true, opacity: 0.45, depthWrite: false }));
+    wake.rotation.x = -Math.PI / 2; wake.position.set(-L * 0.95, 0.1, 0); g.add(wake);
+  }
   return g;
 }
 export class ShipShapesLayer {
@@ -185,9 +237,9 @@ export class ShipShapesLayer {
     this.clear();
     this.vessel = v;
     const g = new THREE.Group();
-    g.add(hullMesh(v.hull, v.L));
+    g.add(hullMesh(v.hull, v.L, v.moving && v.speed > 0));
     if (v.type === 'dTowing') { // holowana barka 230 m za rufą i hol
-      const barge = hullMesh('ship', 40); barge.position.x = -v.L / 2 - 230; g.add(barge);
+      const barge = hullMesh('barge', 40, true); barge.position.x = -v.L / 2 - 230; g.add(barge);
       const tow = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 210, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a }));
       g.add(tow);
     }
@@ -317,7 +369,7 @@ export class LightsScreen extends PassageScreen {
     // statek idzie prosto na nas: po chwili obserwacji namiaru trzeba ocenić, czy przejdzie przed dziobem, czy za rufą
     if (askAspect && q.aspectPick === 'bow' && realAspect === 'bow' && v.pass) {
       q.phase = 'observe';
-      q.obsT = 30;
+      q.obsT = Math.min(90, Math.max(25, v.obsT || 40)); // aż statek podejdzie na ok. 260 m
       q.brg0 = this.vesselBearing();
     } else this.scoreStreak(okType && okAspect);
     this.pushLog({ msg: okType && okAspect ? 'Dobrze!' : `Błąd – to: ${v.name}`, type: okType && okAspect ? 'good' : 'bad' });
@@ -334,6 +386,7 @@ export class LightsScreen extends PassageScreen {
     const v = this.q.vessel, b = this.world.boat;
     return ((Math.atan2(v.x - b.x, -(v.z - b.z)) / DEG) + 360) % 360;
   }
+  fmtBrg(a) { return `${pad3(Math.floor(a))},${Math.floor((a % 1) * 10)}`; }
 
   answerPass(choice) {
     const q = this.q, v = q.vessel;
@@ -397,7 +450,7 @@ export class LightsScreen extends PassageScreen {
     }
     if (q.phase === 'observe' || q.phase === 'pass') {
       el.appendChild(h('div.quiz-verdict.ok', {}, '✓ Dobrze – statek idzie prosto na nas'));
-      el.appendChild(h('div.small', {}, h('span.muted', {}, 'Namiar na początku:'), ' ', h('b', {}, `${pad3(q.brg0)}°`), '  ', h('span.muted', {}, 'teraz:'), ' ', h('b', { class: 'live-brg' }, `${pad3(this.vesselBearing())}°`)));
+      el.appendChild(h('div.small', {}, h('span.muted', {}, 'Namiar na początku:'), ' ', h('b', {}, `${this.fmtBrg(q.brg0)}°`), '  ', h('span.muted', {}, 'teraz:'), ' ', h('b', { class: 'live-brg' }, `${this.fmtBrg(this.vesselBearing())}°`)));
       if (q.phase === 'observe') {
         el.appendChild(h('div.quiz-title', { style: { marginTop: '8px' } }, h('span', {}, 'Obserwuj jeszcze:'), ' ', h('span', { class: 'obs-t' }, `${Math.ceil(q.obsT)} s`)));
         el.appendChild(h('div.small.muted', {}, 'Możesz przyspieszyć czas przyciskami 2×–8×.'));
@@ -452,7 +505,7 @@ export class LightsScreen extends PassageScreen {
       else if (Math.ceil(q.obsT) !== before) {
         const t1 = this.quizEl.querySelector('.obs-t'), b1 = this.quizEl.querySelector('.live-brg');
         if (t1) t1.textContent = `${Math.ceil(q.obsT)} s`;
-        if (b1) b1.textContent = `${pad3(this.vesselBearing())}°`;
+        if (b1) b1.textContent = `${this.fmtBrg(this.vesselBearing())}°`;
       }
     }
     this.layer.update(dt, this.view.camera.position, now / 1000, this.view.water);
