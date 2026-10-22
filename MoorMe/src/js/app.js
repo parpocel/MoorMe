@@ -11,6 +11,7 @@ import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
+import { LightsScreen } from './ui/lightsUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
 
@@ -23,6 +24,7 @@ function sceneryEl() {
 const icon = {
   play: '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="#fff7f1"/></svg>',
   chev: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#fff7f1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  bulb: '<svg width="30" height="30" viewBox="0 0 24 24"><circle cx="6" cy="14" r="2.6" fill="#d62828"/><circle cx="12" cy="7" r="2.6" fill="#f2c230"/><circle cx="18" cy="14" r="2.6" fill="#1f9d55"/><circle cx="12" cy="18.5" r="2.2" fill="#8aa0c0"/></svg>',
   dice: '<svg width="26" height="26" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#d2695f" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="15.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="8.5" cy="15.5" r="1.6" fill="#d2695f"/></svg>',
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
   help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -118,13 +120,14 @@ function showModeSelect() {
   const card = (cls, ic, title, text, onclick) => h('button.mode-card' + cls, { onclick },
     h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
   app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', { style: { width: 'min(900px, 94vw)' } },
+    h('div.title-card', { style: { width: 'min(1060px, 96vw)' } },
       h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'WYBÓR TRYBU')),
       h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
       h('p.desc', {}, 'Wybierz tryb gry.'),
       h('div.mode-cards', {},
         card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
-        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup())),
+        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup()),
+        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z pokładu jachtu płynącego stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => startLights())),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
 }
 
@@ -195,6 +198,16 @@ function showPassageSetup() {
 
 function savePassageCfg() {
   try { localStorage.setItem(PASSAGE_KEY, JSON.stringify({ ...passageCfg, seed: null })); } catch (e) { /* ignoruj */ }
+}
+
+function startLights() {
+  app.innerHTML = '';
+  const root = h('div', { style: { position: 'absolute', inset: 0 } });
+  app.appendChild(root);
+  const equip = defaultEquipment(BOATS.C34);
+  equip.bowThruster = 'none'; equip.sternThruster = false;
+  const config = { mode: 'lights', boatId: 'C34', equip, weather: { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear' } };
+  window.__sim = new LightsScreen(root, config, { restart: () => startLights(), exit: () => showModeSelect() });
 }
 
 function startPassage(seed) {

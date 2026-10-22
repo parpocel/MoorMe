@@ -283,6 +283,7 @@ export function buildMarkMesh(type) {
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: lightColor, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));
   sp.position.y = lightY;
   sp.visible = false;
+  sp.renderOrder = 30; // światło zawsze na wierzchu bryły znaku
   g.add(sp);
   g.userData.light = sp;
   g.userData.lightColor = lightColor;
@@ -386,7 +387,7 @@ export function buildSea(H, scene) {
     }
   }
   // drzewa (instancje)
-  {
+  if (H.coasts.length) {
     const N = 1500;
     const geo = new THREE.ConeGeometry(2.2, 7.5, 6);
     geo.translate(0, 3.7, 0);
@@ -519,9 +520,10 @@ export function buildSea(H, scene) {
           mesh.traverse((o) => {
             if (!o.isMesh || !o.material) return;
             o.visible = vis > 0.02;
-            o.material.transparent = vis < 1;
+            // nocą materiał jest stale przezroczysty (bez przełączania przy pełnej widoczności – inaczej znak „wyskakuje”)
+            o.material.transparent = lightsOn > 0.3;
             o.material.opacity = vis;
-            o.material.depthWrite = vis > 0.6;
+            o.material.depthWrite = true;
             if (o.material.emissive) {
               if (!o.userData.base) o.userData.base = o.material.color.clone();
               o.material.emissive.copy(o.userData.base).lerp(new THREE.Color(0x6a7a90), 0.25);

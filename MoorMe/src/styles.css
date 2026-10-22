@@ -291,7 +291,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .xte { position: relative; height: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; margin: 6px 0 8px; }
 .xte::before { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: rgba(255, 255, 255, 0.45); }
 .xte i { position: absolute; top: -3px; width: 8px; height: 18px; background: #ffd166; border-radius: 4px; transform: translateX(-50%); }
-.mode-cards { display: grid; grid-template-columns: repeat(2, minmax(260px, 1fr)); gap: 16px; margin: 18px 0 6px; }
+.mode-cards { display: grid; grid-template-columns: repeat(3, minmax(220px, 1fr)); gap: 16px; margin: 18px 0 6px; }
 .mode-card { border: 0; border-radius: 18px; padding: 20px 22px; text-align: left; cursor: pointer; font-family: inherit; color: #2f4468; transition: transform 0.08s, filter 0.15s; display: flex; flex-direction: column; gap: 8px; min-height: 190px; }
 .mode-card:hover { filter: brightness(1.04); transform: translateY(-2px); }
 .mode-card h3 { font-size: 22px; margin: 0; }
@@ -299,5 +299,15 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .mode-card .mc-ic { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; background: #fff7f1; }
 .mode-card.moor { background: #f5dbd2; }
 .mode-card.sail { background: #d5ebe4; }
+.mode-card.lights { background: #d9dcf2; }
+#hud-quiz { top: 130px; left: 12px; padding: 12px 14px; width: 330px; max-height: calc(100vh - 150px); overflow: auto; font-size: 13px; }
+#hud-quiz .quiz-score { font-size: 12px; margin-bottom: 6px; }
+#hud-quiz .quiz-title { font-weight: 800; font-size: 15px; margin: 2px 0 4px; }
+#hud-quiz .quiz-opts { display: grid; grid-template-columns: 1fr; gap: 4px; margin-top: 6px; }
+#hud-quiz .quiz-opts.two { grid-template-columns: 1fr 1fr; }
+#hud-quiz .quiz-opts .btn { text-align: left; white-space: normal; line-height: 1.25; padding: 6px 8px; }
+#hud-quiz .quiz-verdict { font-weight: 800; font-size: 16px; }
+#hud-quiz .quiz-verdict.ok { color: #7ff0b5; }
+#hud-quiz .quiz-verdict.bad { color: #ff8a8a; }
 .passage-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
 .chip.lvl { background: rgba(47, 68, 104, 0.12); }

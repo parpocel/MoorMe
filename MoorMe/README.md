@@ -137,3 +137,12 @@ npm run dist       # instalator Windows (NSIS) w dist/MoorMe-Setup-<wersja>.exe
 
 Na Windows `npm run dist` działa od razu. Na Linuksie budowa instalatora wymaga Wine (32- i 64-bit).
 Workflow GitHub Actions (`.github/workflows/build-windows.yml` w katalogu głównym repozytorium) buduje instalator na `windows-latest` przy każdym pushu.
+
+## Rozpoznawanie świateł
+
+Trzeci tryb (karta „Rozpoznawanie świateł” w oknie wyboru trybu). Jest noc, a jacht płynie autopilotem stałym kursem 090°. Patrzysz z pozycji kapitana i rozglądasz się, przeciągając myszą (kółko przybliża). Co kilka sekund na lewej albo prawej burcie, w odległości 0,25–0,65 nm, pojawia się statek widoczny wyłącznie po światłach (MPZZM/COLREG, część C). Trzeba rozpoznać:
+
+- **co to za jednostka i co robi** – 6 odpowiedzi do wyboru, a w katalogu jest 13 typów: statek o napędzie mechanicznym < 50 m i ≥ 50 m, jednostka żaglowa, statek na kotwicy < 50 m i ≥ 50 m, trałowiec, statek rybacki, niezdolny do manewrowania, o ograniczonej zdolności manewrowania, ograniczony zanurzeniem, holujący (z holowaną jednostką), pilotowy i statek na mieliźnie;
+- **którą stronę statku widzisz** – dziób, prawą burtę, lewą burtę albo rufę (dla statków w ruchu).
+
+Światła świecą w swoich sektorach (masztowe 225°, burtowe po 112,5°, rufowe i holownicze 135°, dookólne 360°), więc zestaw widocznych świateł zależy od kursu statku względem jachtu. Żółty punkt na kompasie wskazuje kierunek świateł. Po odpowiedzi wyświetla się wyjaśnienie, a „Pomoc” zawiera ściągę ze wszystkimi zestawami świateł.
