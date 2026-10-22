@@ -117,6 +117,8 @@ export function sceneryHTML() {
   s += `<path d="M1291 322 L1715 988" stroke="#e9dcc6" stroke-width="9"/><path d="M1291 322 L1715 988" stroke="#8fa5d0" stroke-width="3" transform="translate(6 0)"/>`;
   s += `<g stroke="#a9afc6" stroke-width="2" fill="none"><path d="M1290 340 L935 992"/><path d="M1290 340 L985 992"/><path d="M1290 340 L1440 985"/><path d="M1268 458 H1318"/><path d="M1262 582 H1326"/></g>`;
   s += rect(1286, 308, 9, 690, '#c9d0e3');
+  // gala flagowa: od topu masztu do dziobu „MOORME”, od topu do rufy „AHOJ”
+  s += bunting('MOORME', [1302, 318], [1708, 960], 62, 1) + bunting('AHOJ', [1284, 318], [940, 978], 62, -1);
   // grot zwinięty na bomie i genua
   s += poly([[1040, 905], [1290, 862], [1290, 878], [1040, 924]], '#9db1dd') + poly([[1290, 858], [1290, 866], [1040, 906], [1040, 898]], '#7f95c6');
   // kadłub
@@ -156,16 +158,59 @@ export function sceneryHTML() {
   return s;
 }
 
-// małe flagi sygnałowe do nagłówka karty
+// Flagi Międzynarodowego Kodu Sygnałowego (MKS / ICS) – wzory jak w oryginale, w układzie 40×40
+// (x = 0 przy drzewcu / lince, x = 40 – wolny koniec; A i B z „jaskółczym ogonem”).
+const FR = '#d9483f', FY = '#f4c542', FB = '#2c5aa0', FW = '#f8f5f0', FK = '#262626';
+const sq = (c) => `<rect width="40" height="40" fill="${c}"/>`;
+const hs = (cols) => cols.map((c, k) => `<rect y="${(k * 40) / cols.length}" width="40" height="${40 / cols.length + 0.3}" fill="${c}"/>`).join('');
+const vs = (cols) => cols.map((c, k) => `<rect x="${(k * 40) / cols.length}" width="${40 / cols.length + 0.3}" height="40" fill="${c}"/>`).join('');
+const quarters = (a, b) => sq(b) + `<rect width="20" height="20" fill="${a}"/><rect x="20" y="20" width="20" height="20" fill="${a}"/>`;
+export const ICS_FLAGS = {
+  A: `<polygon points="0,0 40,0 28,20 40,40 0,40" fill="${FB}"/><rect width="20" height="40" fill="${FW}"/>`,
+  B: `<polygon points="0,0 40,0 28,20 40,40 0,40" fill="${FR}"/>`,
+  C: hs([FB, FW, FR, FW, FB]),
+  D: hs([FY, FB, FB, FY]),
+  E: hs([FB, FR]),
+  F: sq(FW) + `<polygon points="20,0 40,20 20,40 0,20" fill="${FR}"/>`,
+  G: vs([FY, FB, FY, FB, FY, FB]),
+  H: vs([FW, FR]),
+  I: sq(FY) + `<circle cx="20" cy="20" r="10" fill="${FK}"/>`,
+  J: hs([FB, FW, FB]),
+  K: vs([FY, FB]),
+  L: quarters(FY, FK),
+  M: sq(FB) + `<path d="M0 0L40 40M40 0L0 40" stroke="${FW}" stroke-width="8"/>`,
+  N: sq(FW) + [0, 1, 2, 3].flatMap((j) => [0, 1, 2, 3].filter((k) => (j + k) % 2 === 0).map((k) => `<rect x="${k * 10}" y="${j * 10}" width="10.2" height="10.2" fill="${FB}"/>`)).join(''),
+  O: sq(FY) + `<polygon points="0,0 40,0 0,40" fill="${FR}"/>`,
+  P: sq(FB) + `<rect x="12" y="12" width="16" height="16" fill="${FW}"/>`,
+  Q: sq(FY),
+  R: sq(FR) + `<rect x="16" width="8" height="40" fill="${FY}"/><rect y="16" width="40" height="8" fill="${FY}"/>`,
+  S: sq(FW) + `<rect x="12" y="12" width="16" height="16" fill="${FB}"/>`,
+  T: vs([FR, FW, FB]),
+  U: quarters(FR, FW),
+  V: sq(FW) + `<path d="M0 0L40 40M40 0L0 40" stroke="${FR}" stroke-width="8"/>`,
+  W: sq(FB) + `<rect x="8" y="8" width="24" height="24" fill="${FW}"/><rect x="14" y="14" width="12" height="12" fill="${FR}"/>`,
+  X: sq(FW) + `<rect x="16" width="8" height="40" fill="${FB}"/><rect y="16" width="40" height="8" fill="${FB}"/>`,
+  Y: sq(FY) + `<clipPath id="icsY"><rect width="40" height="40"/></clipPath><g clip-path="url(#icsY)">${[-40, -24, -8, 8, 24, 40].map((o) => `<polygon points="${o},0 ${o + 8},0 ${o + 48},40 ${o + 40},40" fill="${FR}"/>`).join('')}</g>`,
+  Z: `<polygon points="0,0 40,0 20,20" fill="${FY}"/><polygon points="40,0 40,40 20,20" fill="${FB}"/><polygon points="0,40 40,40 20,20" fill="${FR}"/><polygon points="0,0 0,40 20,20" fill="${FK}"/>`
+};
+const flagBody = (L) => `${ICS_FLAGS[L]}${L === 'A' || L === 'B' ? '<polygon points="0,0 40,0 28,20 40,40 0,40" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>' : '<rect width="40" height="40" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>'}`;
+
+// girlanda flag na lince od p0 (wyżej) do p1: krawędź przy lince wzdłuż liny, wolny koniec odchylony od masztu i opadający
+function bunting(word, p0, p1, size, out) {
+  const dx = p1[0] - p0[0], dy = p1[1] - p0[1], len = Math.hypot(dx, dy), u = [dx / len, dy / len];
+  let n = [-u[1], u[0]];
+  if (n[0] * out < 0) n = [-n[0], -n[1]];
+  n = [n[0], n[1] + 0.2]; const nl = Math.hypot(n[0], n[1]); n = [n[0] / nl, n[1] / nl];
+  const gap = (len - word.length * size) / (word.length + 1);
+  let g = `<path d="M${p0[0]} ${p0[1]} L${p1[0]} ${p1[1]}" stroke="#7d7f94" stroke-width="2" fill="none"/>`;
+  [...word].forEach((L, k) => {
+    const t = gap + k * (size + gap), x = p0[0] + u[0] * t, y = p0[1] + u[1] * t, sc = size / 40;
+    g += `<g transform="matrix(${(n[0] * sc).toFixed(4)} ${(n[1] * sc).toFixed(4)} ${(u[0] * sc).toFixed(4)} ${(u[1] * sc).toFixed(4)} ${x.toFixed(1)} ${y.toFixed(1)})">${flagBody(L)}</g>`;
+  });
+  return g;
+}
+
+// małe flagi sygnałowe do nagłówka karty: „MOORME” w kodzie MKS
 export function signalFlagsHTML() {
-  const f = (inner) => `<svg viewBox="0 0 40 40" width="40" height="40">${inner}</svg>`;
-  const a = '#e2726a', b = '#f2c95b', c = '#5677b6', d = '#f7f3f0';
-  return [
-    f(`<rect width="40" height="40" fill="${c}"/><path d="M0 0L40 40M40 0L0 40" stroke="${d}" stroke-width="8"/>`),
-    f(`<rect width="40" height="40" fill="${a}"/><polygon points="0,0 40,0 0,40" fill="${b}"/>`),
-    f(`<rect width="40" height="40" fill="${b}"/><polygon points="40,0 40,40 0,40" fill="${a}"/>`),
-    f(`<rect width="40" height="40" fill="${b}"/><rect x="0" y="0" width="20" height="20" fill="${a}"/><rect x="20" y="20" width="20" height="20" fill="${a}"/>`),
-    f(`<rect width="40" height="40" fill="${c}"/><path d="M0 0L40 40M40 0L0 40" stroke="${d}" stroke-width="8"/><rect x="16" y="0" width="8" height="40" fill="${d}"/>`),
-    f(`<rect width="40" height="20" fill="${c}"/><rect y="20" width="40" height="20" fill="${a}"/>`)
-  ].join('');
+  return [...'MOORME'].map((L) => `<svg viewBox="0 0 40 40" width="34" height="34" aria-label="${L}">${flagBody(L)}</svg>`).join('');
 }
