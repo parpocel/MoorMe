@@ -491,3 +491,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks.desk .nt-card.float.min .nt-head { margin-bottom: 0; }
 .navtasks .nt-grip { font-size: 18px; color: #8a94a6; line-height: 1; }
 .navtasks .nt-min { min-width: 28px; }
+
+.navtasks .pb-colors { display: inline-flex; gap: 4px; align-items: center; }
+.navtasks .pb-color { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(47, 68, 104, 0.35); cursor: pointer; padding: 0; }
+.navtasks .pb-color.on { box-shadow: 0 0 0 2px #1b1f24; transform: scale(1.12); }

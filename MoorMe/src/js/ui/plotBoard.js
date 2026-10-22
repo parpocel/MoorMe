@@ -76,6 +76,9 @@ export class PlotBoard {
   toNm(p) { return { x: p.lon * 60 * this.cl, y: p.lat * 60 }; }
   toLL(n) { return { lat: n.y / 60, lon: n.x / 60 / this.cl }; }
   px(n) { return { x: this.W / 2 + (n.x - this.cx) * this.k, y: this.H / 2 - (n.y - this.cy) * this.k }; }
+  // nowy element gracza w wybranym kolorze
+  add(it) { it.color = this.color; this.items.push(it); }
+  static COLORS = [['#2f4468', 'Granatowy'], ['#d0302a', 'Czerwony'], ['#1f7fd1', 'Niebieski'], ['#e07b16', 'Pomarańczowy'], ['#8e3fb5', 'Fioletowy'], ['#1b1f24', 'Czarny']];
   nm(px, py) { return { x: this.cx + (px - this.W / 2) / this.k, y: this.cy - (py - this.H / 2) / this.k }; }
 
   // powiększenie i przesuwanie mapy (w granicach arkusza wyjściowego)
@@ -165,6 +168,14 @@ export class PlotBoard {
     this.distIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0,0', style: { width: '64px' } });
     this.readout = h('div.pb-readout', {}, '');
     this.toolBtns = h('div.seg.pb-tools');
+    // kolor rysowanych linii (zielony zostaje dla rozwiązania)
+    this.color = PlotBoard.COLORS[0][0];
+    this.colorBtns = h('span.pb-colors', {});
+    const renderColors = () => {
+      this.colorBtns.innerHTML = '';
+      for (const [c, n] of PlotBoard.COLORS) this.colorBtns.appendChild(h('button.pb-color', { class: this.color === c ? 'on' : '', title: tr(n), 'aria-label': tr(n), style: { background: c }, onclick: () => { this.color = c; renderColors(); } }));
+    };
+    renderColors();
     const tools = [['pan', '✋ Przesuń'], ['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt']];
     this.edgeBtn = h('button.btn.xs', { onclick: () => this.drawAlongPlotter() }, '📐 Kreśl wzdłuż krawędzi');
     const renderTools = () => {
@@ -179,7 +190,7 @@ export class PlotBoard {
     renderTools();
     this.hint = h('div.small.muted.pb-hint');
     this.el = h('div.pb', { class: this.fill ? 'pb-fill' : '' },
-      h('div.pb-bar', {}, this.toolBtns),
+      h('div.pb-bar', {}, this.toolBtns, h('span.pb-in', {}, h('span', {}, 'Kolor'), this.colorBtns)),
       h('div.pb-bar', {},
         h('label.pb-in', {}, h('span', {}, 'Kąt'), this.angIn, '°'),
         h('label.pb-in', {}, h('span', {}, this.vec ? 'Długość' : 'Droga'), this.distIn, this.unit),
@@ -302,7 +313,7 @@ export class PlotBoard {
   drawAlongPlotter() {
     if (!this.plotter) return;
     const a = this.plotter.ang;
-    this.items.push({ kind: 'line', x: this.plotter.x, y: this.plotter.y, dx: Math.sin(a * D2R), dy: Math.cos(a * D2R), ang: a });
+    this.add({ kind: 'line', x: this.plotter.x, y: this.plotter.y, dx: Math.sin(a * D2R), dy: Math.cos(a * D2R), ang: a });
     this.draw();
   }
   nearestLine(p) {
@@ -319,7 +330,7 @@ export class PlotBoard {
   down(p) {
     const n = this.snap(p);
     if (this.tool === 'drag' || this.tool === 'dividers') { this.drag = { a: n, b: n }; return; }
-    if (this.tool === 'point') { this.items.push({ kind: 'pt', x: n.x, y: n.y }); this.draw(); return; }
+    if (this.tool === 'point') { this.add({ kind: 'pt', x: n.x, y: n.y }); this.draw(); return; }
     if (this.tool === 'plotter') {
       if (this.plotter) {
         const g = this.plotterGeom(), lx = (p.x - g.c.x) * g.u.x + (p.y - g.c.y) * g.u.y, ly = (p.x - g.c.x) * g.v.x + (p.y - g.c.y) * g.v.y;
@@ -333,23 +344,23 @@ export class PlotBoard {
     if (this.tool === 'parallel') {
       if (this.sel === null) { this.sel = this.nearestLine(p); this.draw(); return; }
       const ref = this.items[this.sel];
-      this.items.push({ kind: 'line', x: n.x, y: n.y, dx: ref.dx, dy: ref.dy, ang: ref.ang });
+      this.add({ kind: 'line', x: n.x, y: n.y, dx: ref.dx, dy: ref.dy, ang: ref.ang });
       this.angIn.value = String(Math.round(ref.ang * 10) / 10).replace('.', ',');
       this.sel = null; this.draw(); return;
     }
     if (this.tool === 'circle') {
       const d = this.num(this.distIn);
       if (d === null || d <= 0) { this.flash(this.distIn); return; }
-      this.items.push({ kind: 'circle', x: n.x, y: n.y, r: d }); this.draw(); return;
+      this.add({ kind: 'circle', x: n.x, y: n.y, r: d }); this.draw(); return;
     }
     const ang = this.num(this.angIn);
     if (ang === null) { this.flash(this.angIn); return; }
     const dx = Math.sin(ang * D2R), dy = Math.cos(ang * D2R);
-    if (this.tool === 'bearing') this.items.push({ kind: 'line', x: n.x, y: n.y, dx, dy, ang: norm(ang) });
+    if (this.tool === 'bearing') this.add({ kind: 'line', x: n.x, y: n.y, dx, dy, ang: norm(ang) });
     else {
       const d = this.num(this.distIn);
       if (d === null || d <= 0) { this.flash(this.distIn); return; }
-      this.items.push({ kind: 'seg', x: n.x, y: n.y, dx, dy, len: d, ang: norm(ang) });
+      this.add({ kind: 'seg', x: n.x, y: n.y, dx, dy, len: d, ang: norm(ang) });
     }
     this.draw();
   }
@@ -371,11 +382,11 @@ export class PlotBoard {
     const len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
     if (len * this.k < 6) return this.draw();
     if (this.tool === 'dividers') {
-      this.items.push({ kind: 'meas', a: { x: d.a.x, y: d.a.y }, b: { x: d.b.x, y: d.b.y }, len });
+      this.add({ kind: 'meas', a: { x: d.a.x, y: d.a.y }, b: { x: d.b.x, y: d.b.y }, len });
       this.distIn.value = nm2(len);
       return this.draw();
     }
-    this.items.push({ kind: 'seg', x: d.a.x, y: d.a.y, dx: (d.b.x - d.a.x) / len, dy: (d.b.y - d.a.y) / len, len, ang: norm(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R) });
+    this.add({ kind: 'seg', x: d.a.x, y: d.a.y, dx: (d.b.x - d.a.x) / len, dy: (d.b.y - d.a.y) / len, len, ang: norm(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R) });
     this.draw();
   }
   flash(inp) { inp.style.outline = '2px solid #d0453b'; inp.focus(); setTimeout(() => { inp.style.outline = ''; }, 700); }
@@ -425,7 +436,11 @@ export class PlotBoard {
     }
     // elementy gracza
     this.items.forEach((it, i) => {
-      ctx.strokeStyle = i === this.sel ? '#e07b16' : '#2f4468'; ctx.lineWidth = i === this.sel ? 3 : 1.8;
+      const col = it.color || '#2f4468';
+      ctx.save();
+      ctx.strokeStyle = col; ctx.lineWidth = i === this.sel ? 3.2 : 1.8;
+      if (i === this.sel) { ctx.shadowColor = 'rgba(255,170,40,0.95)'; ctx.shadowBlur = 8; }
+      this.lc = col;
       if (it.kind === 'line') this.strokeLine(ctx, it);
       else if (it.kind === 'seg') {
         const a = this.px(it), b = this.px({ x: it.x + it.dx * it.len, y: it.y + it.dy * it.len });
@@ -437,7 +452,9 @@ export class PlotBoard {
         ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(c.x, c.y, it.r * this.k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
         this.label(ctx, c.x + it.r * this.k * 0.71 + 4, c.y - it.r * this.k * 0.71, `${nm2(it.r)} ${this.unit}`);
       } else if (it.kind === 'meas') this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.55);
-      else { const q = this.px(it); ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); const ll = this.toLL(it); this.label(ctx, q.x + 7, q.y - 6, `${fmtLat(ll.lat)} ${fmtLon(ll.lon)}`); }
+      else { const q = this.px(it); ctx.fillStyle = col; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); const ll = this.toLL(it); this.label(ctx, q.x + 7, q.y - 6, `${fmtLat(ll.lat)} ${fmtLon(ll.lon)}`); }
+      ctx.restore();
+      this.lc = null;
     });
     // przecięcia
     for (const x of this.crossings()) { const q = this.px(x); ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(q.x, q.y, 5, 0, Math.PI * 2); ctx.stroke(); }
@@ -558,7 +575,7 @@ export class PlotBoard {
     ctx.font = 'bold 11px Segoe UI, sans-serif';
     const w = ctx.measureText(s).width;
     ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(x - 3, y - 11, w + 6, 15);
-    ctx.fillStyle = '#2f4468'; ctx.fillText(s, x, y);
+    ctx.shadowBlur = 0; ctx.fillStyle = this.lc || '#2f4468'; ctx.fillText(s, x, y);
   }
 
   // podziałka minut na brzegach (etykiety w stopniach i minutach) i siatka
