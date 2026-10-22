@@ -475,3 +475,5 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .safety .vhf-line[draggable="true"] { cursor: grab; }
 .safety .vhf-drop { height: 4px; border-radius: 2px; background: #c2410c; margin: 1px 0; }
 .safety .vhf-step { margin-top: 8px; font-weight: 800; color: #c2410c; }
+
+.tbtn.quit span:not(.ic) { color: #b8453b; }

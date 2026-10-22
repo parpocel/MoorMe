@@ -45,6 +45,7 @@ const icon = {
   dice: '<svg width="26" height="26" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4" fill="none" stroke="#d2695f" stroke-width="2"/><circle cx="8.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="15.5" r="1.6" fill="#d2695f"/><circle cx="15.5" cy="8.5" r="1.6" fill="#d2695f"/><circle cx="8.5" cy="15.5" r="1.6" fill="#d2695f"/></svg>',
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
   help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
+  power: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 3v8" stroke="#b8453b" stroke-width="2.2" stroke-linecap="round"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0" fill="none" stroke="#b8453b" stroke-width="2.2" stroke-linecap="round"/></svg>',
   gear: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
   anchor: '<svg width="34" height="34" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2" fill="none" stroke="#d2695f" stroke-width="2"/><path d="M12 7.5V20M7.5 11h9M4.5 14.5c.6 3.2 3.7 5.5 7.5 5.5s6.9-2.3 7.5-5.5" fill="none" stroke="#d2695f" stroke-width="2" stroke-linecap="round"/></svg>',
   sail: '<svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 3v14M12 4c4 2.5 6 6 6.5 11H12zM11 6C8 8.5 6.5 11.5 6 15h5z" fill="#3f8a72" stroke="#3f8a72" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 18.5h16l-2.2 3H6.2z" fill="#2f4468"/></svg>',
@@ -128,6 +129,7 @@ function showTitle() {
       btn('.help', icon.help, 'Pomoc – sterowanie i praca na cumach', null, () => showHelp()),
       btn('.help', icon.gear, 'Ustawienia', null, () => showSettings(() => showTitle())),
       btn('.help', icon.chev2 || icon.down, 'Zmień tryb', null, () => showModeSelect()),
+      window.moorme && window.moorme.quit ? btn('.help.quit', icon.power, 'Wyjdź z gry', null, () => window.moorme.quit()) : null,
       h('div.title-note', {}, raw(icon.down), h('span', {}, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne'))));
   app.appendChild(s);
 }
@@ -150,7 +152,13 @@ function showModeSelect() {
         card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => showSoundsIntro()),
         card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Przeliczanie kursów i namiarów z dewiacją, deklinacją, dryfem i prądem, kurs z poprawką na prąd, pozycja z dwóch namiarów i zliczenie drogi – z rozwiązaniem krok po kroku.', () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }),
         card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); })),
-      h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
+      h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia')), quitButton()))));
+}
+
+// wyjście z gry – tylko w aplikacji (w przeglądarce kartę zamyka się samemu)
+function quitButton() {
+  if (typeof window === 'undefined' || !window.moorme || !window.moorme.quit) return null;
+  return h('button.tbtn.sec.quit', { onclick: () => window.moorme.quit(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.power)), h('span', {}, 'Wyjdź z gry'));
 }
 
 // ---------- Trening albo nauka (podręczniki) ----------

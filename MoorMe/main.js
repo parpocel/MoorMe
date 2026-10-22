@@ -35,6 +35,7 @@ function createWindow() {
     const f = uiScale === 'auto' ? auto : Math.max(0.75, Math.min(2.5, Number(uiScale) || 1));
     win.webContents.setZoomFactor(Math.round(f * 100) / 100);
   };
+  ipcMain.handle('app:quit', () => { app.quit(); return true; });
   ipcMain.handle('ui:scale', (_e, v) => { uiScale = v; applyZoom(); return true; });
   for (const ev of ['resize', 'enter-full-screen', 'leave-full-screen', 'maximize', 'unmaximize']) win.on(ev, applyZoom);
   win.webContents.on('did-finish-load', applyZoom);
