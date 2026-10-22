@@ -63,6 +63,18 @@ const BASE = { lat: 54 + 25 / 60, lon: 18 + 35 / 60 };
 
 const ans = (key, label, value, kind, tol) => ({ key, label, value, kind, tol });
 
+// trójkąt prędkości na mapce: wektory odkładane dla 1 godziny (1 kn = 1 Mm); legs – kolejne wektory [N, E] od punktu O
+function vectorPlot(r, legs, labels, total) {
+  const O = { lat: BASE.lat + rf(r, -0.08, 0.06, 600), lon: BASE.lon + rf(r, -0.12, 0.08, 600) }, cl = Math.cos(O.lat * D2R);
+  const at = (p, [n, e]) => ({ lat: p.lat + n / 60, lon: p.lon + e / 60 / cl });
+  const pts = [O];
+  for (const l of legs) pts.push(at(pts[pts.length - 1], l));
+  const end = pts[pts.length - 1];
+  const vectors = legs.map((l, i) => ({ from: pts[i], to: pts[i + 1], label: labels[i] }));
+  vectors.push({ from: O, to: end, label: total, main: true });
+  return { mode: 'vector', pts: [{ label: 'O', ...O }], sol: { vectors, point: end }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) };
+}
+
 export const GENERATORS = {
   compass(r) {
     const KK = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r, YEAR);
@@ -110,7 +122,8 @@ export const GENERATORS = {
       steps: [beta ? `KDw = KR + β = ${deg3(KDw)}` : L(`Bez dryfu: KDw = KR = ${deg3(KDw)}`, `No leeway: KDw = KR = ${deg3(KDw)}`),
         L(`Wektor po wodzie: N ${num(w[0], 2)}, E ${num(w[1], 2)} kn; prąd: N ${num(cv[0], 2)}, E ${num(cv[1], 2)} kn`, `Water vector: N ${num(w[0], 2)}, E ${num(w[1], 2)} kn; current: N ${num(cv[0], 2)}, E ${num(cv[1], 2)} kn`),
         L(`Suma: N ${num(g[0], 2)}, E ${num(g[1], 2)} → KDd = ${deg3(KDd)}, SOG = ${num(SOG, 2)} kn`, `Sum: N ${num(g[0], 2)}, E ${num(g[1], 2)} → KDd = ${deg3(KDd)}, SOG = ${num(SOG, 2)} kn`)],
-      diagram: { kind: 'current', KDw, V, set, c, KDd, SOG }
+      diagram: { kind: 'current', KDw, V, set, c, KDd, SOG },
+      plot: vectorPlot(r, [w, cv], [L('po wodzie', 'through water'), L('prąd', 'current')], L('nad dnem', 'over ground'))
     };
   },
   steer(r) {
@@ -124,7 +137,8 @@ export const GENERATORS = {
       answers: [ans('KR', 'KR', KR, 'deg', 1.5), ans('KK', 'KK', KK, 'deg', 1.5), ans('SOG', 'SOG', SOG, 'kn', 0.15)],
       steps: [L(`Kąt poprawki na prąd: sin α = c · sin(kierunek prądu − KDd) / V = ${num(c)} · sin(${Math.round(angDiff(set, KDd))}°) / ${num(V)} → α = ${num(alpha, 1)}°`, `Current correction angle: sin α = c · sin(set − KDd) / V = ${num(c)} · sin(${Math.round(angDiff(set, KDd))}°) / ${num(V)} → α = ${num(alpha, 1)}°`),
         `KR = KDd − α = ${deg3(KDd)} − (${num(alpha, 1)}°) = ${deg3(KR)}`, `KK = KR − δ − d = ${deg3(KR)} − (${plus(dev)}) − (${plus(d, 1)}) = ${deg3(KK)}`, L(`SOG = |wektor po wodzie + prąd| = ${num(SOG, 2)} kn`, `SOG = |water vector + current| = ${num(SOG, 2)} kn`)],
-      diagram: { kind: 'current', KDw, V, set, c, KDd: course([w[0] + cv[0], w[1] + cv[1]]), SOG }
+      diagram: { kind: 'current', KDw, V, set, c, KDd: course([w[0] + cv[0], w[1] + cv[1]]), SOG },
+      plot: vectorPlot(r, [cv, w], [L('prąd', 'current'), L('po wodzie (KR)', 'through water (KR)')], L('nad dnem (KDd)', 'over ground (KDd)'))
     };
   },
   bearing(r) {

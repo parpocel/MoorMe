@@ -47,11 +47,13 @@ export class PlotBoard {
   constructor(plot) {
     this.plot = plot;
     this.items = []; // { kind: 'line'|'seg'|'pt'|'circle'|'meas', ... }
-    this.tool = plot.sol.segs ? 'course' : 'bearing';
+    this.vec = plot.mode === 'vector'; // trójkąt prędkości: wektory w węzłach odkładane dla 1 h (1 kn = 1 Mm)
+    this.unit = this.vec ? 'kn' : 'Mm';
+    this.tool = plot.sol.segs || this.vec ? 'course' : 'bearing';
     this.showSol = false;
     this.hover = null; this.drag = null; this.plotter = null; this.sel = null;
     // zasięg mapy: obiekty + rozwiązanie z zapasem, proporcje płótna
-    const all = [...plot.pts, plot.sol.point];
+    const all = [...plot.pts, plot.sol.point, ...(plot.sol.vectors || []).flatMap((v) => [v.from, v.to])];
     const lat0 = all.reduce((s, p) => s + p.lat, 0) / all.length;
     this.cl = Math.cos(lat0 * D2R);
     const xs = all.map((p) => p.lon * 60 * this.cl), ys = all.map((p) => p.lat * 60);
@@ -106,7 +108,7 @@ export class PlotBoard {
   genChart() {
     const r = rng(this.plot.seed || 7), P = this.toNm(this.plot.sol.point), objs = this.plot.pts.map((p) => this.toNm(p));
     const fix = !!this.plot.sol.lines;
-    const track = fix ? objs.map((o) => [o, P]) : [[objs[0], P]];
+    const track = fix ? objs.map((o) => [o, P]) : this.vec ? this.plot.sol.vectors.map((v) => [this.toNm(v.from), this.toNm(v.to)]) : [[objs[0], P]];
     const lo = this.nm(M, H - M), hi = this.nm(W - M, M);
     const blob = (c, R) => {
       const ph = [r() * 6, r() * 6, r() * 6, r() * 6], a = [0.16 + r() * 0.1, 0.09 + r() * 0.07, 0.05, 0.03];
@@ -174,7 +176,7 @@ export class PlotBoard {
       h('div.pb-bar', {}, this.toolBtns),
       h('div.pb-bar', {},
         h('label.pb-in', {}, h('span', {}, 'Kąt'), this.angIn, '°'),
-        h('label.pb-in', {}, h('span', {}, 'Droga'), this.distIn, 'Mm'),
+        h('label.pb-in', {}, h('span', {}, this.vec ? 'Długość' : 'Droga'), this.distIn, this.unit),
         this.edgeBtn,
         h('button.btn.xs', { onclick: () => { this.items.pop(); this.draw(); } }, '↶ Cofnij'),
         h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.draw(); } }, 'Wyczyść'),
@@ -240,6 +242,14 @@ export class PlotBoard {
   }
 
   updateHint() {
+    if (this.vec && (this.tool === 'course' || this.tool === 'circle' || this.tool === 'drag')) {
+      this.hint.textContent = tr({
+        course: 'Trójkąt prędkości: wektory odkładaj dla 1 godziny (1 kn = 1 Mm). Wpisz kierunek i długość w węzłach, potem kliknij początek wektora – zwykle punkt O albo koniec poprzedniego wektora.',
+        circle: 'Wpisz prędkość po wodzie w polu „Długość” i kliknij koniec wektora prądu – okrąg przetnie linię drogi nad dnem w miejscu, gdzie kończy się wektor po wodzie.',
+        drag: 'Przeciągnij między dwoma punktami (np. od O do końca ostatniego wektora) – odczytasz kierunek i prędkość wypadkową. Linie przyciągają się do końców wektorów i przecięć.'
+      }[this.tool]);
+      return;
+    }
     this.hint.textContent = tr({
       pan: 'Przeciągnij mapę, aby ją przesunąć. Kółko myszy lub szczypanie – powiększenie (także przyciski + i −); prawy przycisk myszy przesuwa mapę przy każdym narzędziu.',
       drag: 'Przeciągnij od punktu, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
@@ -394,6 +404,14 @@ export class PlotBoard {
       const s = this.plot.sol;
       ctx.setLineDash([7, 5]); ctx.strokeStyle = 'rgba(46,157,98,0.9)'; ctx.lineWidth = 2;
       for (const l of s.lines || []) this.strokeLine(ctx, { ...this.toNm(l.p), dx: Math.sin(l.brg * D2R), dy: Math.cos(l.brg * D2R) });
+      for (const v of s.vectors || []) {
+        const a = this.px(this.toNm(v.from)), b = this.px(this.toNm(v.to)), len = Math.hypot(b.x - a.x, b.y - a.y) / this.k;
+        const n = this.toNm(v.to), m = this.toNm(v.from), ang = norm(Math.atan2(n.x - m.x, n.y - m.y) / D2R);
+        ctx.strokeStyle = v.main ? 'rgba(46,157,98,1)' : 'rgba(46,157,98,0.8)'; ctx.lineWidth = v.main ? 2.6 : 2;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        ctx.setLineDash([]); this.arrowHead(ctx, a, b); ctx.setLineDash([7, 5]);
+        this.label(ctx, (a.x + b.x) / 2 + 6, (a.y + b.y) / 2 - 4, `${tr(v.label)}: ${deg3(ang)} · ${nm2(len)} kn`);
+      }
       for (const g of s.segs || []) { const a = this.px(this.toNm(g.p)), b = this.px(this.toNm(s.point)); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
       ctx.setLineDash([]);
       const q = this.px(this.toNm(s.point));
@@ -407,11 +425,11 @@ export class PlotBoard {
         const a = this.px(it), b = this.px({ x: it.x + it.dx * it.len, y: it.y + it.dy * it.len });
         ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
         this.arrowHead(ctx, a, b);
-        this.label(ctx, (a.x + b.x) / 2, (a.y + b.y) / 2, `${deg3(it.ang)} · ${nm2(it.len)} Mm`);
+        this.label(ctx, (a.x + b.x) / 2, (a.y + b.y) / 2, `${deg3(it.ang)} · ${nm2(it.len)} ${this.unit}`);
       } else if (it.kind === 'circle') {
         const c = this.px(it);
         ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.arc(c.x, c.y, it.r * this.k, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-        this.label(ctx, c.x + it.r * this.k * 0.71 + 4, c.y - it.r * this.k * 0.71, `${nm2(it.r)} Mm`);
+        this.label(ctx, c.x + it.r * this.k * 0.71 + 4, c.y - it.r * this.k * 0.71, `${nm2(it.r)} ${this.unit}`);
       } else if (it.kind === 'meas') this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.55);
       else { const q = this.px(it); ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill(); const ll = this.toLL(it); this.label(ctx, q.x + 7, q.y - 6, `${fmtLat(ll.lat)} ${fmtLon(ll.lon)}`); }
     });
@@ -423,7 +441,7 @@ export class PlotBoard {
       if (this.tool === 'dividers') this.drawDividers(ctx, a, b, len, 1);
       else {
         ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-        if (len > 0.01) this.label(ctx, b.x + 12, b.y - 10, `${deg3(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R)} · ${nm2(len)} Mm`);
+        if (len > 0.01) this.label(ctx, b.x + 12, b.y - 10, `${deg3(Math.atan2(d.b.x - d.a.x, d.b.y - d.a.y) / D2R)} · ${nm2(len)} ${this.unit}`);
       }
     }
     if (this.plotter) this.drawPlotter(ctx);
@@ -486,7 +504,7 @@ export class PlotBoard {
     ctx.fillStyle = '#3a3f47'; ctx.beginPath(); ctx.arc(hx, hy, 4.5, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1; ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
     ctx.restore();
-    this.label(ctx, hx + 8, hy - 4, `${nm2(len)} Mm`);
+    this.label(ctx, hx + 8, hy - 4, `${nm2(len)} ${this.unit}`);
   }
 
   drawPlotter(ctx) {

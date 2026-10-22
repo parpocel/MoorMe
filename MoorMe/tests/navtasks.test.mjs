@@ -64,6 +64,22 @@ check(checkAnswer({ kind: 'deg', value: 359.6, tol: 1 }, '000') && !checkAnswer(
   }
   check(worst < 0.5, `mapka: pozycja z rozwiązania leży na liniach namiarów (max ${worst.toFixed(3)}°)`);
 }
+// 5c) trójkąt prędkości: wektor wypadkowy z mapki = KDd i SOG z obliczeń
+{
+  const r = rng(17);
+  let worst = 0;
+  const vecOf = (v) => { const cl = Math.cos(v.from.lat * Math.PI / 180), dx = (v.to.lon - v.from.lon) * 60 * cl, dy = (v.to.lat - v.from.lat) * 60; return { ang: Math.atan2(dx, dy) * 180 / Math.PI, len: Math.hypot(dx, dy) }; };
+  for (let i = 0; i < 50; i++) {
+    for (const cat of ['current', 'steer']) {
+      const tk = GENERATORS[cat](r), vs = tk.plot && tk.plot.sol.vectors, g = vs && vecOf(vs.find((v) => v.main));
+      if (!g || tk.plot.mode !== 'vector') { worst = 99; continue; }
+      const SOG = tk.answers.find((a) => a.key === 'SOG').value;
+      worst = Math.max(worst, Math.abs(angDiff(g.ang, tk.diagram.KDd)), Math.abs(g.len - SOG) * 10);
+      if (cat === 'steer') { const w = vecOf(vs[1]); worst = Math.max(worst, Math.abs(angDiff(w.ang, tk.answers[0].value)), Math.abs(w.len - tk.diagram.V) * 10); }
+    }
+  }
+  check(worst < 0.2, `mapka wektorowa (prąd): wypadkowa = KDd i SOG, wektor po wodzie = KR i V (max ${worst.toFixed(3)})`);
+}
 // 6) wersja angielska treści
 setLang('en');
 const tk = makeTask(rng(3), 'current');
