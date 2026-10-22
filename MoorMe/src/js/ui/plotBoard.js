@@ -60,6 +60,7 @@ export class PlotBoard {
     const span = Math.max((Math.max(...xs) - Math.min(...xs)) / iw, (Math.max(...ys) - Math.min(...ys)) / ih) * 1.5;
     this.k = 1 / Math.max(span, 5 / ih); // px na milę (co najmniej ok. 5 Mm na wysokość)
     this.cx = cx; this.cy = cy;
+    this.k0 = this.k; this.cx0 = cx; this.cy0 = cy; this.zoom = 1; // widok wyjściowy – powiększenie nie mniejsze niż 1×
     this.genChart();
     this.build();
   }
@@ -69,6 +70,37 @@ export class PlotBoard {
   toLL(n) { return { lat: n.y / 60, lon: n.x / 60 / this.cl }; }
   px(n) { return { x: W / 2 + (n.x - this.cx) * this.k, y: H / 2 - (n.y - this.cy) * this.k }; }
   nm(px, py) { return { x: this.cx + (px - W / 2) / this.k, y: this.cy - (py - H / 2) / this.k }; }
+
+  // powiększenie i przesuwanie mapy (w granicach arkusza wyjściowego)
+  static ZMAX = 8;
+  setZoom(z, at = { x: W / 2, y: H / 2 }) {
+    z = Math.max(1, Math.min(PlotBoard.ZMAX, z));
+    const a = this.nm(at.x, at.y);
+    this.zoom = z; this.k = this.k0 * z;
+    this.cx = a.x - (at.x - W / 2) / this.k; this.cy = a.y + (at.y - H / 2) / this.k;
+    this.clampView(); this.updateZoomUI(); this.draw();
+  }
+  panBy(dx, dy) { this.cx -= dx / this.k; this.cy += dy / this.k; this.clampView(); this.draw(); }
+  clampView() {
+    const ex = (W / 2 - M) * (1 / this.k0 - 1 / this.k), ey = (H / 2 - M) * (1 / this.k0 - 1 / this.k);
+    this.cx = Math.max(this.cx0 - ex, Math.min(this.cx0 + ex, this.cx));
+    this.cy = Math.max(this.cy0 - ey, Math.min(this.cy0 + ey, this.cy));
+  }
+  updateZoomUI() { if (this.zoomLbl) this.zoomLbl.textContent = `${Math.round(this.zoom * 10) / 10}×`.replace('.', ','); }
+  // duża mapa: arkusz na cały ekran, płótno w wyższej rozdzielczości (ostre linie)
+  setBig(on) {
+    this.big = on;
+    this.el.classList.toggle('pb-big', on);
+    this.bigBtn.textContent = tr(on ? '✕ Zamknij dużą mapę' : '⛶ Duża mapa');
+    this.fitCanvas();
+  }
+  fitCanvas() {
+    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+    const w = this.big ? this.cv.getBoundingClientRect().width || W : W;
+    this.res = Math.min(4, dpr * Math.max(1, w / W));
+    this.cv.width = Math.round(W * this.res); this.cv.height = Math.round(H * this.res);
+    this.draw();
+  }
 
   // ---------- treść mapy: ląd z latarniami na cyplach, izobaty, głębokości, róża ----------
   genChart() {
@@ -120,19 +152,22 @@ export class PlotBoard {
 
   build() {
     const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    this.cv = h('canvas', { width: W * dpr, height: H * dpr, style: { width: '100%', maxWidth: `${W}px`, aspectRatio: `${W} / ${H}`, cursor: 'crosshair', touchAction: 'none' } });
-    this.dpr = dpr;
+    this.cv = h('canvas.pb-cv', { width: W * dpr, height: H * dpr, style: { aspectRatio: `${W} / ${H}`, cursor: 'crosshair', touchAction: 'none' } });
+    this.res = dpr;
     this.angIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '000', style: { width: '64px' } });
     this.distIn = h('input', { type: 'text', inputmode: 'decimal', placeholder: '0,0', style: { width: '64px' } });
     this.readout = h('div.pb-readout', {}, '');
     this.toolBtns = h('div.seg.pb-tools');
-    const tools = [['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt']];
+    const tools = [['pan', '✋ Przesuń'], ['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt']];
     this.edgeBtn = h('button.btn.xs', { onclick: () => this.drawAlongPlotter() }, '📐 Kreśl wzdłuż krawędzi');
     const renderTools = () => {
       this.toolBtns.innerHTML = '';
       for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; renderTools(); this.updateHint(); this.draw(); } }, n));
       this.edgeBtn.style.display = this.tool === 'plotter' ? '' : 'none';
+      this.cv.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
     };
+    this.zoomLbl = h('span.pb-zoom', {}, '1×');
+    this.bigBtn = h('button.btn.xs', { onclick: () => this.setBig(!this.big) }, '⛶ Duża mapa');
     renderTools();
     this.hint = h('div.small.muted.pb-hint');
     this.el = h('div.pb', {},
@@ -142,20 +177,71 @@ export class PlotBoard {
         h('label.pb-in', {}, h('span', {}, 'Droga'), this.distIn, 'Mm'),
         this.edgeBtn,
         h('button.btn.xs', { onclick: () => { this.items.pop(); this.draw(); } }, '↶ Cofnij'),
-        h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.draw(); } }, 'Wyczyść')),
+        h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.draw(); } }, 'Wyczyść'),
+        h('span.pb-zoombox', {},
+          h('button.btn.xs', { title: tr('Pomniejsz'), onclick: () => this.setZoom(this.zoom / 1.5) }, '−'),
+          this.zoomLbl,
+          h('button.btn.xs', { title: tr('Powiększ'), onclick: () => this.setZoom(this.zoom * 1.5) }, '+'),
+          h('button.btn.xs', { onclick: () => this.setZoom(1) }, '1:1'),
+          this.bigBtn)),
       this.hint, this.cv, this.readout);
     this.updateHint();
     const pos = (e) => { const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H }; };
-    this.cv.addEventListener('pointerdown', (e) => { this.cv.setPointerCapture?.(e.pointerId); this.down(pos(e)); });
-    this.cv.addEventListener('pointermove', (e) => this.move(pos(e)));
-    this.cv.addEventListener('pointerup', (e) => this.up(pos(e)));
+    // przesuwanie: narzędzie „Przesuń”, prawy lub środkowy przycisk myszy; dwa palce – szczypanie
+    const touches = new Map();
+    let pinch = null;
+    this.cv.addEventListener('contextmenu', (e) => e.preventDefault());
+    this.cv.addEventListener('pointerdown', (e) => {
+      this.cv.setPointerCapture?.(e.pointerId);
+      const p = pos(e);
+      if (e.pointerType === 'touch') {
+        touches.set(e.pointerId, p);
+        if (touches.size === 2) {
+          const [u, v] = [...touches.values()];
+          pinch = { d: Math.hypot(u.x - v.x, u.y - v.y) || 1, z: this.zoom, m: { x: (u.x + v.x) / 2, y: (u.y + v.y) / 2 } };
+          this.drag = null; this.pan = null; this.pdrag = null; return;
+        }
+      }
+      if (this.tool === 'pan' || e.button === 1 || e.button === 2) { e.preventDefault(); this.pan = p; this.cv.style.cursor = 'grabbing'; return; }
+      this.down(p);
+    });
+    this.cv.addEventListener('pointermove', (e) => {
+      const p = pos(e);
+      if (touches.has(e.pointerId)) touches.set(e.pointerId, p);
+      if (pinch && touches.size === 2) {
+        const [u, v] = [...touches.values()], m = { x: (u.x + v.x) / 2, y: (u.y + v.y) / 2 };
+        this.panBy(m.x - pinch.m.x, m.y - pinch.m.y); pinch.m = m;
+        this.setZoom(pinch.z * (Math.hypot(u.x - v.x, u.y - v.y) / pinch.d), m); return;
+      }
+      if (this.pan) { this.panBy(p.x - this.pan.x, p.y - this.pan.y); this.pan = p; return; }
+      this.move(p);
+    });
+    const end = (e) => {
+      touches.delete(e.pointerId);
+      if (pinch) { if (touches.size < 2) pinch = null; return; }
+      if (this.pan) { this.pan = null; this.cv.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair'; return; }
+      this.up(pos(e));
+    };
+    this.cv.addEventListener('pointerup', end);
+    this.cv.addEventListener('pointercancel', end);
     this.cv.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.draw(); } });
-    this.cv.addEventListener('wheel', (e) => { if (this.tool === 'plotter' && this.plotter) { e.preventDefault(); this.setPlotterAng(this.plotter.ang + (e.deltaY > 0 ? 1 : -1) * (e.shiftKey ? 10 : 1)); } }, { passive: false });
+    // kółko myszy / gest szczypania na touchpadzie – powiększenie wokół kursora; przy trójkącie kółko obraca trójkąt (Ctrl + kółko – powiększa)
+    this.cv.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      if (this.tool === 'plotter' && this.plotter && !e.ctrlKey) { this.setPlotterAng(this.plotter.ang + (e.deltaY > 0 ? 1 : -1) * (e.shiftKey ? 10 : 1)); return; }
+      const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      this.setZoom(this.zoom * Math.exp(-dy * (e.ctrlKey ? 0.01 : 0.0015)), pos(e));
+    }, { passive: false });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => { if (this.big && this.el.isConnected) this.fitCanvas(); });
+      window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.big && this.el.isConnected) this.setBig(false); });
+    }
     this.draw();
   }
 
   updateHint() {
     this.hint.textContent = tr({
+      pan: 'Przeciągnij mapę, aby ją przesunąć. Kółko myszy lub szczypanie – powiększenie (także przyciski + i −); prawy przycisk myszy przesuwa mapę przy każdym narzędziu.',
       drag: 'Przeciągnij od punktu, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
       bearing: 'Wpisz kąt (np. namiar rzeczywisty) i kliknij obiekt – przez punkt zostanie wykreślona linia pozycyjna.',
       course: 'Wpisz kurs i drogę, potem kliknij punkt startu – odłożony zostanie odcinek z punktem końcowym.',
@@ -283,7 +369,7 @@ export class PlotBoard {
   // ---------- rysowanie ----------
   draw() {
     const ctx = this.cv.getContext('2d');
-    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    ctx.setTransform(this.res, 0, 0, this.res, 0, 0);
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#fbf7ec'; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = '#f4f9fc'; ctx.fillRect(M, M, W - 2 * M, H - 2 * M);
@@ -469,8 +555,8 @@ export class PlotBoard {
     // pas naprzemiennych pól co 1' (jak na brzegu mapy morskiej)
     for (let m = Math.floor(latMin); m <= latMax; m += 1) { const y0 = yOf(m), y1 = yOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillStyle = '#1b1f24'; ctx.fillRect(M - 10, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); ctx.fillRect(W - M + 6, Math.max(M - 10, y1), 4, Math.min(H - M + 10, y0) - Math.max(M - 10, y1)); } }
     ctx.fillStyle = '#1b1f24';
-    for (let m = Math.ceil(latMin / s1) * s1; m <= latMax; m += s1) {
-      const y = yOf(m), major = Math.abs(m / latStep - Math.round(m / latStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
+    for (let i = Math.ceil(latMin / s1 - 1e-9); i * s1 <= latMax; i++) {
+      const m = Math.round(i * s1 * 1000) / 1000, y = yOf(m), major = Math.abs(m / latStep - Math.round(m / latStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
       ctx.beginPath(); ctx.moveTo(M - len, y); ctx.lineTo(M, y); ctx.moveTo(W - M, y); ctx.lineTo(W - M + len, y); ctx.stroke();
       if (major) {
@@ -484,8 +570,8 @@ export class PlotBoard {
     const s2 = sub(lonStep);
     for (let m = Math.floor(lonMin); m <= lonMax; m += 1) { const x0 = xOf(m), x1 = xOf(m + 1); if (Math.round(m) % 2 === 0) { ctx.fillRect(Math.max(M - 10, x0), M - 10, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); ctx.fillRect(Math.max(M - 10, x0), H - M + 6, Math.min(W - M + 10, x1) - Math.max(M - 10, x0), 4); } }
     ctx.textAlign = 'center';
-    for (let m = Math.ceil(lonMin / s2) * s2; m <= lonMax; m += s2) {
-      const x = xOf(m), major = Math.abs(m / lonStep - Math.round(m / lonStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
+    for (let i = Math.ceil(lonMin / s2 - 1e-9); i * s2 <= lonMax; i++) {
+      const m = Math.round(i * s2 * 1000) / 1000, x = xOf(m), major = Math.abs(m / lonStep - Math.round(m / lonStep)) < 1e-6, mid = Math.abs(m - Math.round(m)) < 1e-6;
       const len = major ? 10 : mid ? 7 : 4;
       ctx.beginPath(); ctx.moveTo(x, M - len); ctx.lineTo(x, M); ctx.moveTo(x, H - M); ctx.lineTo(x, H - M + len); ctx.stroke();
       if (major) {
