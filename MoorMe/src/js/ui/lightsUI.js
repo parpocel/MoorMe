@@ -5,7 +5,7 @@ import { h } from './dom.js';
 import { SimScreen } from './simUI.js';
 import { PassageScreen } from './passageUI.js';
 import { PassageWorld } from '../physics/passage.js';
-import { VESSELS, DAY_VESSELS, anyVessel, ASPECTS, GEAR_SIDES, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck } from '../data/shipLights.js';
+import { VESSELS, DAY_VESSELS, anyVessel, ASPECTS, GEAR_SIDES, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
 import { DEG, KN, clamp, rng, thetaToCompass } from '../math.js';
 
 const NM = 1852;
@@ -79,17 +79,6 @@ export function buildRowboat() {
       rail.rotation.y = -s * Math.atan2(hb(x1) - hb(x0), x1 - x0);
       g.add(rail);
     }
-    // wiosło oparte o dulkę, pióro nad wodą
-    const oar = new THREE.Group();
-    const loom = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.6, 6), wood);
-    loom.rotation.z = Math.PI / 2;
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.14), wood);
-    blade.position.x = 1.45;
-    oar.add(loom, blade);
-    oar.position.set(-0.2, sheer(-0.2) + 0.08, s * (hb(-0.2) + 0.55));
-    oar.rotation.y = s * 1.35;
-    oar.rotation.z = -0.12;
-    g.add(oar);
   }
   // maska: niewidoczna powierzchnia tuż pod burtą zapisuje głębię, więc fale nie rysują się wewnątrz łodzi
   const shape = new THREE.Shape();
@@ -155,6 +144,7 @@ class ShipLightsLayer {
 
 // Dzień: czarna sylwetka statku i znaki dzienne (kule, stożki, romby, walec) na maszcie
 const BLACK = new THREE.MeshBasicMaterial({ color: 0x050505 });
+const MAST = new THREE.MeshStandardMaterial({ color: 0x9aa1a9, roughness: 0.8 });
 function shapeMesh(k) {
   const g = new THREE.Group();
   const cone = (up, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLACK); m.position.y = y; if (!up) m.rotation.z = Math.PI; return m; };
@@ -168,8 +158,8 @@ function shapeMesh(k) {
 }
 function hullMesh(type, L) {
   const g = new THREE.Group();
-  const dark = new THREE.MeshStandardMaterial({ color: 0x2b3038, roughness: 0.9, flatShading: true });
-  const sup = new THREE.MeshStandardMaterial({ color: 0x58606b, roughness: 0.9, flatShading: true });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x8b929b, roughness: 0.9, flatShading: true }); // szare – czarne znaki dzienne odcinają się od sylwetki
+  const sup = new THREE.MeshStandardMaterial({ color: 0xa9b0b8, roughness: 0.9, flatShading: true });
   const box = (w, hh, d, x, y, m = dark) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), m); b.position.set(x, y, 0); g.add(b); return b; };
   const B = type === 'yacht' ? 3.4 : Math.max(5, L * 0.16);
   if (type === 'yacht') {
@@ -194,14 +184,14 @@ class ShipShapesLayer {
     g.add(hullMesh(v.hull, v.L));
     if (v.type === 'dTowing') { // holowana barka 230 m za rufą i hol
       const barge = hullMesh('ship', 40); barge.position.x = -v.L / 2 - 230; g.add(barge);
-      const tow = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 210, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x111111 }));
+      const tow = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 210, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a }));
       g.add(tow);
     }
     this.items = [];
     for (const s of v.shapes) {
       const m = shapeMesh(s.k);
       g.add(m);
-      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1, 6), BLACK);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 1, 6), MAST);
       g.add(mast);
       this.items.push({ s, m, mast });
     }
@@ -243,14 +233,14 @@ export class LightsScreen extends PassageScreen {
       weather: config.weather,
       blind: true
     });
-    this.world.boat.throttle = 0.22; // spokojne tempo łodzi
-    this.world.boat.vx = 1.4;
+    this.world.boat.throttle = 0.08; // spokojne tempo łodzi (ok. 1,6 kn)
+    this.world.boat.vx = 0.85;
     this.world.setAutopilot(true, 90);
     this.chart = { range: 1800, headUp: false, labels: false };
     this.rand = rng(config.seed || 1 + Math.floor(Math.random() * 1e9));
     this.day = !!config.day;
     this.nextType = makeDeck(this.rand, this.day); // każdy typ raz na „talię” – bez ciągłego statku na kotwicy
-    this.q = { phase: 'wait', timer: 4, vessel: null, pick: null, aspectPick: null, gearPick: null, stats: { n: 0, ok: 0, an: 0, aok: 0, streak: 0, best: 0 } };
+    this.q = { phase: 'wait', timer: 2, vessel: null, pick: null, aspectPick: null, gearPick: null, stats: { n: 0, ok: 0, an: 0, aok: 0, streak: 0, best: 0 } };
   }
 
   introLog() {
@@ -285,6 +275,8 @@ export class LightsScreen extends PassageScreen {
     // tylko autopilot – silnik i ster są tu zbędne
     const ctl = this.sim.querySelector('#hud-controls');
     if (ctl) [...ctl.children].slice(0, 2).forEach((c) => { c.style.display = 'none'; });
+    // piana i bryzgi są liczone dla rufy jachtu – przy małej łodzi pojawiały się przed jej rufą
+    if (this.view.particles) this.view.particles.points.visible = false;
     this.view.setView('fpv');
     this._qLast = performance.now();
     this.renderQuiz();
@@ -293,12 +285,12 @@ export class LightsScreen extends PassageScreen {
   // ---------- Quiz ----------
   observer() {
     const b = this.world.boat;
-    return { x: b.x, z: b.z, hdg: thetaToCompass(b.th) };
+    return { x: b.x, z: b.z, hdg: thetaToCompass(b.th), speed: Math.max(0.3, b.speed) };
   }
 
   spawn() {
     const q = this.q;
-    q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day }); // _forceType – podgląd konkretnego typu (testy)
+    q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day, aspect: this._forceAspect || null }); // _forceType – podgląd konkretnego typu (testy)
     q.options = answerOptions(this.rand, q.vessel.type, 6);
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
     q.phase = 'active';
@@ -316,11 +308,40 @@ export class LightsScreen extends PassageScreen {
     const s = q.stats;
     s.n++; if (okType) s.ok++;
     if (askAspect || v.gear) { s.an++; if (okAspect) s.aok++; }
-    s.streak = okType && okAspect ? s.streak + 1 : 0;
-    s.best = Math.max(s.best, s.streak);
     q.result = { okType, okAspect, realAspect };
     q.phase = 'feedback';
+    // statek idzie prosto na nas: po chwili obserwacji namiaru trzeba ocenić, czy przejdzie przed dziobem, czy za rufą
+    if (askAspect && q.aspectPick === 'bow' && realAspect === 'bow' && v.pass) {
+      q.phase = 'observe';
+      q.obsT = 30;
+      q.brg0 = this.vesselBearing();
+    } else this.scoreStreak(okType && okAspect);
     this.pushLog({ msg: okType && okAspect ? 'Dobrze!' : `Błąd – to: ${v.name}`, type: okType && okAspect ? 'good' : 'bad' });
+    this.renderQuiz();
+  }
+
+  scoreStreak(ok) {
+    const s = this.q.stats;
+    s.streak = ok ? s.streak + 1 : 0;
+    s.best = Math.max(s.best, s.streak);
+  }
+
+  vesselBearing() {
+    const v = this.q.vessel, b = this.world.boat;
+    return ((Math.atan2(v.x - b.x, -(v.z - b.z)) / DEG) + 360) % 360;
+  }
+
+  answerPass(choice) {
+    const q = this.q, v = q.vessel;
+    const truth = passSide(v, this.observer()).side;
+    const real = truth === 'none' ? v.pass : truth;
+    q.result.passAsked = true;
+    q.result.passOk = choice === real;
+    q.result.passTruth = real;
+    q.result.brg1 = this.vesselBearing();
+    this.scoreStreak(q.result.okType && q.result.okAspect && q.result.passOk);
+    q.phase = 'feedback';
+    this.pushLog({ msg: q.result.passOk ? 'Dobrze!' : PASS_SIDES[real], type: q.result.passOk ? 'good' : 'bad' });
     this.renderQuiz();
   }
 
@@ -328,7 +349,7 @@ export class LightsScreen extends PassageScreen {
     this.layer.clear();
     this.q.vessel = null;
     this.q.phase = 'wait';
-    this.q.timer = 3 + this.rand() * 5;
+    this.q.timer = 1 + this.rand() * 1.5;
     this.renderQuiz();
   }
 
@@ -370,12 +391,32 @@ export class LightsScreen extends PassageScreen {
         h('button.btn', { onclick: () => { q.stats.n++; q.stats.streak = 0; q.result = { okType: false, okAspect: false, skipped: true, realAspect: aspectOf(relBearing(v.x, v.z, v.hdg, this.world.boat.x, this.world.boat.z), v.moving) }; q.phase = 'feedback'; this.renderQuiz(); } }, 'Nie wiem')));
       return;
     }
+    if (q.phase === 'observe' || q.phase === 'pass') {
+      el.appendChild(h('div.quiz-verdict.ok', {}, '✓ Statek idzie prosto na nas!'));
+      el.appendChild(h('div.small', { style: { margin: '4px 0' } }, 'Obserwuj namiar na jego światła. Jeśli przesuwa się w stronę dziobu – przejdzie przed dziobem; w stronę rufy – za rufą; stały namiar oznacza kolizję.'));
+      el.appendChild(h('div.small', {}, h('span.muted', {}, 'Namiar na początku:'), ' ', h('b', {}, `${pad3(q.brg0)}°`), '  ', h('span.muted', {}, 'teraz:'), ' ', h('b', { class: 'live-brg' }, `${pad3(this.vesselBearing())}°`)));
+      if (q.phase === 'observe') {
+        el.appendChild(h('div.quiz-title', { style: { marginTop: '8px' } }, h('span', {}, 'Obserwuj jeszcze:'), ' ', h('span', { class: 'obs-t' }, `${Math.ceil(q.obsT)} s`)));
+        el.appendChild(h('div.small.muted', {}, 'Możesz przyspieszyć czas przyciskami 2×–8×.'));
+      } else {
+        el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Gdzie przejdzie statek?'));
+        const ps = h('div.quiz-opts.two');
+        for (const a of ['ahead', 'astern']) ps.appendChild(h('button.btn.sm', { onclick: () => this.answerPass(a) }, PASS_SIDES[a]));
+        el.appendChild(ps);
+      }
+      return;
+    }
     // informacja zwrotna
     const r = q.result, V = anyVessel(v.type);
-    el.appendChild(h('div.quiz-verdict', { class: r.okType && r.okAspect ? 'ok' : 'bad' }, r.skipped ? 'Odpowiedź:' : r.okType && r.okAspect ? '✓ Dobrze!' : r.okType ? (v.gear ? '✓ Typ dobrze, ✗ strona statku lub sieci źle' : '✓ Typ dobrze, ✗ strona statku źle') : '✗ Źle'));
+    const allOk = r.okType && r.okAspect && (!r.passAsked || r.passOk);
+    el.appendChild(h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad' }, r.skipped ? 'Odpowiedź:' : allOk ? '✓ Dobrze!' : r.okType && r.okAspect ? '✓ Typ i strona dobrze, ✗ przejście źle' : r.okType ? (v.gear ? '✓ Typ dobrze, ✗ strona statku lub sieci źle' : '✓ Typ dobrze, ✗ strona statku źle') : '✗ Źle'));
     el.appendChild(h('div', { style: { fontWeight: 700, margin: '4px 0' } }, V.name));
     el.appendChild(h('div.small', {}, V.explain));
     if (v.moving && !this.day) el.appendChild(h('div.small', { style: { marginTop: '6px' } }, h('span.muted', {}, 'Widzisz:'), ' ', h('b', {}, ASPECTS[r.realAspect])));
+    if (r.passAsked) {
+      el.appendChild(h('div.small', { style: { marginTop: '4px', color: r.passOk ? '#7ff0b5' : '#ff8a8a' } }, r.passOk ? '✓ ' : '✗ ', PASS_SIDES[r.passTruth]));
+      el.appendChild(h('div.small.muted', {}, h('span', {}, 'Namiar:'), ' ', h('b', {}, `${pad3(q.brg0)}° → ${pad3(r.brg1)}°`)));
+    }
     if (v.gear) el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, 'Sieci:'), ' ', h('b', {}, GEAR_SIDES[v.gearSide])));
     el.appendChild(h('div.small.muted', { style: { marginTop: '4px' } }, h('span', {}, 'Odległość:'), ' ', h('b', {}, `${(Math.hypot(v.x - this.world.boat.x, v.z - this.world.boat.z) / NM).toFixed(2)} nm`)));
     el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => this.next() }, 'Następny statek →'));
@@ -403,6 +444,16 @@ export class LightsScreen extends PassageScreen {
     // quiz i światła statku
     const q = this.q;
     if (q.phase === 'wait') { q.timer -= dt; if (q.timer <= 0) this.spawn(); }
+    if (q.phase === 'observe') {
+      const before = Math.ceil(q.obsT);
+      q.obsT -= dt;
+      if (q.obsT <= 0) { q.phase = 'pass'; this.renderQuiz(); }
+      else if (Math.ceil(q.obsT) !== before) {
+        const t1 = this.quizEl.querySelector('.obs-t'), b1 = this.quizEl.querySelector('.live-brg');
+        if (t1) t1.textContent = `${Math.ceil(q.obsT)} s`;
+        if (b1) b1.textContent = `${pad3(this.vesselBearing())}°`;
+      }
+    }
     this.layer.update(dt, this.view.camera.position, now / 1000, this.view.water);
     if (q.vessel && q.phase !== 'wait') {
       const d = Math.hypot(q.vessel.x - b.x, q.vessel.z - b.z);

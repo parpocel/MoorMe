@@ -1,4 +1,4 @@
-import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck } from '../src/js/data/shipLights.js';
+import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide } from '../src/js/data/shipLights.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -68,6 +68,29 @@ for (const asp of ['bow', 'starboard', 'port', 'stern']) {
   check(c && (c.z > 0) === (d.gearSide === 'starboard') && d.hull === 'trawler', `stożek wierzchołkiem w górę po stronie sieci (${d.gearSide})`);
 }
 
+// 3d) statek prosto na nas: oba burtowe widoczne, a przejście przed dziobem / za rufą zgodne z ruchem względnym
+{
+  const r2 = rng(21), seen = { ahead: 0, astern: 0 };
+  let okAll = true;
+  for (let i = 0; i < 60; i++) {
+    const obs = { x: 0, z: 0, hdg: 90, speed: 0.84 };
+    const v = spawnVessel(r2, obs, { type: 'power', aspect: 'bow' });
+    const rel = relBearing(v.x, v.z, v.hdg, 0, 0);
+    if (Math.abs(rel) > 3 || !v.pass) { okAll = false; continue; }
+    seen[v.pass]++;
+    // symulacja: czy rzeczywiście przecina naszą linię kursu przed / za nami
+    let x = v.x, z = v.z, ox = 0, cross = null;
+    const vx = Math.sin(v.hdg * Math.PI / 180) * v.speed * 0.514444, vz = -Math.cos(v.hdg * Math.PI / 180) * v.speed * 0.514444;
+    for (let t = 0; t < 2000 && cross === null; t += 0.5) {
+      const pz = z; x += vx * 0.5; z += vz * 0.5; ox += 0.84 * 0.5;
+      if (Math.sign(pz) !== Math.sign(z)) cross = x > ox ? 'ahead' : 'astern';
+    }
+    if (cross !== v.pass) okAll = false;
+  }
+  check(okAll && seen.ahead > 5 && seen.astern > 5, `statek prosto na nas: przejście przed dziobem ${seen.ahead}×, za rufą ${seen.astern}×, zgodne z symulacją`);
+  check(Object.values(PASS_SIDES).every((s2) => s2.length > 5), 'opisy przejścia');
+}
+
 // 4) odpowiedzi: 6 różnych, w tym poprawna
 const opts = answerOptions(r, 'pilot', 6);
 check(opts.length === 6 && new Set(opts).size === 6 && opts.includes('pilot'), `6 różnych odpowiedzi z poprawną (${opts.join(', ')})`);
@@ -75,7 +98,7 @@ check(opts.length === 6 && new Set(opts).size === 6 && opts.includes('pilot'), `
 // 5) tłumaczenia
 setLang('en');
 const PL = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
-const strs = [...VESSELS.flatMap((v) => [v.name, v.explain]), ...DAY_VESSELS.flatMap((v) => [v.name, v.explain]), ...Object.values(ASPECTS), ...Object.values(GEAR_SIDES)];
+const strs = [...VESSELS.flatMap((v) => [v.name, v.explain]), ...DAY_VESSELS.flatMap((v) => [v.name, v.explain]), ...Object.values(ASPECTS), ...Object.values(GEAR_SIDES), ...Object.values(PASS_SIDES)];
 const missing = strs.filter((s) => t(s) === s || PL.test(t(s)));
 check(missing.length === 0, `nazwy i opisy świateł mają tłumaczenie (${strs.length})${missing.length ? ': ' + missing.slice(0, 3).join(' | ') : ''}`);
 check(t('Błąd – to: Statek pilotowy na służbie') === 'Wrong – it was: Pilot vessel on duty', 'komunikat o błędzie tłumaczy nazwę statku');

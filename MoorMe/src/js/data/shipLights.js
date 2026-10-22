@@ -168,6 +168,20 @@ export function visibleLights(lights, rel) {
   return lights.filter((l) => SECTORS[l.s](rel));
 }
 
+// Czy statek przejdzie przed naszym dziobem, czy za rufą: ruch względny – gdzie przetnie naszą linię kursu (w naszym układzie)
+export function passSide(v, own) {
+  const vh = (v.hdg * Math.PI) / 180, oh = (own.hdg * Math.PI) / 180;
+  const fx = Math.sin(oh), fz = -Math.cos(oh), sx = Math.cos(oh), sz = Math.sin(oh);
+  const rvx = Math.sin(vh) * v.speed * 0.514444 - fx * own.speed, rvz = -Math.cos(vh) * v.speed * 0.514444 - fz * own.speed;
+  const px = v.x - own.x, pz = v.z - own.z;
+  const lat = px * sx + pz * sz, latV = rvx * sx + rvz * sz; // odległość boczna od naszej linii kursu i jej zmiana
+  if (Math.abs(latV) < 1e-6 || -lat / latV < 0) return { side: 'none', along: 0, t: Infinity };
+  const t = -lat / latV;
+  const along = (px + rvx * t) * fx + (pz + rvz * t) * fz; // > 0: przed dziobem
+  return { side: along > 0 ? 'ahead' : 'astern', along, t };
+}
+export const PASS_SIDES = { ahead: 'Przejdzie przed naszym dziobem', astern: 'Przejdzie za naszą rufą' };
+
 // „Talia” typów: każdy typ pojawia się raz w losowej kolejności, potem talia jest tasowana od nowa
 export function makeDeck(r, day = false) {
   let deck = [], last = null;
@@ -195,14 +209,33 @@ export function spawnVessel(r, observer, opts = {}) {
   const x = observer.x + Math.sin(br) * dist, z = observer.z - Math.cos(br) * dist;
   // aspekt widziany z łodzi; przy sieciach – burta statku z sieciami ma być widoczna lub oczywista z pozycji świateł
   const pick = r();
-  const aspect = !v.moving ? 'none' : v.gear ? (pick < 0.5 ? 'starboard' : 'port') : pick < 0.2 ? 'bow' : pick < 0.45 ? 'starboard' : pick < 0.7 ? 'port' : 'stern';
+  const aspect = opts.aspect && v.moving ? opts.aspect : !v.moving ? 'none' : v.gear ? (pick < 0.5 ? 'starboard' : 'port') : pick < 0.2 ? 'bow' : pick < 0.45 ? 'starboard' : pick < 0.7 ? 'port' : 'stern';
   const rel = aspect === 'bow' ? (r() - 0.5) * 4 : aspect === 'starboard' ? 20 + r() * 80 : aspect === 'port' ? -(20 + r() * 80) : aspect === 'stern' ? 130 + r() * 100 : r() * 360;
   // kurs statku: namiar od statku do łodzi minus kąt względny
   const back = (Math.atan2(observer.x - x, -(observer.z - z)) * 180) / Math.PI;
   const hdg = (((back - rel) % 360) + 360) % 360;
-  const speed = (v.speed[0] + r() * (v.speed[1] - v.speed[0])) * 0.6; // wolniej niż w realu – więcej czasu na obserwację
+  let speed = (v.speed[0] + r() * (v.speed[1] - v.speed[0])) * 0.6; // wolniej niż w realu – więcej czasu na obserwację
   const o = { gearSide: r() < 0.5 ? 'port' : 'starboard' };
-  const base = { type: v.id, name: v.name, L, x, z, hdg, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
+  let pos = { x, z, hdg }, pass = null;
+  if (aspect === 'bow' && observer.speed !== undefined) {
+    // statek idący „prosto na nas” (widać oba burtowe): podchodzi z kierunku bliskiego dziobowi i celuje w punkt naszej
+    // linii kursu nieco przed albo za nami – po chwili namiar zacznie się przesuwać i będzie wiadomo, gdzie przejdzie
+    speed = Math.max(speed, 6);
+    const want = r() < 0.5 ? 'ahead' : 'astern', sgn = side === 'port' ? -1 : 1;
+    const oh = (observer.hdg * Math.PI) / 180, fx = Math.sin(oh), fz = -Math.cos(oh);
+    for (let k = 0; k < 400; k++) {
+      const a = ((observer.hdg + sgn * (6 + r() * 14)) * Math.PI) / 180, dd = 650 + r() * 500;
+      const px = observer.x + Math.sin(a) * dd, pz = observer.z - Math.cos(a) * dd;
+      const s = -250 + r() * 600, tx = observer.x + fx * s, tz = observer.z + fz * s;
+      const h2 = (((Math.atan2(tx - px, -(tz - pz)) * 180) / Math.PI) + 360) % 360;
+      if (Math.abs(relBearing(px, pz, h2, observer.x, observer.z)) > 2.8) continue;
+      const p = passSide({ x: px, z: pz, hdg: h2, speed }, observer);
+      if (p.side === 'none' || Math.abs(p.along) < 45 || (p.side !== want && k < 300)) continue;
+      pos = { x: px, z: pz, hdg: h2 }; pass = p.side;
+      break;
+    }
+  }
+  const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
   if (opts.day) return { ...base, hull: v.hull, shapes: v.shapes(L, r, o), lights: [] };
   return { ...base, lights: v.lights(L, r, o) };
 }
