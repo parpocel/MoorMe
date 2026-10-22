@@ -15,31 +15,35 @@ for (const k of ['mayday', 'pan', 'securite']) { const p = procedureCard(k); che
 check(procedureCard('mayday').lines.at(-1) === 'OVER' && procedureCard('securite').lines.at(-1) === 'OUT', 'MAYDAY kończy się OVER, SÉCURITÉ – OUT');
 
 const r = rng(5), kinds = {};
-let allOk = true;
+let allOk = true, twoStep = 0;
 for (let i = 0; i < 300; i++) {
   const t = makeRadioTask(r, ship);
   kinds[t.id] = (kinds[t.id] || 0) + 1;
-  // poprawna odpowiedź przechodzi, zła nie
-  const good = checkRadio(t, { channel: t.channels[0], dscSent: true, lines: t.lines ? [...t.lines] : [] });
-  const badCh = checkRadio(t, { channel: t.channels.includes(16) ? 70 : 16, dscSent: true, lines: t.lines ? [...t.lines] : [] });
-  if (!good.ok || badCh.ok) allOk = false;
-  if (t.lines) {
-    if (t.pool.length !== t.lines.length + t.distractors.length || new Set(t.pool).size !== t.pool.length) allOk = false;
-    if (t.distractors.some((d) => t.lines.includes(d))) allOk = false;
-    const swapped = [...t.lines]; [swapped[0], swapped[1]] = [swapped[1], swapped[0]];
-    if (checkRadio(t, { channel: t.channels[0], dscSent: true, lines: swapped }).ok) allOk = false;
-    if (!t.lines.some((l) => l.includes('ZEFIR'))) allOk = false;
+  if (t.steps.length > 1) twoStep++;
+  for (const st of t.steps) {
+    const good = checkRadio(st, { channel: st.channels[0], power: st.power || 25, dscSent: true, lines: st.lines ? [...st.lines] : [] });
+    const badCh = checkRadio(st, { channel: st.channels.includes(16) ? 70 : 16, power: st.power || 25, dscSent: true, lines: st.lines ? [...st.lines] : [] });
+    if (!good.ok || badCh.ok) allOk = false;
+    if (st.power && checkRadio(st, { channel: st.channels[0], power: st.power === 1 ? 25 : 1, dscSent: true, lines: st.lines ? [...st.lines] : [] }).ok) allOk = false;
+    if (st.lines) {
+      if (st.pool.length !== st.lines.length + st.distractors.length || new Set(st.pool).size !== st.pool.length) allOk = false;
+      if (st.distractors.some((d) => st.lines.includes(d))) allOk = false;
+      const swapped = [...st.lines]; [swapped[0], swapped[1]] = [swapped[1], swapped[0]];
+      if (checkRadio(st, { channel: st.channels[0], power: st.power || 25, dscSent: true, lines: swapped }).ok) allOk = false;
+    }
+    if (st.dsc && checkRadio(st, { channel: 16, power: 25, dscSent: false, lines: [...st.lines] }).ok) allOk = false;
   }
-  if (t.dsc && checkRadio(t, { channel: 16, dscSent: false, lines: [...t.lines] }).ok) allOk = false;
 }
-check(allOk, 'test radiowy: poprawne odpowiedzi przechodzą, zły kanał / kolejność / brak DSC – nie');
-check(Object.keys(kinds).length >= 10, `losowane są wszystkie rodzaje zadań (${Object.keys(kinds).join(', ')})`);
-check(makeRadioTask(rng(1), ship, 'mayday').dsc === true && makeRadioTask(rng(1), ship, 'pan').dsc === false, 'MAYDAY wymaga alarmu DSC');
-
+check(allOk, 'test radiowy: poprawne odpowiedzi przechodzą, zły kanał / moc / kolejność / brak DSC – nie');
+check(Object.keys(kinds).length >= 11, `losowane są wszystkie rodzaje zadań (${Object.keys(kinds).join(', ')})`);
+const mt = makeRadioTask(rng(1), ship, 'mayday').steps[0], sec = makeRadioTask(rng(2), ship, 'securite');
+check(mt.dsc === true && mt.power === 25, 'MAYDAY: alarm DSC i pełna moc 25 W');
+check(sec.steps.length === 2 && sec.steps[0].channels[0] === 16 && [72, 77].includes(sec.steps[1].channels[0]) && !sec.steps.some((s) => s.channels.includes(6)), 'SÉCURITÉ: zapowiedź na 16, komunikat na kanale roboczym 72/77 (nie 06)');
+check(makeRadioTask(rng(3), ship, 'onboard').steps[0].power === 1, 'łączność na pokładzie (15/17) tylko 1 W');
 setLang('en');
 const PL = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 const en = [...DEVICE_IDS.flatMap((id) => { const d = deviceInfo(id); return [d.name, d.short, ...d.sections.flat()]; }), ...channels().map((c) => c.use), ...['mayday', 'pan', 'securite'].flatMap((k) => { const p = procedureCard(k); return [p.when, p.after, ...p.steps]; })];
-const tk = Array.from({ length: 40 }, (_, i) => makeRadioTask(rng(i + 1), ship)).flatMap((t) => [t.text, t.explain]);
+const tk = Array.from({ length: 40 }, (_, i) => makeRadioTask(rng(i + 1), ship)).flatMap((t) => [t.text, t.explain, ...t.steps.map((s) => s.label || '')]);
 check([...en, ...tk].every((s) => !PL.test(s)), 'treści modułu po angielsku');
 setLang('pl');
 if (fails) process.exit(1);

@@ -11,73 +11,85 @@ export function deviceInfo(id) {
   const D = {
     epirb: {
       name: L('Radiopława EPIRB 406 MHz', 'EPIRB 406 MHz'),
-      short: L('Awaryjna radiopława alarmowa – wysyła sygnał wzywania pomocy przez satelity COSPAS-SARSAT.', 'Emergency position-indicating radio beacon – sends a distress alert via the COSPAS-SARSAT satellites.'),
+      short: L('Awaryjna radiopława wskazująca pozycję. Po włączeniu wysyła przez satelity COSPAS-SARSAT alarm z identyfikatorem jachtu i pozycją GPS – działa na całym świecie, także daleko poza zasięgiem VHF.', 'Emergency position-indicating radio beacon. Once switched on it sends an alert with the yacht’s ID and GPS position via the COSPAS-SARSAT satellites – it works worldwide, far beyond VHF range.'),
       sections: [
-        [L('Częstotliwości', 'Frequencies'), L('406 MHz – zakodowany alarm z identyfikatorem (HEX ID / MMSI) i pozycją GNSS; 121,5 MHz – sygnał naprowadzający dla jednostek i śmigłowców ratowniczych; nowsze modele także AIS (161,975 / 162,025 MHz).', '406 MHz – coded alert with the beacon ID (HEX ID / MMSI) and GNSS position; 121.5 MHz – homing signal for rescue vessels and helicopters; newer models also AIS (161.975 / 162.025 MHz).')],
-        [L('Gdzie trafia sygnał', 'Where the signal goes'), L('Satelity COSPAS-SARSAT (MEOSAR, LEOSAR, GEOSAR) → stacja naziemna LUT → centrum MCC → właściwe RCC/MRCC (w Polsce MRCK Gdynia), które koordynuje akcję ratowniczą. Działa na całym świecie (obszary A1–A4).', 'COSPAS-SARSAT satellites (MEOSAR, LEOSAR, GEOSAR) → LUT ground station → MCC → the responsible RCC/MRCC, which coordinates the rescue. Works worldwide (sea areas A1–A4).')],
-        [L('Kiedy używać', 'When to use'), L('Tylko w niebezpieczeństwie – bezpośrednie zagrożenie życia lub jachtu, gdy nie da się wezwać pomocy przez VHF albo przy opuszczaniu jachtu. Zabierz radiopławę do tratwy.', 'Only in distress – grave and imminent danger to life or the yacht, when you cannot call for help on VHF or when abandoning ship. Take the beacon into the liferaft.')],
-        [L('Jak używać', 'How to use'), L('Wyjmij z uchwytu, wysuń antenę, włącz (ON / zerwanie plomby). Kategoria I uruchamia się sama po zanurzeniu (zwalniak hydrostatyczny). Trzymaj antenę pionowo, nad wodą, z widokiem na niebo; przywiąż linką do tratwy. Nadaje co najmniej 48 h.', 'Remove from the bracket, extend the antenna, switch ON (break the seal). Category I activates automatically when immersed (hydrostatic release). Keep the antenna upright, clear of the water with a view of the sky; tether it to the raft. Transmits for at least 48 h.')],
-        [L('Obsługa', 'Maintenance'), L('Rejestracja w urzędzie (dane jachtu i kontakty), comiesięczny autotest (TEST), daty ważności baterii i zwalniaka. Fałszywy alarm: wyłącz i natychmiast powiadom MRCC.', 'Register it (yacht data and contacts), monthly self-test (TEST), check battery and release expiry dates. False alert: switch off and inform the MRCC immediately.')]
+        [L('Częstotliwości', 'Frequencies'), L('406 MHz – cyfrowy alarm z numerem radiopławy (HEX ID, zwykle powiązanym z MMSI jachtu) i pozycją z wbudowanego GPS. 121,5 MHz – słaby sygnał naprowadzający, na który ratownicy (statki, śmigłowce, samoloty) namierzają radiopławę z bliska. Nowsze modele nadają także AIS (161,975 i 162,025 MHz), więc pojawiają się na ploterach statków w pobliżu.', '406 MHz – a digital alert with the beacon number (HEX ID, usually linked to the yacht’s MMSI) and the position from the built-in GPS. 121.5 MHz – a weak homing signal that rescuers (ships, helicopters, aircraft) use to find the beacon at close range. Newer models also transmit AIS (161.975 and 162.025 MHz), so they appear on the plotters of nearby vessels.')],
+        [L('Gdzie trafia sygnał', 'Where the signal goes'), L('Satelity COSPAS-SARSAT (MEOSAR na orbitach średnich – wykrycie zwykle w ciągu minut, LEOSAR polarne i GEOSAR geostacjonarne) → naziemna stacja odbiorcza LUT → krajowe centrum MCC → właściwe centrum koordynacji ratownictwa RCC/MRCC. Na polskich obszarach SAR jest to MRCK w Gdyni, które wysyła jednostki ratownicze i śmigłowiec. Część radiopław ma też potwierdzenie odbioru (Return Link Service przez Galileo).', 'COSPAS-SARSAT satellites (MEOSAR in medium orbits – detection usually within minutes, polar LEOSAR and geostationary GEOSAR) → a ground receiving station (LUT) → a national mission control centre (MCC) → the responsible rescue coordination centre (RCC/MRCC), which sends lifeboats and a helicopter. Some beacons also confirm reception (Return Link Service via Galileo).')],
+        [L('Kiedy używać', 'When to use'), L('Tylko w niebezpieczeństwie – gdy grozi utrata życia lub jachtu: tonięcie, pożar poza kontrolą, opuszczanie jachtu, a także gdy nie da się wezwać pomocy przez VHF (brak zasięgu, awaria, brak zasilania). Zabierz ją do tratwy – ratownicy szukają radiopławy, nie jachtu.', 'Only in distress – when life or the yacht is in danger: sinking, fire out of control, abandoning ship, and also when you cannot call for help on VHF (out of range, radio failure, no power). Take it into the liferaft – rescuers home in on the beacon, not the yacht.')],
+        [L('Jak używać', 'How to use'), L('Kategoria II (ręczna, jak ta): wyjmij z uchwytu, rozwiń antenę, przesuń osłonę i naciśnij ON – zacznie błyskać lampa. Kategoria I uruchamia się sama: po zatonięciu jachtu zwalniak hydrostatyczny uwalnia ją z pojemnika, a woda ją włącza. Trzymaj antenę pionowo, nad wodą, z widokiem na niebo; przywiąż ją linką do tratwy lub siebie i nie wyłączaj, dopóki ratownicy nie przypłyną. Bateria wystarcza na co najmniej 48 h.', 'Category II (manual, like this one): take it out of the bracket, unfold the antenna, slide the cover and press ON – the strobe starts flashing. Category I activates itself: when the yacht sinks a hydrostatic release frees it and the water switches it on. Keep the antenna upright, clear of the water with a view of the sky; tie it to the raft or to yourself with the lanyard and leave it on until rescuers arrive. The battery lasts at least 48 h.')],
+        [L('Obsługa i fałszywy alarm', 'Maintenance and false alerts'), L('Zarejestruj radiopławę w krajowym rejestrze (dane jachtu, armatora i kontakty alarmowe) – bez tego ratownicy nie wiedzą, kogo szukają. Rób tylko autotest przyciskiem TEST według instrukcji (zwykle raz w miesiącu), pilnuj dat ważności baterii i zwalniaka. Jeśli włączysz ją przypadkiem: wyłącz i natychmiast powiadom MRCC lub stację brzegową – nie wyrzucaj jej, nie „czekaj, aż przestanie”.', 'Register the beacon in the national register (yacht, owner and emergency contacts) – otherwise rescuers do not know whom they are looking for. Only use the TEST button as the manufacturer says (usually once a month) and watch the battery and release expiry dates. If it goes off by accident: switch it off and inform the MRCC or a coast station immediately.')],
+        [L('EPIRB a PLB', 'EPIRB vs PLB'), L('PLB to osobista radiopława (np. przy kamizelce) – działa tak samo na 406 MHz, ale jest mniejsza, rejestrowana na osobę i nadaje krócej (min. 24 h).', 'A PLB is a personal beacon (e.g. on a lifejacket) – it works the same way on 406 MHz but is smaller, registered to a person and transmits for a shorter time (at least 24 h).')]
       ]
     },
     sart: {
-      name: L('Transponder SAR (SART)', 'Search and rescue transponder (SART)'),
-      short: L('Pozwala ratownikom odnaleźć tratwę: radar-SART odpowiada na impulsy radaru, AIS-SART nadaje pozycję w AIS.', 'Lets rescuers home in on the liferaft: a radar SART answers radar pulses, an AIS-SART transmits its position over AIS.'),
+      name: L('Transponder SAR (AIS-SART / radar-SART)', 'Search and rescue transponder (AIS-SART / radar SART)'),
+      short: L('Urządzenie do odnalezienia rozbitków w ostatniej fazie akcji: EPIRB alarmuje, a SART pokazuje statkom ratowniczym, gdzie dokładnie jest tratwa.', 'A device for locating survivors in the final stage of a rescue: the EPIRB raises the alarm, the SART shows rescue vessels exactly where the raft is.'),
       sections: [
-        [L('Częstotliwości', 'Frequencies'), L('Radar-SART: pasmo 9 GHz (radar X, 9,2–9,5 GHz). AIS-SART: kanały AIS 1 i 2 – 161,975 i 162,025 MHz.', 'Radar SART: 9 GHz band (X-band radar, 9.2–9.5 GHz). AIS-SART: AIS channels 1 and 2 – 161.975 and 162.025 MHz.')],
-        [L('Gdzie odbierany', 'Where it is received'), L('Na radarach statków i samolotów: linia 12 kropek od pozycji SART (z bliska łuki, potem okręgi). AIS-SART – na ekranach AIS i ploterach jako kółko z krzyżykiem „SART ACTIVE”. Zasięg ok. 5 Mm ze statku, do 30 Mm z samolotu.', 'On ship and aircraft radars: a line of 12 dots from the SART position (arcs, then circles at close range). AIS-SART – on AIS displays and plotters as a crossed circle “SART ACTIVE”. Range about 5 NM from a ship, up to 30 NM from an aircraft.')],
-        [L('Kiedy używać', 'When to use'), L('W tratwie lub w wodzie, gdy czekasz na ratunek – uzupełnia EPIRB (ta alarmuje, SART naprowadza).', 'In the liferaft or in the water while waiting for rescue – it complements the EPIRB (the EPIRB alerts, the SART guides).')],
-        [L('Jak używać', 'How to use'), L('Włącz i zamocuj na maszcie teleskopowym min. 1 m nad wodą (wyżej = większy zasięg). Czuwanie 96 h, potem co najmniej 8 h nadawania.', 'Switch on and mount it on the telescopic pole at least 1 m above the water (higher = longer range). 96 h standby, then at least 8 h of transmission.')]
+        [L('Rodzaje i częstotliwości', 'Types and frequencies'), L('AIS-SART (jak ten na stole) nadaje swoją pozycję GPS w systemie AIS na kanałach AIS 1 i 2 (161,975 i 162,025 MHz), co minutę serię komunikatów. Radar-SART działa w paśmie 9 GHz (9,2–9,5 GHz) i odpowiada na impulsy radarów pasma X (3 cm) – radarów 10 cm (pasmo S) nie widzi.', 'An AIS-SART (like the one on the table) transmits its GPS position over AIS on AIS channels 1 and 2 (161.975 and 162.025 MHz), a burst of messages every minute. A radar SART works in the 9 GHz band (9.2–9.5 GHz) and answers X-band (3 cm) radar pulses – it is not seen by 10 cm (S-band) radars.')],
+        [L('Co widzą ratownicy', 'What rescuers see'), L('AIS-SART: na ploterze i ekranie AIS kółko z krzyżykiem z opisem „SART ACTIVE” (przy teście „SART TEST”). Radar-SART: na ekranie radaru linia 12 kropek od pozycji SART w kierunku od radaru; gdy statek jest bliżej niż ok. 1 Mm, kropki zmieniają się w łuki, a tuż obok – w koncentryczne okręgi.', 'AIS-SART: a crossed circle labelled “SART ACTIVE” on the plotter and AIS display (“SART TEST” during a test). Radar SART: a line of 12 dots on the radar screen starting at the SART and pointing away from the radar; within about 1 NM the dots become arcs and, very close, concentric circles.')],
+        [L('Zasięg', 'Range'), L('Zależy od wysokości: z SART-em 1 m nad wodą statek wykryje go z ok. 5 Mm, samolot lub śmigłowiec – z 30 Mm i więcej. Dlatego mocuje się go jak najwyżej.', 'It depends on height: with the SART 1 m above the water a ship detects it at about 5 NM, an aircraft or helicopter at 30 NM or more. That is why it is mounted as high as possible.')],
+        [L('Jak używać', 'How to use'), L('W tratwie włącz SART i zamocuj na maszcie teleskopowym co najmniej 1 m nad wodą (albo przywiąż jak najwyżej do daszku). Działa min. 96 h w czuwaniu i 8 h nadawania. Nie włączaj go na jachcie „na zapas” – po teście wyłącz.', 'In the liferaft switch the SART on and mount it on its telescopic pole at least 1 m above the water (or tie it as high as possible on the canopy). It runs at least 96 h on standby and 8 h transmitting. Do not leave it on aboard “just in case” – switch it off after a test.')]
       ]
     },
     vhf: {
       name: L('Radiotelefon VHF z DSC (stacjonarny)', 'Fixed VHF radio with DSC'),
-      short: L('Podstawowe radio jachtu: łączność głosowa na kanałach morskich i cyfrowy alarm DSC na kanale 70. Kliknij, aby otworzyć kanały i test.', 'The yacht’s main radio: voice on marine channels and a digital DSC alert on channel 70. Click to open the channels and the test.'),
+      short: L('Podstawowe radio jachtu do łączności z innymi statkami, mariną i stacjami brzegowymi, a w niebezpieczeństwie – do cyfrowego alarmu DSC i wezwania MAYDAY. Kliknij, aby otworzyć kanały i test.', 'The yacht’s main radio for talking to other vessels, marinas and coast stations and, in distress, for the digital DSC alert and the MAYDAY call. Click to open the channels and the test.'),
       sections: [
-        [L('Częstotliwości', 'Frequencies'), L('Pasmo morskie VHF 156–162 MHz. Kanał 16 (156,800 MHz) – wzywanie pomocy, pilność, bezpieczeństwo i wywołania; kanał 70 (156,525 MHz) – tylko DSC (bez głosu). Moc 25 W lub 1 W.', 'Marine VHF band 156–162 MHz. Channel 16 (156.800 MHz) – distress, urgency, safety and calling; channel 70 (156.525 MHz) – DSC only (no voice). Power 25 W or 1 W.')],
-        [L('Kanały osłonowe', 'Guard channels'), L('Kanał 16 chronią sąsiednie częstotliwości: 75 (156,775) i 76 (156,825 MHz) – tylko łączność nawigacyjna z mocą maks. 1 W – oraz 15 i 17 – łączność na pokładzie, też maks. 1 W. Dzięki temu silny nadajnik obok nie zagłusza wezwań o pomoc na 16.', 'Channel 16 is protected by the adjacent frequencies: 75 (156.775) and 76 (156.825 MHz) – navigation-related communications only, max 1 W – and 15 and 17 – on-board communications, also max 1 W. This keeps a strong transmitter next door from blocking distress calls on 16.')],
-        [L('Gdzie odbierany', 'Where it is received'), L('Stacje brzegowe i MRCC oraz statki w zasięgu – praktycznie linia horyzontu radiowego, dla jachtu ok. 20–30 Mm (obszar A1).', 'Coast stations and MRCCs, plus vessels within range – roughly the radio horizon, about 20–30 NM for a yacht (sea area A1).')],
-        [L('Alarm DSC', 'DSC alert'), L('Podnieś osłonę, przytrzymaj DISTRESS ok. 5 s (najpierw, jeśli zdążysz, wybierz rodzaj zagrożenia). Radio wysyła MMSI i pozycję z GPS, powtarza alarm do potwierdzenia. Potem nadaj MAYDAY głosem na kanale 16.', 'Lift the cover and hold DISTRESS for about 5 s (if there is time, select the nature of distress first). The radio sends the MMSI and the GPS position and repeats the alert until acknowledged. Then send the MAYDAY by voice on channel 16.')],
-        [L('Wymagania', 'Requirements'), L('Świadectwo operatora (SRC), pozwolenie radiowe dla jachtu, numer MMSI i znak wywoławczy; podłączony GPS.', 'Operator’s certificate (SRC), ship station licence, MMSI and call sign; a connected GPS.')]
+        [L('Częstotliwości i moc', 'Frequencies and power'), L('Pasmo morskie VHF 156–162 MHz. Kanał 16 (156,800 MHz) – wzywanie pomocy, pilność, bezpieczeństwo i wywołania; kanał 70 (156,525 MHz) – wyłącznie cyfrowe wywołania DSC, bez głosu. Moc: 25 W albo 1 W – używaj najmniejszej mocy, która wystarcza (w porcie i blisko innych statków 1 W), pełnej przy MAYDAY i PAN-PAN.', 'Marine VHF band 156–162 MHz. Channel 16 (156.800 MHz) – distress, urgency, safety and calling; channel 70 (156.525 MHz) – digital DSC calls only, no voice. Power: 25 W or 1 W – use the lowest power that works (1 W in harbour and close to other vessels), full power for MAYDAY and PAN-PAN.')],
+        [L('Kanały osłonowe', 'Guard channels'), L('Kanał 16 chronią sąsiednie częstotliwości: 75 (156,775) i 76 (156,825 MHz) – tylko łączność dotycząca nawigacji, moc maks. 1 W – oraz 15 i 17 – łączność na pokładzie, też maks. 1 W. Dzięki temu silny nadajnik na sąsiednim kanale nie zagłusza wezwań o pomoc na 16.', 'Channel 16 is protected by the adjacent frequencies: 75 (156.775) and 76 (156.825 MHz) – navigation-related communications only, max 1 W – and 15 and 17 – on-board communications, also max 1 W. This keeps a strong transmitter on a neighbouring channel from blocking distress calls on 16.')],
+        [L('Zasięg', 'Range'), L('VHF działa na „linię wzroku”: zasięg zależy od wysokości anten. Między dwoma jachtami to zwykle 5–15 Mm, do stacji brzegowej z wysoką anteną – ok. 20–30 Mm (obszar morza A1 systemu GMDSS). Ręczne radio 5 W na wysokości człowieka – kilka mil.', 'VHF works by line of sight: range depends on antenna heights. Between two yachts it is usually 5–15 NM, to a coast station with a high antenna about 20–30 NM (GMDSS sea area A1). A 5 W handheld at head height – a few miles.')],
+        [L('Alarm DSC', 'DSC alert'), L('Podnieś osłonę i przytrzymaj DISTRESS ok. 5 s (jeśli zdążysz – najpierw wybierz rodzaj zagrożenia). Radio wysyła na kanale 70 numer MMSI, rodzaj zagrożenia, pozycję i czas z GPS, powtarza alarm co kilka minut do potwierdzenia przez stację brzegową i samo przełącza się na kanał 16 – wtedy nadaj MAYDAY głosem. Bez podłączonego GPS trzeba wpisać pozycję ręcznie.', 'Lift the cover and hold DISTRESS for about 5 s (if there is time – select the nature of distress first). On channel 70 the radio sends the MMSI, the nature of distress and the GPS position and time, repeats the alert every few minutes until a coast station acknowledges it and switches to channel 16 by itself – then send the MAYDAY by voice. Without a GPS connection the position must be entered by hand.')],
+        [L('Wymagania', 'Requirements'), L('Operator musi mieć świadectwo SRC (w Polsce egzamin w UKE), jacht – pozwolenie radiowe na stację statkową, numer MMSI (polskie zaczynają się od 261) i znak wywoławczy. Rozmowy prowadź krótko, procedury po angielsku, kanał 16 zwalniaj jak najszybciej.', 'The operator needs an SRC certificate, the yacht a ship station licence, an MMSI (Polish ones start with 261) and a call sign. Keep calls short, use the standard English procedure words and leave channel 16 as quickly as possible.')]
       ]
     },
     raft: {
       name: L('Tratwa ratunkowa', 'Liferaft'),
-      short: L('Samonapełniająca się tratwa (ISO 9650) w torbie lub pojemniku – ostatnia deska ratunku po opuszczeniu jachtu.', 'Self-inflating liferaft (ISO 9650) in a valise or canister – the last resort after abandoning the yacht.'),
+      short: L('Samonapełniająca się tratwa w torbie (jak ta) albo w pojemniku na pokładzie – miejsce schronienia, gdy jacht naprawdę tonie albo płonie. Pojemność dobiera się do liczby osób na pokładzie.', 'A self-inflating liferaft in a valise (like this one) or a canister on deck – a refuge when the yacht is really sinking or on fire. Its capacity must match the number of people aboard.'),
       sections: [
-        [L('Kiedy', 'When'), L('Opuszczaj jacht dopiero wtedy, gdy naprawdę tonie lub płonie – „wchodzi się do tratwy w górę”. Wcześniej nadaj MAYDAY i uruchom EPIRB.', 'Leave the yacht only when it is really sinking or burning – “step up into the liferaft”. Send a MAYDAY and activate the EPIRB first.')],
-        [L('Jak', 'How'), L('Przywiąż linkę (fangę) do mocnego punktu, wyrzuć tratwę po zawietrznej, szarpnij fangę – butla CO₂ napełni tratwę. Wsiadaj prosto z pokładu, najsilniejsza osoba pierwsza, potem pomoże reszcie. Odetnij fangę nożem z tratwy, wypuść dryfkotwę.', 'Tie the painter to a strong point, launch the raft to leeward, pull the painter – the CO₂ cylinder inflates it. Board directly from the deck, strongest person first to help the others. Cut the painter with the raft knife and stream the drogue.')],
-        [L('Wyposażenie', 'Contents'), L('Dryfkotwa, wiosełka, czerpak, nóż, zestaw naprawczy, pirotechnika, woda, apteczka, latarka. Zabierz też: EPIRB, SART, VHF ręczne, dziennik pokładowy (ostatnia pozycja, kurs, wydarzenia – potrzebne ratownikom i do raportu), dokumenty jachtu i załogi, wodę, ciepłe ubrania, leki.', 'Drogue, paddles, bailer, knife, repair kit, flares, water, first-aid kit, torch. Also take: EPIRB, SART, handheld VHF, the logbook (last position, course, events – needed by rescuers and for the report), the yacht’s and crew’s documents, water, warm clothing, medication.')],
-        [L('Obsługa', 'Maintenance'), L('Przegląd w serwisie co 1–3 lata (wg producenta), zwalniak hydrostatyczny (np. Hammar) – wymiana co 2 lata.', 'Service every 1–3 years (per the manufacturer), hydrostatic release (e.g. Hammar) – replace every 2 years.')]
+        [L('Kiedy opuścić jacht', 'When to abandon ship'), L('Dopiero gdy jacht naprawdę tonie lub płonie – nawet zalany jacht jest większy i łatwiejszy do znalezienia niż tratwa („do tratwy wchodzi się w górę”). Przedtem nadaj MAYDAY, włącz EPIRB, ubierz załogę ciepło i w kamizelki, przygotuj torbę ratunkową.', 'Only when the yacht is really sinking or burning – even a swamped yacht is bigger and easier to find than a raft (“step up into the liferaft”). Before that send a MAYDAY, activate the EPIRB, dress the crew warmly with lifejackets on and get the grab bag ready.')],
+        [L('Jak zwodować', 'How to launch'), L('Sprawdź, czy linka (fanga) jest przywiązana do mocnego punktu jachtu. Wyrzuć tratwę za burtę po zawietrznej, wyciągnij całą fangę i mocno szarpnij – butla CO₂ napełni tratwę w kilkadziesiąt sekund. Gdy tratwa odwróci się dnem do góry, postaw ją: stań na butli i pociągnij za taśmę do odwracania.', 'Check that the painter is tied to a strong point on the yacht. Throw the raft overboard to leeward, pull out the whole painter and give it a sharp tug – the CO₂ cylinder inflates the raft in under a minute. If it inflates upside down, right it: stand on the gas cylinder and pull the righting strap.')],
+        [L('Wsiadanie i pierwsze czynności', 'Boarding and first actions'), L('Wsiadaj prosto z jachtu, bez skakania do wody; pierwsza najsilniejsza osoba pomaga pozostałym. Fangę odetnij nożem przy wejściu dopiero, gdy wszyscy są w środku albo jacht idzie na dno. Potem: wyrzuć dryfkotwę, zamknij wejścia, wybierz wodę, sprawdź, czy nikt nie jest ranny, weź tabletki na chorobę morską, wystaw obserwatora, ustaw EPIRB i SART.', 'Board directly from the yacht without jumping into the water; the strongest person goes first to help the others. Cut the painter with the knife by the entrance only when everyone is aboard or the yacht is going down. Then: stream the drogue, close the entrances, bail out, check for injuries, take seasickness tablets, post a lookout, set up the EPIRB and SART.')],
+        [L('Co zabrać', 'Take along'), L('W tratwie jest m.in. dryfkotwa, wiosełka, czerpak, nóż, zestaw naprawczy, pompka, latarka, pirotechnika, woda i apteczka (zależnie od pakietu). Zabierz też torbę ratunkową: EPIRB, SART, VHF ręczne, telefon w wodoszczelnym etui, dziennik pokładowy (ostatnia pozycja, kurs i zdarzenia – potrzebne ratownikom i do raportu), dokumenty jachtu i załogi, dodatkową wodę, ciepłe ubrania, leki.', 'The raft contains, among other things, a drogue, paddles, a bailer, a knife, a repair kit, a pump, a torch, flares, water and a first-aid kit (depending on the pack). Also take the grab bag: EPIRB, SART, handheld VHF, a phone in a waterproof case, the logbook (last position, course and events – needed by rescuers and for the report), the yacht’s and crew’s documents, extra water, warm clothes, medication.')],
+        [L('Obsługa', 'Maintenance'), L('Przegląd w autoryzowanym serwisie w terminie podanym przez producenta (zwykle co 1–3 lata). Tratwa w pojemniku na pokładzie ma zwalniak hydrostatyczny (np. Hammar), który uwalnia ją, gdy jacht zatonie – wymienia się go co 2 lata.', 'Service at an authorised station at the interval given by the manufacturer (usually every 1–3 years). A raft in a canister on deck has a hydrostatic release (e.g. Hammar) that frees it if the yacht sinks – it is replaced every 2 years.')]
       ]
     },
     jacket: {
       name: L('Kamizelka ratunkowa (pneumatyczna)', 'Lifejacket (inflatable)'),
-      short: L('Kamizelka 150 N (ISO 12402-3) z automatycznym napełnianiem, szelkami i pasem krokowym – utrzymuje twarz nad wodą.', '150 N lifejacket (ISO 12402-3) with automatic inflation, harness and crotch strap – keeps the face clear of the water.'),
+      short: L('Kamizelka 150 N (ISO 12402-3) z automatycznym napełnianiem, uprzężą i pasem krokowym – w wodzie sama obraca człowieka na plecy i utrzymuje twarz nad wodą, także nieprzytomnego.', '150 N lifejacket (ISO 12402-3) with automatic inflation, harness and crotch strap – in the water it turns the wearer onto their back and keeps the face clear, even if unconscious.'),
       sections: [
-        [L('Kiedy zakładać', 'When to wear it'), L('Zawsze na pokładzie nocą, przy złej pogodzie, przy samotnej wachcie, w pontonie i przy manewrach w porcie, jeśli tak ustali kapitan. Na sztormowej pogodzie przypinaj się lifeliną do linki asekuracyjnej.', 'Always on deck at night, in bad weather, on a solo watch, in the tender and during harbour manoeuvres if the skipper says so. In heavy weather clip your lifeline to the jackstay.')],
-        [L('Budowa', 'Features'), L('Butla CO₂ i automat (tabletka lub hydrostat), linka do ręcznego napełnienia, ustnik, światło, gwizdek, kaptur przeciwbryzgowy, pas krokowy, kółko D do lifeliny, taśmy odblaskowe.', 'CO₂ cylinder and automatic firing head (bobbin or hydrostatic), manual pull toggle, oral inflation tube, light, whistle, spray hood, crotch strap, D-ring for the lifeline, reflective tape.')],
-        [L('Kontrola', 'Checks'), L('Przed rejsem: butla dokręcona i nieprzebita, wskaźnik automatu zielony, data ważności, pas krokowy dopasowany.', 'Before sailing: cylinder screwed in and not pierced, firing head indicator green, expiry date, crotch strap adjusted.')]
+        [L('Kiedy zakładać', 'When to wear it'), L('Zawsze na pokładzie nocą, przy silnym wietrze i fali, we mgle, przy samotnej wachcie, w pontonie, a także zawsze, gdy każe kapitan. Przy złej pogodzie przypinaj się lifeliną do linki asekuracyjnej (jackstay) jeszcze w zejściówce, zanim wyjdziesz z kokpitu.', 'Always on deck at night, in strong wind and waves, in fog, on a solo watch, in the tender and whenever the skipper says so. In bad weather clip your tether to the jackstay while still in the companionway, before leaving the cockpit.')],
+        [L('Budowa', 'Features'), L('Butla CO₂ (dla 150 N zwykle 33 g) i automat: tabletkowy – rozpuszcza się w wodzie (może zadziałać od silnej bryzgi), albo hydrostatyczny (np. Hammar) – zadziała dopiero ok. 10 cm pod wodą. Do tego linka do ręcznego napełnienia, ustnik do dmuchania, światło włączane wodą, gwizdek, kaptur przeciwbryzgowy, pas krokowy (żeby kamizelka nie zsunęła się przez głowę), kółko D do lifeliny, taśmy odblaskowe.', 'A CO₂ cylinder (usually 33 g for 150 N) and a firing head: a bobbin type dissolves in water (heavy spray can set it off) or a hydrostatic one (e.g. Hammar) fires only about 10 cm under water. Plus a manual pull toggle, an oral inflation tube, a water-activated light, a whistle, a spray hood, a crotch strap (so the jacket cannot ride up over the head), a D-ring for the tether and reflective tape.')],
+        [L('Kontrola', 'Checks'), L('Przed rejsem: butla dokręcona i nieprzebita, wskaźnik automatu zielony, daty ważności, pas krokowy i klamra dopasowane. Raz w roku przegląd (napełnij ustnikiem i sprawdź szczelność przez noc).', 'Before sailing: cylinder screwed in and not pierced, firing head indicator green, expiry dates, crotch strap and buckle adjusted. An annual check (inflate orally and leave it overnight to test for leaks).')]
       ]
     },
     extinguisher: {
       name: L('Gaśnica proszkowa', 'Dry-powder fire extinguisher'),
-      short: L('Gaśnica 2 kg ABC przy zejściówce – na pożary materiałów stałych, paliwa i instalacji elektrycznej.', '2 kg ABC extinguisher by the companionway – for fires of solids, fuel and electrical installations.'),
-      sections: [[L('Jak', 'How'), L('Zerwij zawleczkę, celuj w podstawę ognia krótkimi seriami, stój tyłem do drogi ucieczki. Pożar w maszynowni – nie otwieraj szeroko pokrywy (dopływ powietrza). Gdy ogień jest poza kontrolą – MAYDAY.', 'Pull the pin, aim at the base of the fire in short bursts, keep your escape route behind you. Engine fire – do not open the hatch wide (air supply). If the fire is out of control – MAYDAY.')]]
+      short: L('Gaśnica 2 kg ABC przy zejściówce – na pożary materiałów stałych (A), cieczy jak paliwo (B) i gazów (C); nadaje się też do urządzeń elektrycznych do napięcia podanego na etykiecie.', '2 kg ABC extinguisher by the companionway – for fires of solids (A), liquids such as fuel (B) and gases (C); also suitable for electrical equipment up to the voltage on the label.'),
+      sections: [
+        [L('Jak gasić', 'How to use'), L('Zerwij zawleczkę, celuj w podstawę ognia krótkimi seriami z odległości 1–2 m, miej drogę ucieczki za plecami. Pożar silnika: wyłącz silnik i zamknij dopływ paliwa, nie otwieraj szeroko pokrywy (dopływ powietrza) – gaś przez otwór gaśniczy. Płonący tłuszcz w kambuzie gaś kocem gaśniczym, nigdy wodą. Gdy ogień jest poza kontrolą – MAYDAY i przygotowanie do opuszczenia jachtu.', 'Pull the pin, aim at the base of the fire in short bursts from 1–2 m and keep your escape route behind you. Engine fire: stop the engine and shut off the fuel, do not open the engine hatch wide (air supply) – discharge through the fire port. Burning fat in the galley: use a fire blanket, never water. If the fire is out of control – MAYDAY and prepare to abandon ship.')],
+        [L('Kontrola', 'Checks'), L('Wskazówka manometru w zielonym polu, plomba cała; proszek co jakiś czas „rozbij”, odwracając gaśnicę. Przegląd zgodnie z przepisami i etykietą (zwykle co rok).', 'The pressure gauge needle in the green, seal intact; turn the extinguisher over now and then so the powder does not compact. Service as required by regulations and the label (usually yearly).')]
+      ]
     },
     flares: {
       name: L('Pirotechnika ratunkowa', 'Distress flares'),
-      short: L('Rakiety spadochronowe (czerwone), pochodnie ręczne i pławka dymna – sygnały niebezpieczeństwa widoczne z daleka.', 'Red parachute rockets, red hand flares and an orange smoke signal – distress signals visible from afar.'),
-      sections: [[L('Jak', 'How'), L('Rakietę odpal z wiatrem lekko z boku, gdy w pobliżu może być ktoś, kto ją zobaczy; pochodnię trzymaj po zawietrznej, gdy ratownicy są blisko; dym – w dzień, dla śmigłowca. Sprawdzaj daty ważności.', 'Fire a rocket slightly downwind when someone may be close enough to see it; hold a hand flare to leeward when rescuers are near; smoke – by day, for a helicopter. Check expiry dates.')]]
+      short: L('Czerwone rakiety spadochronowe, czerwone pochodnie ręczne i pomarańczowa pława dymna – sygnały niebezpieczeństwa (MPZZM, zał. IV), które widać z daleka.', 'Red parachute rockets, red hand flares and an orange smoke signal – distress signals (COLREG Annex IV) visible from afar.'),
+      sections: [
+        [L('Rakieta spadochronowa', 'Parachute rocket'), L('Wznosi się na ok. 300 m i świeci na czerwono co najmniej 40 s – widać ją z daleka, nawet zza horyzontu. Odpal, gdy w okolicy może być ktoś, kto ją zobaczy; trzymaj pionowo, przy silnym wietrze lekko z wiatrem. Nigdy w stronę śmigłowca.', 'It climbs to about 300 m and burns red for at least 40 s – it can be seen from far away, even beyond the horizon. Fire it when someone may be in the area to see it; hold it vertically, in a strong wind slightly downwind. Never towards a helicopter.')],
+        [L('Pochodnia i dym', 'Hand flare and smoke'), L('Pochodnia ręczna (czerwona, ok. 1 minuty) – gdy ratownicy są już w zasięgu wzroku, żeby wskazać dokładne miejsce; trzymaj po zawietrznej, ręką w rękawicy, nad wodą. Pława dymna (pomarańczowa, ok. 3 minuty) – w dzień, zwłaszcza dla samolotu i śmigłowca; pokazuje też kierunek wiatru.', 'Hand flare (red, about one minute) – when rescuers are already in sight, to pinpoint your position; hold it to leeward with a gloved hand, over the water. Smoke (orange, about 3 minutes) – by day, especially for aircraft and helicopters; it also shows the wind direction.')],
+        [L('Przechowywanie', 'Storage'), L('Suchy, wodoszczelny pojemnik pod ręką. Pirotechnika ma datę ważności (zwykle 3–4 lata); przeterminowaną oddaje się do utylizacji – nie odpala „na próbę”.', 'A dry, waterproof container within reach. Flares have an expiry date (usually 3–4 years); hand in expired ones for disposal – do not fire them “to test”.')]
+      ]
     },
     firstaid: {
       name: L('Apteczka', 'First-aid kit'),
-      short: L('Apteczka jachtowa z instrukcją – w razie poważnego urazu wezwij poradę medyczną przez radio (PAN-PAN).', 'Yacht first-aid kit with instructions – for a serious injury call for medical advice by radio (PAN-PAN).'),
-      sections: []
+      short: L('Apteczka jachtowa z instrukcją, dobrana do rejonu i długości rejsu. Przy poważnym urazie lub chorobie wezwij przez radio poradę medyczną (PAN-PAN), a w zagrożeniu życia – MAYDAY.', 'A yacht first-aid kit with instructions, matched to the area and length of the voyage. For a serious injury or illness call for medical advice by radio (PAN-PAN); if life is in danger – MAYDAY.'),
+      sections: [
+        [L('Porada medyczna przez radio', 'Radio medical advice'), L('Wywołaj stację brzegową lub MRCC i poproś o poradę lekarza (służba TMAS). Przygotuj: wiek i płeć chorego, objawy, puls, oddech, temperaturę, przyjęte leki, pozycję jachtu i czas dotarcia do portu.', 'Call a coast station or the MRCC and ask for a doctor’s advice (TMAS service). Have ready: the patient’s age and sex, symptoms, pulse, breathing, temperature, medication taken, the yacht’s position and time to port.')],
+        [L('Zawartość', 'Contents'), L('Opatrunki i bandaże, plastry, opaska uciskowa, folia NRC, rękawiczki, maseczka do resuscytacji, środki przeciwbólowe, na chorobę morską, na oparzenia, krople do oczu, szyny. Sprawdzaj daty ważności przed sezonem.', 'Dressings and bandages, plasters, a tourniquet, a foil blanket, gloves, a resuscitation mask, painkillers, seasickness tablets, burn gel, eye drops, splints. Check expiry dates before the season.')]
+      ]
     },
-    cardMayday: { name: 'MAYDAY', short: L('Karta procedury: wzywanie pomocy w niebezpieczeństwie. Kliknij, aby przeczytać.', 'Procedure card: distress call. Click to read.'), sections: [] },
-    cardPan: { name: 'PAN-PAN', short: L('Karta procedury: komunikat pilności. Kliknij, aby przeczytać.', 'Procedure card: urgency message. Click to read.'), sections: [] },
-    cardSecurite: { name: 'SÉCURITÉ', short: L('Karta procedury: komunikat bezpieczeństwa. Kliknij, aby przeczytać.', 'Procedure card: safety message. Click to read.'), sections: [] }
+    cardMayday: { name: 'MAYDAY', short: L('Karta procedury: wzywanie pomocy w niebezpieczeństwie (zagrożenie życia lub jachtu). Kliknij, aby przeczytać.', 'Procedure card: distress call (danger to life or the yacht). Click to read.'), sections: [] },
+    cardPan: { name: 'PAN-PAN', short: L('Karta procedury: komunikat pilności (pilna sprawa bez bezpośredniego zagrożenia życia). Kliknij, aby przeczytać.', 'Procedure card: urgency message (an urgent matter without immediate danger to life). Click to read.'), sections: [] },
+    cardSecurite: { name: 'SÉCURITÉ', short: L('Karta procedury: komunikat bezpieczeństwa (ostrzeżenie nawigacyjne lub meteorologiczne). Kliknij, aby przeczytać.', 'Procedure card: safety message (a navigational or meteorological warning). Click to read.'), sections: [] }
   };
   return D[id];
 }
@@ -113,33 +125,33 @@ export function procedureCard(kind) {
   const P = {
     mayday: {
       title: 'MAYDAY',
-      when: L('Niebezpieczeństwo: poważne i bezpośrednie zagrożenie życia lub jachtu (tonięcie, pożar poza kontrolą, człowiek za burtą, wejście na skały).', 'Distress: grave and imminent danger to life or the yacht (sinking, fire out of control, man overboard, going aground on rocks).'),
+      when: L('Niebezpieczeństwo: poważne i bezpośrednie zagrożenie życia lub jachtu – tonięcie, pożar poza kontrolą, człowiek za burtą, wejście na skały, wypadek zagrażający życiu.', 'Distress: grave and imminent danger to life or the yacht – sinking, fire out of control, man overboard, going aground on rocks, a life-threatening accident.'),
       steps: [
-        L('Alarm DSC: podnieś osłonę, przytrzymaj DISTRESS 5 s (jeśli zdążysz – wybierz rodzaj zagrożenia).', 'DSC alert: lift the cover, hold DISTRESS for 5 s (if there is time – select the nature of distress).'),
-        L('Kanał 16, pełna moc (25 W). Naciśnij PTT i mów powoli, wyraźnie:', 'Channel 16, high power (25 W). Press PTT and speak slowly and clearly:')
+        L('Alarm DSC: podnieś osłonę i przytrzymaj DISTRESS ok. 5 s (jeśli zdążysz – najpierw wybierz rodzaj zagrożenia). Radio przejdzie na kanał 16.', 'DSC alert: lift the cover and hold DISTRESS for about 5 s (if there is time – select the nature of distress first). The radio switches to channel 16.'),
+        L('Kanał 16, pełna moc (25 W). Naciśnij PTT, mów powoli i wyraźnie:', 'Channel 16, high power (25 W). Press PTT and speak slowly and clearly:')
       ],
       lines: ['MAYDAY, MAYDAY, MAYDAY', 'THIS IS [YACHT ×3], [CALL SIGN], MMSI [9 DIGITS]', 'MAYDAY [YACHT], [CALL SIGN], MMSI', 'MY POSITION [LAT / LONG or bearing and distance from a landmark]', 'NATURE OF DISTRESS [e.g. SINKING / FIRE]', 'I REQUIRE IMMEDIATE ASSISTANCE', '[N] PERSONS ON BOARD', '[OTHER INFORMATION: abandoning to liferaft, EPIRB activated…]', 'OVER'],
-      after: L('Czekaj na odpowiedź MRCC/stacji brzegowej; bez odpowiedzi – powtarzaj. Odwołanie fałszywego alarmu: kanał 16 „ALL STATIONS ×3, THIS IS …, MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [time]”.', 'Wait for the MRCC / coast station to answer; if there is no answer – repeat. Cancelling a false alert: channel 16 “ALL STATIONS ×3, THIS IS …, MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [time]”.')
+      after: L('Czekaj na odpowiedź MRCC lub stacji brzegowej; bez odpowiedzi – powtarzaj. Jeśli nie możesz zostać przy radiu, zostaw je włączone na kanale 16. Fałszywy alarm odwołaj od razu na kanale 16: „ALL STATIONS ×3, THIS IS [jacht ×3], [znak], MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [data, czas UTC]”.', 'Wait for the MRCC or a coast station to answer; if there is no answer – repeat. If you cannot stay at the radio, leave it on channel 16. Cancel a false alert straight away on channel 16: “ALL STATIONS ×3, THIS IS [yacht ×3], [call sign], MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [date, time UTC]”.')
     },
     pan: {
       title: 'PAN-PAN',
-      when: L('Pilność: pilna sprawa bezpieczeństwa jachtu lub osoby, ale bez bezpośredniego zagrożenia życia (awaria steru lub silnika z dryfem na niebezpieczeństwo, uraz wymagający porady medycznej).', 'Urgency: an urgent matter concerning the safety of the yacht or a person, without immediate danger to life (steering or engine failure drifting into danger, injury requiring medical advice).'),
+      when: L('Pilność: pilna sprawa bezpieczeństwa jachtu lub osoby, ale bez bezpośredniego zagrożenia życia – awaria steru lub silnika z dryfem w stronę niebezpieczeństwa, uraz lub choroba wymagająca porady lekarza albo ewakuacji.', 'Urgency: an urgent matter concerning the safety of the yacht or a person, without immediate danger to life – steering or engine failure drifting towards danger, an injury or illness requiring a doctor’s advice or evacuation.'),
       steps: [
-        L('Opcjonalnie wywołanie DSC „URGENCY” do wszystkich stacji.', 'Optionally a DSC “URGENCY” call to all stations.'),
-        L('Kanał 16:', 'Channel 16:')
+        L('Można najpierw nadać wywołanie DSC „URGENCY” do wszystkich stacji (kanał 70).', 'You may first send a DSC “URGENCY” call to all stations (channel 70).'),
+        L('Kanał 16, pełna moc (25 W):', 'Channel 16, high power (25 W):')
       ],
       lines: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'THIS IS [YACHT ×3], [CALL SIGN], MMSI', 'MY POSITION […]', '[NATURE OF URGENCY]', 'I REQUIRE [TOW / MEDICAL ADVICE …]', '[N] PERSONS ON BOARD', 'OVER'],
-      after: L('Gdy problem zniknie – odwołaj komunikat do wszystkich stacji.', 'When the problem is solved – cancel the message to all stations.')
+      after: L('Komunikat można skierować do konkretnej stacji (np. MRCC) zamiast „ALL STATIONS”. Gdy problem zniknie – odwołaj komunikat do wszystkich stacji. Gdy sytuacja się pogorszy i zagrozi życiu – nadaj MAYDAY.', 'The message may be addressed to a particular station (e.g. the MRCC) instead of “ALL STATIONS”. When the problem is solved – cancel it to all stations. If the situation worsens and life is in danger – send a MAYDAY.')
     },
     securite: {
       title: 'SÉCURITÉ',
-      when: L('Bezpieczeństwo: ważne ostrzeżenie nawigacyjne lub meteorologiczne (dryfująca przeszkoda, niedziałający znak, nagłe załamanie pogody).', 'Safety: an important navigational or meteorological warning (drifting obstruction, unlit mark, sudden deterioration of the weather).'),
+      when: L('Bezpieczeństwo: ważne ostrzeżenie nawigacyjne lub meteorologiczne – dryfująca przeszkoda, niedziałający znak, nagłe załamanie pogody.', 'Safety: an important navigational or meteorological warning – a drifting obstruction, an unlit mark, a sudden deterioration of the weather.'),
       steps: [
-        L('Na kanale 16 zapowiedz komunikat i podaj kanał roboczy (np. 06 albo 13); długi komunikat nadaj już na kanale roboczym.', 'On channel 16 announce the message and give a working channel (e.g. 06 or 13); send a long message on the working channel.'),
-        L('Komunikat:', 'Message:')
+        L('1) Zapowiedź na kanale 16 (można też wywołanie DSC „SAFETY”): kim jesteś i na którym kanale roboczym nadasz ostrzeżenie – np. 72 lub 77. Kanał 16 tylko na zapowiedź, żeby nie zajmować go dłużej niż trzeba.', '1) Announcement on channel 16 (or a DSC “SAFETY” call): who you are and on which working channel you will send the warning – e.g. 72 or 77. Channel 16 for the announcement only, so it is not kept busy longer than necessary.'),
+        L('2) Przejdź na kanał roboczy i nadaj komunikat:', '2) Change to the working channel and send the message:')
       ],
       lines: ['SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'THIS IS [YACHT ×3], [CALL SIGN], MMSI', 'POSITION […]', '[WARNING: e.g. DRIFTING CONTAINER, DANGEROUS TO NAVIGATION]', 'OUT'],
-      after: L('SÉCURITÉ kończy się „OUT” – nie oczekujesz odpowiedzi.', 'SÉCURITÉ ends with “OUT” – no reply is expected.')
+      after: L('Zapowiedź na kanale 16 brzmi: „SÉCURITÉ ×3, ALL STATIONS ×3, THIS IS [jacht ×3], [znak], MMSI, NAVIGATIONAL WARNING, LISTEN CHANNEL [72], OUT”. Kanał 06 to kanał statek–statek, ale służy też do łączności z samolotami i śmigłowcami w akcjach SAR – lepiej nie zajmować go komunikatami. SÉCURITÉ kończy się „OUT” – nie oczekujesz odpowiedzi.', 'The announcement on channel 16: “SÉCURITÉ ×3, ALL STATIONS ×3, THIS IS [yacht ×3], [call sign], MMSI, NAVIGATIONAL WARNING, LISTEN CHANNEL [72], OUT”. Channel 06 is an intership channel but is also used for working with aircraft in SAR operations – better not to tie it up with messages. SÉCURITÉ ends with “OUT” – no reply is expected.')
     }
   };
   return P[kind];
@@ -157,12 +169,14 @@ function randomPos(r) {
 const OTHERS = ['ORKA', 'MEWA', 'BALTICA', 'NEPTUN', 'ZAWISZA'];
 
 /**
- * Zadanie: { id, kind, text, channels: [poprawne kanały], dsc: wymagany alarm DSC, lines: [poprawna kolejność] | null, distractors, explain }
+ * Zadanie: { id, kind, text, explain, steps: [{ label, channels, power: 25|1|null, dsc, lines|null, distractors, pool }] }
+ * Kroki wykonuje się po kolei (np. SÉCURITÉ: zapowiedź na 16, potem komunikat na kanale roboczym).
  * ship: { name, call, mmsi }
  */
 export function makeRadioTask(r, ship, only) {
   const N = ship.name.toUpperCase(), ID = `THIS IS ${N}, ${N}, ${N}, ${ship.call}, MMSI ${ship.mmsi}`;
   const pos = randomPos(r), pob = 2 + Math.floor(r() * 5);
+  const step = (o) => ({ label: null, power: null, dsc: false, lines: null, distractors: [], ...o });
   const gens = {
     mayday() {
       const sc = pick(r, [
@@ -173,10 +187,10 @@ export function makeRadioTask(r, ship, only) {
       return {
         kind: 'mayday',
         text: L(`${sc.pl} Pozycja ${pos}, na pokładzie ${pob} osób. Wezwij pomoc.`, `${sc.en} Position ${pos}, ${pob} persons on board. Call for help.`),
-        channels: [16], dsc: true,
-        lines: ['MAYDAY, MAYDAY, MAYDAY', ID, `MAYDAY ${N}, ${ship.call}, MMSI ${ship.mmsi}`, `MY POSITION ${pos}`, sc.nat, 'I REQUIRE IMMEDIATE ASSISTANCE', `${pob} PERSONS ON BOARD`, sc.other, 'OVER'],
-        distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'OUT'],
-        explain: L('Zagrożenie życia → MAYDAY: najpierw alarm DSC (DISTRESS), potem głos na kanale 16; kończysz „OVER”.', 'Danger to life → MAYDAY: first the DSC alert (DISTRESS), then voice on channel 16; end with “OVER”.')
+        steps: [step({ channels: [16], power: 25, dsc: true,
+          lines: ['MAYDAY, MAYDAY, MAYDAY', ID, `MAYDAY ${N}, ${ship.call}, MMSI ${ship.mmsi}`, `MY POSITION ${pos}`, sc.nat, 'I REQUIRE IMMEDIATE ASSISTANCE', `${pob} PERSONS ON BOARD`, sc.other, 'OVER'],
+          distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'OUT'] })],
+        explain: L('Zagrożenie życia → MAYDAY: najpierw alarm DSC (DISTRESS), potem głos na kanale 16 z pełną mocą 25 W; kończysz „OVER”.', 'Danger to life → MAYDAY: first the DSC alert (DISTRESS), then voice on channel 16 at full power (25 W); end with “OVER”.')
       };
     },
     pan() {
@@ -188,10 +202,10 @@ export function makeRadioTask(r, ship, only) {
       return {
         kind: 'pan',
         text: L(`${sc.pl} Pozycja ${pos}, na pokładzie ${pob} osób.`, `${sc.en} Position ${pos}, ${pob} persons on board.`),
-        channels: [16], dsc: false,
-        lines: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, `MY POSITION ${pos}`, sc.nat, sc.req, `${pob} PERSONS ON BOARD`, 'OVER'],
-        distractors: ['MAYDAY, MAYDAY, MAYDAY', 'SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'OUT'],
-        explain: L('Pilna sprawa bez bezpośredniego zagrożenia życia → PAN-PAN na kanale 16 do wszystkich stacji; kończysz „OVER”.', 'Urgent matter without immediate danger to life → PAN-PAN on channel 16 to all stations; end with “OVER”.')
+        steps: [step({ channels: [16], power: 25,
+          lines: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, `MY POSITION ${pos}`, sc.nat, sc.req, `${pob} PERSONS ON BOARD`, 'OVER'],
+          distractors: ['MAYDAY, MAYDAY, MAYDAY', 'SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'OUT'] })],
+        explain: L('Pilna sprawa bez bezpośredniego zagrożenia życia → PAN-PAN na kanale 16 do wszystkich stacji, pełna moc; kończysz „OVER”.', 'Urgent matter without immediate danger to life → PAN-PAN on channel 16 to all stations, full power; end with “OVER”.')
       };
     },
     securite() {
@@ -200,13 +214,19 @@ export function makeRadioTask(r, ship, only) {
         { pl: 'Północny znak kardynalny przy torze wodnym nie świeci.', en: 'The north cardinal mark next to the fairway is unlit.', w: 'NORTH CARDINAL MARK UNLIT' },
         { pl: 'Widzisz dryfujący, duży pień drzewa na torze podejściowym.', en: 'You see a large drifting tree trunk in the approach channel.', w: 'DRIFTING TREE TRUNK, DANGEROUS TO NAVIGATION' }
       ]);
+      const wc = pick(r, [72, 77]);
       return {
         kind: 'securite',
-        text: L(`${sc.pl} Pozycja ${pos}. Ostrzeż inne jednostki.`, `${sc.en} Position ${pos}. Warn other vessels.`),
-        channels: [16], dsc: false,
-        lines: ['SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, `POSITION ${pos}`, sc.w, 'OUT'],
-        distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', 'I REQUIRE IMMEDIATE ASSISTANCE', 'OVER'],
-        explain: L('Ostrzeżenie nawigacyjne → SÉCURITÉ; zapowiedź na kanale 16 (dłuższy komunikat na kanale roboczym); kończysz „OUT”.', 'Navigational warning → SÉCURITÉ; announce on channel 16 (a longer message on a working channel); end with “OUT”.')
+        text: L(`${sc.pl} Pozycja ${pos}. Ostrzeż inne jednostki – zapowiedz komunikat na kanale 16 i nadaj go na kanale roboczym ${wc}.`, `${sc.en} Position ${pos}. Warn other vessels – announce the message on channel 16 and send it on working channel ${wc}.`),
+        steps: [
+          step({ label: L('Krok 1: zapowiedź', 'Step 1: announcement'), channels: [16],
+            lines: ['SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, 'NAVIGATIONAL WARNING', `LISTEN CHANNEL ${wc}`, 'OUT'],
+            distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', `POSITION ${pos}`, 'OVER'] }),
+          step({ label: L(`Krok 2: komunikat na kanale ${wc}`, `Step 2: the message on channel ${wc}`), channels: [wc],
+            lines: ['SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, `POSITION ${pos}`, sc.w, 'OUT'],
+            distractors: ['I REQUIRE IMMEDIATE ASSISTANCE', `LISTEN CHANNEL ${wc}`, 'OVER'] })
+        ],
+        explain: L(`Ostrzeżenie nawigacyjne → SÉCURITÉ: na kanale 16 tylko krótka zapowiedź z podaniem kanału roboczego, sam komunikat na kanale ${wc}; oba kończysz „OUT”.`, `Navigational warning → SÉCURITÉ: only a short announcement naming the working channel on channel 16, the message itself on channel ${wc}; end both with “OUT”.`)
       };
     },
     ack() {
@@ -214,73 +234,62 @@ export function makeRadioTask(r, ship, only) {
       return {
         kind: 'ack',
         text: L(`Odebrałeś MAYDAY jachtu ${o}, jesteś 2 Mm od niego i możesz pomóc. Stacja brzegowa nie potwierdziła odbioru od 5 minut. Potwierdź odbiór.`, `You have received a MAYDAY from the yacht ${o}; you are 2 NM away and can help. The coast station has not acknowledged for 5 minutes. Acknowledge it.`),
-        channels: [16], dsc: false,
-        lines: ['MAYDAY', `${o}, ${o}, ${o}`, `THIS IS ${N}, ${N}, ${N}`, 'RECEIVED MAYDAY', 'OVER'],
-        distractors: ['ALL STATIONS, ALL STATIONS, ALL STATIONS', 'SÉCURITÉ', 'OUT'],
-        explain: L('Potwierdzenie MAYDAY: kanał 16 – „MAYDAY, [jacht w niebezpieczeństwie ×3], THIS IS [własny ×3], RECEIVED MAYDAY”, potem przekaż MRCC informacje.', 'Acknowledging a MAYDAY: channel 16 – “MAYDAY, [vessel in distress ×3], THIS IS [own ×3], RECEIVED MAYDAY”, then pass the information to the MRCC.')
+        steps: [step({ channels: [16], power: 25,
+          lines: ['MAYDAY', `${o}, ${o}, ${o}`, `THIS IS ${N}, ${N}, ${N}`, 'RECEIVED MAYDAY', 'OVER'],
+          distractors: ['ALL STATIONS, ALL STATIONS, ALL STATIONS', 'SÉCURITÉ', 'OUT'] })],
+        explain: L('Potwierdzenie MAYDAY: kanał 16, pełna moc – „MAYDAY, [jacht w niebezpieczeństwie ×3], THIS IS [własny ×3], RECEIVED MAYDAY”, potem podaj swoją pozycję i czas dotarcia i przekaż informacje MRCC.', 'Acknowledging a MAYDAY: channel 16, full power – “MAYDAY, [vessel in distress ×3], THIS IS [own ×3], RECEIVED MAYDAY”, then give your position and ETA and pass the information to the MRCC.')
       };
     },
     routine() {
       const o = pick(r, OTHERS), wc = pick(r, [72, 77]);
       return {
         kind: 'routine',
-        text: L(`Chcesz porozmawiać z jachtem ${o}, który prowadzi nasłuch na kanale 16. Wywołaj go i zaproponuj przejście na kanał statek–statek ${wc}.`, `You want to talk to the yacht ${o}, which keeps a watch on channel 16. Call it and propose moving to intership channel ${wc}.`),
-        channels: [16], dsc: false,
-        lines: [`${o}, ${o}, ${o}`, `THIS IS ${N}, ${N}, ${N}`, `CHANNEL ${wc}`, 'OVER'],
-        distractors: ['MAYDAY', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'OUT'],
-        explain: L('Wywołanie rutynowe: krótko na kanale 16 (najpierw stacja wywoływana, potem własna nazwa), od razu przejście na kanał roboczy.', 'Routine call: briefly on channel 16 (called station first, then your own name), then move straight to a working channel.')
+        text: L(`Chcesz porozmawiać z jachtem ${o}, który prowadzi nasłuch na kanale 16 i jest 1 Mm od ciebie. Wywołaj go i zaproponuj przejście na kanał statek–statek ${wc}.`, `You want to talk to the yacht ${o}, which keeps a watch on channel 16 and is 1 NM away. Call it and propose moving to intership channel ${wc}.`),
+        steps: [step({ channels: [16],
+          lines: [`${o}, ${o}, ${o}`, `THIS IS ${N}, ${N}, ${N}`, `CHANNEL ${wc}`, 'OVER'],
+          distractors: ['MAYDAY', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'OUT'] })],
+        explain: L('Wywołanie rutynowe: krótko na kanale 16 (najpierw stacja wywoływana, potem własna nazwa), od razu przejście na kanał roboczy. Statek jest blisko – zalecana mała moc 1 W.', 'Routine call: briefly on channel 16 (called station first, then your own name), then move straight to a working channel. The vessel is close – low power (1 W) is recommended.')
       };
     },
     bridge() {
-      return {
-        kind: 'channel', text: L('W wąskim torze chcesz uzgodnić z mostkiem nadpływającego statku, którą burtą się miniecie.', 'In a narrow channel you want to agree with the bridge of an approaching ship which side you will pass on.'),
-        channels: [13], dsc: false, lines: null, explain: L('Kanał 13 – bezpieczeństwo nawigacji mostek–mostek.', 'Channel 13 – bridge-to-bridge navigational safety.')
-      };
+      return { kind: 'channel', text: L('W wąskim torze chcesz uzgodnić z mostkiem nadpływającego statku, którą burtą się miniecie.', 'In a narrow channel you want to agree with the bridge of an approaching ship which side you will pass on.'),
+        steps: [step({ channels: [13] })], explain: L('Kanał 13 – bezpieczeństwo nawigacji mostek–mostek.', 'Channel 13 – bridge-to-bridge navigational safety.') };
     },
     sar() {
-      return {
-        kind: 'channel', text: L('Nad tratwą krąży śmigłowiec SAR, a MRCC poleca rozmawiać z nim bezpośrednio na kanale statek–samolot.', 'A SAR helicopter is circling over the liferaft and the MRCC tells you to talk to it directly on the ship–aircraft channel.'),
-        channels: [6], dsc: false, lines: null, explain: L('Kanał 06 – łączność statków z samolotami i śmigłowcami w akcji SAR.', 'Channel 06 – ship–aircraft communication in SAR operations.')
-      };
+      return { kind: 'channel', text: L('Nad tratwą krąży śmigłowiec SAR, a MRCC poleca rozmawiać z nim bezpośrednio na kanale statek–samolot.', 'A SAR helicopter is circling over the liferaft and the MRCC tells you to talk to it directly on the ship–aircraft channel.'),
+        steps: [step({ channels: [6] })], explain: L('Kanał 06 – łączność statków z samolotami i śmigłowcami w akcji SAR.', 'Channel 06 – ship–aircraft communication in SAR operations.') };
     },
     dsc() {
-      return {
-        kind: 'channel', text: L('Na którym kanale radio wysyła i odbiera cyfrowe wywołania DSC (alarm DISTRESS)?', 'On which channel does the radio send and receive digital DSC calls (DISTRESS alerts)?'),
-        channels: [70], dsc: false, lines: null, explain: L('Kanał 70 – wyłącznie DSC, bez łączności głosowej.', 'Channel 70 – DSC only, no voice.')
-      };
+      return { kind: 'channel', text: L('Na którym kanale radio wysyła i odbiera cyfrowe wywołania DSC (alarm DISTRESS)?', 'On which channel does the radio send and receive digital DSC calls (DISTRESS alerts)?'),
+        steps: [step({ channels: [70] })], explain: L('Kanał 70 – wyłącznie DSC, bez łączności głosowej.', 'Channel 70 – DSC only, no voice.') };
     },
     port() {
       const ch = pick(r, [12, 14]);
-      return {
-        kind: 'channel', text: L(`Locja podaje, że Kapitanat Portu i VTS pracują na kanale ${ch}. Ustaw radio, aby zgłosić wejście do portu.`, `The pilot book says the harbour master and VTS work on channel ${ch}. Set the radio to report entering the harbour.`),
-        channels: [ch], dsc: false, lines: null, explain: L(`Operacje portowe – kanał z locji (${ch}).`, `Port operations – the channel from the pilot book (${ch}).`)
-      };
+      return { kind: 'channel', text: L(`Locja podaje, że Kapitanat Portu i VTS pracują na kanale ${ch}. Ustaw radio, aby zgłosić wejście do portu.`, `The pilot book says the harbour master and VTS work on channel ${ch}. Set the radio to report entering the harbour.`),
+        steps: [step({ channels: [ch] })], explain: L(`Operacje portowe – kanał z locji (${ch}).`, `Port operations – the channel from the pilot book (${ch}).`) };
     },
     onboard() {
-      return {
-        kind: 'channel', text: L('Podczas cumowania chcesz rozmawiać przez radiotelefony ręczne z załogą na dziobie (łączność na pokładzie, mała moc).', 'While mooring you want to talk on handheld radios with the crew on the foredeck (on-board communications, low power).'),
-        channels: [15, 17], dsc: false, lines: null, explain: L('Łączność na pokładzie: kanały 15 i 17, moc 1 W – sąsiadują z kanałem 16, więc tylko mała moc. Kanały 75 i 76 – tylko łączność nawigacyjna, też 1 W.', 'On-board communications: channels 15 and 17 at 1 W – they are next to channel 16, so low power only. Channels 75 and 76 – navigation-related only, also 1 W.')
-      };
+      return { kind: 'channel', text: L('Podczas cumowania chcesz rozmawiać przez radiotelefony ręczne z załogą na dziobie (łączność na pokładzie). Ustaw kanał i moc.', 'While mooring you want to talk on handheld radios with the crew on the foredeck (on-board communications). Set the channel and power.'),
+        steps: [step({ channels: [15, 17], power: 1 })], explain: L('Łączność na pokładzie: kanały 15 i 17, wyłącznie 1 W – sąsiadują z kanałem 16. Kanały 75 i 76 – tylko łączność nawigacyjna, też 1 W.', 'On-board communications: channels 15 and 17, 1 W only – they are next to channel 16. Channels 75 and 76 – navigation-related only, also 1 W.') };
     },
     intership() {
-      return {
-        kind: 'channel', text: L('Chcesz pogadać z kolegą z drugiego jachtu płynącego obok (rutynowa rozmowa statek–statek). Wybierz kanał roboczy.', 'You want a chat with a friend on another yacht sailing nearby (routine intership talk). Choose a working channel.'),
-        channels: [72, 77, 8], dsc: false, lines: null, explain: L('Statek–statek: np. 72, 77 lub 08 – nie 16, 70, 06 ani 13.', 'Intership: e.g. 72, 77 or 08 – not 16, 70, 06 or 13.')
-      };
+      return { kind: 'channel', text: L('Chcesz pogadać z kolegą z drugiego jachtu płynącego obok (rutynowa rozmowa statek–statek). Wybierz kanał roboczy.', 'You want a chat with a friend on another yacht sailing nearby (routine intership talk). Choose a working channel.'),
+        steps: [step({ channels: [72, 77, 8] })], explain: L('Statek–statek: np. 72, 77 lub 08 – nie 16, 70, 06 ani 13; jacht jest obok, więc zalecana moc 1 W.', 'Intership: e.g. 72, 77 or 08 – not 16, 70, 06 or 13; the yacht is next to you, so 1 W is recommended.') };
     }
   };
   const keys = Object.keys(gens);
   const id = only && gens[only] ? only : keys[Math.floor(r() * keys.length)];
   const t = gens[id]();
   t.id = id;
-  if (t.lines) t.pool = shuffle(r, [...t.lines, ...t.distractors]);
+  for (const st of t.steps) if (st.lines) st.pool = shuffle(r, [...st.lines, ...st.distractors]);
   return t;
 }
 
-// ocena: kanał, DSC (dla MAYDAY) i kolejność linii korespondencji
-export function checkRadio(task, { channel, dscSent, lines }) {
-  const chOk = task.channels.includes(Number(channel));
-  const dscOk = !task.dsc || !!dscSent;
-  const msgOk = !task.lines || (lines.length === task.lines.length && lines.every((l, i) => l === task.lines[i]));
-  return { chOk, dscOk, msgOk, ok: chOk && dscOk && msgOk };
+// ocena kroku: kanał, moc (gdy ma znaczenie), alarm DSC (MAYDAY) i kolejność linii korespondencji
+export function checkRadio(step, { channel, power, dscSent, lines }) {
+  const chOk = step.channels.includes(Number(channel));
+  const powerOk = !step.power || Number(power) === step.power;
+  const dscOk = !step.dsc || !!dscSent;
+  const msgOk = !step.lines || (lines.length === step.lines.length && lines.every((l, i) => l === step.lines[i]));
+  return { chOk, powerOk, dscOk, msgOk, ok: chOk && powerOk && dscOk && msgOk };
 }

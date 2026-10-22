@@ -77,61 +77,73 @@ export function showSafety(app, { onExit }) {
     const st = getSettings(), id = boatIdentity();
     const ship = { name: id.name, call: (st.callsign || 'SPS2024').toUpperCase(), mmsi: st.mmsi || '261012345' };
     const r = rng(1 + Math.floor(Math.random() * 1e9));
-    const S = { ch: 16, cover: false, dsc: false, task: null, lines: [], result: null, stats: { n: 0, ok: 0 } };
+    const S = { ch: 16, power: 25, cover: false, dsc: false, task: null, si: 0, lines: [], result: null, stats: { n: 0, ok: 0 } };
     const body = h('div.sf-radio');
     openModal(h('h2', {}, 'Radiotelefon VHF DSC'), body);
     const setCh = (c) => { c = Math.round(Number(c)); if (!VALID_CHANNELS.includes(c)) return; S.ch = c; render(); };
+    const ch2 = (c) => String(c).padStart(2, '0');
     function render() {
       body.innerHTML = '';
       const list = channels();
       const idx = VALID_CHANNELS.indexOf(S.ch);
       const face = h('div.vhf-face', {},
-        h('div.vhf-lcd', {}, h('div.vhf-ch', {}, String(S.ch).padStart(2, '0')), h('div.vhf-info', {}, h('div', {}, 'DSC  25W'), h('div', {}, S.dsc ? 'DISTRESS SENT' : 'CH70 WATCH'))),
+        h('div.vhf-lcd', {}, h('div.vhf-ch', {}, ch2(S.ch)), h('div.vhf-info', {}, h('div', {}, `DSC  ${S.power === 1 ? '1W  LO' : '25W HI'}`), h('div', {}, S.dsc ? 'DISTRESS SENT' : 'CH70 WATCH'))),
         h('div.vhf-btns', {},
           h('button.btn.sm', { onclick: () => setCh(VALID_CHANNELS[(idx - 1 + VALID_CHANNELS.length) % VALID_CHANNELS.length]) }, 'CH ▼'),
           h('button.btn.sm', { onclick: () => setCh(VALID_CHANNELS[(idx + 1) % VALID_CHANNELS.length]) }, 'CH ▲'),
           h('button.btn.sm', { onclick: () => setCh(16) }, '16'),
+          h('button.btn.sm.vhf-pw', { class: S.power === 1 ? 'lo' : '', onclick: () => { S.power = S.power === 1 ? 25 : 1; render(); } }, S.power === 1 ? '1W / 25W ▸ 1W' : '1W / 25W ▸ 25W'),
           h('input.vhf-in', { type: 'text', inputmode: 'numeric', placeholder: 'kanał', onkeydown: (e) => { if (e.key === 'Enter') setCh(e.target.value); } })),
         h('div.vhf-dist', {},
           h('button.vhf-cover', { class: S.cover ? 'open' : '', onclick: () => { S.cover = !S.cover; render(); } }, S.cover ? 'Osłona podniesiona' : 'Podnieś osłonę'),
           h('button.vhf-distress', { disabled: S.cover ? null : true, onclick: () => { S.dsc = true; render(); } }, 'DISTRESS')),
-        h('div.small.muted', {}, 'Alarm DSC: podnieś osłonę i naciśnij DISTRESS (w prawdziwym radiu przytrzymaj 5 s). Ćwiczenie – nic nie jest wysyłane.'));
+        h('div.small.muted', {}, 'Przycisk 1W/25W przełącza moc nadajnika. Alarm DSC: podnieś osłonę i naciśnij DISTRESS (w prawdziwym radiu przytrzymaj 5 s). Ćwiczenie – nic nie jest wysyłane.'));
       const table = h('table.spec-table.vhf-table', {}, h('tr', {}, h('th', {}, 'Kanał'), h('th', {}, 'MHz'), h('th', {}, 'Przeznaczenie')),
-        ...list.map((c) => h('tr', { class: (c.ch === S.ch ? 'on ' : '') + (c.guard ? 'guard' : ''), onclick: () => setCh(c.ch) }, h('td', {}, h('b', {}, String(c.ch).padStart(2, '0'))), h('td', {}, c.f), h('td', {}, c.use))));
+        ...list.map((c) => h('tr', { class: (c.ch === S.ch ? 'on ' : '') + (c.guard ? 'guard' : ''), onclick: () => setCh(c.ch) }, h('td', {}, h('b', {}, ch2(c.ch))), h('td', {}, c.f), h('td', {}, c.use))));
       const test = h('div.vhf-test');
       if (!S.task) {
-        test.append(h('p', {}, 'Test: dostajesz sytuację na morzu – ustaw właściwy kanał (dla MAYDAY także wyślij alarm DSC) i ułóż korespondencję z gotowych zdań.'),
+        test.append(h('p', {}, 'Test: dostajesz sytuację na morzu – ustaw kanał i moc (dla MAYDAY także wyślij alarm DSC) i ułóż korespondencję z gotowych zdań. Niektóre zadania mają kilka kroków.'),
           h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => newTask() }, '▶ Rozpocznij test'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`)));
       } else {
-        const T = S.task;
+        const T = S.task, ST = T.steps[S.si];
         test.append(h('div.vhf-task', {}, h('div.vhf-task-h', {}, 'Zadanie'), h('p', {}, T.text),
           h('div.small.muted', {}, `${t('Twój jacht')}: ${ship.name}, ${t('znak wywoławczy')} ${ship.call}, MMSI ${ship.mmsi}`)));
-        if (T.lines) {
+        if (ST.label) test.append(h('div.vhf-step', {}, ST.label));
+        if (ST.lines) {
           const used = new Set(S.lines);
           test.append(h('div.vhf-sub', {}, 'Ułóż korespondencję (klikaj zdania w kolejności):'),
             h('div.vhf-msg', {}, S.lines.length ? S.lines.map((l, i) => h('button.vhf-line.on', { disabled: S.result ? true : null, onclick: () => { S.lines.splice(i, 1); render(); } }, `${i + 1}. ${l}`)) : h('div.muted.small', {}, '— pusto —')),
-            h('div.vhf-pool', {}, ...T.pool.filter((l) => !used.has(l)).map((l) => h('button.vhf-line', { disabled: S.result ? true : null, onclick: () => { S.lines.push(l); render(); } }, l))));
+            h('div.vhf-pool', {}, ...ST.pool.filter((l) => !used.has(l)).map((l) => h('button.vhf-line', { disabled: S.result ? true : null, onclick: () => { S.lines.push(l); render(); } }, l))));
         }
         if (!S.result) {
-          test.append(h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => check() }, T.lines ? '🎙 Nadaj (PTT)' : 'Sprawdź kanał'), h('span.muted', {}, `${t('Ustawiony kanał')}: ${String(S.ch).padStart(2, '0')}`)));
+          test.append(h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => check() }, ST.lines ? '🎙 Nadaj (PTT)' : 'Sprawdź ustawienie'), h('span.muted', {}, `${t('Ustawiony kanał')}: ${ch2(S.ch)}, ${S.power} W`)));
         } else {
-          const R = S.result;
+          const R = S.result, more = R.ok && S.si < T.steps.length - 1;
           test.append(h('div.quiz-verdict', { class: R.ok ? 'ok' : 'bad' }, R.ok ? '✓ Dobrze!' : '✗ Źle'));
           if (!R.ok) {
             const fb = h('div.vhf-fb');
-            if (!R.chOk) fb.append(h('div', {}, h('span.muted', {}, 'Poprawny kanał:'), ' ', h('b', {}, T.channels.map((c) => String(c).padStart(2, '0')).join(' / '))));
+            if (!R.chOk) fb.append(h('div', {}, h('span.muted', {}, 'Poprawny kanał:'), ' ', h('b', {}, ST.channels.map(ch2).join(' / '))));
+            if (!R.powerOk) fb.append(h('div', {}, h('span.muted', {}, 'Poprawna moc:'), ' ', h('b', {}, `${ST.power} W`)));
             if (!R.dscOk) fb.append(h('div', {}, h('b', {}, 'Najpierw alarm DSC (DISTRESS), potem MAYDAY głosem.')));
-            if (!R.msgOk) fb.append(h('div', {}, h('span.muted', {}, 'Poprawna korespondencja:')), h('div.sf-lines', {}, ...T.lines.map((l) => h('div', {}, l))));
+            if (!R.msgOk) fb.append(h('div', {}, h('span.muted', {}, 'Poprawna korespondencja:')), h('div.sf-lines', {}, ...ST.lines.map((l) => h('div', {}, l))));
             fb.append(h('div.small', {}, T.explain));
             test.append(fb);
           }
-          test.append(h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`)));
+          test.append(h('div.vhf-row', {}, more
+            ? h('button.btn.primary', { onclick: () => { S.si++; S.lines = []; S.result = null; render(); } }, 'Dalej – następny krok →')
+            : h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`)));
         }
       }
       body.append(h('div.vhf-left', {}, face, test), h('div.vhf-right', {}, table));
     }
-    function newTask() { S.task = makeRadioTask(r, ship); S.lines = []; S.result = null; S.dsc = false; S.cover = false; render(); }
-    function check() { S.result = checkRadio(S.task, { channel: S.ch, dscSent: S.dsc, lines: S.lines }); S.stats.n++; if (S.result.ok) S.stats.ok++; render(); }
+    function newTask() { S.task = makeRadioTask(r, ship); S.si = 0; S.lines = []; S.result = null; S.dsc = false; S.cover = false; render(); }
+    function check() {
+      const T = S.task;
+      S.result = checkRadio(T.steps[S.si], { channel: S.ch, power: S.power, dscSent: S.dsc, lines: S.lines });
+      // wynik liczony za całe zadanie: błąd w dowolnym kroku albo dobrze w ostatnim
+      if (!S.result.ok || S.si === T.steps.length - 1) { S.stats.n++; if (S.result.ok) S.stats.ok++; }
+      render();
+    }
     render();
     return { S, render, newTask, check, setCh };
   }
