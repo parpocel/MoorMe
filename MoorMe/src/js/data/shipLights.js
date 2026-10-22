@@ -96,6 +96,11 @@ export const VESSELS = [
     lights: (L) => [...column(L * 0.1, 8, ['white', 'red']), ...sides(L, 4), ...stern(L, 3.5)]
   },
   {
+    id: 'fishingGear', name: 'Statek rybacki z narzędziami połowowymi wystającymi > 150 m', L: [15, 35], speed: [1, 3], moving: true, gear: true,
+    explain: 'Czerwone nad białym jak statek rybacki, a do tego niżej białe światło dookólne przesunięte w stronę wystawionych sieci (2–6 m od głównych świateł). Nie przecinaj tej strony!',
+    lights: (L, r, o) => [...column(L * 0.2, 8, ['red', 'white']), { x: L * 0.2, y: 4.5, z: (o.gearSide === 'port' ? -1 : 1) * 5, c: 'white', s: 'all' }, ...sides(L, 4), ...stern(L, 3.5)]
+  },
+  {
     id: 'aground', name: 'Statek na mieliźnie', L: [40, 120], speed: [0, 0], moving: false,
     explain: 'Światła kotwiczne (białe dookólne) oraz dwa czerwone dookólne w pionie. Trzymaj się z daleka – tam jest płytko!',
     lights: (L) => [...column(0, 9, ['red', 'red']), { x: L * 0.4, y: 7, z: 0, c: 'white', s: 'all' }]
@@ -104,6 +109,36 @@ export const VESSELS = [
 
 export const VESSEL_BY_ID = Object.fromEntries(VESSELS.map((v) => [v.id, v]));
 
+// Znaki dzienne (czarne kształty na maszcie). shapes: [{ x, y, z, k }], k: ball | coneUp | coneDown | diamond | cylinder | hourglass
+const col = (x, y0, ks) => ks.map((k, i) => ({ x, y: y0 + (ks.length - 1 - i) * 1.6, z: 0, k }));
+export const DAY_VESSELS = [
+  { id: 'dPower', name: 'Statek o napędzie mechanicznym w drodze (bez znaków)', L: [25, 120], speed: [8, 14], moving: true, hull: 'ship',
+    explain: 'Statek o napędzie mechanicznym w drodze nie nosi w dzień żadnych znaków.', shapes: () => [] },
+  { id: 'dAnchor', name: 'Statek na kotwicy', L: [25, 150], speed: [0, 0], moving: false, hull: 'ship',
+    explain: 'Jedna czarna kula w przedniej części statku.', shapes: (L) => [{ x: L * 0.4, y: 9, z: 0, k: 'ball' }] },
+  { id: 'dAground', name: 'Statek na mieliźnie', L: [40, 120], speed: [0, 0], moving: false, hull: 'ship',
+    explain: 'Trzy czarne kule w pionie.', shapes: () => col(0, 9, ['ball', 'ball', 'ball']) },
+  { id: 'dNuc', name: 'Statek niezdolny do manewrowania', L: [40, 150], speed: [1, 3], moving: true, hull: 'ship',
+    explain: 'Dwie czarne kule w pionie.', shapes: () => col(0, 10, ['ball', 'ball']) },
+  { id: 'dRam', name: 'Statek o ograniczonej zdolności manewrowania', L: [40, 120], speed: [2, 5], moving: true, hull: 'ship',
+    explain: 'Kula – romb – kula w pionie (np. kładzenie kabla, pogłębianie).', shapes: () => col(0, 10, ['ball', 'diamond', 'ball']) },
+  { id: 'dCbd', name: 'Statek ograniczony zanurzeniem', L: [150, 300], speed: [8, 12], moving: true, hull: 'ship',
+    explain: 'Czarny walec (cylinder) w miejscu dobrze widocznym.', shapes: () => [{ x: 0, y: 14, z: 0, k: 'cylinder' }] },
+  { id: 'dFishing', name: 'Statek zajęty połowem', L: [15, 40], speed: [1, 4], moving: true, hull: 'trawler',
+    explain: 'Dwa stożki połączone wierzchołkami (klepsydra) – tak samo przy trałowaniu i innych połowach.', shapes: (L) => [{ x: L * 0.15, y: 9, z: 0, k: 'hourglass' }] },
+  { id: 'dFishingGear', name: 'Statek zajęty połowem z narzędziami wystającymi > 150 m', L: [15, 35], speed: [1, 3], moving: true, hull: 'trawler', gear: true,
+    explain: 'Klepsydra oraz stożek wierzchołkiem do góry po tej stronie, w którą wystawione są sieci.',
+    shapes: (L, r, o) => [{ x: L * 0.15, y: 9, z: 0, k: 'hourglass' }, { x: L * 0.15, y: 5.5, z: (o.gearSide === 'port' ? -1 : 1) * 3.5, k: 'coneUp' }] },
+  { id: 'dTowing', name: 'Statek holujący (hol > 200 m)', L: [25, 40], speed: [4, 7], moving: true, hull: 'tug',
+    explain: 'Romb na holowniku i romb na holowanej jednostce, gdy długość holu przekracza 200 m.',
+    shapes: (L) => [{ x: L * 0.2, y: 9, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
+  { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
+    explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',
+    shapes: () => [{ x: 1.5, y: 6, z: 0, k: 'coneDown' }] }
+];
+export const DAY_BY_ID = Object.fromEntries(DAY_VESSELS.map((v) => [v.id, v]));
+export const anyVessel = (id) => VESSEL_BY_ID[id] || DAY_BY_ID[id];
+
 export const ASPECTS = {
   bow: 'Dziób – płynie na nas',
   starboard: 'Prawa burta (zielone)',
@@ -111,6 +146,7 @@ export const ASPECTS = {
   stern: 'Rufa – oddala się',
   none: 'Stoi – kierunek nieistotny'
 };
+export const GEAR_SIDES = { port: 'Z lewej burty statku', starboard: 'Z prawej burty statku' };
 
 // Kąt względny obserwatora (od dziobu statku, + w prawo) z pozycji statku i kursu
 export function relBearing(vx, vz, hdgDeg, ox, oz) {
@@ -132,30 +168,48 @@ export function visibleLights(lights, rel) {
   return lights.filter((l) => SECTORS[l.s](rel));
 }
 
+// „Talia” typów: każdy typ pojawia się raz w losowej kolejności, potem talia jest tasowana od nowa
+export function makeDeck(r, day = false) {
+  let deck = [], last = null;
+  return () => {
+    if (!deck.length) {
+      deck = (day ? DAY_VESSELS : VESSELS).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+      if (deck[0] === last && deck.length > 1) deck.push(deck.shift());
+    }
+    last = deck.shift();
+    return last;
+  };
+}
+
 // Losuje jednostkę: typ, długość, kurs tak, by obserwator widział zadany aspekt; pozycja względem obserwatora
 export function spawnVessel(r, observer, opts = {}) {
-  const v = opts.type ? VESSEL_BY_ID[opts.type] : VESSELS[Math.floor(r() * VESSELS.length)];
+  const list = opts.day ? DAY_VESSELS : VESSELS;
+  const v = opts.type ? anyVessel(opts.type) : list[Math.floor(r() * list.length)];
   const L = Math.round(v.L[0] + r() * (v.L[1] - v.L[0]));
   const side = opts.side || (r() < 0.5 ? 'port' : 'starboard');
-  // namiar z jachtu: 25–150° na wybraną burtę
+  // namiar z łodzi: 25–150° na wybraną burtę
   const relFromYacht = (25 + r() * 125) * (side === 'port' ? -1 : 1);
-  const dist = 500 + r() * 700;
+  const dist = (opts.day ? 350 : 500) + r() * (opts.day ? 450 : 700);
   const brg = observer.hdg + relFromYacht;
   const br = (brg * Math.PI) / 180;
   const x = observer.x + Math.sin(br) * dist, z = observer.z - Math.cos(br) * dist;
-  // aspekt widziany z jachtu
+  // aspekt widziany z łodzi; przy sieciach – burta statku z sieciami ma być widoczna lub oczywista z pozycji świateł
   const pick = r();
-  const aspect = !v.moving ? 'none' : pick < 0.2 ? 'bow' : pick < 0.45 ? 'starboard' : pick < 0.7 ? 'port' : 'stern';
+  const aspect = !v.moving ? 'none' : v.gear ? (pick < 0.5 ? 'starboard' : 'port') : pick < 0.2 ? 'bow' : pick < 0.45 ? 'starboard' : pick < 0.7 ? 'port' : 'stern';
   const rel = aspect === 'bow' ? (r() - 0.5) * 4 : aspect === 'starboard' ? 20 + r() * 80 : aspect === 'port' ? -(20 + r() * 80) : aspect === 'stern' ? 130 + r() * 100 : r() * 360;
-  // kurs statku: namiar od statku do jachtu minus kąt względny
+  // kurs statku: namiar od statku do łodzi minus kąt względny
   const back = (Math.atan2(observer.x - x, -(observer.z - z)) * 180) / Math.PI;
   const hdg = (((back - rel) % 360) + 360) % 360;
   const speed = (v.speed[0] + r() * (v.speed[1] - v.speed[0])) * 0.6; // wolniej niż w realu – więcej czasu na obserwację
-  return { type: v.id, name: v.name, L, x, z, hdg, speed: v.moving ? speed : 0, side, lights: v.lights(L, r), moving: v.moving };
+  const o = { gearSide: r() < 0.5 ? 'port' : 'starboard' };
+  const base = { type: v.id, name: v.name, L, x, z, hdg, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
+  if (opts.day) return { ...base, hull: v.hull, shapes: v.shapes(L, r, o), lights: [] };
+  return { ...base, lights: v.lights(L, r, o) };
 }
 
-// Opcje odpowiedzi: poprawna + n-1 losowych innych
+// Opcje odpowiedzi: poprawna + n-1 losowych innych z tego samego katalogu
 export function answerOptions(r, correctId, n = 6) {
-  const others = VESSELS.filter((v) => v.id !== correctId).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).slice(0, n - 1).map((x) => x[1]);
+  const list = DAY_BY_ID[correctId] ? DAY_VESSELS : VESSELS;
+  const others = list.filter((v) => v.id !== correctId).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).slice(0, n - 1).map((x) => x[1]);
   return [...others, correctId].map((id) => [r(), id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
 }

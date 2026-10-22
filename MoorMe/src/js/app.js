@@ -127,7 +127,7 @@ function showModeSelect() {
       h('div.mode-cards', {},
         card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
         card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup()),
-        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => startLights())),
+        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsSetup())),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
 }
 
@@ -200,14 +200,27 @@ function savePassageCfg() {
   try { localStorage.setItem(PASSAGE_KEY, JSON.stringify({ ...passageCfg, seed: null })); } catch (e) { /* ignoruj */ }
 }
 
-function startLights() {
+function showLightsSetup() {
+  app.innerHTML = '';
+  const card = (cls, title, text, onclick) => h('button.mode-card' + cls, { onclick }, h('h3', {}, title), h('p', {}, text));
+  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
+    h('div.title-card', { style: { width: 'min(820px, 94vw)' } },
+      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'ROZPOZNAWANIE ŚWIATEŁ')),
+      h('p.desc', {}, 'Wybierz porę: nocą statki rozpoznajesz po światłach, w dzień – po czarnych znakach dziennych.'),
+      h('div.mode-cards', { style: { gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))' } },
+        card('.lights', '🌙 Noc – światła', 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', () => startLights(false)),
+        card('.sail', '☀ Dzień – znaki dzienne', 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', () => startLights(true))),
+      h('div.tbtn-row', {}, h('button.btn', { onclick: () => showModeSelect() }, '← Tryby')))));
+}
+
+function startLights(day = false) {
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
   app.appendChild(root);
   const equip = defaultEquipment(BOATS.C34);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'lights', boatId: 'C34', equip, weather: { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear', blackSky: true } };
-  window.__sim = new LightsScreen(root, config, { restart: () => startLights(), exit: () => showModeSelect() });
+  const config = { mode: 'lights', boatId: 'C34', equip, day, weather: day ? { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 13, sky: 'clear' } : { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear', blackSky: true } };
+  window.__sim = new LightsScreen(root, config, { restart: () => startLights(day), exit: () => showLightsSetup() });
 }
 
 function startPassage(seed) {

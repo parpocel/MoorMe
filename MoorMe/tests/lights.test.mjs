@@ -1,4 +1,4 @@
-import { VESSELS, VESSEL_BY_ID, ASPECTS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions } from '../src/js/data/shipLights.js';
+import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck } from '../src/js/data/shipLights.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -49,6 +49,25 @@ for (const asp of ['bow', 'starboard', 'port', 'stern']) {
   check(tot > 10, `aspekt „${asp}” występuje (${tot}/200)`);
 }
 
+// 3b) talia: każdy typ raz na rundę (statek na kotwicy nie dominuje), trałowce i rybacy zawsze się pojawiają
+{
+  const deck = makeDeck(rng(3));
+  const round = Array.from({ length: VESSELS.length }, () => deck());
+  check(new Set(round).size === VESSELS.length, `w jednej rundzie każdy z ${VESSELS.length} typów pojawia się raz`);
+  const day = makeDeck(rng(4), true);
+  const dr = Array.from({ length: DAY_VESSELS.length }, () => day());
+  check(new Set(dr).size === DAY_VESSELS.length && dr.includes('dFishingGear'), `tryb dzienny: ${DAY_VESSELS.length} typów, w tym połów z sieciami`);
+}
+// 3c) sieci: dodatkowe białe światło / stożek po stronie sieci
+{
+  const v = spawnVessel(rng(11), { x: 0, z: 0, hdg: 90 }, { type: 'fishingGear' });
+  const g = v.lights.find((l) => l.c === 'white' && l.s === 'all' && Math.abs(l.z) > 1);
+  check(g && (g.z > 0) === (v.gearSide === 'starboard'), `światło sieci po stronie ${v.gearSide}`);
+  const d = spawnVessel(rng(12), { x: 0, z: 0, hdg: 90 }, { type: 'dFishingGear', day: true });
+  const c = d.shapes.find((s) => s.k === 'coneUp');
+  check(c && (c.z > 0) === (d.gearSide === 'starboard') && d.hull === 'trawler', `stożek wierzchołkiem w górę po stronie sieci (${d.gearSide})`);
+}
+
 // 4) odpowiedzi: 6 różnych, w tym poprawna
 const opts = answerOptions(r, 'pilot', 6);
 check(opts.length === 6 && new Set(opts).size === 6 && opts.includes('pilot'), `6 różnych odpowiedzi z poprawną (${opts.join(', ')})`);
@@ -56,7 +75,7 @@ check(opts.length === 6 && new Set(opts).size === 6 && opts.includes('pilot'), `
 // 5) tłumaczenia
 setLang('en');
 const PL = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
-const strs = [...VESSELS.flatMap((v) => [v.name, v.explain]), ...Object.values(ASPECTS)];
+const strs = [...VESSELS.flatMap((v) => [v.name, v.explain]), ...DAY_VESSELS.flatMap((v) => [v.name, v.explain]), ...Object.values(ASPECTS), ...Object.values(GEAR_SIDES)];
 const missing = strs.filter((s) => t(s) === s || PL.test(t(s)));
 check(missing.length === 0, `nazwy i opisy świateł mają tłumaczenie (${strs.length})${missing.length ? ': ' + missing.slice(0, 3).join(' | ') : ''}`);
 check(t('Błąd – to: Statek pilotowy na służbie') === 'Wrong – it was: Pilot vessel on duty', 'komunikat o błędzie tłumaczy nazwę statku');

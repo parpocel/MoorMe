@@ -146,3 +146,10 @@ Trzeci tryb (karta „Rozpoznawanie świateł” w oknie wyboru trybu). Jest noc
 - **którą stronę statku widzisz** – dziób, prawą burtę, lewą burtę albo rufę (dla statków w ruchu).
 
 Światła świecą w swoich sektorach (masztowe 225°, burtowe po 112,5°, rufowe i holownicze 135°, dookólne 360°), więc zestaw widocznych świateł zależy od kursu statku względem jachtu. Żółty punkt na kompasie wskazuje kierunek świateł. Po odpowiedzi wyświetla się wyjaśnienie, a „Pomoc” zawiera ściągę ze wszystkimi zestawami świateł.
+
+Po wybraniu trybu wybierasz porę:
+- **Noc – światła:** 14 typów jednostek, w tym statek rybacki z sieciami wystającymi ponad 150 m (dodatkowe białe światło dookólne po stronie sieci). Przy takim statku pada też pytanie, z której burty ma sieci.
+- **Dzień – znaki dzienne:** statki widać jako ciemne sylwetki z czarnymi znakami. Jest 10 typów: kula (kotwica), trzy kule (mielizna), dwie kule (niezdolny do manewrowania), kula–romb–kula (ograniczona zdolność manewrowania), walec (ograniczony zanurzeniem), klepsydra (połów), klepsydra ze stożkiem wierzchołkiem w górę po stronie sieci, romb na holowniku i holowanym (hol > 200 m), stożek wierzchołkiem w dół (jacht na silniku) oraz statek bez znaków.
+
+Typy losowane są „talią”: każdy pojawia się raz w rundzie, w losowej kolejności, więc żaden (np. statek na kotwicy) nie powtarza się zbyt często.
+
