@@ -5,7 +5,7 @@ import { SIGNALS, SIGNAL_BY_ID, CONTEXTS, notation, schedule, signalOptions, mak
 import { spawnVessel } from '../data/shipLights.js';
 
 // Synteza dźwięków statkowych (Web Audio)
-class ShipAudio {
+export class ShipAudio {
   constructor() {
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = AC ? new AC() : null;

@@ -295,7 +295,7 @@ export class LightsScreen extends PassageScreen {
   spawn() {
     const q = this.q;
     q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day, aspect: this._forceAspect || null }); // _forceType – podgląd konkretnego typu (testy)
-    q.options = answerOptions(this.rand, q.vessel.type, 6);
+    { const v = q.vessel, o = this.observer(); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel: relBearing(v.x, v.z, v.hdg, o.x, o.z) }); }
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
     q.phase = 'active';
     this.layer.set(q.vessel);

@@ -12,7 +12,8 @@ import { Preview3D } from './render/preview.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
-import { SoundsScreen } from './ui/soundsUI.js';
+import { SoundsScreen, ShipAudio } from './ui/soundsUI.js';
+import { showHandbook, showTrainOrLearn, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
@@ -20,6 +21,7 @@ import { drawChart } from './ui/chart.js';
 import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, GFX_PRESETS } from './settings.js';
 import { FLAGS, FLAG_CODES, flagCanvas } from './render/flags.js';
 import { setIalaRegion } from './data/passage.js';
+import { menuMusic } from './menuMusic.js';
 
 setIalaRegion(getSettings().iala);
 
@@ -31,6 +33,7 @@ function sceneryEl() {
   return d.firstChild;
 }
 const icon = {
+  book: '<svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 5c3-1.5 5.5-1.5 8 0v14c-2.5-1.5-5-1.5-8 0z" fill="#2f4468"/><path d="M20 5c-3-1.5-5.5-1.5-8 0v14c2.5-1.5 5-1.5 8 0z" fill="#d2695f"/></svg>',
   buoy: '<svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#e6dccf" stroke-width="5"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="#d2695f" stroke-width="5" stroke-dasharray="6.7 6.7"/></svg>',
   play: '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="#fff7f1"/></svg>',
   chev: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#fff7f1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -103,6 +106,7 @@ function screen(step, body, onNext, nextLabel) {
 
 // ---------- Ekran tytułowy ----------
 function showTitle() {
+  menuMusic.start();
   app.innerHTML = '';
   const saved = !!loadConfig();
   const btn = (cls, iconHtml, label, sub, onclick, extra = {}) => h('button.tbtn' + cls, { onclick, ...extra },
@@ -128,6 +132,7 @@ function showTitle() {
 
 // ---------- Wybór trybu (okno startowe) ----------
 function showModeSelect() {
+  menuMusic.start();
   app.innerHTML = '';
   const card = (cls, ic, title, text, onclick) => h('button.mode-card' + cls, { onclick },
     h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
@@ -138,12 +143,46 @@ function showModeSelect() {
       h('p.desc', {}, 'Wybierz tryb gry.'),
       h('div.mode-cards', {},
         card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
-        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup()),
-        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsSetup()),
-        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => startSounds()),
-        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Przeliczanie kursów i namiarów z dewiacją, deklinacją, dryfem i prądem, kurs z poprawką na prąd, pozycja z dwóch namiarów i zliczenie drogi – z rozwiązaniem krok po kroku.', () => showNavTasks(app, { onExit: () => showModeSelect() })),
-        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => showSafety(app, { onExit: () => showModeSelect() }))),
+        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showSailIntro()),
+        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsIntro()),
+        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => showSoundsIntro()),
+        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Przeliczanie kursów i namiarów z dewiacją, deklinacją, dryfem i prądem, kurs z poprawką na prąd, pozycja z dwóch namiarów i zliczenie drogi – z rozwiązaniem krok po kroku.', () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }),
+        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); })),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
+}
+
+// ---------- Trening albo nauka (podręczniki) ----------
+function showLightsIntro() {
+  menuMusic.start();
+  showTrainOrLearn(app, { title: 'Rozpoznawanie świateł i znaków dziennych', sceneryEl, icons: { train: raw(icon.bulb), learn: raw(icon.book) },
+    desc: { train: 'Noc albo dzień na morzu: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz i jak przejdą.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron i znaki dzienne.' },
+    onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), onExit: () => showModeSelect() });
+}
+function showLightsBook() {
+  menuMusic.start();
+  showHandbook(app, { title: 'podręcznik – światła i znaki dzienne', sections: lightsBook(), sceneryEl, onExit: () => showLightsIntro(), onTrain: () => showLightsSetup() });
+}
+function showSoundsIntro() {
+  menuMusic.start();
+  showTrainOrLearn(app, { title: 'Sygnały dźwiękowe', sceneryEl, icons: { train: raw(icon.horn), learn: raw(icon.book) },
+    desc: { train: 'Z łodzi na morzu słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: wszystkie sygnały manewrowe, ostrzegawcze i mgłowe z zapisem, osią czasu i odsłuchem.' },
+    onTrain: () => startSounds(), onLearn: () => showSoundsBook(), onExit: () => showModeSelect() });
+}
+function showSoundsBook() {
+  menuMusic.stop(0.6);
+  const audio = new ShipAudio();
+  const close = () => { audio.stop(); if (audio.ctx) audio.ctx.close(); };
+  showHandbook(app, { title: 'podręcznik – sygnały dźwiękowe', sections: soundsBook((p) => audio.play(p)), sceneryEl, onExit: () => { close(); showSoundsIntro(); }, onTrain: () => { close(); startSounds(); } });
+}
+function showSailIntro() {
+  menuMusic.start();
+  showTrainOrLearn(app, { title: 'Rejs wzdłuż wybrzeża', sceneryEl, icons: { train: raw(icon.sail), learn: raw(icon.book) },
+    desc: { train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła.' },
+    onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), onExit: () => showModeSelect() });
+}
+function showMarksBook() {
+  menuMusic.start();
+  showHandbook(app, { title: 'podręcznik – oznakowanie nawigacyjne IALA', sections: marksBook(), sceneryEl, onExit: () => showSailIntro(), onTrain: () => showPassageSetup() });
 }
 
 // ---------- Rejs: ustawienia ----------
@@ -158,6 +197,7 @@ function loadPassageCfg() {
 let passageCfg = loadPassageCfg() || { passageId: 'baltic', boatId: 'C34', weather: { ...PASSAGES.baltic.weather } };
 
 function showPassageSetup() {
+  menuMusic.start();
   if (!passageCfg.seed) passageCfg.seed = 1 + Math.floor(Math.random() * 1e9); // układ znaków i trasy jest losowany przy każdym rejsie
   const cfg = passageCfg;
   const w = cfg.weather;
@@ -216,6 +256,7 @@ function savePassageCfg() {
 }
 
 function showLightsSetup() {
+  menuMusic.start();
   app.innerHTML = '';
   const card = (cls, title, text, onclick) => h('button.mode-card' + cls, { onclick }, h('h3', {}, title), h('p', {}, text));
   app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
@@ -229,16 +270,18 @@ function showLightsSetup() {
 }
 
 function startSounds() {
+  menuMusic.stop();
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
   app.appendChild(root);
   const equip = defaultEquipment(BOATS.C34);
   equip.bowThruster = 'none'; equip.sternThruster = false;
   const config = { mode: 'sounds', boatId: 'C34', equip, day: true, weather: { windKn: 5, windFrom: 250, gust: 0.1, currentKn: 0, currentTo: 90, hour: 12, sky: 'clear' } };
-  window.__sim = new SoundsScreen(root, config, { restart: () => startSounds(), exit: () => showModeSelect() });
+  window.__sim = new SoundsScreen(root, config, { restart: () => startSounds(), exit: () => showSoundsIntro() });
 }
 
 function startLights(day = false) {
+  menuMusic.stop();
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
   app.appendChild(root);
@@ -249,6 +292,7 @@ function startLights(day = false) {
 }
 
 function startPassage(seed) {
+  menuMusic.stop();
   const sd = seed || passageCfg.seed || 1 + Math.floor(Math.random() * 1e9);
   passageCfg.seed = null;
   savePassageCfg();
@@ -273,20 +317,37 @@ function langButtons() {
   return h('div.tbtn-row', {}, LANGS.map((l) => h('button.tbtn.sec' + (cur === l.id ? '.rnd' : ''), { onclick: () => chooseLang(l.id) }, h('span', {}, l.name, cur === l.id ? h('small', {}, '✓') : null))));
 }
 
-// pierwsze uruchomienie: wybór języka (napisy dwujęzyczne, więc bez tłumaczenia DOM)
+// pierwsze uruchomienie: wybór języka i systemu oznakowania IALA (napisy dwujęzyczne, więc bez tłumaczenia DOM)
 function showLangPicker() {
-  app.innerHTML = '';
-  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', {},
-      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
-      h('p.desc', {}, 'Wybierz język / Choose your language'),
-      langButtons(),
-      h('div.title-note', {}, h('span', {}, 'Język możesz później zmienić w Ustawieniach. / You can change the language later in Settings.')))));
+  menuMusic.start();
+  const sel = { lang: getLang(), iala: getSettings().iala || 'A' };
+  const can = (c) => `<svg width="34" height="44" viewBox="0 0 34 44"><rect x="7" y="6" width="20" height="26" rx="2" fill="${c}"/><rect x="4" y="30" width="26" height="8" rx="2" fill="${c}"/><rect x="15" y="0" width="4" height="7" fill="#333"/></svg>`;
+  const cone = (c) => `<svg width="34" height="44" viewBox="0 0 34 44"><polygon points="17,4 30,32 4,32" fill="${c}"/><rect x="4" y="30" width="26" height="8" rx="2" fill="${c}"/></svg>`;
+  const render = () => {
+    app.innerHTML = '';
+    const langRow = h('div.tbtn-row', {}, LANGS.map((l) => h('button.tbtn.sec' + (sel.lang === l.id ? '.rnd' : ''), { onclick: () => { sel.lang = l.id; render(); } }, h('span', {}, l.name, sel.lang === l.id ? h('small', {}, '✓') : null))));
+    const ialaBtn = (id, red, green, region) => h('button.tbtn.sec.iala-btn' + (sel.iala === id ? '.rnd' : ''), { onclick: () => { sel.iala = id; render(); } },
+      h('span.iala-ic', {}, raw((id === 'A' ? can('#d62828') + cone('#1f9d55') : can('#1f9d55') + cone('#d62828')))),
+      h('span', {}, `IALA ${id}`, h('small', {}, region)), sel.iala === id ? h('small.iala-ok', {}, '✓') : null);
+    app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
+      h('div.title-card.first-run', {},
+        h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
+        h('p.desc', {}, 'Wybierz język / Choose your language'),
+        langRow,
+        h('p.desc', { style: { marginTop: '18px' } }, 'System oznakowania / Buoyage system'),
+        h('div.tbtn-row', {},
+          ialaBtn('A', 'red', 'green', 'Europa, Afryka, Azja, Australia / Europe, Africa, Asia, Australia'),
+          ialaBtn('B', 'green', 'red', 'Ameryki, Japonia, Korea, Filipiny / Americas, Japan, Korea, Philippines')),
+        h('div.tbtn-row', { style: { marginTop: '18px' } }, h('button.tbtn.main', { onclick: () => { saveSettings({ iala: sel.iala }); setLang(sel.lang); location.reload(); } }, h('span', {}, 'Dalej / Continue'), h('span.ic', {}, raw(icon.chev)))),
+        h('div.title-note', {}, h('span', {}, 'Oba ustawienia zmienisz później w Ustawieniach. / You can change both later in Settings.')))));
+  };
+  render();
 }
 
 const COUNTRY = { DE: 'Niemcy', PL: 'Polska', NL: 'Holandia', FR: 'Francja', IT: 'Włochy', BE: 'Belgia', IE: 'Irlandia', ES: 'Hiszpania', PT: 'Portugalia', HR: 'Chorwacja', LT: 'Litwa', LV: 'Łotwa', EE: 'Estonia', BG: 'Bułgaria', RO: 'Rumunia', UA: 'Ukraina', MT: 'Malta', SE: 'Szwecja', DK: 'Dania', NO: 'Norwegia', FI: 'Finlandia', IS: 'Islandia', GR: 'Grecja', GB: 'Wielka Brytania' };
 
 function showSettings(back = () => showModeSelect()) {
+  menuMusic.start();
   const st = getSettings();
   app.innerHTML = '';
   const row = (label, ...ctl) => h('div.set-row', {}, h('label', {}, label), h('div.set-ctl', {}, ...ctl));
@@ -333,6 +394,13 @@ function showSettings(back = () => showModeSelect()) {
     row('Licznik FPS', segRow([['on', 'Pokaż'], ['off', 'Ukryj']], g.showFps ? 'on' : 'off', (v) => { saveSettings({ gfx: { showFps: v === 'on' } }); rerender(); })),
     h('p.small.muted', {}, 'Na starszym komputerze wybierz „Niska”: mniejsza rozdzielczość, bez cieni i wygładzania, prostsza woda i 30 klatek na sekundę. Zmiany działają od następnej symulacji.'));
 
+  // dźwięk
+  const musOut = h('b', {}, `${Math.round((st.musicVol ?? 0.5) * 100)}%`);
+  const sound = h('div.help-card.set-card', {},
+    h('h2', {}, 'Dźwięk'),
+    row('Muzyka w menu', segRow([['on', 'Wł.'], ['off', 'Wył.']], st.music === false ? 'off' : 'on', (v) => { saveSettings({ music: v === 'on' }); menuMusic.refresh(); rerender(); })),
+    row('Głośność muzyki', h('div.set-range', {}, h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: st.musicVol ?? 0.5, oninput: (e) => { musOut.textContent = `${Math.round(e.target.value * 100)}%`; saveSettings({ musicVol: +e.target.value }); menuMusic.refresh(); } }), musOut)));
+
   // ekran
   const screen = h('div.help-card.set-card', {},
     h('h2', {}, 'Ekran'),
@@ -342,12 +410,13 @@ function showSettings(back = () => showModeSelect()) {
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),
     h('div.screen-body', {}, h('div.set-wrap', {},
       h('div.help-card.set-card', {}, h('h2', { style: { marginBottom: '8px' } }, 'Język / Language'), langButtons()),
-      boat, iala, gfx, screen)),
+      boat, iala, gfx, sound, screen)),
     h('div.screen-footer', {}, h('button.btn', { onclick: () => back() }, '← Menu'), h('span'))));
 }
 
 // ---------- Pomoc ----------
 function showHelp() {
+  menuMusic.start();
   app.innerHTML = '';
   app.appendChild(h('div.screen', {}, sceneryEl(),
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'pomoc')),
@@ -651,11 +720,13 @@ function stepWeather() {
 }
 
 function showStep(i) {
+  menuMusic.start();
   saveConfig(config);
   [stepBoat, stepEquipment, stepHarbor, stepWeather][i]();
 }
 
 function startSim() {
+  menuMusic.stop();
   saveConfig(config);
   app.innerHTML = '';
   const root = h('div', { style: { position: 'absolute', inset: 0 } });
@@ -733,6 +804,7 @@ function difficulty(cfg) {
 }
 
 function showRandom(cfg = randomConfig()) {
+  menuMusic.start();
   const spec = BOATS[cfg.boatId], w = cfg.weather, eq = cfg.equip;
   const [diff, dcol] = difficulty(cfg);
   const skyName = { clear: '☀ słonecznie', cloudy: '☁ pochmurno', rain: '🌧 deszcz', fog: '🌫 mgła' }[w.sky];

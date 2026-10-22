@@ -427,3 +427,37 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks.desk .nt-sheet-h { font: 800 13px 'Nunito', sans-serif; letter-spacing: 2px; text-transform: uppercase; color: #5a6b80; margin-bottom: 4px; }
 .navtasks.desk .nt-conv { margin-top: 12px; font-size: 11px; }
 .navtasks.desk .nt-desk > * { margin-top: auto; margin-bottom: auto; }
+.iala-btn { display: flex; align-items: center; gap: 12px; text-align: left; }
+.iala-btn .iala-ic { display: flex; gap: 2px; }
+.iala-btn small { display: block; font-size: 11px; font-weight: 600; opacity: 0.8; margin-top: 2px; }
+.iala-btn .iala-ok { margin-left: auto; }
+/* trening / nauka */
+.mode-cards.two { grid-template-columns: repeat(2, minmax(240px, 1fr)); }
+.mode-card.train { background: #d5ebe4; }
+.mode-card.learn { background: #f3e6c8; }
+.mode-card .mc-ic { font-size: 30px; }
+/* podręcznik */
+.screen.handbook .hb-body { flex: 1; display: flex; gap: 18px; padding: 14px 24px; min-height: 0; position: relative; z-index: 1; }
+.handbook .hb-nav { width: 230px; display: flex; flex-direction: column; gap: 8px; flex: none; }
+.handbook .hb-tab { text-align: left; border: 0; border-radius: 12px; padding: 12px 14px; font: 700 15px 'Nunito', sans-serif; background: rgba(255, 247, 241, 0.9); color: #2f4468; cursor: pointer; }
+.handbook .hb-tab.on { background: #2f4468; color: #fff7f1; }
+.handbook .hb-main { flex: 1; overflow: auto; background: rgba(255, 247, 241, 0.97); border-radius: 18px; padding: 18px 26px; color: #1b1f24; box-shadow: 10px 10px 0 rgba(120, 110, 160, 0.22); }
+.handbook .hb-main > h2 { color: #d2695f; font-size: 22px; margin-bottom: 10px; }
+.handbook .hb-entry { border-bottom: 1px solid rgba(47, 68, 104, 0.12); padding: 12px 0 14px; }
+.handbook .hb-entry h3 { color: #2f4468; font-size: 17px; margin-bottom: 8px; }
+.handbook .hb-entry p { margin: 6px 0; line-height: 1.5; font-size: 14.5px; }
+.handbook .hb-views { display: flex; gap: 10px; flex-wrap: wrap; }
+.handbook figure { margin: 0; }
+.handbook figcaption { font-size: 12px; font-weight: 700; color: #5a6b80; text-align: center; margin-top: 3px; }
+.handbook .hb-svg svg { display: block; border-radius: 8px; }
+.handbook .hb-mark { display: flex; gap: 18px; align-items: flex-start; }
+.handbook .hb-sound-h { display: flex; align-items: center; gap: 10px; }
+.handbook .hb-sound-h h3 { margin: 0; }
+.handbook .hb-notation { font-size: 20px; letter-spacing: 3px; margin: 6px 0; }
+.handbook .hb-ctx { font-weight: 700; color: #4a5a7d; }
+.handbook .hb-lamp { animation: hbBlink 2.4s infinite; }
+@keyframes hbBlink { 0%, 55%, 100% { opacity: 0.25; } 8%, 30% { opacity: 1; } }
+.title-card.first-run { width: min(780px, 94vw); }
+.first-run .iala-btn { height: auto; min-height: 84px; padding: 10px 16px; }
+.first-run .iala-btn > span:not(.iala-ic) { font-size: 18px; }
+.first-run .iala-btn small { font-size: 11.5px; line-height: 1.35; }

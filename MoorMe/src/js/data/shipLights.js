@@ -240,9 +240,39 @@ export function spawnVessel(r, observer, opts = {}) {
   return { ...base, lights: v.lights(L, r, o) };
 }
 
-// Opcje odpowiedzi: poprawna + n-1 losowych innych z tego samego katalogu
-export function answerOptions(r, correctId, n = 6) {
+// Co widać z kąta rel: widoczne światła, przy czym światła w jednym pionie (ta sama pozycja na statku) tworzą
+// kolumnę w kolejności od góry (np. „czerwone nad białym” ≠ „białe nad czerwonym”)
+export function lightSignature(lights, rel) {
+  const groups = new Map();
+  for (const l of visibleLights(lights, rel)) {
+    const k = `${Math.round(l.x * 2)}:${Math.round(l.z * 2)}`;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(l);
+  }
+  return [...groups.values()].map((g) => g.sort((a, b) => b.y - a.y).map((l) => l.c).join('>')).sort().join(',');
+}
+// Wszystkie obrazy świateł, jakie dany typ może pokazać (różne kierunki poza samymi granicami sektorów, warianty latarni, strona sieci)
+const SIG_CACHE = new Map();
+export function typeSignatures(id) {
+  if (SIG_CACHE.has(id)) return SIG_CACHE.get(id);
+  const v = VESSEL_BY_ID[id], out = new Set();
+  if (v) {
+    const Lm = (v.L[0] + v.L[1]) / 2;
+    for (const rv of [0.1, 0.9]) for (const gearSide of ['port', 'starboard']) {
+      const ls = v.lights(Lm, () => rv, { gearSide });
+      for (let rel = -178; rel < 180; rel += 4) if (Math.abs(Math.abs(rel) - 112.5) > 1.5) out.add(lightSignature(ls, rel));
+    }
+  }
+  SIG_CACHE.set(id, out);
+  return out;
+}
+
+// Opcje odpowiedzi: poprawna + n-1 losowych innych z tego samego katalogu.
+// shown = { lights, rel } – to, co widzi obserwator; pomijamy typy, które mogłyby wyglądać identycznie
+// (np. pojedyncze białe: rufowe statku w drodze = kotwiczne małego statku) – wtedy pasuje tylko jedna odpowiedź.
+export function answerOptions(r, correctId, n = 6, shown = null) {
   const list = DAY_BY_ID[correctId] ? DAY_VESSELS : VESSELS;
-  const others = list.filter((v) => v.id !== correctId).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).slice(0, n - 1).map((x) => x[1]);
+  const sig = shown && !DAY_BY_ID[correctId] ? lightSignature(shown.lights, shown.rel) : null;
+  const others = list.filter((v) => v.id !== correctId && !(sig && typeSignatures(v.id).has(sig))).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).slice(0, n - 1).map((x) => x[1]);
   return [...others, correctId].map((id) => [r(), id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
 }

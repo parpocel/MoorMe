@@ -16,6 +16,8 @@ const DEFAULTS = {
   iala: 'A',
   callsign: 'SPS2024',
   mmsi: '261012345',
+  music: true,
+  musicVol: 0.5,
   captain: 'Kuba',
   crew: ['', '', ''], // puste = losowe imię z puli
   gfx: { preset: 'high', ...GFX_PRESETS.high, showFps: false }

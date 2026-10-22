@@ -1,4 +1,4 @@
-import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide } from '../src/js/data/shipLights.js';
+import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, lightSignature, typeSignatures } from '../src/js/data/shipLights.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -94,6 +94,23 @@ for (const asp of ['bow', 'starboard', 'port', 'stern']) {
 // 4) odpowiedzi: 6 różnych, w tym poprawna
 const opts = answerOptions(r, 'pilot', 6);
 check(opts.length === 6 && new Set(opts).size === 6 && opts.includes('pilot'), `6 różnych odpowiedzi z poprawną (${opts.join(', ')})`);
+
+// 4b) jedna pasująca odpowiedź: wśród opcji nie ma innego typu, który mógłby pokazać te same światła
+{
+  const r3 = rng(77);
+  let amb = 0, singleWhite = 0;
+  for (let i = 0; i < 600; i++) {
+    const obs = { x: 0, z: 0, hdg: 90, speed: 0.8 };
+    const v = spawnVessel(r3, obs, { type: VESSELS[i % VESSELS.length].id });
+    const rel = relBearing(v.x, v.z, v.hdg, obs.x, obs.z), sig = lightSignature(v.lights, rel);
+    const opts = answerOptions(r3, v.type, 6, { lights: v.lights, rel });
+    if (sig === 'white') singleWhite++;
+    if (opts.filter((id) => id !== v.type && typeSignatures(id).has(sig)).length) amb++;
+    if (!opts.includes(v.type)) amb++;
+  }
+  check(amb === 0 && singleWhite > 5, `opcje odpowiedzi jednoznaczne (pojedyncze białe światło ${singleWhite}×, niejednoznacznych: ${amb})`);
+  check(lightSignature(VESSEL_BY_ID.fishing.lights(25), 180) !== lightSignature(VESSEL_BY_ID.pilot.lights(20), 180), 'czerwone nad białym ≠ białe nad czerwonym');
+}
 
 // 5) tłumaczenia
 setLang('en');
