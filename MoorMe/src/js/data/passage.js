@@ -75,7 +75,7 @@ const DEFS = {
   adriatic: {
     id: 'adriatic',
     name: 'Adriatyk – kanały między wyspami',
-    desc: 'Skalisty brzeg i wąskie, skaliste grzbiety tworzące długie bariery z przejściami na przemian od północy i południa – trasa meandruje, a znaki kardynalne wskazują, z której strony je minąć. Tor ze znakami bocznymi zaczyna się dopiero przy wejściu do portu. Układ zmienia się przy każdym rejsie.',
+    desc: 'Skalisty brzeg i podwodne skaliste grzbiety, niewidoczne z pokładu, tworzące długie bariery z przejściami na przemian od północy i południa – trasa meandruje, a tylko znaki kardynalne wskazują, z której strony je minąć. Tor ze znakami bocznymi zaczyna się dopiero przy wejściu do portu. Układ zmienia się przy każdym rejsie.',
     style: 'med',
     difficulty: 2,
     depthMax: 70,
@@ -96,7 +96,7 @@ const DEFS = {
     route: [{ x: -1200, z: -20, name: 'Start' }],
     tail: [{ x: 6460, z: 420, label: 'podejście' }, { x: 6460, z: 240, label: 'tor wejściowy' }, { x: 6460, z: 20, label: 'przed główkami' }, { x: 6460, z: -340, name: 'Meta – port' }],
     marks: [],
-    meander: { kind: 'island' }
+    meander: { kind: 'shoal', wall: 'rocky' }
   }
 };
 
@@ -174,7 +174,7 @@ function applyMeander(d, r) {
   // brzeg południowy zamykający basen
   const xW = maxX + 80;
   const wall = R4(m.x0 - 1400, zS, xW, zS + 900);
-  if (m.kind === 'island') isl.push({ name: 'Brzeg południowy', poly: wall, h: 40 });
+  if (m.wall === 'rocky') isl.push({ name: 'Brzeg południowy', poly: wall, h: 40 });
   else isl.push({ name: 'Mierzeja', poly: wall, h: 7 });
   // trasa: punkty kontrolne w osiach kanałów i przejściach, wygładzone splajnem
   d.start.z = d.route[0].z = Math.round(zg(0)); // start na poziomie pierwszego przejścia

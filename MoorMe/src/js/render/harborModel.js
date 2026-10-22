@@ -1013,7 +1013,7 @@ export class Water {
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
     const size = 520, seg = this.follow ? 110 : 150; // na otwartym morzu większe trójkąty (styl low-poly)
-    this.waveGain = this.follow ? 3.0 : 1.9;
+    this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;
     this.drift = { x: 0, y: 0 };
@@ -1184,6 +1184,6 @@ export class Water {
   }
   heightAt(x, z, windKn, windDir) {
     const a = 0.03 + Math.min(windKn, 35) * 0.0032;
-    return this.wave(x, z, this.t, a, windDir) * (this.follow ? 3.4 : 2.2); // kołysanie jachtu nieco silniejsze niż rysowana fala
+    return this.wave(x, z, this.t, a, windDir) * (this.follow ? 2.1 : 2.2); // kołysanie jachtu nieco silniejsze niż rysowana fala
   }
 }

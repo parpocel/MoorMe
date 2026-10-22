@@ -736,6 +736,11 @@ export class View3D {
     }
     const fpv = cam.mode === 'fpv';
     this.helmsman.visible = !fpv;
+    if (this.world.isPassage) {
+      // w widoku kapitana załoga w kokpicie zasłaniałaby widok – chowamy ją
+      this.mate1.visible = this.mate2.visible = !fpv;
+      this.deckhand.visible = !fpv;
+    }
     if (fpv) {
       // oczy kapitana przy kole sterowym; kamera kołysze się razem z jachtem
       const heel = this.boat.userData.heel;
