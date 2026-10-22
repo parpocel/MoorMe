@@ -14,6 +14,8 @@ const DEFAULTS = {
   homePort: 'Bregge',
   flag: 'DE',
   iala: 'A',
+  callsign: 'SPS2024',
+  mmsi: '261012345',
   captain: 'Kuba',
   crew: ['', '', ''], // puste = losowe imię z puli
   gfx: { preset: 'high', ...GFX_PRESETS.high, showFps: false }

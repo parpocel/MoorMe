@@ -4,6 +4,7 @@ import { CATEGORIES, makeTask, checkAnswer, fmtAnswer, deg3 } from '../data/navT
 import { rng } from '../math.js';
 import { t as tr } from '../i18n.js';
 import { PlotBoard } from './plotBoard.js';
+import { SaloonView } from '../render/saloon.js';
 
 const D2R = Math.PI / 180;
 
@@ -51,19 +52,23 @@ function drawDiagram(cv, dg) {
   }
 }
 
-export function showNavTasks(app, { onExit, translate = (s) => s }) {
+export function showNavTasks(app, { onExit }) {
   const r = rng(1 + Math.floor(Math.random() * 1e9));
   const state = { cat: null, task: null, checked: false, showSol: false, stats: { n: 0, ok: 0 } };
   app.innerHTML = '';
-  const root = h('div.screen.navtasks');
+  // gracz siedzi przy stole w mesie: widok 3D z góry na stół, zadanie i mapka leżą na blacie
+  const viewEl = h('div.nt-view');
+  const ui = h('div.nt-ui');
+  const root = h('div.screen.navtasks.desk', {}, viewEl, ui);
   app.appendChild(root);
-  const scenery = typeof window !== 'undefined' && window.__sceneryEl ? window.__sceneryEl() : null;
+  let view = null;
+  try { view = new SaloonView(viewEl, { mode: 'nav' }); } catch (e) { view = null; } // bez WebGL – samo tło
+  const exit = () => { if (view) view.destroy(); onExit(); };
 
   const newTask = () => { state.task = makeTask(r, state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
 
   function render() {
-    root.innerHTML = '';
-    if (scenery) root.appendChild(scenery);
+    ui.innerHTML = '';
     const t = state.task;
     const cats = h('div.nt-cats', {},
       h('button.btn.sm', { class: state.cat === null ? 'on' : '', onclick: () => { state.cat = null; newTask(); } }, 'Wszystkie'),
@@ -81,26 +86,25 @@ export function showNavTasks(app, { onExit, translate = (s) => s }) {
         state.checked ? h('span.nt-res', {}, ok ? '✓' : `✗ ${fmtAnswer(a)}`) : null));
     }
     const allOk = state.checked && t.answers.every((a) => res[a.key]);
-    const card = h('div.panel.nt-card', {},
+    // karta z zadaniem (papier na stole)
+    const card = h('div.nt-card.paper', {},
       h('div.nt-head', {}, h('span.chip', {}, CATEGORIES[t.cat]), h('span.nt-score', {}, h('span.muted', {}, 'Poprawne:'), ' ', h('b', {}, `${state.stats.ok}/${state.stats.n}`))),
       h('p.nt-text', {}, t.text),
       t.table ? h('table.spec-table.nt-table', {}, h('tr', {}, ...t.table.head.map((x) => h('th', {}, x))), ...t.table.rows.map((row) => h('tr', {}, ...row.map((x) => h('td', {}, x))))) : null,
-      state.board ? h('div.nt-plot', {}, h('div.small', { style: { fontWeight: 800, marginBottom: '4px' } }, 'Mapka do kreślenia'), state.board.el) : null,
       fields,
       state.checked ? h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad', style: { margin: '6px 0' } }, allOk ? '✓ Dobrze!' : '✗ Źle') : null,
       h('div.nt-btns', {},
         state.checked ? null : h('button.btn.primary', { onclick: () => { state.checked = true; state.stats.n++; if (t.answers.every((a) => checkAnswer(a, state.inputs[a.key]))) state.stats.ok++; render(); } }, 'Sprawdź'),
         h('button.btn', { onclick: () => { state.showSol = !state.showSol; render(); } }, state.showSol ? 'Ukryj rozwiązanie' : 'Pokaż rozwiązanie'),
         h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →')),
-      state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram && !state.board ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null);
+      state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram && !state.board ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null,
+      h('p.small.muted.nt-conv', {}, 'Konwencja: poprawki na E i dryf w prawo są dodatnie (+), na W i w lewo – ujemne (−). KK – kurs kompasowy, KM – magnetyczny, KR – rzeczywisty, KDw – drogi nad wodą, KDd – drogi nad dnem, δ – dewiacja, d – deklinacja, β – dryf. Kąty wpisuj w stopniach (np. 047), ułamki z przecinkiem.'));
+    // arkusz mapy do kreślenia obok karty
+    const chart = state.board ? h('div.nt-plot.chart-sheet', {}, h('div.nt-sheet-h', {}, 'Mapka do kreślenia'), state.board.el) : null;
     if (state.board) state.board.setSolution(state.showSol);
-    root.append(
-      h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'zadania nawigacyjne')),
-      h('div.screen-body', {}, h('div.nt-wrap', {},
-        h('p.small.muted', {}, 'Konwencja: poprawki na E i dryf w prawo są dodatnie (+), na W i w lewo – ujemne (−). KK – kurs kompasowy, KM – magnetyczny, KR – rzeczywisty, KDw – drogi nad wodą, KDd – drogi nad dnem, δ – dewiacja, d – deklinacja, β – dryf. Kąty wpisuj w stopniach (np. 047), ułamki z przecinkiem.'),
-        cats, card)),
-      h('div.screen-footer', {}, h('button.btn', { onclick: () => onExit() }, '← Tryby')));
-    void translate;
+    ui.append(
+      h('div.nt-bar', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'zadania nawigacyjne'), cats, h('button.btn.sm.nt-exit', { onclick: exit }, '← Tryby')),
+      h('div.nt-desk', { class: chart ? 'two' : '' }, card, chart));
   }
   newTask();
 }

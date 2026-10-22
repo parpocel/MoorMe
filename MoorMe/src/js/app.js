@@ -14,6 +14,7 @@ import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
 import { SoundsScreen } from './ui/soundsUI.js';
 import { showNavTasks } from './ui/navTasksUI.js';
+import { showSafety } from './ui/safetyUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
 import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, GFX_PRESETS } from './settings.js';
@@ -30,6 +31,7 @@ function sceneryEl() {
   return d.firstChild;
 }
 const icon = {
+  buoy: '<svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="#e6dccf" stroke-width="5"/><circle cx="12" cy="12" r="8.5" fill="none" stroke="#d2695f" stroke-width="5" stroke-dasharray="6.7 6.7"/></svg>',
   play: '<svg width="24" height="24" viewBox="0 0 24 24"><path d="M8 5l12 7-12 7z" fill="#fff7f1"/></svg>',
   chev: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="#fff7f1" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   horn: '<svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 10h3l6-4v12l-6-4H4z" fill="#2f4468"/><path d="M16 8.5c1.6 1.6 1.6 5.4 0 7M18.5 6c3 3 3 9 0 12" fill="none" stroke="#d2695f" stroke-width="1.8" stroke-linecap="round"/></svg>',
@@ -139,7 +141,8 @@ function showModeSelect() {
         card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showPassageSetup()),
         card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsSetup()),
         card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => startSounds()),
-        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Przeliczanie kursów i namiarów z dewiacją, deklinacją, dryfem i prądem, kurs z poprawką na prąd, pozycja z dwóch namiarów i zliczenie drogi – z rozwiązaniem krok po kroku.', () => showNavTasks(app, { onExit: () => showModeSelect() }))),
+        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Przeliczanie kursów i namiarów z dewiacją, deklinacją, dryfem i prądem, kurs z poprawką na prąd, pozycja z dwóch namiarów i zliczenie drogi – z rozwiązaniem krok po kroku.', () => showNavTasks(app, { onExit: () => showModeSelect() })),
+        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => showSafety(app, { onExit: () => showModeSelect() }))),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia'))))));
 }
 
@@ -300,6 +303,8 @@ function showSettings(back = () => showModeSelect()) {
     row('Nazwa jachtu', text(st.boatName, (v) => saveSettings({ boatName: v.toUpperCase() }), { max: 18 })),
     row('Port macierzysty', text(st.homePort, (v) => saveSettings({ homePort: v }), { max: 18 })),
     row('Bandera', flagPrev, flagSel),
+    row('Znak wywoławczy', text(st.callsign, (v) => saveSettings({ callsign: v.toUpperCase() }), { max: 8 })),
+    row('MMSI', text(st.mmsi, (v) => saveSettings({ mmsi: v.replace(/\D/g, '').slice(0, 9) }), { max: 9 })),
     row('Kapitan', text(st.captain, (v) => saveSettings({ captain: v }), { max: 14 })),
     ...[0, 1, 2].map((k) => row(`Załoga ${k + 1}`, text(st.crew[k], (v) => { const c = [...getSettings().crew]; c[k] = v; saveSettings({ crew: c }); }, { max: 14, ph: t('losowo') }))),
     h('p.small.muted', {}, 'Puste pole – imię zostanie wylosowane. Zmiany obowiązują od następnej symulacji.'));
