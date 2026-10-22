@@ -131,22 +131,37 @@ function smoothPath(pts, step) {
   return out;
 }
 
+// Upraszcza łamaną: zostają start, meta, punkty z listy keep i te, w których kurs zmienia się o więcej niż tolDeg
+export function simplifyRoute(pts, tolDeg = 12, keep = []) {
+  const out = [pts[0]];
+  const ang = (a, b) => Math.atan2(b.x - a.x, -(b.z - a.z));
+  for (let i = 1; i < pts.length - 1; i++) {
+    const last = out[out.length - 1], p = pts[i], nx = pts[i + 1];
+    let d = Math.abs(ang(last, p) - ang(p, nx)) * 180 / Math.PI;
+    if (d > 180) d = 360 - d;
+    if (keep.includes(p) || d > tolDeg) out.push(p);
+  }
+  out.push(pts[pts.length - 1]);
+  return out;
+}
+
 function applyMeander(d, r) {
   const m = d.meander;
   // parametry losowane przy każdym rejsie
-  const n = 3 + Math.floor(r() * 2), dx = 190 + r() * (n === 4 ? 30 : 70), H = 370 + r() * 80, par = r() < 0.5 ? 0 : 1;
+  // szeroki akwen: przejścia ok. 300 m, kanały między barierami 300–360 m – drogę wyznaczają tylko znaki
+  const n = 3, dx = 300 + r() * 60, H = 720 + r() * 100, par = r() < 0.5 ? 0 : 1;
   const slope0 = 0.55 + r() * 0.35;
   m.x0 = Math.round(-20 + r() * 40);
   let zN = -1e9;
   for (let x = m.x0 - 250; x <= m.x0 + n * dx + 250; x += 25) zN = Math.max(zN, coastZ(d.coasts[0].pts, x));
   const zS = zN + H, zref = zN + H / 2;
-  const gN = zN + 95, gS = zS - 95;
+  const gN = zN + 160, gS = zS - 160;
   const zg = (k) => ((k + par) % 2 === 0 ? gN : gS);
   // każda bariera ma własny odstęp, pochylenie, wygięcie i długość przejścia
   const bars = [];
   for (let k = 0; k < n; k++) {
     const north = (k + par) % 2 === 0;
-    const top = (north ? zN + 190 + r() * 20 : zN - 200), bot = (north ? zS + 160 : zS - 190 - r() * 20);
+    const top = (north ? zN + 320 + r() * 40 : zN - 200), bot = (north ? zS + 160 : zS - 320 - r() * 40);
     const slope = slope0 + (r() - 0.5) * 0.25, bow = (r() - 0.5) * 0.22, x0k = m.x0 + k * dx + (r() - 0.5) * 50;
     const X = (z) => {
       const t = Math.max(0, Math.min(1, (z - top) / (bot - top)));
@@ -185,9 +200,9 @@ function applyMeander(d, r) {
   }
   // brzeg południowy zamykający basen
   const xW = maxX + 80;
-  const wall = R4(m.x0 - 1400, zS, xW, zS + 900);
-  if (m.wall === 'rocky') isl.push({ name: 'Brzeg południowy', poly: wall, h: 40 });
-  else isl.push({ name: 'Mierzeja', poly: wall, h: 7 });
+  // południowa granica akwenu – podwodna (niewidoczna z pokładu), żeby kształt lądu nie zdradzał trasy
+  const wall = R4(m.x0 - 1400, zS, xW, zS + 260);
+  sh.push({ name: m.wall === 'rocky' ? 'Podwodne skały' : 'Mielizna południowa', poly: wall, depth: m.wall === 'rocky' ? 0.8 : 0.6 });
   // trasa: punkty kontrolne w osiach kanałów i przejściach, wygładzone splajnem
   d.start.z = d.route[0].z = Math.round(zg(0)); // start na poziomie pierwszego przejścia
   const ctrl = [d.route[0], { x: Math.round(cx(-1, zg(0))), z: Math.round(zg(0)) }];
@@ -225,9 +240,11 @@ function applyMeander(d, r) {
     if (kind.wreck) d.wrecks.push({ name: kind.name, x, z, rot: r() * 3 });
     d.marks.push({ type: kind.type, x, z, name: kind.name });
   }
-  route.forEach((p, i) => { if (!p.name) p.name = `WP${i}${p.label ? ' – ' + p.label : ''}`; });
-  d.route = route;
-  d.gates = { from: route.length - 3, to: route.length - 1, step: 180, half: 70 };
+  // waypointy tylko na zakrętach: punkt pomijamy, gdy odcinek od ostatniego zachowanego biegnie dalej prosto
+  const simple = simplifyRoute(route, 12, [d.tail[0]]);
+  simple.forEach((p, i) => { p.name = p.name && !/^WP\d/.test(p.name) ? p.name : `WP${i}${p.label ? ' – ' + p.label : ''}`; });
+  d.route = simple;
+  d.gates = { from: simple.indexOf(d.tail[0]), to: simple.length - 1, step: 180, half: 80 };
   d.meander = { ...m, n, dx, H, par };
 }
 

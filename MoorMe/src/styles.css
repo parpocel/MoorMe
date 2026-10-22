@@ -461,3 +461,5 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .first-run .iala-btn { height: auto; min-height: 84px; padding: 10px 16px; }
 .first-run .iala-btn > span:not(.iala-ic) { font-size: 18px; }
 .first-run .iala-btn small { font-size: 11.5px; line-height: 1.35; }
+.safety .vhf-table tr.guard td:first-child b { color: #c2410c; }
+.safety .vhf-table tr.guard td:last-child { color: #7a3b12; }

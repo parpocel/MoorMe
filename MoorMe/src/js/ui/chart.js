@@ -107,15 +107,15 @@ export function drawChart(ctx, W, Hh, opts) {
   // trasa, strefy, znaki i waypointy – tylko w trybie z pełną pomocą
   const R = w.route;
   if (!w.blind) {
-  ctx.setLineDash([9, 6]);
-  ctx.strokeStyle = 'rgba(210,40,170,0.9)'; ctx.lineWidth = 2;
+  ctx.setLineDash([6, 8]);
+  ctx.strokeStyle = 'rgba(210,40,170,0.35)'; ctx.lineWidth = 1.2;
   ctx.beginPath();
   R.forEach((p, i) => (i ? ctx.lineTo(X(p.x, p.z), Y(p.x, p.z)) : ctx.moveTo(X(p.x, p.z), Y(p.x, p.z))));
   ctx.stroke();
   ctx.setLineDash([]);
   // pozostała część odcinka do następnego waypointu – grubiej
   const nx = w.next, nxp = R[nx];
-  ctx.strokeStyle = '#d223aa'; ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(210,35,170,0.55)'; ctx.lineWidth = 1.8;
   ctx.beginPath(); ctx.moveTo(X(R[nx - 1].x, R[nx - 1].z), Y(R[nx - 1].x, R[nx - 1].z)); ctx.lineTo(X(nxp.x, nxp.z), Y(nxp.x, nxp.z)); ctx.stroke();
 
   // strefy zagrożeń
@@ -146,11 +146,12 @@ export function drawChart(ctx, W, Hh, opts) {
   R.forEach((p, i) => {
     if (i === 0) return;
     const x = X(p.x, p.z), y = Y(p.x, p.z);
-    ctx.beginPath(); ctx.arc(x, y, i === nx ? 9 : 6, 0, Math.PI * 2);
+    ctx.globalAlpha = i === nx ? 0.8 : 0.4;
+    ctx.beginPath(); ctx.arc(x, y, i === nx ? 6 : 4, 0, Math.PI * 2);
     ctx.fillStyle = i < nx ? 'rgba(120,120,120,0.6)' : i === nx ? '#d223aa' : 'rgba(255,255,255,0.9)';
-    ctx.fill(); ctx.strokeStyle = '#d223aa'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.fillStyle = i === nx ? '#fff' : '#a0187f'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center';
-    ctx.fillText(i === R.length - 1 ? 'M' : String(i), x, y + 3);
+    ctx.fill(); ctx.strokeStyle = '#d223aa'; ctx.lineWidth = 1.2; ctx.stroke();
+    if (i === nx || i === R.length - 1) { ctx.fillStyle = i === nx ? '#fff' : '#a0187f'; ctx.font = 'bold 8px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(i === R.length - 1 ? 'M' : String(i), x, y + 3); }
+    ctx.globalAlpha = 1;
   });
 
   }

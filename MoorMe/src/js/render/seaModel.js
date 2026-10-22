@@ -482,19 +482,19 @@ export function buildSea(H, scene) {
   for (let i = 0; i < R.length - 1; i++) lp.push(R[i].x, 0.7, R[i].z, R[i + 1].x, 0.7, R[i + 1].z);
   const lg = new THREE.BufferGeometry();
   lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
-  const routeLine = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.55 }));
+  const routeLine = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.22 }));
   routeLine.frustumCulled = false;
   routeGroup.add(routeLine);
   const wpRings = R.map((p, i) => {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(i === R.length - 1 ? 40 : 22, 0.8, 6, 36), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.8 }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(i === R.length - 1 ? 30 : 14, 0.45, 6, 36), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.35 }));
     ring.rotation.x = Math.PI / 2;
     ring.position.set(p.x, 0.8, p.z);
     ring.visible = i > 0;
     routeGroup.add(ring);
     return ring;
   });
-  const beam = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 140, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false, fog: false }));
-  beam.position.y = 70;
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 70, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false, fog: false }));
+  beam.position.y = 35;
   routeGroup.add(beam);
   dyn.add(routeGroup);
 
@@ -503,8 +503,8 @@ export function buildSea(H, scene) {
     group, dyn, bollardMeshes: [], lamps: [], lighthouses, marks, routeGroup,
     setNext(i) {
       const p = R[Math.min(i, R.length - 1)];
-      beam.position.set(p.x, 70, p.z);
-      wpRings.forEach((ring, k) => { ring.visible = k >= i; ring.material.opacity = k === i ? 1 : 0.45; });
+      beam.position.set(p.x, 35, p.z);
+      wpRings.forEach((ring, k) => { ring.visible = k >= i; ring.material.opacity = k === i ? 0.45 : 0.15; });
     },
     // kołysanie znaków na fali i migotanie świateł (lightsOn: 0..1 – noc)
     update(t, view, windKn, windDir, lightsOn) {

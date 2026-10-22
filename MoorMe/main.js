@@ -1,5 +1,5 @@
 // MoorMe – proces główny Electron
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, ipcMain } = require('electron');
 const path = require('path');
 
 // Awaryjny renderer programowy WebGL (komputery bez sterowników GPU, maszyny wirtualne)
@@ -16,13 +16,17 @@ function createWindow() {
     title: 'MoorMe – symulator cumowania',
     icon: path.join(__dirname, 'build', 'icon.png'),
     autoHideMenuBar: true,
+    fullscreen: !process.env.MOORME_SMOKE_OUT, // domyślnie pełny ekran (F11 przełącza)
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
     }
   });
   Menu.setApplicationMenu(null);
+  ipcMain.handle('fullscreen:set', (_e, on) => { win.setFullScreen(on); return on; });
+  ipcMain.handle('fullscreen:get', () => win.isFullScreen());
   win.loadFile(path.join(__dirname, 'src', 'index.html'), process.env.MOORME_SMOKE_OUT ? { query: { smoke: '1' } } : undefined);
 
   // Test dymny (CI): MOORME_SMOKE_OUT=plik.png – zrzut ekranu po starcie i zamknięcie

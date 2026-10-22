@@ -18,12 +18,13 @@ import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
-import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, GFX_PRESETS } from './settings.js';
+import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, refreshFullscreen, GFX_PRESETS } from './settings.js';
 import { FLAGS, FLAG_CODES, flagCanvas } from './render/flags.js';
 import { setIalaRegion } from './data/passage.js';
 import { menuMusic } from './menuMusic.js';
 
 setIalaRegion(getSettings().iala);
+refreshFullscreen();
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 window.__sceneryEl = () => sceneryEl();
@@ -401,10 +402,13 @@ function showSettings(back = () => showModeSelect()) {
     row('Muzyka w menu', segRow([['on', 'Wł.'], ['off', 'Wył.']], st.music === false ? 'off' : 'on', (v) => { saveSettings({ music: v === 'on' }); menuMusic.refresh(); rerender(); })),
     row('Głośność muzyki', h('div.set-range', {}, h('input', { type: 'range', min: 0, max: 1, step: 0.05, value: st.musicVol ?? 0.5, oninput: (e) => { musOut.textContent = `${Math.round(e.target.value * 100)}%`; saveSettings({ musicVol: +e.target.value }); menuMusic.refresh(); } }), musOut)));
 
-  // ekran
+  // ekran (stan pełnego ekranu odczytany z okna – mógł się zmienić klawiszem F11)
+  const fsLabel = (on) => t(on ? '⛶ Wyłącz pełny ekran' : '⛶ Włącz pełny ekran');
+  const fsBtn = h('button.btn', { onclick: async () => { await toggleFullscreen(); setTimeout(async () => { fsBtn.textContent = fsLabel(await refreshFullscreen()); }, 400); } }, fsLabel(isFullscreen()));
+  refreshFullscreen().then((on) => { fsBtn.textContent = fsLabel(on); });
   const screen = h('div.help-card.set-card', {},
     h('h2', {}, 'Ekran'),
-    row('Pełny ekran', h('button.btn', { onclick: () => { toggleFullscreen(); setTimeout(rerender, 300); } }, isFullscreen() ? '⛶ Wyłącz pełny ekran' : '⛶ Włącz pełny ekran'), h('span.small.muted', { style: { marginLeft: '10px' } }, 'albo klawisz F11')));
+    row('Pełny ekran', fsBtn, h('span.small.muted', { style: { marginLeft: '10px' } }, 'albo klawisz F11')));
 
   app.appendChild(h('div.screen.settings', {}, sceneryEl(),
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'Ustawienia')),

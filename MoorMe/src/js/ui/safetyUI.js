@@ -97,7 +97,7 @@ export function showSafety(app, { onExit }) {
           h('button.vhf-distress', { disabled: S.cover ? null : true, onclick: () => { S.dsc = true; render(); } }, 'DISTRESS')),
         h('div.small.muted', {}, 'Alarm DSC: podnieś osłonę i naciśnij DISTRESS (w prawdziwym radiu przytrzymaj 5 s). Ćwiczenie – nic nie jest wysyłane.'));
       const table = h('table.spec-table.vhf-table', {}, h('tr', {}, h('th', {}, 'Kanał'), h('th', {}, 'MHz'), h('th', {}, 'Przeznaczenie')),
-        ...list.map((c) => h('tr', { class: c.ch === S.ch ? 'on' : '', onclick: () => setCh(c.ch) }, h('td', {}, h('b', {}, String(c.ch).padStart(2, '0'))), h('td', {}, c.f), h('td', {}, c.use))));
+        ...list.map((c) => h('tr', { class: (c.ch === S.ch ? 'on ' : '') + (c.guard ? 'guard' : ''), onclick: () => setCh(c.ch) }, h('td', {}, h('b', {}, String(c.ch).padStart(2, '0'))), h('td', {}, c.f), h('td', {}, c.use))));
       const test = h('div.vhf-test');
       if (!S.task) {
         test.append(h('p', {}, 'Test: dostajesz sytuację na morzu – ustaw właściwy kanał (dla MAYDAY także wyślij alarm DSC) i ułóż korespondencję z gotowych zdań.'),

@@ -35,6 +35,7 @@ export function deviceInfo(id) {
       short: L('Podstawowe radio jachtu: łączność głosowa na kanałach morskich i cyfrowy alarm DSC na kanale 70. Kliknij, aby otworzyć kanały i test.', 'The yacht’s main radio: voice on marine channels and a digital DSC alert on channel 70. Click to open the channels and the test.'),
       sections: [
         [L('Częstotliwości', 'Frequencies'), L('Pasmo morskie VHF 156–162 MHz. Kanał 16 (156,800 MHz) – wzywanie pomocy, pilność, bezpieczeństwo i wywołania; kanał 70 (156,525 MHz) – tylko DSC (bez głosu). Moc 25 W lub 1 W.', 'Marine VHF band 156–162 MHz. Channel 16 (156.800 MHz) – distress, urgency, safety and calling; channel 70 (156.525 MHz) – DSC only (no voice). Power 25 W or 1 W.')],
+        [L('Kanały osłonowe', 'Guard channels'), L('Kanał 16 chronią sąsiednie częstotliwości: 75 (156,775) i 76 (156,825 MHz) – tylko łączność nawigacyjna z mocą maks. 1 W – oraz 15 i 17 – łączność na pokładzie, też maks. 1 W. Dzięki temu silny nadajnik obok nie zagłusza wezwań o pomoc na 16.', 'Channel 16 is protected by the adjacent frequencies: 75 (156.775) and 76 (156.825 MHz) – navigation-related communications only, max 1 W – and 15 and 17 – on-board communications, also max 1 W. This keeps a strong transmitter next door from blocking distress calls on 16.')],
         [L('Gdzie odbierany', 'Where it is received'), L('Stacje brzegowe i MRCC oraz statki w zasięgu – praktycznie linia horyzontu radiowego, dla jachtu ok. 20–30 Mm (obszar A1).', 'Coast stations and MRCCs, plus vessels within range – roughly the radio horizon, about 20–30 NM for a yacht (sea area A1).')],
         [L('Alarm DSC', 'DSC alert'), L('Podnieś osłonę, przytrzymaj DISTRESS ok. 5 s (najpierw, jeśli zdążysz, wybierz rodzaj zagrożenia). Radio wysyła MMSI i pozycję z GPS, powtarza alarm do potwierdzenia. Potem nadaj MAYDAY głosem na kanale 16.', 'Lift the cover and hold DISTRESS for about 5 s (if there is time, select the nature of distress first). The radio sends the MMSI and the GPS position and repeats the alert until acknowledged. Then send the MAYDAY by voice on channel 16.')],
         [L('Wymagania', 'Requirements'), L('Świadectwo operatora (SRC), pozwolenie radiowe dla jachtu, numer MMSI i znak wywoławczy; podłączony GPS.', 'Operator’s certificate (SRC), ship station licence, MMSI and call sign; a connected GPS.')]
@@ -46,7 +47,7 @@ export function deviceInfo(id) {
       sections: [
         [L('Kiedy', 'When'), L('Opuszczaj jacht dopiero wtedy, gdy naprawdę tonie lub płonie – „wchodzi się do tratwy w górę”. Wcześniej nadaj MAYDAY i uruchom EPIRB.', 'Leave the yacht only when it is really sinking or burning – “step up into the liferaft”. Send a MAYDAY and activate the EPIRB first.')],
         [L('Jak', 'How'), L('Przywiąż linkę (fangę) do mocnego punktu, wyrzuć tratwę po zawietrznej, szarpnij fangę – butla CO₂ napełni tratwę. Wsiadaj prosto z pokładu, najsilniejsza osoba pierwsza, potem pomoże reszcie. Odetnij fangę nożem z tratwy, wypuść dryfkotwę.', 'Tie the painter to a strong point, launch the raft to leeward, pull the painter – the CO₂ cylinder inflates it. Board directly from the deck, strongest person first to help the others. Cut the painter with the raft knife and stream the drogue.')],
-        [L('Wyposażenie', 'Contents'), L('Dryfkotwa, wiosełka, czerpak, nóż, zestaw naprawczy, pirotechnika, woda, apteczka, latarka. Zabierz też: EPIRB, SART, VHF ręczne, wodę, leki.', 'Drogue, paddles, bailer, knife, repair kit, flares, water, first-aid kit, torch. Also take: EPIRB, SART, handheld VHF, water, medication.')],
+        [L('Wyposażenie', 'Contents'), L('Dryfkotwa, wiosełka, czerpak, nóż, zestaw naprawczy, pirotechnika, woda, apteczka, latarka. Zabierz też: EPIRB, SART, VHF ręczne, dziennik pokładowy (ostatnia pozycja, kurs, wydarzenia – potrzebne ratownikom i do raportu), dokumenty jachtu i załogi, wodę, ciepłe ubrania, leki.', 'Drogue, paddles, bailer, knife, repair kit, flares, water, first-aid kit, torch. Also take: EPIRB, SART, handheld VHF, the logbook (last position, course, events – needed by rescuers and for the report), the yacht’s and crew’s documents, water, warm clothing, medication.')],
         [L('Obsługa', 'Maintenance'), L('Przegląd w serwisie co 1–3 lata (wg producenta), zwalniak hydrostatyczny (np. Hammar) – wymiana co 2 lata.', 'Service every 1–3 years (per the manufacturer), hydrostatic release (e.g. Hammar) – replace every 2 years.')]
       ]
     },
@@ -98,12 +99,14 @@ export function channels() {
     { ch: 14, f: '156.700', use: L('Operacje portowe, VTS – kanał podany w locji', 'Port operations, VTS – channel given in the pilot book') },
     { ch: 67, f: '156.375', use: L('Wielka Brytania: kanał roboczy straży wybrzeża dla małych jednostek', 'UK: Coastguard small craft safety working channel') },
     { ch: 80, f: '157.025', use: L('Wielka Brytania: mariny', 'UK: marinas') },
-    { ch: 15, f: '156.750', use: L('Łączność na pokładzie, moc 1 W', 'On-board communications, 1 W') },
-    { ch: 17, f: '156.850', use: L('Łączność na pokładzie, moc 1 W', 'On-board communications, 1 W') },
+    { ch: 75, f: '156.775', use: L('Kanał osłonowy kanału 16 – tylko łączność dotycząca nawigacji, moc maks. 1 W (także AIS dalekiego zasięgu)', 'Guard channel for channel 16 – navigation-related communications only, max 1 W (also long-range AIS)'), guard: true },
+    { ch: 76, f: '156.825', use: L('Kanał osłonowy kanału 16 – tylko łączność dotycząca nawigacji, moc maks. 1 W (także AIS dalekiego zasięgu)', 'Guard channel for channel 16 – navigation-related communications only, max 1 W (also long-range AIS)'), guard: true },
+    { ch: 15, f: '156.750', use: L('Sąsiad kanału 16: łączność na pokładzie, moc maks. 1 W', 'Next to channel 16: on-board communications, max 1 W'), guard: true },
+    { ch: 17, f: '156.850', use: L('Sąsiad kanału 16: łączność na pokładzie, moc maks. 1 W', 'Next to channel 16: on-board communications, max 1 W'), guard: true },
     { ch: 24, f: '157.200 / 161.800', use: L('Stacje brzegowe – korespondencja publiczna (przykład kanału dupleksowego, także 23–28, 84–87)', 'Coast stations – public correspondence (example duplex channel, also 23–28, 84–87)') }
   ];
 }
-export const VALID_CHANNELS = [6, 8, 9, 10, 12, 13, 14, 15, 16, 17, 24, 67, 70, 72, 77, 80];
+export const VALID_CHANNELS = [6, 8, 9, 10, 12, 13, 14, 15, 16, 17, 24, 67, 70, 72, 75, 76, 77, 80];
 
 // ---------- Procedury (karty na stole) ----------
 export function procedureCard(kind) {
@@ -251,6 +254,12 @@ export function makeRadioTask(r, ship, only) {
       return {
         kind: 'channel', text: L(`Locja podaje, że Kapitanat Portu i VTS pracują na kanale ${ch}. Ustaw radio, aby zgłosić wejście do portu.`, `The pilot book says the harbour master and VTS work on channel ${ch}. Set the radio to report entering the harbour.`),
         channels: [ch], dsc: false, lines: null, explain: L(`Operacje portowe – kanał z locji (${ch}).`, `Port operations – the channel from the pilot book (${ch}).`)
+      };
+    },
+    onboard() {
+      return {
+        kind: 'channel', text: L('Podczas cumowania chcesz rozmawiać przez radiotelefony ręczne z załogą na dziobie (łączność na pokładzie, mała moc).', 'While mooring you want to talk on handheld radios with the crew on the foredeck (on-board communications, low power).'),
+        channels: [15, 17], dsc: false, lines: null, explain: L('Łączność na pokładzie: kanały 15 i 17, moc 1 W – sąsiadują z kanałem 16, więc tylko mała moc. Kanały 75 i 76 – tylko łączność nawigacyjna, też 1 W.', 'On-board communications: channels 15 and 17 at 1 W – they are next to channel 16, so low power only. Channels 75 and 76 – navigation-related only, also 1 W.')
       };
     },
     intership() {

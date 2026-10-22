@@ -147,6 +147,12 @@ function furniture(parent, B) {
   for (let k = 0; k < 8; k++) box(0.016, 0.03, 0.02, std(k % 3 ? 0xd7d7d7 : 0xd84a3a), -1.9 + k * 0.034, 1.33, 1.395, parent);
   const baro = cyl(0.07, 0.07, 0.03, std(0xc8a24a, { metal: 0.8, rough: 0.3 }), -1.2, 1.36, 1.405, parent, 24); baro.rotation.x = Math.PI / 2;
   const face = new THREE.Mesh(new THREE.CircleGeometry(0.058, 24), std(0xf7f3e8)); face.position.set(-1.2, 1.36, 1.388); face.rotation.y = Math.PI; parent.add(face);
+  // listwy LED pod szafkami i lampka nad stołem nawigacyjnym
+  for (const sd of [-1, 1]) box(2.1, 0.012, 0.02, std(0xffe2b0, { emissive: 0xffc98a, ei: 1.6 }), 0.2, 1.255, sd * (B(0.2) - 0.56), parent);
+  const shade = cyl(0.03, 0.06, 0.07, std(0x2a2d33, { metal: 0.6, rough: 0.4 }), -1.35, 1.62, 1.05, parent, 16);
+  cyl(0.004, 0.004, 0.3, std(0x2a2d33), -1.3, 1.78, 1.12, parent, 6).rotation.x = 0.4;
+  cyl(0.025, 0.025, 0.005, std(0xfff2d6, { emissive: 0xffd9a0, ei: 2 }), -1.35, 1.584, 1.05, parent, 16);
+  void shade;
   // lampki sufitowe
   for (const [x, z] of [[-0.9, -0.5], [-0.9, 0.5], [0.5, -0.55], [0.5, 0.55], [-1.5, 1.0]]) cyl(0.04, 0.04, 0.015, std(0xfff6dc, { emissive: 0xfff0c8, ei: 1.4 }), x, 1.985, z, parent, 16);
   return T;
@@ -157,22 +163,37 @@ function label(w, h, txt, bg, fg, sub) {
   return std(0xffffff, { map: textTex(256, Math.round((256 * h) / w), (g, W, H) => { g.fillStyle = bg; g.fillRect(0, 0, W, H); g.fillStyle = fg; g.textAlign = 'center'; g.font = `bold ${Math.round(H * 0.42)}px Arial`; g.fillText(txt, W / 2, H * (sub ? 0.5 : 0.62)); if (sub) { g.font = `${Math.round(H * 0.24)}px Arial`; g.fillText(sub, W / 2, H * 0.86); } }) });
 }
 
+// radiopława EPIRB (kategoria II, ręczna): zaokrąglony żółty korpus, czarna nasadka z antenką i lampą błyskową, panel z przyciskiem, linka
+function roundedRect(w, d, r) {
+  const sh = new THREE.Shape(), x = -w / 2, y = -d / 2;
+  sh.moveTo(x + r, y); sh.lineTo(x + w - r, y); sh.quadraticCurveTo(x + w, y, x + w, y + r); sh.lineTo(x + w, y + d - r); sh.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  sh.lineTo(x + r, y + d); sh.quadraticCurveTo(x, y + d, x, y + d - r); sh.lineTo(x, y + r); sh.quadraticCurveTo(x, y, x + r, y);
+  return sh;
+}
 function epirb() {
   const g = new THREE.Group();
-  // uchwyt ścienny/stołowy
-  box(0.13, 0.012, 0.11, std(0xf2f2f2, { rough: 0.4 }), 0, 0.006, 0, g);
-  box(0.13, 0.2, 0.012, std(0xf2f2f2, { rough: 0.4 }), 0, 0.1, -0.052, g);
-  for (const y of [0.05, 0.16]) { const c = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.006, 6, 20, Math.PI), std(0xdedede)); c.position.set(0, y, 0); c.rotation.x = Math.PI / 2; c.rotation.z = Math.PI; g.add(c); }
-  // korpus (zwężający się ku górze)
-  const pts = [[0.0, 0], [0.042, 0], [0.046, 0.02], [0.046, 0.17], [0.04, 0.2], [0.03, 0.215], [0.0, 0.22]].map(([r, y]) => new THREE.Vector2(r, y));
-  const body = new THREE.Mesh(new THREE.LatheGeometry(pts, 24), std(0xffc21a, { rough: 0.45 })); body.position.y = 0.012; body.castShadow = true; g.add(body);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.0465, 0.0465, 0.05, 24, 1, true), label(0.29, 0.05, 'EPIRB 406', '#ffc21a', '#111', 'COSPAS-SARSAT · 121.5 MHz'));
-  band.position.y = 0.1; g.add(band);
-  cyl(0.034, 0.03, 0.025, std(0x222222), 0, 0.235, 0, g, 20); // gumowa podstawa anteny
-  cyl(0.006, 0.009, 0.2, std(0x151515), 0, 0.345, 0, g, 8); // antena
-  const strobe = cyl(0.016, 0.016, 0.03, std(0xffffff, { transparent: true, opacity: 0.6, emissive: 0xffffff, ei: 0.2 }), 0, 0.26, 0.03, g, 12); strobe.rotation.x = 0.4;
-  box(0.03, 0.022, 0.012, std(0xd8352a), 0, 0.15, 0.046, g); // osłona przełącznika ON
-  box(0.02, 0.012, 0.01, std(0x2a2a2a), 0, 0.125, 0.047, g); // przycisk TEST
+  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(0.085, 0.062, 0.022), { depth: 0.2, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 3, curveSegments: 8 }), std(0xffcf14, { rough: 0.45 }));
+  body.rotation.x = -Math.PI / 2; body.position.y = 0.006; body.castShadow = true; g.add(body);
+  // spód i nasadka z gumy
+  const cap = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(0.08, 0.058, 0.02), { depth: 0.035, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2 }), std(0x1c1d20, { rough: 0.7 }));
+  cap.rotation.x = -Math.PI / 2; cap.position.y = 0.205; g.add(cap);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { transparent: true, opacity: 0.55, rough: 0.1, emissive: 0xffffff, ei: 0.15 }));
+  dome.position.set(0.012, 0.245, 0.006); g.add(dome);
+  cyl(0.004, 0.006, 0.2, std(0x111111), -0.022, 0.345, -0.008, g, 8); // antenka
+  cyl(0.009, 0.009, 0.012, std(0x111111), -0.022, 0.248, -0.008, g, 10);
+  // panel czołowy z napisem i przyciskiem ON pod przesuwną osłoną
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.12), std(0xffffff, { map: textTex(140, 240, (c, W, H) => {
+    c.fillStyle = '#1c1d20'; c.fillRect(0, 0, W, H); c.textAlign = 'center';
+    c.fillStyle = '#ffcf14'; c.font = 'bold 30px Arial'; c.fillText('EPIRB', W / 2, 44);
+    c.fillStyle = '#ffffff'; c.font = 'bold 17px Arial'; c.fillText('406 MHz', W / 2, 72); c.font = '13px Arial'; c.fillText('GPS · 121.5 MHz', W / 2, 92);
+    c.fillStyle = '#d8352a'; c.fillRect(20, 112, W - 40, 34); c.fillStyle = '#fff'; c.font = 'bold 14px Arial'; c.fillText('ON', W / 2, 135);
+    c.fillStyle = '#ffffff'; c.font = '11px Arial'; c.fillText('1. ANTENNA UP', W / 2, 172); c.fillText('2. SLIDE & PRESS ON', W / 2, 190); c.fillText('TEST ▼', W / 2, 222);
+  }) }));
+  panel.position.set(0, 0.1, 0.0375); g.add(panel);
+  box(0.026, 0.01, 0.008, std(0x2a2a2a), 0, 0.03, 0.038, g); // TEST
+  // linka (lanyard) zwinięta obok
+  const pts = []; for (let k = 0; k <= 60; k++) { const t = k / 60, a = t * Math.PI * 5; pts.push(new THREE.Vector3(0.07 + Math.cos(a) * 0.03, 0.004 + t * 0.004, 0.02 + Math.sin(a) * 0.022)); }
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0025, 5), std(0xffffff)));
   return g;
 }
 
@@ -229,16 +250,22 @@ function liferaft() {
   return g;
 }
 
+// kamizelka pneumatyczna złożona „na płasko”: kołnierz w kształcie litery U z prostymi panelami, pas biodrowy z klamrą,
+// pas krokowy, linka z uchwytem do ręcznego napełniania, taśmy odblaskowe
 function lifejacket(col = 0xd8352a) {
   const g = new THREE.Group();
-  // złożony kołnierz w kształcie podkowy (spłaszczony torus) + pas biodrowy z klamrą
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.045, 8, 28, Math.PI * 1.55), std(col, { rough: 0.8 }));
-  collar.rotation.x = -Math.PI / 2; collar.rotation.z = Math.PI * 0.72; collar.scale.set(1, 1.25, 0.45); collar.position.y = 0.025; g.add(collar);
-  for (const s of [-1, 1]) { const st = box(0.06, 0.012, 0.03, std(0xd9d9d9, { emissive: 0x666666, ei: 0.3, rough: 0.3 }), s * 0.12, 0.05, 0.06, g); st.rotation.y = s * 0.5; } // taśmy odblaskowe
-  const belt = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.008, 4, 30), std(0x1b1d22)); belt.rotation.x = -Math.PI / 2; belt.scale.set(1.2, 1, 1); belt.position.set(0, 0.008, -0.02); g.add(belt);
-  box(0.05, 0.015, 0.03, std(0xb9bec6, { metal: 0.8, rough: 0.3 }), 0, 0.012, 0.2, g); // klamra
-  const dring = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.004, 6, 14), std(ALU, { metal: 0.9, rough: 0.2 })); dring.rotation.x = -Math.PI / 2; dring.position.set(0.03, 0.02, 0.2); g.add(dring);
-  cyl(0.012, 0.012, 0.07, std(0x1d9d55), -0.12, 0.03, -0.12, g, 10).rotation.z = Math.PI / 2; // butla CO2
+  const sh = new THREE.Shape();
+  sh.moveTo(-0.17, -0.4); sh.lineTo(-0.17, 0); sh.absarc(0, 0, 0.17, Math.PI, 0, true); sh.lineTo(0.17, -0.4); sh.quadraticCurveTo(0.17, -0.44, 0.13, -0.44); sh.lineTo(0.08, -0.44); sh.quadraticCurveTo(0.055, -0.44, 0.055, -0.4);
+  sh.lineTo(0.055, 0); sh.absarc(0, 0, 0.055, 0, Math.PI, false); sh.lineTo(-0.055, -0.4); sh.quadraticCurveTo(-0.055, -0.44, -0.08, -0.44); sh.lineTo(-0.13, -0.44); sh.quadraticCurveTo(-0.17, -0.44, -0.17, -0.4);
+  const yoke = new THREE.Mesh(new THREE.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 3, curveSegments: 18 }), std(col, { rough: 0.85 }));
+  yoke.castShadow = true; g.add(yoke);
+  for (const x of [-0.112, 0.112]) { box(0.035, 0.12, 0.004, std(0xd9d9d9, { emissive: 0x777777, ei: 0.35, rough: 0.3 }), x, -0.18, 0.045, g); } // odblaski
+  box(0.48, 0.04, 0.008, std(0x1b1d22, { rough: 0.9 }), 0, -0.47, 0.02, g); // pas biodrowy
+  box(0.05, 0.035, 0.016, std(0x202226, { rough: 0.5 }), 0, -0.47, 0.03, g); // klamra
+  const crotch = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.007, 4, 18, Math.PI), std(0x1b1d22)); crotch.position.set(0, -0.49, 0.02); crotch.rotation.z = Math.PI; g.add(crotch);
+  const dring = new THREE.Mesh(new THREE.TorusGeometry(0.018, 0.004, 6, 14), std(ALU, { metal: 0.9, rough: 0.2 })); dring.position.set(0.0, -0.43, 0.04); g.add(dring);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.15, -0.38, 0.04), new THREE.Vector3(0.17, -0.45, 0.04), new THREE.Vector3(0.16, -0.5, 0.03)]), 12, 0.003, 5), std(0x1b1d22)));
+  const tog = cyl(0.008, 0.008, 0.03, std(0x2e9d62), 0.16, -0.515, 0.03, g, 8); tog.rotation.z = 0.2; // uchwyt do ręcznego napełnienia
   return g;
 }
 
@@ -309,19 +336,23 @@ export class SaloonView {
     r.setPixelRatio(Math.max(0.4, Math.min(window.devicePixelRatio || 1, 2) * (gfx.scale || 1)));
     r.shadowMap.enabled = gfx.shadows !== 'off';
     r.shadowMap.type = gfx.shadows === 'basic' ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
-    r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.1;
+    r.outputColorSpace = THREE.SRGBColorSpace; r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
     r.domElement.style.width = '100%'; r.domElement.style.height = '100%'; r.domElement.style.display = 'block';
     container.appendChild(r.domElement);
     this.renderer = r;
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2b2620); this.scene = scene;
     this.camera = new THREE.PerspectiveCamera(52, 1, 0.02, 30);
-    // światło: rozproszone + ciepłe lampki + dzienne przez świetlik
-    scene.add(new THREE.HemisphereLight(0xfff4e6, 0x5a4636, 0.9));
-    const sun = new THREE.DirectionalLight(0xffffff, 1.6); sun.position.set(1.2, 4, 0.6); sun.target.position.set(0.3, 0.7, 0); sun.castShadow = true;
+    // światło: przytłumione rozproszone, ciepłe lampki, listwy LED pod szafkami i lampka nad stołem nawigacyjnym; dzienne słabo przez luki
+    scene.add(new THREE.HemisphereLight(0xffe2c0, 0x3a2a1e, 0.5));
+    const sun = new THREE.DirectionalLight(0xdfeeff, 0.55); sun.position.set(1.2, 4, 0.6); sun.target.position.set(0.3, 0.7, 0); sun.castShadow = true;
     sun.shadow.mapSize.set(gfx.shadows === 'basic' ? 1024 : 2048, gfx.shadows === 'basic' ? 1024 : 2048);
     Object.assign(sun.shadow.camera, { left: -2.5, right: 2.5, top: 2.5, bottom: -2.5, near: 0.5, far: 8 }); sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.02;
     scene.add(sun, sun.target);
-    for (const [x, z] of [[-0.9, 0], [0.5, 0], [-1.5, 1.0]]) { const p = new THREE.PointLight(0xffd9a0, 1.1, 3.2, 1.6); p.position.set(x, 1.9, z); scene.add(p); }
+    for (const [x, y, z, i, d] of [[0.3, 1.85, 0, 1.6, 2.6], [-0.9, 1.9, -0.45, 0.9, 2.4], [-0.9, 1.9, 0.45, 0.9, 2.4], [1.1, 1.85, 0, 0.7, 2.2], [-1.55, 1.85, -1.0, 0.8, 1.8]]) {
+      const p = new THREE.PointLight(0xffb870, i, d, 1.8); p.position.set(x, y, z); scene.add(p);
+    }
+    for (const sd of [-1, 1]) { const strip = new THREE.PointLight(0xffc98a, 0.5, 1.6, 1.5); strip.position.set(0.2, 1.22, sd * 1.15); scene.add(strip); }
+    const reading = new THREE.SpotLight(0xffc27a, 2.2, 2.2, 0.6, 0.6, 1.5); reading.position.set(-1.35, 1.6, 1.05); reading.target.position.set(-1.5, 0.78, 1.1); scene.add(reading, reading.target);
     const B = hullShell(scene);
     this.table = furniture(scene, B);
     this.pickables = [];
@@ -331,14 +362,17 @@ export class SaloonView {
     this.groups.vhf = add(vhfRadio(), 'vhf', -1.5, 1.08, 1.395, Math.PI);
     this.groups.vhf.rotation.x = -0.06;
     if (mode === 'safety') {
-      this.groups.epirb = add(epirb(), 'epirb', -0.12, T.y, -0.33, 0.5);
+      this.groups.epirb = add(epirb(), 'epirb', -0.12, T.y, -0.33, -0.9);
       this.groups.sart = add(sart(), 'sart', 0.68, T.y, 0.3, -0.3);
       this.groups.cardMayday = add(procCard('mayday'), 'cardMayday', 0.2, T.y + 0.002, -0.31, -Math.PI / 2 + 0.06);
       this.groups.cardPan = add(procCard('pan'), 'cardPan', 0.55, T.y + 0.002, -0.33, -Math.PI / 2 - 0.08);
       this.groups.cardSecurite = add(procCard('securite'), 'cardSecurite', 0.1, T.y + 0.002, 0.31, -Math.PI / 2 + 0.1);
       this.groups.raft = add(liferaft(), 'raft', -1.25, 0, 0.05, 0.15);
-      this.groups.jacket = add(lifejacket(0xd8352a), 'jacket', 0.55, 0.52, -1.0, 0.4);
-      const j2 = lifejacket(0xe7c21c); j2.position.set(-0.05, 0.53, -1.05); j2.rotation.y = -0.6; j2.traverse((o) => { if (o.isMesh) { o.userData.pick = 'jacket'; o.material = o.material.clone(); } }); scene.add(j2); this.pickables.push(j2);
+      this.groups.jacket = add(lifejacket(0xd8352a), 'jacket', 0.35, 0.535, -1.0, 0.3);
+      this.groups.jacket.rotation.x = -Math.PI / 2;
+      const j2 = lifejacket(0xe7c21c); j2.position.set(-1.62, 1.55, 0.52); j2.rotation.y = -Math.PI / 2; j2.rotation.x = -0.04;
+      j2.traverse((o) => { if (o.isMesh) { o.userData.pick = 'jacket'; o.material = o.material.clone(); o.castShadow = true; } }); j2.userData.pick = 'jacket'; scene.add(j2); this.pickables.push(j2);
+      cyl(0.006, 0.006, 0.05, std(0xb9bec6, { metal: 0.9, rough: 0.2 }), -1.63, 1.62, 0.52, scene, 8).rotation.z = Math.PI / 2; // haczyk
       this.groups.extinguisher = add(extinguisher(), 'extinguisher', -1.62, 0.0, -0.5);
       this.groups.flares = add(flares(), 'flares', 0.95, 0.52, 1.0, -0.3);
       this.groups.firstaid = add(firstAid(), 'firstaid', 1.555, 1.2, 0.95, Math.PI / 2);

@@ -61,9 +61,15 @@ export function boatIdentity() {
   return { name: (String(s.boatName || '').trim() || DEFAULTS.boatName).toUpperCase().slice(0, 18), sub: String(s.homePort || '').trim().slice(0, 18), flag: s.flag || 'DE' };
 }
 
-// tryb pełnoekranowy (Electron obsługuje też F11)
-export function isFullscreen() { return typeof document !== 'undefined' && !!document.fullscreenElement; }
-export function toggleFullscreen() {
+// tryb pełnoekranowy: w aplikacji – pełny ekran okna Electron (domyślnie włączony, F11 przełącza), w przeglądarce – HTML
+let fsState = null;
+export function isFullscreen() {
+  if (typeof window !== 'undefined' && window.moorme) return !!fsState;
+  return typeof document !== 'undefined' && !!document.fullscreenElement;
+}
+export async function refreshFullscreen() { if (typeof window !== 'undefined' && window.moorme) fsState = await window.moorme.isFullscreen(); return isFullscreen(); }
+export async function toggleFullscreen() {
+  if (typeof window !== 'undefined' && window.moorme) { fsState = await window.moorme.setFullscreen(!(await window.moorme.isFullscreen())); return; }
   if (typeof document === 'undefined') return;
   if (document.fullscreenElement) document.exitFullscreen?.();
   else document.documentElement.requestFullscreen?.().catch(() => {});
