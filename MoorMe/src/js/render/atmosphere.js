@@ -96,6 +96,16 @@ export class Atmosphere {
     const moon = new THREE.Mesh(new THREE.SphereGeometry(22, 16, 10), new THREE.MeshBasicMaterial({ color: 0xf2f0e6, fog: false, transparent: true, opacity: 0 }));
     this.moon = moon;
     this.scene.add(moon);
+    // tarcza słońca z poświatą (widoczna nisko nad horyzontem – zachody i wschody)
+    const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+    const sg = sc.getContext('2d'), gr = sg.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.14, 'rgba(255,255,255,1)'); gr.addColorStop(0.2, 'rgba(255,255,255,0.7)');
+    gr.addColorStop(0.45, 'rgba(255,255,255,0.22)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    sg.fillStyle = gr; sg.fillRect(0, 0, 128, 128);
+    const stex = new THREE.CanvasTexture(sc);
+    this.sunDisk = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, color: 0xffe2b0, fog: false, transparent: true, depthWrite: false, opacity: 0 }));
+    this.sunDisk.scale.set(260, 260, 1);
+    this.scene.add(this.sunDisk);
   }
 
   buildRain() {
@@ -229,6 +239,13 @@ export class Atmosphere {
     }
     sun.position.set(cam.tx + dir.x * 130, dir.y * 130, cam.tz + dir.z * 130);
     sun.target.position.set(cam.tx, 0, cam.tz);
+    {
+      const sd = this.sunDisk, e = Math.max(el, -0.04);
+      sd.position.set(cam.tx + Math.sin(az) * Math.cos(e) * 1000, Math.sin(e) * 1000, cam.tz - Math.cos(az) * Math.cos(e) * 1000);
+      sd.material.color.copy(lerpC(C(0xfff4dc), C(0xffa055), clamp(1 - elDeg / 12, 0, 1)));
+      sd.material.opacity = clamp((elDeg + 1.5) / 3, 0, 1) * (1 - sky.grey) * (this.blackSky ? 0 : 1);
+      sd.visible = sd.material.opacity > 0.01;
+    }
     this.moon.position.set(cam.tx - 0.45 * 900, 0.75 * 900, cam.tz + 0.5 * 900);
     this.moon.material.opacity = night * (1 - sky.grey) * (this.blackSky ? 0.45 : 1); // w trybie świateł księżyc przygaszony
     this.moon.visible = night > 0.05;

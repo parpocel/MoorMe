@@ -49,6 +49,21 @@ check(checkAnswer({ kind: 'deg', value: 359.6, tol: 1 }, '000') && !checkAnswer(
   }
   check(worst < 1, `iteracja tabeli dewiacji: KK + δ(KK) = KM (max ${worst.toFixed(2)}°)`);
 }
+// 5b) dane do mapki: obiekty i rozwiązanie leżą na wykreślanych liniach / końcu odcinka
+{
+  const r = rng(91);
+  let worst = 0;
+  for (let i = 0; i < 50; i++) {
+    const f = GENERATORS.fix(r), P = f.plot.sol.point;
+    for (const l of f.plot.sol.lines) {
+      const cl = Math.cos(P.lat * Math.PI / 180), dx = (l.p.lon - P.lon) * 60 * cl, dy = (l.p.lat - P.lat) * 60;
+      worst = Math.max(worst, Math.abs(angDiff(Math.atan2(dx, dy) * 180 / Math.PI, l.brg)));
+    }
+    const d = GENERATORS.dr(r);
+    if (!d.plot || d.plot.pts.length !== 1 || d.plot.sol.segs.length !== 1) worst = 99;
+  }
+  check(worst < 0.5, `mapka: pozycja z rozwiązania leży na liniach namiarów (max ${worst.toFixed(3)}°)`);
+}
 // 6) wersja angielska treści
 setLang('en');
 const tk = makeTask(rng(3), 'current');

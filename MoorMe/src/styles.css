@@ -337,3 +337,11 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks .nt-sol canvas { border-radius: 10px; border: 1px solid rgba(47, 68, 104, 0.2); }
 .navtasks .quiz-verdict.ok { color: #2e9d62; font-weight: 800; font-size: 17px; }
 .navtasks .quiz-verdict.bad { color: #d0453b; font-weight: 800; font-size: 17px; }
+.navtasks .nt-plot { margin: 6px 0 10px; }
+.navtasks .pb-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin-bottom: 4px; }
+.navtasks .pb-tools button { padding: 5px 9px; font-size: 12px; }
+.navtasks .pb-in { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; }
+.navtasks .pb-in input { padding: 4px 6px; font-size: 13px; border-radius: 6px; border: 1px solid rgba(47, 68, 104, 0.3); font-family: inherit; }
+.navtasks .pb-hint { margin: 2px 0 4px; }
+.navtasks .pb canvas { display: block; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.25); }
+.navtasks .pb-readout { font-family: Consolas, 'Courier New', monospace; font-size: 13px; font-weight: 700; margin-top: 4px; color: #2f4468; min-height: 18px; }

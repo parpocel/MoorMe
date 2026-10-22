@@ -188,7 +188,7 @@ export class BoatPhysics {
     }
 
     // --- Płetwy sterowe (dwie, połowa powierzchni każda) ---
-    const rRate = 22.5 * DEG;
+    const rRate = 11 * DEG;
     const dr = clamp(this.rudderCmd - this.rudder, -rRate * dt, rRate * dt);
     this.rudder = clamp(this.rudder + dr, -35 * DEG, 35 * DEG);
     let ur = u;

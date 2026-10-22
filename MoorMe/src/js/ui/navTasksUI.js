@@ -3,6 +3,7 @@ import { h } from './dom.js';
 import { CATEGORIES, makeTask, checkAnswer, fmtAnswer, deg3 } from '../data/navTasks.js';
 import { rng } from '../math.js';
 import { t as tr } from '../i18n.js';
+import { PlotBoard } from './plotBoard.js';
 
 const D2R = Math.PI / 180;
 
@@ -58,7 +59,7 @@ export function showNavTasks(app, { onExit, translate = (s) => s }) {
   app.appendChild(root);
   const scenery = typeof window !== 'undefined' && window.__sceneryEl ? window.__sceneryEl() : null;
 
-  const newTask = () => { state.task = makeTask(r, state.cat); state.checked = false; state.showSol = false; state.inputs = {}; render(); };
+  const newTask = () => { state.task = makeTask(r, state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
 
   function render() {
     root.innerHTML = '';
@@ -84,13 +85,15 @@ export function showNavTasks(app, { onExit, translate = (s) => s }) {
       h('div.nt-head', {}, h('span.chip', {}, CATEGORIES[t.cat]), h('span.nt-score', {}, h('span.muted', {}, 'Poprawne:'), ' ', h('b', {}, `${state.stats.ok}/${state.stats.n}`))),
       h('p.nt-text', {}, t.text),
       t.table ? h('table.spec-table.nt-table', {}, h('tr', {}, ...t.table.head.map((x) => h('th', {}, x))), ...t.table.rows.map((row) => h('tr', {}, ...row.map((x) => h('td', {}, x))))) : null,
+      state.board ? h('div.nt-plot', {}, h('div.small', { style: { fontWeight: 800, marginBottom: '4px' } }, 'Mapka do kreślenia'), state.board.el) : null,
       fields,
       state.checked ? h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad', style: { margin: '6px 0' } }, allOk ? '✓ Dobrze!' : '✗ Źle') : null,
       h('div.nt-btns', {},
         state.checked ? null : h('button.btn.primary', { onclick: () => { state.checked = true; state.stats.n++; if (t.answers.every((a) => checkAnswer(a, state.inputs[a.key]))) state.stats.ok++; render(); } }, 'Sprawdź'),
         h('button.btn', { onclick: () => { state.showSol = !state.showSol; render(); } }, state.showSol ? 'Ukryj rozwiązanie' : 'Pokaż rozwiązanie'),
         h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →')),
-      state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null);
+      state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram && !state.board ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null);
+    if (state.board) state.board.setSolution(state.showSol);
     root.append(
       h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'zadania nawigacyjne')),
       h('div.screen-body', {}, h('div.nt-wrap', {},

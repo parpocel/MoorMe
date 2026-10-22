@@ -157,7 +157,8 @@ export const GENERATORS = {
       steps: [`NR_A = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR_B = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
         L(`Linie pozycyjne kreślimy z latarni w kierunkach zwrotnych: ${deg3(NR1 + 180)} od A i ${deg3(NR2 + 180)} od B`, `Plot the position lines from the lighthouses along the reciprocals: ${deg3(NR1 + 180)} from A and ${deg3(NR2 + 180)} from B`),
         L(`Przecięcie linii: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Intersection: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
-      diagram: { kind: 'fix', A, B, NR1, NR2, P: sol }
+      diagram: { kind: 'fix', A, B, NR1, NR2, P: sol },
+      plot: { pts: [{ label: 'A', ...A }, { label: 'B', ...B }], sol: { lines: [{ p: A, brg: NR1 }, { p: B, brg: NR2 }], point: sol } }
     };
   },
   dr(r) {
@@ -172,7 +173,8 @@ export const GENERATORS = {
       answers: [ans('dist', L('Droga', 'Distance'), dist, 'nm', 0.06), ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(E.lat)}°`, latMin(E.lat), 'min', 0.2), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(E.lon)).padStart(3, '0')}°`, lonMin(E.lon), 'min', 0.3)],
       steps: [L(`Droga = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} Mm`, `Distance = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} NM`),
         L(`Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; odejście = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} Mm`, `Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; departure = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} NM`),
-        L(`Δλ = odejście / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`, `Δλ = departure / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`), L(`Pozycja zliczona: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`, `DR position: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`)]
+        L(`Δλ = odejście / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`, `Δλ = departure / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`), L(`Pozycja zliczona: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`, `DR position: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`)],
+      plot: { pts: [{ label: '10:00', ...P }], sol: { segs: [{ p: P, brg: KDd, dist }], point: E } }
     };
   }
 };
