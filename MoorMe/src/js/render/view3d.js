@@ -760,7 +760,10 @@ export class View3D {
       wp[i * 6 + 3] = it.x - (wv.x / n) * len; wp[i * 6 + 4] = it.y; wp[i * 6 + 5] = it.z - (wv.z / n) * len;
     });
     ws.geometry.attributes.position.needsUpdate = true;
-    ws.material.opacity = clamp(windKn / 25, 0.05, 0.5);
+    // po zmroku smugi gasną – na ciemnym niebie wyglądałyby jak jasne kreski gwiazd
+    const dark = this.atmo ? this.atmo.night || 0 : 0;
+    ws.material.opacity = clamp(windKn / 25, 0.05, 0.5) * (1 - 0.85 * dark);
+    ws.material.color.setScalar(1 - 0.55 * dark);
 
     // kamera
     const cam = this.cam;

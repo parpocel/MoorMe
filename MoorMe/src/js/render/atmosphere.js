@@ -82,8 +82,11 @@ export class Atmosphere {
   buildStars() {
     const r = rng(77);
     const n = 900;
-    const pos = new Float32Array(n * 3);
+    const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
     for (let i = 0; i < n; i++) {
+      // jasność gwiazd: większość ledwo widoczna, tylko nieliczne jaśniejsze; lekki odcień (biało-niebieskie i ciepłe)
+      const br = 0.18 + 0.62 * Math.pow(r(), 4), tint = r();
+      col[i * 3] = br * (tint < 0.2 ? 0.85 : tint > 0.85 ? 1 : 0.95); col[i * 3 + 1] = br * 0.95; col[i * 3 + 2] = br * (tint > 0.85 ? 0.82 : 1);
       const a = r() * Math.PI * 2, e = Math.asin(0.08 + r() * 0.92);
       pos[i * 3] = Math.cos(a) * Math.cos(e) * 1100;
       pos[i * 3 + 1] = Math.sin(e) * 1100;
@@ -91,7 +94,8 @@ export class Atmosphere {
     }
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    this.stars = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    this.stars = new THREE.Points(g, new THREE.PointsMaterial({ vertexColors: true, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
     this.scene.add(this.stars);
     const moon = new THREE.Mesh(new THREE.SphereGeometry(22, 16, 10), new THREE.MeshBasicMaterial({ color: 0xf2f0e6, fog: false, transparent: true, opacity: 0 }));
     this.moon = moon;
@@ -264,7 +268,7 @@ export class Atmosphere {
     // relingi i wanty: stalowe, nocą prawie czarne (bez świecenia)
     for (const l of Object.values(LINE_MATS)) l.mat.color.setHex(l.base).multiplyScalar(1 - 0.9 * night);
 
-    this.stars.material.opacity = this.blackSky ? 0 : night * (1 - sky.grey) * 0.9;
+    this.stars.material.opacity = this.blackSky ? 0 : night * (1 - sky.grey) * 0.7;
     this.stars.position.set(cam.tx, 0, cam.tz);
 
     // światła: nawigacyjne, latarnie, okna – włączają się o zmierzchu (i w mgle/deszczu trochę wcześniej)
