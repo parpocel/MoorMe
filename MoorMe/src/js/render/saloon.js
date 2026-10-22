@@ -68,7 +68,7 @@ function hullShell(parent) {
   box(0.62, 0.04, 0.62, std(0xdedad2), 0.45, 1.995, 0, parent).material.side = THREE.DoubleSide;
   // podłoga
   const sole = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 1.0), std(0xffffff, { map: soleTex(), rough: 0.55 }));
-  sole.rotation.x = -Math.PI / 2; sole.position.set(-0.1, 0.0, 0); sole.receiveShadow = true; parent.add(sole);
+  sole.rotation.x = -Math.PI / 2; sole.position.set(-0.1, 0.0, 0); sole.receiveShadow = true; sole.userData.noFade = true; parent.add(sole);
   return B;
 }
 
@@ -96,7 +96,7 @@ function furniture(parent, B) {
   }
   // stół: płaski blat (skrzydła rozłożone) na dwóch nogach
   const T = { x0: -0.35, x1: 0.95, y: 0.74 };
-  box(T.x1 - T.x0, 0.035, 1.02, wood, (T.x0 + T.x1) / 2, T.y - 0.018, 0, parent);
+  box(T.x1 - T.x0, 0.035, 1.02, wood, (T.x0 + T.x1) / 2, T.y - 0.018, 0, parent).userData.noFade = true;
   // płaski blat na całej powierzchni, tylko niska listwa na krawędzi
   for (const z of [-0.5, 0.5]) box(T.x1 - T.x0, 0.012, 0.02, wood, (T.x0 + T.x1) / 2, T.y + 0.006, z, parent);
   for (const x of [T.x0 + 0.01, T.x1 - 0.01]) box(0.02, 0.012, 1.02, wood, x, T.y + 0.006, 0, parent);
@@ -117,9 +117,16 @@ function furniture(parent, B) {
   ab.receiveShadow = true;
   for (const s of [-1, 1]) box(0.02, 1.7, 0.55, woodD, -2.18, 0.9, s * 0.85, parent);
   // zejściówka: schodki
-  for (let k = 0; k < 4; k++) box(0.24, 0.04, 0.58, wood, -1.72 - k * 0.12, 0.25 + k * 0.32, 0, parent);
-  for (const z of [-0.3, 0.3]) { const s = box(0.03, 1.5, 0.04, woodD, -1.9, 0.75, z, parent); s.rotation.z = -0.36; }
-  box(0.5, 0.6, 0.62, wood, -1.95, 0.3, 0, parent); // obudowa silnika pod schodkami
+  // zejściówka: drabinka wznosi się ku rufie do otwartego luku w dachu; stopnie między dwiema policzkami
+  const st0 = { x: -1.58, y: 0 }, st1 = { x: -2.12, y: 1.62 }, nSt = 5;
+  const sdx = st1.x - st0.x, sdy = st1.y - st0.y, slen = Math.hypot(sdx, sdy), sang = Math.atan2(-sdx, sdy);
+  for (const z of [-0.29, 0.29]) { const sg = box(0.045, slen, 0.05, woodD, (st0.x + st1.x) / 2, (st0.y + st1.y) / 2, z, parent); sg.rotation.z = sang; }
+  for (let k = 1; k <= nSt; k++) { const f = k / (nSt + 1); box(0.2, 0.035, 0.54, wood, st0.x + sdx * f - 0.03, st0.y + sdy * f, 0, parent); }
+  for (const z of [-0.34, 0.34]) { const hr = cyl(0.014, 0.014, slen * 0.9, std(0xc9ced6, { metal: 0.8, rough: 0.3 }), (st0.x + st1.x) / 2, (st0.y + st1.y) / 2 + 0.35, z, parent, 8); hr.rotation.z = sang; }
+  box(0.45, 0.55, 0.62, wood, -1.98, 0.28, 0, parent); // obudowa silnika pod drabinką
+  const sky = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.62), std(0xd8eefa, { emissive: 0xcfeafa, ei: 1.0 }));
+  sky.rotation.x = Math.PI / 2; sky.position.set(-1.95, 1.985, 0); parent.add(sky); // otwarty luk zejściówki
+  box(0.6, 0.05, 0.04, woodD, -1.95, 1.97, -0.33, parent); box(0.6, 0.05, 0.04, woodD, -1.95, 1.97, 0.33, parent);
   // kambuz (lewa burta, rufa): blat, zlew, kuchenka na kardanie
   box(0.95, 0.88, 0.75, wood, -1.55, 0.44, -1.08, parent);
   box(0.97, 0.04, 0.78, std(0xe9e4da, { rough: 0.4 }), -1.55, 0.9, -1.08, parent);
@@ -349,6 +356,10 @@ export class SaloonView {
       div.position.set(0.7, T.y + 0.002, 0.38); div.rotation.y = -0.7; scene.add(div);
       const rule = box(0.38, 0.006, 0.06, std(0xdfe8ee, { transparent: true, opacity: 0.75, rough: 0.2 }), -0.15, T.y + 0.003, -0.42, scene); rule.rotation.y = 0.08;
     }
+    // elementy, które mogą zasłaniać widok – własne kopie materiałów, by dało się je przyciemniać pojedynczo
+    const pickSet = new Set(); for (const g of this.pickables) g.traverse((o) => pickSet.add(o));
+    this.occluders = [];
+    scene.traverse((o) => { if (o.isMesh && !pickSet.has(o) && !o.userData.noFade) { o.material = Array.isArray(o.material) ? o.material.map((m) => m.clone()) : o.material.clone(); o.userData.fade = 1; this.occluders.push(o); } });
     // widok kamery: orbitowanie wokół celu w granicach mesy
     this.cam = { tx: 0.3, ty: 0.78, tz: 0, az: Math.PI * 0.86, el: 0.62, dist: 1.6 };
     if (mode === 'nav') Object.assign(this.cam, { tx: 0.3, ty: 0.74, tz: 0, az: Math.PI / 2, el: 1.38, dist: 1.14 });
@@ -436,10 +447,31 @@ export class SaloonView {
     for (let i = 0; i < 20 && (p.x < -2.1 || p.x > 1.55 || p.y > 1.9 || p.y < 0.1 || Math.abs(p.z) > 1.3); i++) { d *= 0.9; p = pos(); }
     this.camera.position.copy(p);
     this.camera.lookAt(c.tx, c.ty, c.tz);
+    this.fadeOccluders(p, new THREE.Vector3(c.tx, c.ty, c.tz), dt);
     if (this.mode === 'nav') { const key = `${c.az.toFixed(4)},${c.el.toFixed(4)},${c.dist.toFixed(4)},${this.renderer.domElement.width}`; if (key === this._lastKey && !this.want) return; this._lastKey = key; }
     if (this.mouseIn && this.onHover) { const id = this.pick(); this.highlight(id); this.onHover(id, this.mousePx); }
     else if (!this.mouseIn && this.hoverId) { this.highlight(null); this.onHover && this.onHover(null); }
     this.renderer.render(this.scene, this.camera);
+  }
+
+  // nic nie zasłania widoku: to, co leży między kamerą a celem (i jego okolicą), staje się prawie przezroczyste
+  fadeOccluders(cam, target, dt) {
+    const hit = new Set(), ray = this._fadeRay || (this._fadeRay = new THREE.Raycaster());
+    const right = new THREE.Vector3().subVectors(target, cam).cross(new THREE.Vector3(0, 1, 0)).normalize();
+    const pts = [[0, 0], [0.22, 0], [-0.22, 0], [0, 0.15], [0, -0.12]].map(([a, b]) => target.clone().addScaledVector(right, a).add(new THREE.Vector3(0, b, 0)));
+    for (const t of pts) {
+      const d = t.clone().sub(cam), len = d.length();
+      ray.set(cam, d.normalize()); ray.far = Math.max(0, len - 0.06);
+      for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
+    }
+    const k = Math.min(1, (dt || 0.016) * 8);
+    for (const o of this.occluders) {
+      const want = hit.has(o) ? 0.12 : 1;
+      if (Math.abs(o.userData.fade - want) < 0.005 && want === 1 && o.userData.fade === 1) continue;
+      o.userData.fade += (want - o.userData.fade) * k;
+      if (Math.abs(o.userData.fade - 1) < 0.01 && want === 1) o.userData.fade = 1;
+      for (const m of [].concat(o.material)) { m.transparent = o.userData.fade < 1; m.opacity = o.userData.fade; m.depthWrite = o.userData.fade > 0.6; }
+    }
   }
 
   // pozycja ekranowa punktu sceny (np. do ułożenia kart HTML nad stołem)
