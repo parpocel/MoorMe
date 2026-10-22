@@ -19,6 +19,7 @@ const DEFAULTS = {
   music: true,
   musicVol: 0.5,
   uiScale: 'auto',
+  radioHideList: false,
   captain: 'Kuba',
   crew: ['', '', ''], // puste = losowe imię z puli
   gfx: { preset: 'high', ...GFX_PRESETS.high, showFps: false }

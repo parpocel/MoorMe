@@ -1,5 +1,5 @@
 // Moduł bezpieczeństwa: informacje o urządzeniach, kanały VHF, procedury i test korespondencji
-import { deviceInfo, DEVICE_IDS, channels, VALID_CHANNELS, procedureCard, makeRadioTask, checkRadio } from '../src/js/data/safety.js';
+import { deviceInfo, DEVICE_IDS, channels, VALID_CHANNELS, procedureCard, makeRadioTask, checkRadio, makeRadioDeck, radioTaskKeys } from '../src/js/data/safety.js';
 import { setLang } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -40,6 +40,15 @@ const mt = makeRadioTask(rng(1), ship, 'mayday').steps[0], sec = makeRadioTask(r
 check(mt.dsc === true && mt.power === 25, 'MAYDAY: alarm DSC i pełna moc 25 W');
 check(sec.steps.length === 2 && sec.steps[0].channels[0] === 16 && [72, 77].includes(sec.steps[1].channels[0]) && !sec.steps.some((s) => s.channels.includes(6)), 'SÉCURITÉ: zapowiedź na 16, komunikat na kanale roboczym 72/77 (nie 06)');
 check(makeRadioTask(rng(3), ship, 'onboard').steps[0].power === 1, 'łączność na pokładzie (15/17) tylko 1 W');
+{
+  // talia: każde odrębne zadanie (rodzaj + scenariusz) raz na cykl – inna nazwa jachtu czy pozycja to nie nowe zadanie
+  const deck = makeRadioDeck(rng(7)), N = radioTaskKeys().length, seen = [];
+  for (let i = 0; i < N * 3; i++) seen.push(deck.next(ship).key);
+  let cyc = true, rep = false;
+  for (let c = 0; c < 3; c++) if (new Set(seen.slice(c * N, c * N + N)).size !== N) cyc = false;
+  for (let i = 1; i < seen.length; i++) if (seen[i] === seen[i - 1]) rep = true;
+  check(cyc && !rep && N >= 15, `talia zadań radiowych: ${N} odrębnych zadań, każde raz na cykl, bez powtórki pod rząd`);
+}
 setLang('en');
 const PL = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/;
 const en = [...DEVICE_IDS.flatMap((id) => { const d = deviceInfo(id); return [d.name, d.short, ...d.sections.flat()]; }), ...channels().map((c) => c.use), ...['mayday', 'pan', 'securite'].flatMap((k) => { const p = procedureCard(k); return [p.when, p.after, ...p.steps]; })];

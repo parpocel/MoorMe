@@ -464,4 +464,8 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .safety .vhf-table tr.guard td:first-child b { color: #c2410c; }
 .safety .vhf-table tr.guard td:last-child { color: #7a3b12; }
 .safety .vhf-pw.lo { background: #e8f4ff; }
+.safety .sf-radio.nolist { grid-template-columns: minmax(420px, 760px); justify-content: center; }
+.safety .vhf-listbtn { margin-left: auto; }
+.safety .vhf-line[draggable="true"] { cursor: grab; }
+.safety .vhf-drop { height: 4px; border-radius: 2px; background: #c2410c; margin: 1px 0; }
 .safety .vhf-step { margin-top: 8px; font-weight: 800; color: #c2410c; }

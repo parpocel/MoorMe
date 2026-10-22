@@ -1,8 +1,8 @@
 // Moduł „Bezpieczeństwo”: mesa jachtu w 3D z wyposażeniem ratunkowym, kartami procedur i radiem VHF DSC (z testem).
 import { h } from './dom.js';
 import { SaloonView } from '../render/saloon.js';
-import { deviceInfo, channels, procedureCard, makeRadioTask, checkRadio, VALID_CHANNELS } from '../data/safety.js';
-import { getSettings, boatIdentity } from '../settings.js';
+import { deviceInfo, channels, procedureCard, makeRadioDeck, checkRadio, VALID_CHANNELS } from '../data/safety.js';
+import { getSettings, saveSettings, boatIdentity } from '../settings.js';
 import { rng } from '../math.js';
 import { t } from '../i18n.js';
 
@@ -77,13 +77,55 @@ export function showSafety(app, { onExit }) {
     const st = getSettings(), id = boatIdentity();
     const ship = { name: id.name, call: (st.callsign || 'SPS2024').toUpperCase(), mmsi: st.mmsi || '261012345' };
     const r = rng(1 + Math.floor(Math.random() * 1e9));
-    const S = { ch: 16, power: 25, cover: false, dsc: false, task: null, si: 0, lines: [], result: null, stats: { n: 0, ok: 0 } };
+    const S = { ch: 16, power: 25, cover: false, dsc: false, task: null, si: 0, lines: [], result: null, stats: { n: 0, ok: 0 }, hideList: !!st.radioHideList };
+    const deck = makeRadioDeck(r);
     const body = h('div.sf-radio');
+    let drag = null; // przeciągane zdanie: { src: 'pool' | 'msg', l, i }
     openModal(h('h2', {}, 'Radiotelefon VHF DSC'), body);
     const setCh = (c) => { c = Math.round(Number(c)); if (!VALID_CHANNELS.includes(c)) return; S.ch = c; render(); };
     const ch2 = (c) => String(c).padStart(2, '0');
+    const listBtn = () => h('button.btn.sm.vhf-listbtn', { onclick: () => { S.hideList = !S.hideList; saveSettings({ radioHideList: S.hideList }); render(); } },
+      S.hideList ? 'Pokaż spis kanałów' : 'Ukryj spis kanałów');
+    // korespondencja: klik dopisuje / usuwa, przeciąganie wsuwa zdanie w wybrane miejsce lub zmienia kolejność
+    function msgBox(ST) {
+      const live = !S.result;
+      const items = S.lines.map((l, i) => h('button.vhf-line.on', {
+        disabled: live ? null : true, draggable: live ? 'true' : null,
+        ondragstart: (e) => { drag = { src: 'msg', l, i }; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', l); },
+        ondragend: () => { drag = null; marker.remove(); },
+        onclick: () => { S.lines.splice(i, 1); render(); } }, `${i + 1}. ${l}`));
+      const msg = h('div.vhf-msg', {}, ...(items.length ? items : [h('div.muted.small.vhf-empty', {}, '— pusto —')]));
+      const marker = h('div.vhf-drop');
+      const at = (e) => items.filter((el) => e.clientY > el.getBoundingClientRect().top + el.getBoundingClientRect().height / 2).length;
+      msg.addEventListener('dragover', (e) => {
+        if (!drag || !live) return;
+        e.preventDefault();
+        const i = at(e);
+        if (items[i]) msg.insertBefore(marker, items[i]); else msg.appendChild(marker);
+      });
+      msg.addEventListener('dragleave', (e) => { if (!msg.contains(e.relatedTarget)) marker.remove(); });
+      msg.addEventListener('drop', (e) => {
+        if (!drag || !live) return;
+        e.preventDefault();
+        let i = at(e);
+        if (drag.src === 'msg') { S.lines.splice(drag.i, 1); if (drag.i < i) i--; }
+        S.lines.splice(i, 0, drag.l);
+        drag = null; render();
+      });
+      const used = new Set(S.lines);
+      const pool = h('div.vhf-pool', {}, ...ST.pool.filter((l) => !used.has(l)).map((l) => h('button.vhf-line', {
+        disabled: live ? null : true, draggable: live ? 'true' : null,
+        ondragstart: (e) => { drag = { src: 'pool', l }; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', l); },
+        ondragend: () => { drag = null; marker.remove(); },
+        onclick: () => { S.lines.push(l); render(); } }, l)));
+      // zdanie przeciągnięte z korespondencji z powrotem do puli – usunięte
+      pool.addEventListener('dragover', (e) => { if (drag && drag.src === 'msg' && live) e.preventDefault(); });
+      pool.addEventListener('drop', (e) => { if (!drag || drag.src !== 'msg') return; e.preventDefault(); S.lines.splice(drag.i, 1); drag = null; render(); });
+      return [h('div.vhf-sub', {}, 'Ułóż korespondencję – klikaj zdania po kolei albo przeciągaj je, także pomiędzy już wybrane:'), msg, pool];
+    }
     function render() {
       body.innerHTML = '';
+      body.classList.toggle('nolist', S.hideList);
       const list = channels();
       const idx = VALID_CHANNELS.indexOf(S.ch);
       const face = h('div.vhf-face', {},
@@ -103,20 +145,15 @@ export function showSafety(app, { onExit }) {
       const test = h('div.vhf-test');
       if (!S.task) {
         test.append(h('p', {}, 'Test: dostajesz sytuację na morzu – ustaw kanał i moc (dla MAYDAY także wyślij alarm DSC) i ułóż korespondencję z gotowych zdań. Niektóre zadania mają kilka kroków.'),
-          h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => newTask() }, '▶ Rozpocznij test'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`)));
+          h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => newTask() }, '▶ Rozpocznij test'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`), listBtn()));
       } else {
         const T = S.task, ST = T.steps[S.si];
         test.append(h('div.vhf-task', {}, h('div.vhf-task-h', {}, 'Zadanie'), h('p', {}, T.text),
           h('div.small.muted', {}, `${t('Twój jacht')}: ${ship.name}, ${t('znak wywoławczy')} ${ship.call}, MMSI ${ship.mmsi}`)));
         if (ST.label) test.append(h('div.vhf-step', {}, ST.label));
-        if (ST.lines) {
-          const used = new Set(S.lines);
-          test.append(h('div.vhf-sub', {}, 'Ułóż korespondencję (klikaj zdania w kolejności):'),
-            h('div.vhf-msg', {}, S.lines.length ? S.lines.map((l, i) => h('button.vhf-line.on', { disabled: S.result ? true : null, onclick: () => { S.lines.splice(i, 1); render(); } }, `${i + 1}. ${l}`)) : h('div.muted.small', {}, '— pusto —')),
-            h('div.vhf-pool', {}, ...ST.pool.filter((l) => !used.has(l)).map((l) => h('button.vhf-line', { disabled: S.result ? true : null, onclick: () => { S.lines.push(l); render(); } }, l))));
-        }
+        if (ST.lines) test.append(...msgBox(ST));
         if (!S.result) {
-          test.append(h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => check() }, ST.lines ? '🎙 Nadaj (PTT)' : 'Sprawdź ustawienie'), h('span.muted', {}, `${t('Ustawiony kanał')}: ${ch2(S.ch)}, ${S.power} W`)));
+          test.append(h('div.vhf-row', {}, h('button.btn.primary', { onclick: () => check() }, ST.lines ? '🎙 Nadaj (PTT)' : 'Sprawdź ustawienie'), h('span.muted', {}, `${t('Ustawiony kanał')}: ${ch2(S.ch)}, ${S.power} W`), listBtn()));
         } else {
           const R = S.result, more = R.ok && S.si < T.steps.length - 1;
           test.append(h('div.quiz-verdict', { class: R.ok ? 'ok' : 'bad' }, R.ok ? '✓ Dobrze!' : '✗ Źle'));
@@ -131,12 +168,13 @@ export function showSafety(app, { onExit }) {
           }
           test.append(h('div.vhf-row', {}, more
             ? h('button.btn.primary', { onclick: () => { S.si++; S.lines = []; S.result = null; render(); } }, 'Dalej – następny krok →')
-            : h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`)));
+            : h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →'), h('span.muted', {}, `${t('Poprawne:')} ${S.stats.ok}/${S.stats.n}`), listBtn()));
         }
       }
-      body.append(h('div.vhf-left', {}, face, test), h('div.vhf-right', {}, table));
+      body.append(h('div.vhf-left', {}, face, test));
+      if (!S.hideList) body.append(h('div.vhf-right', {}, table));
     }
-    function newTask() { S.task = makeRadioTask(r, ship); S.si = 0; S.lines = []; S.result = null; S.dsc = false; S.cover = false; render(); }
+    function newTask() { S.task = deck.next(ship); S.si = 0; S.lines = []; S.result = null; S.dsc = false; S.cover = false; render(); }
     function check() {
       const T = S.task;
       S.result = checkRadio(T.steps[S.si], { channel: S.ch, power: S.power, dscSent: S.dsc, lines: S.lines });

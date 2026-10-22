@@ -323,21 +323,47 @@ export class Atmosphere {
     if (this.rain.visible) this.updateRain(dt, cam);
   }
 
-  // chmury low-poly: kilka spłaszczonych brył w każdej, wokół kamery, dryfują z wiatrem
+  // miękka „kłębiasta” tekstura chmury: dużo rozmytych plam, jaśniejsza u góry, brzegi wtapiają się w niebo
+  cloudTexture(seed) {
+    let a = seed >>> 0; const r = () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; };
+    const S = 256, cv = document.createElement('canvas');
+    cv.width = cv.height = S;
+    const g = cv.getContext('2d');
+    for (let i = 0; i < 70; i++) {
+      const ang = r() * Math.PI * 2, rr = Math.pow(r(), 0.7) * 0.32;
+      const x = S / 2 + Math.cos(ang) * rr * S * 1.15, y = S / 2 + Math.sin(ang) * rr * S * 0.55 - S * 0.03;
+      const rad = S * (0.07 + r() * 0.13) * (1 - rr);
+      const shade = 225 + Math.round(30 * (1 - (y / S)));
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(${shade},${shade},${Math.min(255, shade + 6)},0.32)`);
+      gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    }
+    // lekko ciemniejszy spód
+    g.globalCompositeOperation = 'source-atop';
+    const v = g.createLinearGradient(0, S * 0.3, 0, S * 0.8);
+    v.addColorStop(0, 'rgba(255,255,255,0)'); v.addColorStop(1, 'rgba(120,135,160,0.35)');
+    g.fillStyle = v; g.fillRect(0, 0, S, S);
+    const tex = new THREE.CanvasTexture(cv);
+    if ('colorSpace' in tex) tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+
+  // chmury: każda z kilku przenikających się miękkich, półprzezroczystych kłębów (sprite’y), wokół kamery, dryfują z wiatrem
   buildClouds() {
     const r = (() => { let a = 12345; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; })();
-    this.cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, emissive: 0x000000, flatShading: true, transparent: true, opacity: 0.95, fog: false, depthWrite: false });
+    this.cloudMats = [11, 222, 3333].map((sd) => new THREE.SpriteMaterial({ map: this.cloudTexture(sd), transparent: true, opacity: 0.8, fog: false, depthWrite: false }));
     this.clouds = [];
     const g = new THREE.Group();
     for (let i = 0; i < 40; i++) {
-      const c = new THREE.Group(), size = 35 + r() * 85, n = 4 + Math.floor(r() * 4);
+      const c = new THREE.Group(), size = 45 + r() * 95, n = 4 + Math.floor(r() * 5);
       for (let k = 0; k < n; k++) {
-        const m = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), this.cloudMat);
-        const sc = size * (0.45 + r() * 0.55);
-        m.scale.set(sc, sc * (0.42 + r() * 0.2), sc * (0.7 + r() * 0.3));
-        m.position.set((r() - 0.5) * size * 1.6, (r() - 0.2) * size * 0.25, (r() - 0.5) * size * 0.6);
-        m.rotation.y = r() * 3;
-        c.add(m);
+        const sp = new THREE.Sprite(this.cloudMats[Math.floor(r() * this.cloudMats.length)]);
+        const sc = size * (0.9 + r() * 0.9);
+        sp.scale.set(sc * 2, sc * (0.85 + r() * 0.35), 1);
+        sp.position.set((r() - 0.5) * size * 2, (r() - 0.3) * size * 0.3, (r() - 0.5) * size * 0.8);
+        c.add(sp);
       }
       const far = this.view.passage ? 2200 : 950; // w porcie kopuła nieba ma promień 1200 m
       const a = r() * Math.PI * 2, d = 300 + r() * (far - 300);
@@ -352,19 +378,18 @@ export class Atmosphere {
   }
 
   updateClouds(dt, cam, night, dusk, sky) {
-    const n = { clear: 14, cloudy: 34, rain: 40, fog: 0 }[this.sky] ?? 14;
+    const n = { clear: 20, cloudy: 34, rain: 40, fog: 0 }[this.sky] ?? 14;
     const show = !this.blackSky && n > 0;
     this.cloudGroup.visible = show;
     if (!show) return;
     const wv = this.world && this.world.env ? this.world.env.windVec() : { x: 2, z: 0 };
     this.cloudDrift.x += wv.x * dt * 0.6; this.cloudDrift.z += wv.z * dt * 0.6;
     const span = this.view.passage ? 4400 : 1900;
-    // kolor: biel w dzień, brzoskwinia o zachodzie, szarość przy złej pogodzie, granat nocą
-    const base = lerpC(lerpC(C(0xffffff), C(0xffc9a8), dusk), C(0x8b939c), sky.grey);
-    this.cloudMat.color.copy(lerpC(base, C(0x1a2233), night));
-    // samo światło słońca nisko nad horyzontem oświetla chmury od spodu – dodajemy własną poświatę (biel w dzień, róż i pomarańcz o zachodzie)
-    this.cloudMat.emissive.copy(lerpC(C(0xb4c0d0), C(0xff9f7a), dusk)).multiplyScalar((0.42 + 0.4 * dusk) * (1 - night) * (1 - 0.5 * sky.grey));
-    this.cloudMat.opacity = 0.92 - night * 0.55;
+    // kolor: biel w dzień, brzoskwinia o zachodzie, szarość przy złej pogodzie, granat nocą (sprite’y nie są oświetlane – kolor liczymy sami)
+    const base = lerpC(lerpC(C(0xffffff), C(0xffc2a0), dusk), C(0x9aa2ab), sky.grey);
+    const col = lerpC(base, C(0x2a3346), night);
+    const op = (this.sky === 'clear' ? 0.72 : 0.85) * (1 - night * 0.55);
+    for (const m of this.cloudMats) { m.color.copy(col); m.opacity = op; }
     const big = this.sky === 'clear' ? 0.8 : 1.25;
     this.clouds.forEach((c, i) => {
       const u = c.userData;

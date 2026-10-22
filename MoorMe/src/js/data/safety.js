@@ -167,23 +167,36 @@ function randomPos(r) {
   return `${dm(lat)} N, 0${dm(lon)} E`;
 }
 const OTHERS = ['ORKA', 'MEWA', 'BALTICA', 'NEPTUN', 'ZAWISZA'];
+const MAYDAY_SC = [
+        { pl: 'Po uderzeniu w zatopioną przeszkodę jacht szybko nabiera wody, pompy nie nadążają.', en: 'After hitting a submerged object the yacht is taking water fast and the pumps cannot keep up.', nat: 'TAKING WATER, SINKING', other: 'PREPARING TO ABANDON TO LIFERAFT' },
+        { pl: 'Pożar w komorze silnika, gaśnice nie pomogły, ogień się rozprzestrzenia.', en: 'Fire in the engine compartment, the extinguishers did not help and the fire is spreading.', nat: 'FIRE ON BOARD, OUT OF CONTROL', other: 'LIFERAFT READY' },
+        { pl: 'Członek załogi wypadł za burtę, straciliście go z oczu.', en: 'A crew member fell overboard and you have lost sight of them.', nat: 'MAN OVERBOARD, LOST FROM SIGHT', other: 'WE ARE SEARCHING THE AREA' }
+      ];
+const PAN_SC = [
+        { pl: 'Zerwała się linka sterowa, jacht jest niesterowny i dryfuje w stronę brzegu odległego o 3 Mm. Nikomu nic nie grozi.', en: 'The steering cable has parted, the yacht cannot be steered and is drifting towards the shore 3 NM away. Nobody is in danger.', nat: 'LOST STEERING, DRIFTING TOWARDS THE COAST', req: 'I REQUIRE A TOW' },
+        { pl: 'Członek załogi złamał rękę, jest przytomny i stabilny; potrzebujesz porady lekarza.', en: 'A crew member has broken an arm, is conscious and stable; you need a doctor’s advice.', nat: 'CREW MEMBER WITH A BROKEN ARM', req: 'I REQUIRE MEDICAL ADVICE' },
+        { pl: 'Silnik nie działa, jest flauta, a prąd znosi jacht na tor wodny.', en: 'The engine has failed, there is no wind and the current is setting the yacht into the fairway.', nat: 'ENGINE FAILURE, DRIFTING INTO THE FAIRWAY', req: 'I REQUIRE A TOW' }
+      ];
+const SECURITE_SC = [
+        { pl: 'Mijasz dryfujący kontener, ledwo wystający nad wodę.', en: 'You pass a drifting container, barely above the water.', w: 'DRIFTING CONTAINER, DANGEROUS TO NAVIGATION' },
+        { pl: 'Północny znak kardynalny przy torze wodnym nie świeci.', en: 'The north cardinal mark next to the fairway is unlit.', w: 'NORTH CARDINAL MARK UNLIT' },
+        { pl: 'Widzisz dryfujący, duży pień drzewa na torze podejściowym.', en: 'You see a large drifting tree trunk in the approach channel.', w: 'DRIFTING TREE TRUNK, DANGEROUS TO NAVIGATION' }
+      ];
 
 /**
  * Zadanie: { id, kind, text, explain, steps: [{ label, channels, power: 25|1|null, dsc, lines|null, distractors, pool }] }
  * Kroki wykonuje się po kolei (np. SÉCURITÉ: zapowiedź na 16, potem komunikat na kanale roboczym).
  * ship: { name, call, mmsi }
  */
-export function makeRadioTask(r, ship, only) {
+export function makeRadioTask(r, ship, only, variant) {
+  // variant – numer scenariusza (np. który MAYDAY); bez niego losowy
+  const V = (list) => (variant != null ? list[variant % list.length] : pick(r, list));
   const N = ship.name.toUpperCase(), ID = `THIS IS ${N}, ${N}, ${N}, ${ship.call}, MMSI ${ship.mmsi}`;
   const pos = randomPos(r), pob = 2 + Math.floor(r() * 5);
   const step = (o) => ({ label: null, power: null, dsc: false, lines: null, distractors: [], ...o });
   const gens = {
     mayday() {
-      const sc = pick(r, [
-        { pl: 'Po uderzeniu w zatopioną przeszkodę jacht szybko nabiera wody, pompy nie nadążają.', en: 'After hitting a submerged object the yacht is taking water fast and the pumps cannot keep up.', nat: 'TAKING WATER, SINKING', other: 'PREPARING TO ABANDON TO LIFERAFT' },
-        { pl: 'Pożar w komorze silnika, gaśnice nie pomogły, ogień się rozprzestrzenia.', en: 'Fire in the engine compartment, the extinguishers did not help and the fire is spreading.', nat: 'FIRE ON BOARD, OUT OF CONTROL', other: 'LIFERAFT READY' },
-        { pl: 'Członek załogi wypadł za burtę, straciliście go z oczu.', en: 'A crew member fell overboard and you have lost sight of them.', nat: 'MAN OVERBOARD, LOST FROM SIGHT', other: 'WE ARE SEARCHING THE AREA' }
-      ]);
+      const sc = V(MAYDAY_SC);
       return {
         kind: 'mayday',
         text: L(`${sc.pl} Pozycja ${pos}, na pokładzie ${pob} osób. Wezwij pomoc.`, `${sc.en} Position ${pos}, ${pob} persons on board. Call for help.`),
@@ -194,11 +207,7 @@ export function makeRadioTask(r, ship, only) {
       };
     },
     pan() {
-      const sc = pick(r, [
-        { pl: 'Zerwała się linka sterowa, jacht jest niesterowny i dryfuje w stronę brzegu odległego o 3 Mm. Nikomu nic nie grozi.', en: 'The steering cable has parted, the yacht cannot be steered and is drifting towards the shore 3 NM away. Nobody is in danger.', nat: 'LOST STEERING, DRIFTING TOWARDS THE COAST', req: 'I REQUIRE A TOW' },
-        { pl: 'Członek załogi złamał rękę, jest przytomny i stabilny; potrzebujesz porady lekarza.', en: 'A crew member has broken an arm, is conscious and stable; you need a doctor’s advice.', nat: 'CREW MEMBER WITH A BROKEN ARM', req: 'I REQUIRE MEDICAL ADVICE' },
-        { pl: 'Silnik nie działa, jest flauta, a prąd znosi jacht na tor wodny.', en: 'The engine has failed, there is no wind and the current is setting the yacht into the fairway.', nat: 'ENGINE FAILURE, DRIFTING INTO THE FAIRWAY', req: 'I REQUIRE A TOW' }
-      ]);
+      const sc = V(PAN_SC);
       return {
         kind: 'pan',
         text: L(`${sc.pl} Pozycja ${pos}, na pokładzie ${pob} osób.`, `${sc.en} Position ${pos}, ${pob} persons on board.`),
@@ -209,11 +218,7 @@ export function makeRadioTask(r, ship, only) {
       };
     },
     securite() {
-      const sc = pick(r, [
-        { pl: 'Mijasz dryfujący kontener, ledwo wystający nad wodę.', en: 'You pass a drifting container, barely above the water.', w: 'DRIFTING CONTAINER, DANGEROUS TO NAVIGATION' },
-        { pl: 'Północny znak kardynalny przy torze wodnym nie świeci.', en: 'The north cardinal mark next to the fairway is unlit.', w: 'NORTH CARDINAL MARK UNLIT' },
-        { pl: 'Widzisz dryfujący, duży pień drzewa na torze podejściowym.', en: 'You see a large drifting tree trunk in the approach channel.', w: 'DRIFTING TREE TRUNK, DANGEROUS TO NAVIGATION' }
-      ]);
+      const sc = V(SECURITE_SC);
       const wc = pick(r, [72, 77]);
       return {
         kind: 'securite',
@@ -281,6 +286,7 @@ export function makeRadioTask(r, ship, only) {
   const id = only && gens[only] ? only : keys[Math.floor(r() * keys.length)];
   const t = gens[id]();
   t.id = id;
+  t.key = `${id}:${variant != null ? variant : 0}`;
   for (const st of t.steps) if (st.lines) st.pool = shuffle(r, [...st.lines, ...st.distractors]);
   return t;
 }
@@ -292,4 +298,29 @@ export function checkRadio(step, { channel, power, dscSent, lines }) {
   const dscOk = !step.dsc || !!dscSent;
   const msgOk = !step.lines || (lines.length === step.lines.length && lines.every((l, i) => l === step.lines[i]));
   return { chOk, powerOk, dscOk, msgOk, ok: chOk && powerOk && dscOk && msgOk };
+}
+
+// Odrębne zadania: rodzaj + scenariusz. Sama zmiana nazwy drugiego jachtu, pozycji czy kanału roboczego to nadal to samo zadanie.
+const VARIANTS = { mayday: MAYDAY_SC.length, pan: PAN_SC.length, securite: SECURITE_SC.length };
+export function radioTaskKeys() {
+  return ['mayday', 'pan', 'securite', 'ack', 'routine', 'bridge', 'sar', 'dsc', 'port', 'onboard', 'intership']
+    .flatMap((id) => Array.from({ length: VARIANTS[id] || 1 }, (_, v) => `${id}:${v}`));
+}
+
+// Talia zadań: każde odrębne zadanie raz, w losowej kolejności; po przejściu całości – nowa kolejność (bez powtórzenia ostatniego od razu).
+export function makeRadioDeck(r) {
+  let deck = [], last = null;
+  return {
+    next(ship) {
+      if (!deck.length) {
+        deck = shuffle(r, radioTaskKeys());
+        if (deck.length > 1 && deck[deck.length - 1] === last) deck.unshift(deck.pop());
+      }
+      last = deck.pop();
+      const [id, v] = last.split(':');
+      return makeRadioTask(r, ship, id, Number(v));
+    },
+    left: () => deck.length,
+    total: () => radioTaskKeys().length
+  };
 }
