@@ -206,7 +206,7 @@ function startLights() {
   app.appendChild(root);
   const equip = defaultEquipment(BOATS.C34);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'lights', boatId: 'C34', equip, weather: { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear' } };
+  const config = { mode: 'lights', boatId: 'C34', equip, weather: { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear', blackSky: true } };
   window.__sim = new LightsScreen(root, config, { restart: () => startLights(), exit: () => showModeSelect() });
 }
 

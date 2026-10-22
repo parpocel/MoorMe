@@ -58,6 +58,7 @@ export class Atmosphere {
     this.world = view.world;
     this.scene = view.scene;
     this.hour = typeof weather.hour === 'number' ? weather.hour : 14;
+    this.blackSky = !!weather.blackSky; // tryb świateł: czarne niebo bez gwiazd i księżyca
     this.sky = SKIES[weather.sky] ? weather.sky : 'clear';
     this.timeFlows = false;
     this.timeRate = 60; // 1 s rzeczywista = 1 min w symulacji
@@ -199,6 +200,7 @@ export class Atmosphere {
     top = lerpC(top, nightTop, night); bot = lerpC(bot, nightBot, night);
     const grey = lerpC(C(0x9aa4ad), C(0x1c232b), night);
     top = lerpC(top, grey, sky.grey); bot = lerpC(bot, grey.clone().offsetHSL(0, 0, 0.06), sky.grey);
+    if (this.blackSky) { top = lerpC(top, C(0x000000), night); bot = lerpC(bot, C(0x010203), night); }
     if (this.sky === 'fog') { bot = lerpC(bot, lerpC(C(0xc9ced2), C(0x2a3038), night), 0.85); top = lerpC(top, bot, 0.6); }
     this.paintSky(top, bot);
     this.scene.background = bot;
@@ -226,7 +228,7 @@ export class Atmosphere {
     sun.position.set(cam.tx + dir.x * 130, dir.y * 130, cam.tz + dir.z * 130);
     sun.target.position.set(cam.tx, 0, cam.tz);
     this.moon.position.set(cam.tx - 0.45 * 900, 0.75 * 900, cam.tz + 0.5 * 900);
-    this.moon.material.opacity = night * (1 - sky.grey);
+    this.moon.material.opacity = this.blackSky ? 0 : night * (1 - sky.grey);
     this.moon.visible = night > 0.05;
 
     v.hemi.color.copy(lerpC(C(0xdff2ff), C(0x2c3a5c), night));
@@ -241,7 +243,7 @@ export class Atmosphere {
     // relingi i wanty: stalowe, nocą prawie czarne (bez świecenia)
     for (const l of Object.values(LINE_MATS)) l.mat.color.setHex(l.base).multiplyScalar(1 - 0.9 * night);
 
-    this.stars.material.opacity = night * (1 - sky.grey) * 0.9;
+    this.stars.material.opacity = this.blackSky ? 0 : night * (1 - sky.grey) * 0.9;
     this.stars.position.set(cam.tx, 0, cam.tz);
 
     // światła: nawigacyjne, latarnie, okna – włączają się o zmierzchu (i w mgle/deszczu trochę wcześniej)
