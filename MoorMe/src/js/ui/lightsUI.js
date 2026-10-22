@@ -111,7 +111,7 @@ class ShipLightsLayer {
     this.clear();
     this.vessel = vessel;
     for (const l of vessel.lights) {
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: COLORS[l.c], transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false }));
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTexture(), color: COLORS[l.c], transparent: true, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending, fog: false, toneMapped: false }));
       sp.renderOrder = 30;
       this.group.add(sp);
       this.items.push({ l, sp });

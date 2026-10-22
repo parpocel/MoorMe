@@ -11,7 +11,7 @@ export const SECTORS = {
   all: () => true // dookólne
 };
 
-export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xfff000, deck: 0xffd9a0 };
+export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xffd166, deck: 0xffd9a0 };
 
 // pomocnicze zestawy świateł
 const sides = (L, y) => [

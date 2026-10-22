@@ -9,7 +9,7 @@ import { getLang, t } from '../i18n.js';
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (w, hgt, inner, cls = '') => { const d = document.createElement('div'); d.className = 'hb-svg ' + cls; d.innerHTML = `<svg xmlns="${NS}" viewBox="0 0 ${w} ${hgt}" width="${w}" height="${hgt}">${inner}</svg>`; return d; };
-const LCOL = { white: '#fff6e0', red: '#ff3b2f', green: '#29e05a', yellow: '#fff23a', deck: '#ffd9a0' };
+const LCOL = { white: '#fff6e0', red: '#ff3b2f', green: '#29e05a', yellow: '#ffd166', deck: '#ffd9a0' };
 
 // ---------- światła statków ----------
 // widok: rel – kąt obserwatora od dziobu; mapowanie (x, z) statku na oś ekranu
