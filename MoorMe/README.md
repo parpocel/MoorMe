@@ -15,10 +15,10 @@ Modele jachtów oparto na danych Bavarii C34, C46 i C50.
 
 Po uruchomieniu otwiera się okno wyboru trybu:
 
-- **Cumowanie** – manewry w porcie (opis niżej).
-- **Rejs wzdłuż wybrzeża** – płyniesz po morzu po waypointach i stosujesz się do znaków nawigacyjnych IALA (region A).
+- **Manewry portowe** – cumowanie i odcumowywanie w porcie (opis niżej).
+- **Locja** – rejs wzdłuż wybrzeża: płyniesz po morzu po waypointach i stosujesz się do znaków nawigacyjnych IALA (region A).
 
-### Rejs wzdłuż wybrzeża
+### Locja (rejs wzdłuż wybrzeża)
 
 - **Nawigacja:** domyślnie „Tylko BRG na port” – bez trasy, waypointów i nazw znaków (znaki rozpoznajesz po kształcie i charakterze światła); w ustawieniach rejsu można wybrać wariant z trasą i waypointami.
 - **Akweny:** Bałtyk (piaszczyste mielizny) i Adriatyk (skaliste grzbiety). Układ jest **generowany proceduralnie przy każdym rejsie**: długie, pochyłe bariery z przejściami na przemian od północy i południa tworzą meandry (zmiany kursu powyżej 90°), oznaczone kardynałami; trasa ma ok. 1,7–2 nm (ok. 15–20 min). Znaki boczne (czerwone/zielone) są tylko przy wejściu do portu.
