@@ -92,6 +92,9 @@ function shape(k, cx, cy, s) {
   if (k === 'diamond') return `<polygon points="${cx},${cy - s * 0.7} ${cx + s * 0.45},${cy} ${cx},${cy + s * 0.7} ${cx - s * 0.45},${cy}" fill="${b}"/>`;
   if (k === 'cylinder') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.7}" width="${s * 0.7}" height="${s * 1.4}" fill="${b}"/>`;
   if (k === 'coneDownB') return `<polygon points="${cx},${cy + s * 0.5} ${cx + s * 0.5},${cy - s * 0.5} ${cx - s * 0.5},${cy - s * 0.5}" fill="#1f5fd1"/>`;
+  if (k === 'ballG') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#1fa64a" stroke="#16181c" stroke-width="0.8"/>`;
+  if (k === 'cylW') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.6}" width="${s * 0.7}" height="${s * 1.2}" fill="#f4f4f0" stroke="#16181c" stroke-width="0.8"/>`;
+  if (k === 'pennantR') return `<polygon points="${cx},${cy - s * 0.5} ${cx},${cy + s * 0.2} ${cx - s * 1.4},${cy - s * 0.15}" fill="#d62a1e"/>`;
   if (k === 'ballY') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#f2c230" stroke="#16181c" stroke-width="0.8"/>`;
   if (k === 'cylYB') {
     // żółty walec: od góry biały, czarny, żółty, czarny, biały pas
@@ -132,6 +135,7 @@ function dayView(v, W = 300, H = 150) {
   const sorted = [...shapes].sort((a, b) => b.y - a.y);
   let y = base - (v.hull === 'yacht' ? 92 : 104);
   for (const s of sorted) {
+    if (s.k === 'pennantR') { const px = x0 + hullW - 26; g += `<rect x="${px - 1}" y="${base - 62}" width="2" height="${40}" fill="${dark}"/>` + shape(s.k, px, base - 54, 16); continue; } // proporzec na dziobie
     if (Math.abs(s.z) > 1) { g += shape(s.k, mx + 40, base - 52, 16); g += `<path d="M${mx} ${base - 70} L${mx + 40} ${base - 60}" stroke="${dark}" stroke-width="1.5"/>`; continue; }
     g += shape(s.k, mx, y, 16); y += s.k === 'hourglass' ? 30 : s.k === 'diamond' ? 26 : 22;
   }

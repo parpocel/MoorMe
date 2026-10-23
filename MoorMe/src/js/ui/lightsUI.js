@@ -154,6 +154,8 @@ const MAST = new THREE.MeshStandardMaterial({ color: 0x9aa1a9, roughness: 0.8 })
 const YELLOW = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
 const BLUE = new THREE.MeshBasicMaterial({ color: 0x1f5fd1 });
 const WHITE = new THREE.MeshBasicMaterial({ color: 0xf4f4f0 });
+const GREEN = new THREE.MeshBasicMaterial({ color: 0x1fa64a });
+const RED = new THREE.MeshBasicMaterial({ color: 0xd62a1e, side: THREE.DoubleSide });
 function shapeMesh(k) {
   const g = new THREE.Group();
   const cone = (up, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLACK); m.position.y = y; if (!up) m.rotation.z = Math.PI; return m; };
@@ -165,6 +167,15 @@ function shapeMesh(k) {
   else if (k === 'cylinder') g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 14), BLACK));
   else if (k === 'ballY') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), YELLOW));
   else if (k === 'coneDownB') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLUE); m.rotation.z = Math.PI; g.add(m); }
+  else if (k === 'ballG') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), GREEN));
+  else if (k === 'cylW') { g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.0, 14), WHITE)); }
+  else if (k === 'pennantR') {
+    // czerwony proporzec na drzewcu; płat ustawiany w update() bokiem do obserwatora
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.5, 0), new THREE.Vector3(0, -0.1, 0), new THREE.Vector3(-1.3, 0.2, 0)]);
+    geo.setIndex([0, 1, 2]);
+    const flag = new THREE.Mesh(geo, RED); flag.name = 'flag'; g.add(flag);
+    const staff = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.1, 6), MAST); staff.position.y = 0.05; g.add(staff);
+  }
   else if (k === 'cylYB') {
     // żółty walec z pasami: od góry biały, czarny, żółty, czarny, biały (białe na skrajach)
     [[WHITE, 0.12], [BLACK, 0.16], [YELLOW, 0.64], [BLACK, 0.16], [WHITE, 0.12]].reduce((y, [m, hgt]) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, hgt, 14), m); c.position.y = y - hgt / 2; g.add(c); return y - hgt; }, 0.6);
@@ -290,6 +301,7 @@ export class ShipShapesLayer {
       mast.position.set(s.x, top / 2, s.z * k);
       mast.scale.set(1, Math.max(0.1, top), 1);
       mast.visible = Math.abs(s.z) < 0.01 && top > 0.5;
+      if (s.k === 'pennantR') m.rotation.y = Math.atan2(cam.x - v.x, cam.z - v.z) - g.rotation.y; // płat proporca zawsze widoczny
     }
   }
 }

@@ -137,6 +137,11 @@ export const VESSELS = [
     lights: (L) => [...mast1(L, 8), ...sides(L, 4.5), ...stern(L, 3.5), { x: L * 0.05, y: 6.5, z: 0, c: 'blue', s: 'all' }]
   },
   {
+    id: 'iFerryPriority', inland: true, name: 'Prom swobodnie przemieszczający się z pierwszeństwem przejścia – drogi śródlądowe', L: [30, 60], speed: [4, 8], moving: true,
+    explain: 'Przepisy śródlądowe: dwa zielone nad białym (dookólne, w pionie), światła burtowe i rufowe – bez masztowego. Zwykły prom przemieszczający się swobodnie ma jedno zielone nad białym; drugie zielone oznacza pierwszeństwo przejścia.',
+    lights: (L) => [...column(L * 0.1, 8, ['green', 'green', 'white']), ...sides(L, 4.5), ...stern(L, 3.5)]
+  },
+  {
     id: 'iSmall', inland: true, name: 'Mała łódź bez napędu mechanicznego lub mały żaglowy (< 7 m) – drogi śródlądowe', L: [4, 7], speed: [0, 0], moving: false,
     explain: 'Przepisy śródlądowe: jedno białe światło widoczne ze wszystkich stron (np. łódź wiosłowa) – kierunku ruchu po nim nie ocenisz. Mały statek żaglowy krótszy niż 7 m może nieść tylko takie światło, a przy zbliżaniu się innych statków pokazuje drugie białe. Tak samo łódź z wyposażenia statku pracująca w jego pobliżu – gdy zbliżają się inne statki.',
     lights: () => [{ x: 0, y: 1.6, z: 0, c: 'white', s: 'all' }]
@@ -192,6 +197,12 @@ export const DAY_VESSELS = [
   { id: 'dIDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true, hull: 'ship',
     explain: 'Przepisy śródlądowe: niebieski stożek wierzchołkiem w dół – ładunek niebezpieczny palny (dwa stożki – szkodliwy dla zdrowia, trzy – wybuchowy). Niesie go także każdy statek zestawu holowanego z takim ładunkiem.',
     shapes: () => [{ x: 0, y: 9, z: 0, k: 'coneDownB' }] },
+  { id: 'dIFerryPriority', inland: true, name: 'Prom swobodnie przemieszczający się z pierwszeństwem przejścia – drogi śródlądowe', L: [30, 60], speed: [4, 8], moving: true, hull: 'ship',
+    explain: 'Przepisy śródlądowe: zielona kula, a około 1 m pod nią biały walec. Sama zielona kula oznacza zwykły prom przemieszczający się swobodnie; biały walec – pierwszeństwo przejścia.',
+    shapes: (L) => col(L * 0.1, 9, ['ballG', 'cylW']) },
+  { id: 'dIPriority', inland: true, name: 'Statek z pierwszeństwem przejścia – drogi śródlądowe', L: [40, 90], speed: [6, 10], moving: true, hull: 'ship',
+    explain: 'Przepisy śródlądowe: czerwony trójkątny proporzec w przedniej części statku – pierwszeństwo przejścia nadane przez dyrektora urzędu żeglugi w miejscach z ustaloną kolejnością przejścia (np. śluzy). Oprócz niego statek niesie inne wymagane znaki.',
+    shapes: (L) => [{ x: L * 0.42, y: 5, z: 0, k: 'pennantR' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
     explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',
     shapes: () => [{ x: 1.5, y: 6, z: 0, k: 'coneDown' }] }
