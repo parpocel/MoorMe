@@ -14,7 +14,7 @@ export const CATEGORIES = {
   fix: 'Pozycja z namiarów',
   dr: 'Zliczenie drogi',
   tsd: 'Czas, prędkość, droga',
-  abeam: 'Namiar podwójny i trawers',
+  abeam: 'Namiar podwójny i odległość mijania',
   range: 'Zasięg widoczności świateł'
 };
 
@@ -379,16 +379,16 @@ const NEW_GEN = {
     // namiar czteropunktowy: 45° → 90°
     (r) => {
       const KR = ri(r, 0, 359), SOG = rf(r, 4, 7, 2), mins = ri(r, 4, 14) * 5, t0 = ri(r, 8 * 12, 15 * 12) * 5, s1 = r() < 0.5 ? 1 : -1, d = (SOG * mins) / 60, NR = norm(KR + s1 * 90);
-      return { cat: 'abeam', text: L(`Płyniesz KR = ${deg3(KR)}, SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0)} latarnia jest w kącie kursowym 45° ${side(s1)}, o ${fmtTime(t0 + mins)} na trawersie. W jakiej odległości od latarni jesteś na trawersie i jaki jest wtedy jej namiar rzeczywisty?`, `You are steering KR = ${deg3(KR)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0)} a lighthouse is 45° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is abeam. How far off are you when abeam and what is its true bearing then?`),
+      return { cat: 'abeam', text: L(`Płyniesz KR = ${deg3(KR)}, SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0)} latarnia jest w kącie kursowym 45° ${side(s1)}, o ${fmtTime(t0 + mins)} dokładnie z boku jachtu (w kącie kursowym 90°). W jakiej odległości od latarni jesteś w tej chwili i jaki jest wtedy jej namiar rzeczywisty?`, `You are steering KR = ${deg3(KR)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0)} a lighthouse is 45° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is abeam. How far off are you when abeam and what is its true bearing then?`),
         answers: [ans('d', L('Odległość', 'Distance'), d, 'nm', 0.08), ans('NR', 'NR', NR, 'deg', 1)],
-        steps: [L('Trójkąt 45°–90°–45° jest równoramienny: odległość na trawersie = droga przebyta między namiarami.', 'The 45°–90°–45° triangle is isosceles: the distance abeam equals the distance run between the bearings.'), L(`Droga = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} Mm`, `Run = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} NM`), L(`Na trawersie NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`, `Abeam NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`)] };
+        steps: [L('Trójkąt 45°–90°–45° jest równoramienny: odległość, gdy latarnia jest dokładnie z boku (90°) = droga przebyta między namiarami.', 'The 45°–90°–45° triangle is isosceles: the distance abeam equals the distance run between the bearings.'), L(`Droga = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} Mm`, `Run = ${num(SOG)} · ${mins}/60 = ${num(d, 2)} NM`), L(`Latarnia w kącie kursowym 90°: NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`, `Abeam NR = KR ${s1 > 0 ? '+' : '−'} 90° = ${deg3(NR)}`)] };
     },
     // podwojenie kąta kursowego: 30° → 60°
     (r) => {
       const SOG = rf(r, 4, 7, 2), mins = ri(r, 4, 14) * 5, s1 = r() < 0.5 ? 1 : -1, a = [20, 25, 30, 35][ri(r, 0, 3)], run = (SOG * mins) / 60, abeam = run * Math.sin(2 * a * D2R), t0 = ri(r, 8 * 12, 15 * 12) * 5;
-      return { cat: 'abeam', text: L(`SOG ${num(SOG)} kn, kurs stały, bez prądu. O ${fmtTime(t0)} latarnia jest w kącie kursowym ${a}° ${side(s1)}, o ${fmtTime(t0 + mins)} w kącie ${2 * a}°. Jaka jest odległość od latarni w chwili drugiego namiaru i w jakiej odległości miniesz ją na trawersie?`, `SOG ${num(SOG)} kn, steady course, no current. At ${fmtTime(t0)} a lighthouse is ${a}° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is ${2 * a}°. How far is the lighthouse at the second bearing and how far off will you pass it abeam?`),
-        answers: [ans('d2', L('Odległość przy 2. namiarze', 'Distance at 2nd bearing'), run, 'nm', 0.08), ans('dab', L('Odległość na trawersie', 'Distance abeam'), abeam, 'nm', 0.1)],
-        steps: [L(`Podwojenie kąta kursowego (${a}° → ${2 * a}°): trójkąt jest równoramienny, więc odległość przy drugim namiarze = droga przebyta = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} Mm`, `Doubling the angle on the bow (${a}° → ${2 * a}°): the triangle is isosceles, so the distance at the second bearing = run = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} NM`), L(`Na trawersie: d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} Mm`, `Abeam: d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} NM`)] };
+      return { cat: 'abeam', text: L(`SOG ${num(SOG)} kn, kurs stały, bez prądu. O ${fmtTime(t0)} latarnia jest w kącie kursowym ${a}° ${side(s1)}, o ${fmtTime(t0 + mins)} w kącie ${2 * a}°. Jaka jest odległość od latarni w chwili drugiego namiaru i w jakiej odległości miniesz ją, gdy będzie dokładnie z boku jachtu (w kącie kursowym 90°)?`, `SOG ${num(SOG)} kn, steady course, no current. At ${fmtTime(t0)} a lighthouse is ${a}° on the ${side(s1)} bow, at ${fmtTime(t0 + mins)} it is ${2 * a}°. How far is the lighthouse at the second bearing and how far off will you pass it abeam?`),
+        answers: [ans('d2', L('Odległość przy 2. namiarze', 'Distance at 2nd bearing'), run, 'nm', 0.08), ans('dab', L('Odległość mijania (latarnia w kącie 90°)', 'Distance abeam'), abeam, 'nm', 0.1)],
+        steps: [L(`Podwojenie kąta kursowego (${a}° → ${2 * a}°): trójkąt jest równoramienny, więc odległość przy drugim namiarze = droga przebyta = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} Mm`, `Doubling the angle on the bow (${a}° → ${2 * a}°): the triangle is isosceles, so the distance at the second bearing = run = ${num(SOG)} · ${mins}/60 = ${num(run, 2)} NM`), L(`Odległość mijania (latarnia w kącie 90°): d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} Mm`, `Abeam: d · sin ${2 * a}° = ${num(run, 2)} · ${num(Math.sin(2 * a * D2R), 3)} = ${num(abeam, 2)} NM`)] };
     }
   ],
   range: [
