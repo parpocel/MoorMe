@@ -243,6 +243,14 @@ export const EN = {
   // ---- Tryb rejsu ----
   // menu główne 3D
   'Symulator żeglarski': 'Sailing simulator', 'Cumowanie · symulator manewrów portowych': 'Mooring · harbour manoeuvring simulator',
+  'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'światła i znaki dzienne': 'lights and day shapes',
+  'Manewry portowe · cumowanie i odcumowanie': 'Harbour manoeuvres · mooring and unmooring',
+  'Cumowanie i odcumowywanie łodzi.': 'Mooring and unmooring a boat.',
+  'Pławy, stawy oraz światła elementów nawigacyjnych.': 'Buoys, leading marks and the lights of navigational aids.',
+  'Rozpoznaj statek po jego światłach lub znakach dziennych.': 'Identify a vessel by its lights or day shapes.',
+  'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.': 'Recognise a vessel’s intentions from the sounds it makes.',
+  'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.': 'Practise calculating and converting courses, fixing position from bearings, etc.',
+  'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.': 'Equipment and procedures for safe navigation at sea.',
   'Tryby': 'Modes', 'wybór': 'select', 'start': 'start',
   'keja, cumy, muringi': 'quays, lines, lazy lines', 'waypointy i znaki IALA': 'waypoints and IALA marks', 'statki nocą': 'ships at night',
   'buczki, dzwony, mgła': 'whistles, bells, fog', 'kursy, namiary, prąd': 'courses, bearings, tidal stream', 'EPIRB, VHF, MAYDAY': 'EPIRB, VHF, MAYDAY',

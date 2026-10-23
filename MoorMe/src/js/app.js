@@ -215,7 +215,7 @@ function showTitle() {
   const saved = !!loadConfig();
   const keep = (i, fn) => () => { titleSel = i; fn(); };
   menuScreen({
-    kicker: 'Cumowanie · symulator manewrów portowych', sel: titleSel,
+    kicker: 'Manewry portowe · cumowanie i odcumowanie', sel: titleSel,
     back: { label: 'Tryby', go: () => showModeSelect() },
     items: [
       { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.', go: keep(0, () => { config.random = false; showStep(0); }) },
@@ -234,12 +234,12 @@ function showModeSelect() {
   menuScreen({
     kicker: 'Symulator żeglarski', sel: modeSel,
     items: [
-      { glyph: 'anchor', color: '#e0705f', title: 'Cumowanie', tag: 'keja, cumy, muringi', desc: 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', go: keep(0, () => showTitle()) },
-      { glyph: 'sail', color: '#2aa39a', title: 'Rejs wzdłuż wybrzeża', tag: 'waypointy i znaki IALA', desc: 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', go: keep(1, () => showSailIntro()) },
-      { glyph: 'lights', color: '#6a6fd6', title: 'Rozpoznawanie świateł', tag: 'statki nocą', desc: 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', go: keep(2, () => showLightsIntro()) },
-      { glyph: 'horn', color: '#e0a33a', title: 'Sygnały dźwiękowe', tag: 'buczki, dzwony, mgła', desc: 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', go: keep(3, () => showSoundsIntro()) },
-      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', tag: 'kursy, namiary, prąd', desc: 'Kursy i namiary z dewiacją, deklinacją i dryfem, prąd i kurs z poprawką na prąd, pozycja z namiarów i radaru, zliczenie drogi, czas–prędkość–droga, namiar podwójny i zasięg świateł – z mapą do kreślenia i rozwiązaniem krok po kroku.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
-      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', tag: 'EPIRB, VHF, MAYDAY', desc: 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
+      { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', tag: 'keja, cumy, muringi', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
+      { glyph: 'sail', color: '#2aa39a', title: 'Locja', tag: 'waypointy i znaki IALA', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
+      { glyph: 'lights', color: '#6a6fd6', title: 'Rozpoznawanie statków', tag: 'światła i znaki dzienne', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
+      { glyph: 'horn', color: '#e0a33a', title: 'Sygnały dźwiękowe', tag: 'buczki, dzwony, mgła', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
+      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', tag: 'kursy, namiary, prąd', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
+      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', tag: 'EPIRB, VHF, MAYDAY', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
     ]
   });
 }
