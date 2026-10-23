@@ -583,3 +583,25 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .m3-hint span { margin: 0 8px 0 2px; }
 @media (max-height: 760px) { .m3-logo { font-size: 64px; } .m3-desc { font-size: 14.5px; } .m3-tile { min-height: 140px; } .m3-gem { width: 50px; height: 50px; margin-bottom: 4px; } }
 @media (prefers-reduced-motion: reduce) { .m3-tile, .m3-hero.swap .m3-card > * { animation: none; } }
+
+/* podmenu w stylu menu głównego: dodatkowy wybór w karcie, tło 3D na ekranach ustawień */
+.m3-extra { margin: -4px 0 18px; }
+.m3-seg { display: flex; flex-direction: column; gap: 8px; }
+.m3-lbl { font-weight: 800; font-size: 12px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255, 240, 230, 0.8); }
+.m3-seg .seg button { padding: 9px 14px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.28); background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 700; font-size: 13.5px; }
+.m3-seg .seg button:hover { background: rgba(255, 255, 255, 0.2); }
+.m3-seg .seg button.on { background: #fff; color: #22304f; border-color: #fff; }
+.screen > .scenery.scenery3d { filter: none; }
+.screen > .scenery.scenery3d .m3-gl, .screen > .scenery.scenery3d canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; display: block; }
+.screen > .scenery.scenery3d::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10, 20, 40, 0.35), rgba(10, 20, 40, 0.62)); pointer-events: none; }
+/* ekrany z formularzami na scenie 3D: paski jak w menu (ciemne szkło), nagłówki sekcji jasne, karty zostają papierowe */
+.screen:has(> .scenery3d) .screen-header, .screen:has(> .scenery3d) .screen-footer { background: rgba(14, 22, 44, 0.42); backdrop-filter: blur(10px); border-color: rgba(255, 255, 255, 0.14); color: #fff; }
+.screen:has(> .scenery3d) .screen-header .logo { color: #fff7f1; text-shadow: 0 3px 14px rgba(40, 10, 30, 0.35); }
+.screen:has(> .scenery3d) .screen-header .logo span { color: #ff8c75; }
+.screen:has(> .scenery3d) .screen-header .muted { color: rgba(255, 240, 230, 0.85); letter-spacing: 2px; text-transform: uppercase; font-size: 12px; font-weight: 800; }
+.screen:has(> .scenery3d) .screen-body > div > h2, .screen:has(> .scenery3d) .screen-body > div > h1 { color: #fff; font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: 26px; text-shadow: 0 2px 12px rgba(20, 10, 30, 0.45); }
+.screen:has(> .scenery3d) .screen-body > div > p.muted { color: rgba(255, 245, 238, 0.85); }
+.screen:has(> .scenery3d) .screen-footer .btn:not(.primary), .screen:has(> .scenery3d) .screen-header .btn:not(.primary) { background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
+.screen:has(> .scenery3d) .step { color: rgba(255, 245, 238, 0.82); border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }
+.screen:has(> .scenery3d) .step.active { background: #fff; color: #22304f; border-color: #fff; }
+.screen:has(> .scenery3d) .step.done { color: #fff; border-color: rgba(120, 230, 170, 0.7); }

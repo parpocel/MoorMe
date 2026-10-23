@@ -13,7 +13,7 @@ import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from '
 import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
 import { SoundsScreen, ShipAudio } from './ui/soundsUI.js';
-import { showHandbook, showTrainOrLearn, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
+import { showHandbook, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
@@ -30,10 +30,19 @@ applyUiScale();
 
 // tło menu: ilustracja portu (SVG) jako pierwsze dziecko ekranu
 window.__sceneryEl = () => sceneryEl();
-function sceneryEl() {
+function svgScenery() {
   const d = document.createElement('div');
   d.innerHTML = sceneryHTML();
   return d.firstChild;
+}
+// tło podmenu i ekranów ustawień: ta sama scena 3D co w menu głównym (bez WebGL – ilustracja SVG)
+function sceneryEl() {
+  try {
+    if (!menuGL || menuGL._disposed) menuGL = new MenuScene(h('div.m3-gl'));
+    const host = h('div.scenery.scenery3d', {}, menuGL.el);
+    requestAnimationFrame(() => menuGL && menuGL.resize());
+    return host;
+  } catch (e) { menuGL = null; return svgScenery(); }
 }
 const icon = {
   book: '<svg width="30" height="30" viewBox="0 0 24 24"><path d="M4 5c3-1.5 5.5-1.5 8 0v14c-2.5-1.5-5-1.5-8 0z" fill="#2f4468"/><path d="M20 5c-3-1.5-5.5-1.5-8 0v14c2.5-1.5 5-1.5 8 0z" fill="#d2695f"/></svg>',
@@ -123,7 +132,12 @@ const GLYPH = {
   help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.6a2.5 2.5 0 014.8.8c0 1.8-2.4 2-2.4 3.6M12 16.8v.4"/>',
   gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
   power: '<path d="M12 3v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
-  back: '<path d="M15 5l-7 7 7 7"/>'
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  book: '<path d="M4 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/><path d="M12 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/>',
+  moon: '<path d="M19.5 14.5A8 8 0 019.5 4.5a8 8 0 1010 10z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/>',
+  wave: '<path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+  river: '<path d="M7 3c3 4-3 7 0 11s-3 5-1 7M17 3c3 4-3 7 0 11s-3 5-1 7"/>'
 };
 const glyph = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GLYPH[k]}</svg>`;
 // sześciokątny klejnot low-poly: 6 faset oświetlonych z lewej-góry
@@ -148,13 +162,13 @@ function menuBackdrop() {
     requestAnimationFrame(() => menuGL && menuGL.resize());
   } catch (e) {
     menuGL = null;
-    host.appendChild(sceneryEl()); // bez WebGL – ilustracja SVG
+    host.appendChild(svgScenery()); // bez WebGL – ilustracja SVG
   }
   return host;
 }
 
 // items: { id, glyph, color, title, tag, desc, go, disabled }
-function menuScreen({ kicker, items, sel = 0, back }) {
+function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack = null }) {
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
   const heroTitle = h('h2.m3-title'), heroDesc = h('p.m3-desc'), heroGlyph = h('div.m3-hglyph');
@@ -193,12 +207,12 @@ function menuScreen({ kicker, items, sel = 0, back }) {
   const hero = h('div.m3-hero', {},
     h('div.m3-logo', {}, 'Moor', h('span', {}, 'Me')),
     h('div.m3-kicker', {}, kicker),
-    h('div.m3-card', {}, h('div.m3-head', {}, heroGlyph, heroTitle), heroDesc, goBtn));
+    h('div.m3-card', {}, h('div.m3-head', {}, heroGlyph, heroTitle), heroDesc, extra ? h('div.m3-extra', {}, extra) : null, goBtn));
   const s = h('div.screen.menu3d', {}, menuBackdrop(), h('div.m3-shade'),
     h('div.m3-top', {},
       back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('div.m3-flags', {}, raw(signalFlagsHTML())),
       h('div.m3-sp'),
-      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => (back ? showTitle() : showModeSelect())); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
+      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
     hero,
     h('div.m3-tiles', {}, tiles),
@@ -245,11 +259,20 @@ function showModeSelect() {
 }
 
 // ---------- Trening albo nauka (podręczniki) ----------
+// Trening albo nauka – w stylu menu głównego (scena 3D, kafle)
+function trainOrLearn({ kicker, glyph: g, color, trainTag, learnTag, train, learn, onTrain, onLearn, self }) {
+  menuScreen({
+    kicker, back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: self,
+    items: [
+      { glyph: g, color, title: 'Trening w symulacji', tag: trainTag, desc: train, go: onTrain },
+      { glyph: 'book', color: '#5b78d6', title: 'Nauka – podręcznik', tag: learnTag, desc: learn, go: onLearn }
+    ]
+  });
+}
+
 function showLightsIntro() {
   menuMusic.start();
-  showTrainOrLearn(app, { title: 'Rozpoznawanie statków', sceneryEl, icons: { train: raw(icon.bulb), learn: raw(icon.book) },
-    desc: { train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).' },
-    onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), onExit: () => showModeSelect() });
+  trainOrLearn({ kicker: 'Rozpoznawanie statków', glyph: 'lights', color: '#6a6fd6', trainTag: 'noc i dzień, morze i śródlądowe', learnTag: 'światła z czterech stron, znaki dzienne', train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).', onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), self: () => showLightsIntro() });
 }
 function showLightsBook() {
   menuMusic.start();
@@ -257,9 +280,7 @@ function showLightsBook() {
 }
 function showSoundsIntro() {
   menuMusic.start();
-  showTrainOrLearn(app, { title: 'Sygnały dźwiękowe', sceneryEl, icons: { train: raw(icon.horn), learn: raw(icon.book) },
-    desc: { train: 'Z łodzi słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności, we mgle i na drogach śródlądowych – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: sygnały manewrowe, ostrzegawcze i mgłowe na morzu oraz sygnały ogólne i alarmowe na drogach śródlądowych – z zapisem, osią czasu i odsłuchem.' },
-    onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), onExit: () => showModeSelect() });
+  trainOrLearn({ kicker: 'Sygnały dźwiękowe', glyph: 'horn', color: '#e0a33a', trainTag: 'morze, mgła, drogi śródlądowe', learnTag: 'zapis, oś czasu, odsłuch', train: 'Z łodzi słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności, we mgle i na drogach śródlądowych – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: sygnały manewrowe, ostrzegawcze i mgłowe na morzu oraz sygnały ogólne i alarmowe na drogach śródlądowych – z zapisem, osią czasu i odsłuchem.', onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), self: () => showSoundsIntro() });
 }
 function showSoundsBook() {
   menuMusic.stop(0.6);
@@ -269,9 +290,7 @@ function showSoundsBook() {
 }
 function showSailIntro() {
   menuMusic.start();
-  showTrainOrLearn(app, { title: 'Locja', sceneryEl, icons: { train: raw(icon.sail), learn: raw(icon.book) },
-    desc: { train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła oraz charakterystyki świateł (Fl, Q, VQ, Iso, Oc, LFl, Mo) z animacją.' },
-    onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), onExit: () => showModeSelect() });
+  trainOrLearn({ kicker: 'Locja', glyph: 'sail', color: '#2aa39a', trainTag: 'rejs wzdłuż wybrzeża', learnTag: 'znaki IALA, charakterystyki świateł', train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła oraz charakterystyki świateł (Fl, Q, VQ, Iso, Oc, LFl, Mo) z animacją.', onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), self: () => showSailIntro() });
 }
 function showMarksBook() {
   menuMusic.start();
@@ -350,32 +369,28 @@ function savePassageCfg() {
 
 function showLightsSetup() {
   menuMusic.start();
-  app.innerHTML = '';
-  const card = (cls, title, text, onclick) => h('button.mode-card' + cls, { onclick }, h('h3', {}, title), h('p', {}, text));
-  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', { style: { width: 'min(820px, 94vw)' } },
-      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'ROZPOZNAWANIE STATKÓW')),
-      h('p.desc', {}, 'Wybierz porę: nocą statki rozpoznajesz po światłach, w dzień – po czarnych znakach dziennych.'),
-      h('div.field', { style: { margin: '0 0 12px' } }, h('label', {}, 'Przepisy'), seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v }))),
-      h('div.mode-cards', { style: { gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))' } },
-        card('.lights', '🌙 Noc – światła', 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', () => startLights(false)),
-        card('.sail', '☀ Dzień – znaki dzienne', 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', () => startLights(true))),
-      h('div.tbtn-row', {}, h('button.btn', { onclick: () => showModeSelect() }, '← Tryby')))));
+  // zakres przepisów – wybór w karcie nad przyciskiem Start
+  const scope = h('div.m3-seg', {}, h('span.m3-lbl', {}, 'Przepisy'),
+    seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
+  menuScreen({
+    kicker: 'Rozpoznawanie statków · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
+    items: [
+      { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => startLights(false) },
+      { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => startLights(true) }
+    ]
+  });
 }
 
 function showSoundsSetup() {
   menuMusic.start();
-  app.innerHTML = '';
-  const card = (cls, ic, title, text, ctxs) => h('button.mode-card' + cls, { onclick: () => startSounds(ctxs) }, h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
-  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', { style: { width: 'min(1060px, 96vw)' } },
-      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
-      h('p.desc', {}, 'Które sygnały ćwiczysz?'),
-      h('div.mode-cards', {},
-        card('.sail', icon.horn, 'Morze (MPZZM / COLREG)', 'Sygnały manewrowe i ostrzegawcze, sygnały we mgle i wzywanie pomocy na morzu.', ['sight', 'fog']),
-        card('.nav', icon.horn, 'Drogi śródlądowe (CEVNI)', 'Sygnały na rzekach, kanałach i jeziorach – m.in. „uwaga”, „nie mogę manewrować”, zawracanie.', ['inland']),
-        card('.lights', icon.horn, 'Wszystkie', 'Morze i drogi śródlądowe razem – przy każdym sygnale widać, którego zestawu dotyczy.', ['sight', 'fog', 'inland'])),
-      h('div.tbtn-row', {}, h('button.btn', { onclick: () => showSoundsIntro() }, '← Wstecz')))));
+  menuScreen({
+    kicker: 'Sygnały dźwiękowe · trening', back: { label: 'Wstecz', go: () => showSoundsIntro() }, settingsBack: () => showSoundsSetup(),
+    items: [
+      { glyph: 'wave', color: '#2aa39a', title: 'Morze (MPZZM / COLREG)', tag: 'manewrowe, mgła, pomoc', desc: 'Sygnały manewrowe i ostrzegawcze, sygnały we mgle i wzywanie pomocy na morzu.', go: () => startSounds(['sight', 'fog']) },
+      { glyph: 'river', color: '#4f9d5c', title: 'Drogi śródlądowe (CEVNI)', tag: 'rzeki, kanały, jeziora', desc: 'Sygnały na rzekach, kanałach i jeziorach – m.in. „uwaga”, „nie mogę manewrować”, „człowiek za burtą”.', go: () => startSounds(['inland']) },
+      { glyph: 'horn', color: '#e0a33a', title: 'Wszystkie', tag: 'morze i drogi śródlądowe', desc: 'Morze i drogi śródlądowe razem – przy każdym sygnale widać, którego zestawu dotyczy.', go: () => startSounds(['sight', 'fog', 'inland']) }
+    ]
+  });
 }
 
 function startSounds(ctxs = ['sight', 'fog', 'inland']) {
