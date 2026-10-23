@@ -461,8 +461,6 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-sound-h h3 { margin: 0; }
 .handbook .hb-notation { font-size: 20px; letter-spacing: 3px; margin: 6px 0; }
 .handbook .hb-ctx { font-weight: 700; color: #4a5a7d; }
-.handbook .hb-lamp { animation: hbBlink 2.4s infinite; }
-@keyframes hbBlink { 0%, 55%, 100% { opacity: 0.25; } 8%, 30% { opacity: 1; } }
 .title-card.first-run { width: min(780px, 94vw); }
 .first-run .iala-btn { height: auto; min-height: 84px; padding: 10px 16px; }
 .first-run .iala-btn > span:not(.iala-ic) { font-size: 18px; }
@@ -498,3 +496,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 
 .navtasks .nt-cats { align-items: center; gap: 8px; font-weight: 700; }
 .navtasks .nt-catsel { font: 700 14px 'Nunito', sans-serif; color: #2f4468; padding: 6px 10px; border-radius: 10px; border: 1px solid rgba(47, 68, 104, 0.3); background: #fff; cursor: pointer; min-width: 260px; }
+
+/* podręcznik: charakterystyki świateł */
+.handbook .hb-char { display: flex; gap: 16px; align-items: flex-start; }
+.handbook .hb-char-body { flex: 1; min-width: 0; }
+.handbook .hb-char-code { font: 800 16px Consolas, 'Courier New', monospace; color: #c2410c; margin: -2px 0 6px; }
+.handbook .hb-rhythm { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 13px; }
+.handbook .hb-rhythm-row { display: flex; gap: 10px; align-items: center; }
