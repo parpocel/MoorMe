@@ -61,7 +61,13 @@ export class PlotBoard {
     const all = [...plot.pts, plot.sol.point, ...(plot.sol.vectors || []).flatMap((v) => [v.from, v.to])];
     const lat0 = all.reduce((s, p) => s + p.lat, 0) / all.length;
     this.cl = Math.cos(lat0 * D2R);
-    const xs = all.map((p) => p.lon * 60 * this.cl), ys = all.map((p) => p.lat * 60);
+    // na mapie mieści się też to, co trzeba wykreślić: pozycja sprzed drogi przy namiarach niejednoczesnych,
+    // końce odcinków kursu i drogi oraz całe okręgi odległości (np. z radaru)
+    const nm = all.map((q) => this.toNm(q)), sol = plot.sol, P = this.toNm(sol.point);
+    if (sol.lines) for (const v of sol.vectors || []) { const a = this.toNm(v.from), b = this.toNm(v.to); nm.push({ x: P.x - (b.x - a.x), y: P.y - (b.y - a.y) }); }
+    for (const sg of sol.segs || []) { const a = this.toNm(sg.p); nm.push({ x: a.x + Math.sin(sg.brg * D2R) * sg.dist, y: a.y + Math.cos(sg.brg * D2R) * sg.dist }); }
+    for (const c of sol.circles || []) { const o = this.toNm(c.p); nm.push({ x: o.x - c.r, y: o.y - c.r }, { x: o.x + c.r, y: o.y + c.r }); }
+    const xs = nm.map((q) => q.x), ys = nm.map((q) => q.y);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
     const iw = this.W - 2 * M, ih = this.H - 2 * M;
     const span = Math.max((Math.max(...xs) - Math.min(...xs)) / iw, (Math.max(...ys) - Math.min(...ys)) / ih) * 1.5;
