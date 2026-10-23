@@ -503,3 +503,12 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-char-code { font: 800 16px Consolas, 'Courier New', monospace; color: #c2410c; margin: -2px 0 6px; }
 .handbook .hb-rhythm { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; font-size: 13px; }
 .handbook .hb-rhythm-row { display: flex; gap: 10px; align-items: center; }
+
+.handbook .hb-ct-wrap { overflow-x: auto; }
+.handbook .hb-ctable { width: 100%; border-collapse: collapse; font-size: 13.5px; margin-top: 6px; }
+.handbook .hb-ctable th { background: #2f4468; color: #fff7f1; text-align: left; padding: 7px 8px; font-weight: 700; }
+.handbook .hb-ctable td { border-bottom: 1px solid rgba(47, 68, 104, 0.15); padding: 6px 8px; vertical-align: middle; line-height: 1.4; }
+.handbook .hb-ctable .hb-ct-grp td { background: #f1e6d6; color: #c2410c; font-weight: 800; padding: 5px 8px; }
+.handbook .hb-ct-name { font-weight: 700; color: #2f4468; white-space: nowrap; }
+.handbook .hb-ct-abbr { font: 800 14px Consolas, 'Courier New', monospace; color: #1b1f24; white-space: nowrap; }
+.handbook .hb-ctable .hb-svg svg { border-radius: 4px; }

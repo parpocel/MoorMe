@@ -166,6 +166,19 @@ export function soundsBook(play) {
 // ---------- oznakowanie IALA ----------
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 // pława filarowa: bands – kolory pasów od góry; topmark – SVG nad pławą
+// odcinki światła na przedziale [0, span): sąsiednie fazy tego samego koloru i jasności scalone (bez szwów na wykresie)
+function litRuns(seq, span) {
+  const out = [];
+  for (let t = 0, i = 0; t < span - 1e-9; i++) {
+    const sg = seq.segs[i % seq.segs.length], last = out[out.length - 1];
+    if (sg.on) {
+      if (last && Math.abs(last.t + last.d - t) < 1e-9 && last.c === sg.c && (last.b ?? 1) === (sg.b ?? 1)) last.d += sg.d;
+      else out.push({ t, d: sg.d, c: sg.c, b: sg.b ?? 1 });
+    }
+    t += sg.d;
+  }
+  return out;
+}
 // ---------- charakterystyki świateł: lampa animowana z prawdziwym taktowaniem i wykres czasowy ----------
 const LAMP_OFF = '#3a3f47';
 // lampa (SVG): data-lc – zapis charakterystyki; animuje ją wspólna pętla animLamps
@@ -174,11 +187,7 @@ const lampSvg = (code, cx, cy, r = 6) => `<g data-lc="${code}"><circle class="lh
 function timelineSvg(code, W = 300) {
   const seq = lightSequence(code), span = Math.max(seq.period, Math.ceil(6 / seq.period) * seq.period), H = 46, x0 = 10, w = W - 20, k = w / span;
   let g = `<rect width="${W}" height="${H}" rx="6" fill="#0b1220"/><line x1="${x0}" y1="18" x2="${x0 + w}" y2="18" stroke="#2b3547" stroke-width="2"/>`;
-  for (let t = 0, i = 0; t < span - 1e-9; i++) {
-    const sg = seq.segs[i % seq.segs.length];
-    if (sg.on) g += `<rect x="${(x0 + t * k).toFixed(2)}" y="9" width="${Math.max(1.2, sg.d * k).toFixed(2)}" height="18" rx="1.5" fill="${LIGHT_COLORS[sg.c] || LIGHT_COLORS.W}"/>`;
-    t += sg.d;
-  }
+  for (const r of litRuns(seq, span)) { const hh = r.b < 1 ? 7 : 18; g += `<rect x="${(x0 + r.t * k).toFixed(2)}" y="${27 - hh}" width="${Math.max(1.2, r.d * k).toFixed(2)}" height="${hh}" rx="1.5" fill="${LIGHT_COLORS[r.c] || LIGHT_COLORS.W}"/>`; }
   const step = span > 16 ? 2 : 1;
   for (let t = 0; t <= span + 1e-9; t += step) g += `<line x1="${x0 + t * k}" y1="29" x2="${x0 + t * k}" y2="${t % (step * 2) === 0 ? 33 : 31}" stroke="#7a8290"/>` + (t % (step * 2) === 0 ? `<text x="${x0 + t * k}" y="${H - 3}" font-size="9" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">${t} s</text>` : '');
   for (let t = seq.period; t < span - 1e-9; t += seq.period) g += `<line x1="${x0 + t * k}" y1="5" x2="${x0 + t * k}" y2="29" stroke="#ffffff" stroke-opacity="0.25" stroke-dasharray="2 2"/>`;
@@ -195,9 +204,11 @@ function lampTick(now) {
     live++;
     if (el.__lamp) {
       const s = lightAt(el.__seq, t), col = s.on ? (LIGHT_COLORS[s.c] || LIGHT_COLORS.W) : null;
+      const br = s.on ? (s.b ?? 1) : 0;
       el.__core.setAttribute('fill', col || LAMP_OFF);
+      el.__core.setAttribute('fill-opacity', col ? String(0.5 + 0.5 * br) : '1');
       el.__halo.setAttribute('fill', col || '#fff');
-      el.__halo.setAttribute('opacity', col ? '0.55' : '0');
+      el.__halo.setAttribute('opacity', col ? String(0.55 * br) : '0');
     } else {
       const x = el.__x0 + (((t % el.__span) + el.__span) % el.__span) / el.__span * el.__w;
       el.setAttribute('x1', x); el.setAttribute('x2', x);
@@ -224,6 +235,69 @@ function animLamps(root) {
 // lampa na nocnym tle (rozdział o charakterystykach)
 const nightLamp = (code, sz = 64) => svgEl(sz, sz, `<rect width="${sz}" height="${sz}" rx="10" fill="#0b1220"/>${lampSvg(code, sz / 2, sz / 2, sz / 8)}`);
 
+// pasek „obrazu graficznego” do tabeli: kilka okresów, światło jasne na ciemnym tle, klamra „okres” pod pierwszym
+function stripSvg(code, W = 210, H = 34) {
+  const seq = lightSequence(code), span = Math.max(2 * seq.period, Math.ceil(9 / seq.period) * seq.period), x0 = 4, w = W - 8, k = w / span;
+  let g = `<rect x="${x0}" y="2" width="${w}" height="16" fill="#0b1220"/>`;
+  for (const r of litRuns(seq, span)) { const hh = r.b < 1 ? 4 : 10; g += `<rect x="${(x0 + r.t * k).toFixed(2)}" y="${15 - hh}" width="${Math.max(1, r.d * k).toFixed(2)}" height="${hh}" fill="${LIGHT_COLORS[r.c] || LIGHT_COLORS.W}"/>`; }
+  const pw = seq.period * k;
+  g += `<path d="M${x0} 21 V25 H${x0 + pw} V21" fill="none" stroke="#2f4468" stroke-width="1"/>${pw < 60 ? `<text x="${x0 + pw + 4}" y="27" font-size="8" fill="#2f4468" font-family="sans-serif">` : `<text x="${x0 + pw / 2}" y="${H - 1}" font-size="8" fill="#2f4468" text-anchor="middle" font-family="sans-serif">`}${L('okres', 'period')} ${String(seq.period).replace('.', ',')} s</text>`;
+  return g;
+}
+// zestawienie charakterystyk (nazwa, skrót, definicja, obraz graficzny, lampa na żywo)
+const CHAR_TABLE = [
+  [L('Stałe i rozbłyskowe', 'Fixed and fixed-and-flashing'), [
+    ['F', 'F', L('Stałe', 'Fixed'), L('Świeci bez przerwy, zawsze z tą samą jasnością i w tym samym kolorze.', 'Shows continuously with unchanging brightness and colour.')],
+    ['FFl', 'FFl 5s', L('Rozbłyskowe', 'Fixed and flashing'), L('Światło stałe, które co pewien czas na chwilę mocno się rozjaśnia (rozbłysk).', 'A steady light that brightens strongly for a moment at regular intervals.')],
+    ['FFl(2)', 'FFl(2) 8s', L('Rozbłyskowe grupowe', 'Fixed and group flashing'), L('Światło stałe, które w każdym okresie rozjaśnia się grupą kilku rozbłysków.', 'A steady light that brightens with a group of flashes in every period.')]
+  ]],
+  [L('Przerywane', 'Occulting'), [
+    ['Oc', 'Oc 4s', L('Przerywane', 'Occulting'), L('Przeważa światło: krótkie, jednakowe zaciemnienia przerywają dłuższe świecenie. Okres co najmniej 1,5 s.', 'Light predominates: short, equal eclipses interrupt longer periods of light. Period at least 1.5 s.')],
+    ['Oc(2)', 'Oc(2) 8s', L('Przerywane grupowe', 'Group occulting'), L('W każdym okresie grupa kilku zaciemnień, a między grupami dłuższe świecenie.', 'A group of eclipses in every period, with a longer spell of light between the groups.')],
+    ['Oc(2+1)', 'Oc(2+1) 12s', L('Przerywane złożone', 'Composite group occulting'), L('Dwie grupy zaciemnień o różnej liczbie (np. dwa i jedno) w jednym okresie.', 'Two groups with a different number of eclipses (e.g. two and one) in one period.')]
+  ]],
+  [L('Izofazowe', 'Isophase'), [
+    ['Iso', 'Iso 4s', L('Izofazowe', 'Isophase'), L('Świecenie i ciemność trwają dokładnie tyle samo. Okres co najmniej 2 s.', 'Light and darkness last exactly the same time. Period at least 2 s.')]
+  ]],
+  [L('Blaskowe', 'Long flashing'), [
+    ['LFl', 'LFl 10s', L('Blaskowe', 'Long flashing'), L('Pojedyncze blaski – długie błyski trwające co najmniej 2 s – wyraźnie krótsze od przerw.', 'Single long flashes of at least 2 s, clearly shorter than the darkness between them.')],
+    ['LFl(2)', 'LFl(2) 12s', L('Blaskowe grupowe', 'Group long flashing'), L('Grupa kilku blasków, po niej dłuższa przerwa.', 'A group of long flashes followed by a longer eclipse.')],
+    ['LFl(2+1)', 'LFl(2+1) 18s', L('Blaskowe złożone', 'Composite group long flashing'), L('Dwie grupy blasków o różnej liczbie w jednym okresie.', 'Two groups with a different number of long flashes in one period.')]
+  ]],
+  [L('Błyskowe', 'Flashing'), [
+    ['Fl', 'Fl 4s', L('Błyskowe', 'Flashing'), L('Krótkie, jednakowe błyski wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę.', 'Short, equal flashes clearly shorter than the darkness, fewer than 50 per minute.')],
+    ['Fl(3)', 'Fl(3) 10s', L('Błyskowe grupowe', 'Group flashing'), L('Grupa kilku błysków (tu trzech), po niej dłuższa przerwa.', 'A group of flashes (here three) followed by a longer eclipse.')],
+    ['Fl(2+1)', 'Fl(2+1) 10s', L('Błyskowe złożone', 'Composite group flashing'), L('Dwie grupy błysków o różnej liczbie – np. dwa błyski, przerwa i jeden błysk.', 'Two groups with a different number of flashes – e.g. two flashes, an eclipse and one flash.')]
+  ]],
+  [L('Migające (Q)', 'Quick (Q)'), [
+    ['Q', 'Q', L('Migające', 'Quick'), L('Jednakowe błyski bez przerw, od 50 do 79 na minutę (zwykle 60).', 'Equal flashes without a break, 50 to 79 per minute (usually 60).')],
+    ['Q(3)', 'Q(3) 10s', L('Migające grupowe', 'Group quick'), L('Grupa błysków migających, po niej dłuższa przerwa.', 'A group of quick flashes followed by a longer eclipse.')],
+    ['Q(6)+LFl', 'Q(6)+LFl 15s', L('Migające złożone', 'Group quick with long flash'), L('Grupa błysków migających zakończona jednym blaskiem.', 'A group of quick flashes ending with one long flash.')],
+    ['IQ', 'IQ 13s', L('Migające przerywane', 'Interrupted quick'), L('Miga jak Q, ale po serii co najmniej ośmiu błysków robi przerwę trwającą 3 s lub dłużej.', 'Flashes like Q, but after a run of at least eight flashes there is an eclipse of 3 s or more.')]
+  ]],
+  [L('Szybko migające (VQ)', 'Very quick (VQ)'), [
+    ['VQ', 'VQ', L('Szybko migające', 'Very quick'), L('Jednakowe błyski bez przerw, od 80 do 159 na minutę (zwykle 120).', 'Equal flashes without a break, 80 to 159 per minute (usually 120).')],
+    ['VQ(3)', 'VQ(3) 5s', L('Szybko migające grupowe', 'Group very quick'), L('Grupa szybkich błysków, po niej dłuższa przerwa.', 'A group of very quick flashes followed by a longer eclipse.')],
+    ['VQ(6)+LFl', 'VQ(6)+LFl 10s', L('Szybko migające złożone', 'Group very quick with long flash'), L('Grupa szybkich błysków zakończona jednym blaskiem.', 'A group of very quick flashes ending with one long flash.')],
+    ['IVQ', 'IVQ 10s', L('Szybko migające przerywane', 'Interrupted very quick'), L('Miga jak VQ, ale po serii co najmniej ośmiu błysków następuje przerwa co najmniej 3 s.', 'Flashes like VQ, but after a run of at least eight flashes there is an eclipse of at least 3 s.')]
+  ]],
+  [L('Kodowe i zmiennobarwne', 'Morse and alternating'), [
+    ['Mo(A)', 'Mo(A) 6s', L('Kodowe Morse’a', 'Morse code'), L('Krótkie i długie świecenia układają się w literę alfabetu Morse’a – tu A (· –).', 'Short and long flashes form a Morse letter – here A (· –).')],
+    ['Al.WR', 'Al.WR 4s', L('Zmiennobarwne', 'Alternating'), L('W tym samym kierunku światło regularnie zmienia kolor, np. białe i czerwone na zmianę.', 'Seen from the same direction the light regularly changes colour, e.g. white and red in turn.')]
+  ]]
+];
+function charTable() {
+  const head = h('tr', {}, ...[L('Nazwa światła', 'Light'), L('Skrót', 'Abbr.'), L('Definicja', 'Definition'), L('Obraz graficzny', 'Pattern'), L('Na żywo', 'Live')].map((x) => h('th', {}, x)));
+  const rows = CHAR_TABLE.flatMap(([grp, list]) => [
+    h('tr.hb-ct-grp', {}, h('td', { colspan: 5 }, grp)),
+    ...list.map(([abbr, code, name, def]) => h('tr', {}, h('td.hb-ct-name', {}, name), h('td.hb-ct-abbr', {}, abbr), h('td', {}, def),
+      h('td', {}, svgEl(210, 34, stripSvg(code))), h('td', {}, nightLamp(code, 34))))
+  ]);
+  return animLamps(h('div.hb-entry', {}, h('h3', {}, L('Zestawienie charakterystyk świateł', 'Table of light characters')),
+    h('p', {}, L('Na obrazie graficznym jasne pola to czas świecenia, ciemne – zaciemnienia; cienka linia oznacza słabsze światło stałe, na którym pojawiają się rozbłyski. Klamra pokazuje jeden okres – czas, po którym cały rytm się powtarza.', 'In the pattern the bright parts show the light and the dark parts the eclipses; a thin line is the weaker steady light on which the flashes appear. The bracket shows one period – the time after which the whole rhythm repeats.')),
+    h('div.hb-ct-wrap', {}, h('table.hb-ctable', {}, head, ...rows))));
+}
+
 function charsSection() {
   const ex = (code, title, desc, extra = null) => animLamps(h('div.hb-entry.hb-char', {},
     nightLamp(code),
@@ -233,16 +307,17 @@ function charsSection() {
       h('p', {}, h('b', {}, 'Fl(3) G 10s 12m 5M'), ' – ', L('charakterystyka Fl(3) (trzy błyski w grupie), kolor zielony (G), okres 10 s (po tylu sekundach cały rytm się powtarza), wysokość światła 12 m nad poziomem wody, zasięg nominalny 5 Mm. Brak litery koloru oznacza światło białe.', 'character Fl(3) (a group of three flashes), green (G), period 10 s (the whole rhythm repeats every 10 s), light 12 m above sea level, nominal range 5 NM. No colour letter means a white light.')),
       h('p', {}, L('Na wykresach poniżej kolorowe paski to czas świecenia, ciemne – przerwy; przerywane pionowe linie oddzielają kolejne okresy, a czerwona kreska przesuwa się w takt animowanej lampy.', 'In the diagrams below the coloured bars show when the light is on and the dark parts the eclipses; the dashed vertical lines separate the periods and the red marker moves in step with the animated lamp.')),
       h('p', {}, L('Zasada ogólna: światło błyskowe świeci krócej, niż trwają przerwy; przerywane – dłużej niż przerwy; izofazowe – tyle samo.', 'General rule: a flashing light is on for less time than it is off; an occulting light is on for longer than it is off; an isophase light is on and off for equal times.'))),
+    charTable(),
     ex('F R', L('F – stałe (fixed)', 'F – fixed'), L('Świeci cały czas, bez przerw i bez zmian. Np. światła na główkach portu.', 'Shows continuously and steadily, with no change. E.g. harbour pier-head lights.')),
-    ex('Fl G 4s', L('Fl – błyskowe (flashing)', 'Fl – flashing'), L('Pojedyncze krótkie błyski (zwykle ok. 0,5 s) z dłuższymi przerwami, nie więcej niż 30 błysków na minutę. Typowe dla znaków bocznych.', 'Single short flashes (usually about 0.5 s) with longer eclipses, at most 30 flashes per minute. Typical of lateral marks.')),
+    ex('Fl G 4s', L('Fl – błyskowe (flashing)', 'Fl – flashing'), L('Pojedyncze krótkie błyski (zwykle ok. 0,5 s), wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę (w praktyce najczęściej nie częściej niż 30). Typowe dla znaków bocznych.', 'Single short flashes (usually about 0.5 s), clearly shorter than the eclipses, fewer than 50 per minute (in practice usually no more than 30). Typical of lateral marks.')),
     ex('Fl(2) 5s', L('Fl(2) – grupowe błyskowe (group flashing)', 'Fl(2) – group flashing'), L('Grupa kilku błysków, potem dłuższa przerwa. Liczba w nawiasie to liczba błysków w grupie. Fl(2) – znak odosobnionego niebezpieczeństwa.', 'A group of flashes followed by a longer eclipse. The number in brackets is the number of flashes in the group. Fl(2) – isolated danger mark.')),
     ex('Fl(2+1) R 10s', L('Fl(2+1) – złożone grupowe (composite group flashing)', 'Fl(2+1) – composite group flashing'), L('Dwie grupy o różnej liczbie błysków: 2 błyski, przerwa, 1 błysk, długa przerwa. Znaki rozwidlenia toru.', 'Two groups with a different number of flashes: 2 flashes, an eclipse, 1 flash, a long eclipse. Preferred-channel marks.')),
-    ex('LFl 10s', L('LFl – długobłyskowe (long flashing)', 'LFl – long flashing'), L('Jeden długi błysk trwający co najmniej 2 s. Np. znak wody bezpiecznej LFl 10s.', 'One long flash of at least 2 s. E.g. a safe-water mark LFl 10s.')),
-    ex('Q', L('Q – szybkobłyskowe (quick)', 'Q – quick'), L('Błyski szybko jeden po drugim: 50–79 na minutę (zwykle 60, czyli co sekundę), bez przerw – świeci tak ciągle. Znak kardynalny północny.', 'Flashes in quick succession: 50–79 per minute (usually 60, i.e. one per second), continuously. North cardinal mark.')),
-    ex('Q(3) 10s', L('Q(n) – grupowe szybkobłyskowe', 'Q(n) – group quick'), L('Grupa szybkich błysków, potem przerwa. Na znakach kardynalnych liczba błysków odpowiada godzinie na tarczy zegara: E – 3, S – 6, W – 9.', 'A group of quick flashes, then an eclipse. On cardinal marks the number of flashes matches the clock face: E – 3, S – 6, W – 9.')),
-    ex('VQ', L('VQ – bardzo szybkobłyskowe (very quick)', 'VQ – very quick'), L('80–159 błysków na minutę (zwykle 120 – dwa na sekundę). Zamiennie z Q na znakach kardynalnych, często tam, gdzie znaki stoją blisko siebie.', '80–159 flashes per minute (usually 120 – two per second). Used instead of Q on cardinal marks, often where marks stand close together.')),
-    ex('VQ(6)+LFl 10s', L('VQ(6)+LFl – znak kardynalny południowy', 'VQ(6)+LFl – south cardinal mark'), L('Sześć bardzo szybkich błysków i zaraz po nich długi błysk – ten długi błysk pozwala odróżnić 6 od 9 błysków.', 'Six very quick flashes immediately followed by a long flash – the long flash lets you tell 6 from 9 flashes.')),
-    ex('UQ', L('UQ – ultraszybkobłyskowe (ultra quick)', 'UQ – ultra quick'), L('160 i więcej błysków na minutę (zwykle 240–300). Rzadkie – np. na konstrukcjach morskich.', '160 or more flashes per minute (usually 240–300). Rare – e.g. on offshore structures.')),
+    ex('LFl 10s', L('LFl – blaskowe (long flashing)', 'LFl – long flashing'), L('Jeden blask, czyli długi błysk trwający co najmniej 2 s. Np. znak wody bezpiecznej LFl 10s.', 'One long flash of at least 2 s. E.g. a safe-water mark LFl 10s.')),
+    ex('Q', L('Q – migające (quick)', 'Q – quick'), L('Błyski szybko jeden po drugim: 50–79 na minutę (zwykle 60, czyli co sekundę), bez przerw między seriami. Znak kardynalny północny.', 'Flashes in quick succession: 50–79 per minute (usually 60, i.e. one per second), continuously. North cardinal mark.')),
+    ex('Q(3) 10s', L('Q(n) – migające grupowe', 'Q(n) – group quick'), L('Grupa szybkich błysków, potem przerwa. Na znakach kardynalnych liczba błysków odpowiada godzinie na tarczy zegara: E – 3, S – 6, W – 9.', 'A group of quick flashes, then an eclipse. On cardinal marks the number of flashes matches the clock face: E – 3, S – 6, W – 9.')),
+    ex('VQ', L('VQ – szybko migające (very quick)', 'VQ – very quick'), L('80–159 błysków na minutę (zwykle 120 – dwa na sekundę). Zamiennie z Q na znakach kardynalnych, często tam, gdzie znaki stoją blisko siebie.', '80–159 flashes per minute (usually 120 – two per second). Used instead of Q on cardinal marks, often where marks stand close together.')),
+    ex('VQ(6)+LFl 10s', L('VQ(6)+LFl – znak kardynalny południowy', 'VQ(6)+LFl – south cardinal mark'), L('Sześć szybkich błysków i zaraz po nich blask (długi błysk) – blask pozwala odróżnić 6 od 9 błysków.', 'Six very quick flashes immediately followed by a long flash – the long flash lets you tell 6 from 9 flashes.')),
+    ex('UQ', L('UQ – bardzo szybko migające (ultra quick)', 'UQ – ultra quick'), L('160 i więcej błysków na minutę (zwykle 240–300). Rzadkie – np. na konstrukcjach morskich.', '160 or more flashes per minute (usually 240–300). Rare – e.g. on offshore structures.')),
     ex('Iso 4s', L('Iso – izofazowe (isophase)', 'Iso – isophase'), L('Światło i ciemność trwają tyle samo. Iso 4s – 2 s światła, 2 s przerwy. Znak wody bezpiecznej.', 'Light and darkness of equal length. Iso 4s – 2 s of light, 2 s of darkness. Safe-water mark.')),
     ex('Oc 4s', L('Oc – przerywane (occulting)', 'Oc – occulting'), L('Odwrotność błyskowego: świeci dłużej, niż trwają krótkie zaciemnienia. Oc 4s – 3 s światła, 1 s ciemności.', 'The opposite of flashing: the light is on longer than the short eclipses. Oc 4s – 3 s of light, 1 s of darkness.')),
     ex('Oc(2) 8s', L('Oc(n) – grupowe przerywane', 'Oc(n) – group occulting'), L('Grupa kilku krótkich zaciemnień w okresie. Oc(2) 8s – dwa zaciemnienia po 1 s.', 'A group of short eclipses in each period. Oc(2) 8s – two 1-s eclipses.')),
@@ -306,7 +381,7 @@ export function marksBook() {
     { id: 'cardinal', name: L('Znaki kardynalne', 'Cardinal marks'), entries: [
       e(L('Północny (N)', 'North (N)'), buoy([B, Y], tm.cones('N'), { char: 'VQ'}), [[L('Wygląd', 'Look'), L('Czarny nad żółtym, dwa stożki wierzchołkami do góry.', 'Black above yellow, two cones pointing up.')], [L('Światło', 'Light'), L('Białe VQ albo Q – błyski ciągłe.', 'White VQ or Q – continuous flashes.')], [L('Jak mijać', 'How to pass'), L('Mijaj od północy.', 'Pass to the north of it.')]], 'VQ'),
       e(L('Wschodni (E)', 'East (E)'), buoy([B, Y, B], tm.cones('E'), { char: 'VQ(3) 5s'}), [[L('Wygląd', 'Look'), L('Czarny z szerokim żółtym pasem, stożki podstawami do siebie.', 'Black with a broad yellow band, cones base to base.')], [L('Światło', 'Light'), L('Białe VQ(3) 5s albo Q(3) 10s – 3 błyski (jak godzina 3 na tarczy).', 'White VQ(3) 5s or Q(3) 10s – 3 flashes (like 3 o’clock).')], [L('Jak mijać', 'How to pass'), L('Mijaj od wschodu.', 'Pass to the east of it.')]], 'VQ(3) 5s'),
-      e(L('Południowy (S)', 'South (S)'), buoy([Y, B], tm.cones('S'), { char: 'VQ(6)+LFl 10s'}), [[L('Wygląd', 'Look'), L('Żółty nad czarnym, dwa stożki wierzchołkami w dół.', 'Yellow above black, two cones pointing down.')], [L('Światło', 'Light'), L('Białe VQ(6)+LFl 10s albo Q(6)+LFl 15s – 6 błysków i długi.', 'White VQ(6)+LFl 10s or Q(6)+LFl 15s – 6 flashes and a long one.')], [L('Jak mijać', 'How to pass'), L('Mijaj od południa.', 'Pass to the south of it.')]], 'VQ(6)+LFl 10s'),
+      e(L('Południowy (S)', 'South (S)'), buoy([Y, B], tm.cones('S'), { char: 'VQ(6)+LFl 10s'}), [[L('Wygląd', 'Look'), L('Żółty nad czarnym, dwa stożki wierzchołkami w dół.', 'Yellow above black, two cones pointing down.')], [L('Światło', 'Light'), L('Białe VQ(6)+LFl 10s albo Q(6)+LFl 15s – 6 błysków i blask (długi błysk).', 'White VQ(6)+LFl 10s or Q(6)+LFl 15s – 6 flashes and a long flash.')], [L('Jak mijać', 'How to pass'), L('Mijaj od południa.', 'Pass to the south of it.')]], 'VQ(6)+LFl 10s'),
       e(L('Zachodni (W)', 'West (W)'), buoy([Y, B, Y], tm.cones('W'), { char: 'VQ(9) 10s'}), [[L('Wygląd', 'Look'), L('Żółty z szerokim czarnym pasem, stożki wierzchołkami do siebie.', 'Yellow with a broad black band, cones point to point.')], [L('Światło', 'Light'), L('Białe VQ(9) 10s albo Q(9) 15s – 9 błysków.', 'White VQ(9) 10s or Q(9) 15s – 9 flashes.')], [L('Jak mijać', 'How to pass'), L('Mijaj od zachodu.', 'Pass to the west of it.')]], 'VQ(9) 10s')
     ] },
     { id: 'other', name: L('Pozostałe znaki', 'Other marks'), entries: [
