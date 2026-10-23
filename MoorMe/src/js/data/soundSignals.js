@@ -3,7 +3,8 @@
 // Śródlądowe drogi wodne – CEVNI (Europejskie przepisy żeglugi śródlądowej, w Polsce przepisy żeglugowe na śródlądowych
 // drogach wodnych, zał. 6): część sygnałów ma tam inne znaczenie niż na morzu (np. 4 krótkie = nie mogę manewrować).
 // Zapis: S – krótki dźwięk (ok. 1 s), L – długi (4–6 s), v – bardzo krótki (ok. ¼ s), C – ciągły dźwięk,
-// B – szybkie dzwonienie dzwonem przez ok. 5 s, b – pojedyncze uderzenie w dzwon, G – gong przez ok. 5 s.
+// B – szybkie dzwonienie dzwonem przez ok. 5 s, b – pojedyncze uderzenie w dzwon, G – gong przez ok. 5 s,
+// p – dłuższa przerwa między grupami (np. pary krótkich w sygnale „człowiek za burtą”).
 
 export const CONTEXTS = {
   sight: 'Morze, dobra widoczność – statki widzą się nawzajem',
@@ -61,14 +62,18 @@ export const SIGNALS = [
     scene: { brg: [20, 45], dist: [300, 420], hdg: 'toward', off: 35, speed: 2.5, beh: { speedTo: -2, accel: 0.25, delay: 2 } } },
   { id: 'iUnable', ctx: 'inland', p: 'SSSS', name: 'Nie mogę manewrować', desc: 'Cztery krótkie dźwięki – statek jest niezdolny do manewrowania (na morzu ten sam sygnał we mgle daje statek pilotowy).',
     scene: { brg: [25, 60], dist: [350, 500], hdg: 'cross', speed: 0.4 } },
-  { id: 'iDanger', ctx: 'inland', p: 'vvvvvvvv', name: 'Niebezpieczeństwo zderzenia', desc: 'Seria bardzo krótkich dźwięków (ok. ¼ s każdy) – grozi zderzenie.',
+  { id: 'iDanger', ctx: 'inland', p: 'vvvvvvvv', name: 'Niebezpieczeństwo', desc: 'Seria bardzo krótkich dźwięków (ok. ¼ s każdy) – sygnał „niebezpieczeństwo”, np. gdy grozi zderzenie.',
     scene: { brg: [30, 60], dist: [320, 450], hdg: 'collision', speed: 7 } },
   { id: 'iTurnStbd', ctx: 'inland', p: 'LS', name: 'Zawracam w prawo', desc: 'Jeden długi i jeden krótki dźwięk – statek zawraca (obraca się) przez prawą burtę.',
     scene: { brg: [25, 55], dist: [380, 520], hdg: 'cross', speed: 3, beh: { turn: 170, rate: 4, delay: 2 } } },
   { id: 'iTurnPort', ctx: 'inland', p: 'LSS', name: 'Zawracam w lewo', desc: 'Jeden długi i dwa krótkie dźwięki – statek zawraca przez lewą burtę.',
     scene: { brg: [25, 55], dist: [380, 520], hdg: 'cross', speed: 3, beh: { turn: -170, rate: 4, delay: 2 } } },
-  { id: 'iDistress', ctx: 'inland', p: 'LLL', name: 'Wzywam pomocy', desc: 'Powtarzane długie dźwięki (albo dzwonienie) – sygnał wzywania pomocy na drogach śródlądowych.',
-    scene: { brg: [35, 90], dist: [450, 650], hdg: 'cross', speed: 0 } }
+  { id: 'iDistress', ctx: 'inland', p: 'LLL', name: 'Wzywam pomocy', desc: 'Powtarzające się długie dźwięki albo uderzenia w dzwon – sygnał wzywania pomocy na drogach śródlądowych.',
+    scene: { brg: [35, 90], dist: [450, 650], hdg: 'cross', speed: 0 } },
+  { id: 'iMob', ctx: 'inland', p: 'SSpSSpSS', name: 'Człowiek za burtą', desc: 'Seria podwójnych krótkich dźwięków: dwa krótkie, przerwa, dwa krótkie… – „człowiek za burtą”. Nie myl z dwoma krótkimi „zmieniam kurs w lewo” – tu pary się powtarzają.',
+    scene: { brg: [35, 80], dist: [400, 560], hdg: 'cross', speed: 3, beh: { turn: 120, rate: 3, delay: 2 } } },
+  { id: 'iStopNow', ctx: 'inland', p: 'SLSS', name: 'Zatrzymajcie natychmiast statek', desc: 'Jeden krótki, jeden długi i dwa krótkie dźwięki – wezwanie do natychmiastowego zatrzymania statku.',
+    scene: { brg: [15, 40], dist: [350, 500], hdg: 'toward', off: 15, speed: 4 } }
 ];
 
 export const SIGNAL_BY_ID = Object.fromEntries(SIGNALS.map((s) => [s.id, s]));
@@ -76,7 +81,7 @@ export const SIGNAL_BY_ID = Object.fromEntries(SIGNALS.map((s) => [s.id, s]));
 // Zapis graficzny sygnału: • krótki, — długi, · bardzo krótki, ━ ciągły, 🔔 dzwon
 export function notation(p) {
   if (/^v+$/.test(p)) return '· · · · · · · ·';
-  return [...p].map((c) => ({ S: '•', L: '—', C: '━━━━━━', v: '·', B: '🔔🔔🔔', b: '🔔', G: '◎ gong' }[c])).join(' ');
+  return [...p].map((c) => ({ S: '•', L: '—', C: '━━━━━━', v: '·', B: '🔔🔔🔔', b: '🔔', G: '◎ gong', p: '\u2003' }[c])).join(' ');
 }
 
 // Plan odtwarzania: [{ kind: 'horn'|'bell'|'stroke'|'gong', t0, dur }]
@@ -86,10 +91,12 @@ export function schedule(p) {
   let t = 0;
   for (let i = 0; i < p.length; i++) {
     const c = p[i];
+    if (c === 'p') { t += 1.6; continue; } // przerwa między grupami
     const kind = 'SLvC'.includes(c) ? 'horn' : c === 'B' ? 'bell' : c === 'b' ? 'stroke' : 'gong';
     out.push({ kind, t0: t, dur: DUR[c] });
     const next = p[i + 1];
-    t += DUR[c] + (c === 'v' ? 0.25 : c === 'b' && next === 'b' ? 0.35 : 1.0); // przerwa ok. 1 s między dźwiękami
+    const pair = c === 'S' && next === 'S' && p.includes('p'); // pary krótkich (grupy rozdzielone „p”) – dźwięki w parze blisko siebie
+    t += DUR[c] + (c === 'v' ? 0.25 : c === 'b' && next === 'b' ? 0.35 : pair ? 0.5 : 1.0); // przerwa ok. 1 s między dźwiękami
   }
   return { parts: out, total: t };
 }

@@ -15,6 +15,10 @@ check(SIGNAL_BY_ID.port.p === 'SS' && SIGNAL_BY_ID.astern.p === 'SSS' && SIGNAL_
 const sc = schedule('LSS');
 check(sc.parts.length === 3 && sc.parts[0].dur >= 4 && sc.parts[0].dur <= 6 && sc.parts[1].dur === 1 && Math.abs(sc.parts[1].t0 - (sc.parts[0].dur + 1)) < 1e-9, `—•• : ${sc.parts.map((p) => `${p.kind}@${p.t0}`).join(', ')}`);
 check(notation('LLS') === '— — •', `zapis graficzny: ${notation('LLS')}`);
+{ // człowiek za burtą (śródlądowe): pary krótkich rozdzielone dłuższą przerwą
+  const m = schedule(SIGNAL_BY_ID.iMob.p), gaps = m.parts.slice(1).map((q, i) => q.t0 - (m.parts[i].t0 + m.parts[i].dur));
+  check(m.parts.length === 6 && gaps[0] < 1.5 && gaps[1] > 2 && gaps[2] < 1.5 && gaps[3] > 2, `•• •• •• – przerwy ${gaps.map((g) => g.toFixed(1)).join('/')} s`);
+}
 // 3) odpowiedzi z tego samego kontekstu, talia bez powtórek
 const r = rng(5);
 const o = signalOptions(r, 'fAnchor', 5);
