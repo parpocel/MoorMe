@@ -57,6 +57,19 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
     if (Lm > 20) g += `<rect x="${X(0) - hb * 0.6}" y="${Y(0) - hh * 1.8}" width="${hb * 1.2}" height="${hh * 0.8}" fill="${hullCol}"/>`;
     else g += `<rect x="${X(0) - 1}" y="${Y(14)}" width="2" height="${Y(0) - Y(14) - hh}" fill="${hullCol}"/>`;
   }
+  // jednostka holowana (barka) i lina holownicza – sylwetka między jej światłami burtowymi (dziób) a rufowym
+  const towed = lights.filter((l) => l.x < -Lm / 2 - 20);
+  if (towed.length) {
+    const bx0 = Math.min(...towed.map((l) => l.x)), bx1 = Math.max(...towed.map((l) => l.x)) + 3, bh = Math.max(1.2, Lm * 0.04) * sc;
+    if (view.kind === 'side') {
+      const a1 = X(view.ax({ x: bx0, z: 0 })), b1 = X(view.ax({ x: bx1, z: 0 })), t0 = X(view.ax({ x: -Lm / 2, z: 0 }));
+      g += `<line x1="${t0}" y1="${Y(0) - bh * 0.9}" x2="${b1}" y2="${Y(0) - bh * 0.6}" stroke="#3a4558" stroke-width="1"/>`;
+      g += `<rect x="${Math.min(a1, b1)}" y="${Y(0) - bh}" width="${Math.abs(b1 - a1)}" height="${bh}" fill="#1a2231"/>`;
+    } else {
+      const bb = Math.max(...towed.map((l) => Math.abs(l.z))) * sx;
+      g = g.replace(/(<polygon)/, `<rect x="${X(0) - bb}" y="${Y(0) - bh}" width="${bb * 2}" height="${bh}" fill="#1a2231"/>$1`);
+    }
+  }
   for (const l of vis) {
     const cx = X(view.ax(l)), cy = Y(l.y), c = LCOL[l.c];
     const rr = l.c === 'deck' ? 2.2 : 3.6;

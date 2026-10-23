@@ -91,9 +91,9 @@ export const VESSELS = [
     lights: (L) => [
       { x: L * 0.25, y: 9, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 11.2, z: 0, c: 'white', s: 'mast' },
       ...sides(L, 5), ...stern(L, 4), { x: -L * 0.48, y: 6.6, z: 0, c: 'yellow', s: 'tow' },
-      // jednostka holowana 150 m za rufą
-      { x: -L / 2 - 150, y: 3, z: -5, c: 'red', s: 'port' }, { x: -L / 2 - 150, y: 3, z: 5, c: 'green', s: 'stbd' },
-      { x: -L / 2 - 190, y: 3, z: 0, c: 'white', s: 'stern' }
+      // barka ok. 80 m na holu ok. 60 m: burtowe na jej dziobie, rufowe na końcu – cały zestaw ok. 140 m (< 200 m)
+      { x: -L / 2 - 60, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - 60, y: 3, z: 6, c: 'green', s: 'stbd' },
+      { x: -L / 2 - 140, y: 2, z: 0, c: 'white', s: 'stern' }
     ]
   },
   {
@@ -102,9 +102,9 @@ export const VESSELS = [
     lights: (L) => [
       { x: L * 0.25, y: 9, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 11.2, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 13.4, z: 0, c: 'white', s: 'mast' },
       ...sides(L, 5), ...stern(L, 4), { x: -L * 0.48, y: 6.6, z: 0, c: 'yellow', s: 'tow' },
-      // jednostka holowana – jej rufa ok. 260 m za rufą holownika
-      { x: -L / 2 - 220, y: 3, z: -5, c: 'red', s: 'port' }, { x: -L / 2 - 220, y: 3, z: 5, c: 'green', s: 'stbd' },
-      { x: -L / 2 - 260, y: 3, z: 0, c: 'white', s: 'stern' }
+      // barka ok. 90 m na holu ok. 150 m – od rufy holownika do rufy barki ok. 240 m (> 200 m)
+      { x: -L / 2 - 150, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - 150, y: 3, z: 6, c: 'green', s: 'stbd' },
+      { x: -L / 2 - 240, y: 2, z: 0, c: 'white', s: 'stern' }
     ]
   },
   {
