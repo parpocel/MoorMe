@@ -25,6 +25,16 @@ const column = (x, y0, cols) => cols.map((c, i) => ({ x, y: y0 + (cols.length - 
 const underway = (L, my) => [...mast1(L, my), ...sides(L, 5), ...stern(L, 4)];
 const underwayLarge = (L) => [...mast2(L, 13), ...sides(L, 8), ...stern(L, 6)];
 
+// śródlądowy holownik z dwiema barkami po ok. 60 m: białe dookólne na każdej barce (z niebieskim nad nim przy ładunku palnym),
+// ostatnia – także rufowe
+const iConvoy = (L, blue) => [
+  { x: L * 0.3, y: 7, z: 0, c: 'white', s: 'mast' }, { x: L * 0.3, y: 8.2, z: 0, c: 'white', s: 'mast' },
+  ...sides(L, 4.5), { x: -L * 0.48, y: 3.5, z: 0, c: 'yellow', s: 'stern' },
+  // światła barek niżej niż masztowe holownika – od dziobu nie zlewają się z nimi
+  ...[-L / 2 - 60, -L / 2 - 140].flatMap((x) => [{ x, y: 4.6, z: 0, c: 'white', s: 'all' }, ...(blue ? [{ x, y: 5.8, z: 0, c: 'blue', s: 'all' }] : [])]),
+  { x: -L / 2 - 170, y: 2, z: 0, c: 'white', s: 'stern' }
+];
+
 // Typy jednostek: name – odpowiedź, lights(L) – zestaw świateł, speed – kn, L – długość (m), moving – czy w drodze
 export const VESSELS = [
   {
@@ -114,18 +124,22 @@ export const VESSELS = [
   {
     id: 'iTowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
     explain: 'Przepisy śródlądowe: dwa białe światła masztowe jedno nad drugim (ok. 1 m odstępu) w przedniej części, światła burtowe i ŻÓŁTE światło rufowe zamiast białego. Każdy statek zestawu holowanego niesie jasne białe światło widoczne ze wszystkich stron, a ostatni – także białe rufowe.',
-    lights: (L) => [
-      { x: L * 0.3, y: 6, z: 0, c: 'white', s: 'mast' }, { x: L * 0.3, y: 7.2, z: 0, c: 'white', s: 'mast' },
-      ...sides(L, 4.5), { x: -L * 0.48, y: 3.5, z: 0, c: 'yellow', s: 'stern' },
-      // dwie barki po ok. 60 m: białe dookólne na każdej, ostatnia – także rufowe
-      { x: -L / 2 - 60, y: 6, z: 0, c: 'white', s: 'all' }, { x: -L / 2 - 140, y: 6, z: 0, c: 'white', s: 'all' },
-      { x: -L / 2 - 170, y: 2, z: 0, c: 'white', s: 'stern' }
-    ]
+    lights: (L) => iConvoy(L, false)
+  },
+  {
+    id: 'iTowingDangerous', inland: true, name: 'Zestaw holowany z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
+    explain: 'Przepisy śródlądowe: holownik jak zwykle (dwa białe masztowe w pionie, burtowe, żółte rufowe), a każdy holowany statek z materiałami niebezpiecznymi palnymi niesie – oprócz białego światła dookólnego – niebieskie światło widoczne ze wszystkich stron. Sam holownik niebieskiego nie pokazuje, jeśli nie wiezie takiego ładunku.',
+    lights: (L) => iConvoy(L, true)
   },
   {
     id: 'iDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true,
     explain: 'Przepisy śródlądowe: oprócz zwykłych świateł statku w drodze (masztowe, burtowe, rufowe) – jedno niebieskie światło widoczne ze wszystkich stron. Niebieski kolor oznacza ładunek niebezpieczny: jedno światło – materiały palne (dwa – szkodliwe dla zdrowia, trzy – wybuchowe).',
     lights: (L) => [...mast1(L, 8), ...sides(L, 4.5), ...stern(L, 3.5), { x: L * 0.05, y: 6.5, z: 0, c: 'blue', s: 'all' }]
+  },
+  {
+    id: 'iSmall', inland: true, name: 'Mała łódź bez napędu mechanicznego lub mały żaglowy (< 7 m) – drogi śródlądowe', L: [4, 7], speed: [0, 0], moving: false,
+    explain: 'Przepisy śródlądowe: jedno białe światło widoczne ze wszystkich stron (np. łódź wiosłowa) – kierunku ruchu po nim nie ocenisz. Mały statek żaglowy krótszy niż 7 m może nieść tylko takie światło, a przy zbliżaniu się innych statków pokazuje drugie białe. Tak samo łódź z wyposażenia statku pracująca w jego pobliżu – gdy zbliżają się inne statki.',
+    lights: () => [{ x: 0, y: 1.6, z: 0, c: 'white', s: 'all' }]
   },
   {
     id: 'pilot', name: 'Statek pilotowy na służbie', L: [15, 25], speed: [6, 12], moving: true,
@@ -172,6 +186,9 @@ export const DAY_VESSELS = [
   { id: 'dITowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Przepisy śródlądowe: na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
     shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, { x: -L / 2 - 60, y: 6, z: 0, k: 'ballY' }, { x: -L / 2 - 140, y: 6, z: 0, k: 'ballY' }] },
+  { id: 'dITowingDangerous', inland: true, name: 'Zestaw holowany z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
+    explain: 'Przepisy śródlądowe: na holowniku żółty walec w pasy, na każdym statku zestawu holowanego żółta kula, a na statkach z materiałami niebezpiecznymi palnymi – dodatkowo niebieski stożek wierzchołkiem w dół.',
+    shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, ...[-L / 2 - 60, -L / 2 - 140].flatMap((x) => [{ x, y: 6, z: 0, k: 'ballY' }, { x, y: 8, z: 0, k: 'coneDownB' }])] },
   { id: 'dIDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true, hull: 'ship',
     explain: 'Przepisy śródlądowe: niebieski stożek wierzchołkiem w dół – ładunek niebezpieczny palny (dwa stożki – szkodliwy dla zdrowia, trzy – wybuchowy). Niesie go także każdy statek zestawu holowanego z takim ładunkiem.',
     shapes: () => [{ x: 0, y: 9, z: 0, k: 'coneDownB' }] },

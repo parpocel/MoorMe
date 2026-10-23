@@ -110,11 +110,12 @@ function dayView(v, W = 300, H = 150) {
   let g = `<rect width="${W}" height="${H}" fill="#cfe6f4"/><rect y="${H - 22}" width="${W}" height="22" fill="#7fb4cf"/>`;
   const base = H - 22, hullW = towedS.length ? 130 : 220, x0 = towedS.length ? W - hullW - 12 : (W - hullW) / 2;
   // zestaw holowany (śródlądowy): barki z lewej, każda ze swoim znakiem na krótkim maszcie, połączone holem
-  towedS.sort((a, b) => a.x - b.x).forEach((s, i) => {
-    const bx = 8 + i * 72, bw = 60;
+  const barges = [...new Set(towedS.map((s) => s.x))].sort((a, b) => a - b);
+  barges.forEach((x, i) => {
+    const bx = 8 + i * 72, bw = 60, ks = towedS.filter((s) => s.x === x).sort((a, b) => a.y - b.y), top = base - 46 - (ks.length - 1) * 18;
     g += `<polygon points="${bx},${base - 12} ${bx + bw},${base - 12} ${bx + bw - 6},${base} ${bx + 4},${base}" fill="#8b929b"/>`;
-    g += `<rect x="${bx + bw / 2 - 1}" y="${base - 46}" width="2" height="34" fill="#6f767f"/>` + shape(s.k, bx + bw / 2, base - 52, 14);
-    g += `<line x1="${bx + bw}" y1="${base - 8}" x2="${i === towedS.length - 1 ? x0 + 4 : bx + 72}" y2="${base - 8}" stroke="#6f767f" stroke-width="1.2"/>`;
+    g += `<rect x="${bx + bw / 2 - 1}" y="${top}" width="2" height="${base - 12 - top}" fill="#6f767f"/>` + ks.map((s, j) => shape(s.k, bx + bw / 2, base - 52 - j * 18, 14)).join('');
+    g += `<line x1="${bx + bw}" y1="${base - 8}" x2="${i === barges.length - 1 ? x0 + 4 : bx + 72}" y2="${base - 8}" stroke="#6f767f" stroke-width="1.2"/>`;
   });
   const grey = '#8b929b', dark = '#6f767f';
   if (v.hull === 'yacht') {

@@ -248,7 +248,7 @@ export class ShipShapesLayer {
     this.vessel = v;
     const g = new THREE.Group();
     g.add(hullMesh(v.hull, v.L, v.moving && v.speed > 0));
-    if (v.type === 'dITowing') { // śródlądowy zestaw: dwie barki po ok. 60 m na krótkich holach
+    if (v.type === 'dITowing' || v.type === 'dITowingDangerous') { // śródlądowy zestaw: dwie barki po ok. 60 m na krótkich holach
       for (const bx of [-v.L / 2 - 60, -v.L / 2 - 140]) { const barge = hullMesh('barge', 60, true); barge.position.x = bx; g.add(barge); }
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 30, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2 - 90, 1.5, 0), new THREE.Vector3(-v.L / 2 - 110, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
