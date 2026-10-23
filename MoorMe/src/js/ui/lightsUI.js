@@ -277,7 +277,7 @@ export class ShipShapesLayer {
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 30, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
       g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2 - 90, 1.5, 0), new THREE.Vector3(-v.L / 2 - 110, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
     }
-    if (v.type === 'dTowing') { // holowana barka 230 m za rufą i hol
+    if (v.type === 'dTowing' || v.type === 'dTowingRam') { // holowana barka 230 m za rufą i hol
       const barge = hullMesh('barge', 40, true); barge.position.x = -v.L / 2 - 230; g.add(barge);
       const tow = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 210, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a }));
       g.add(tow);
@@ -306,7 +306,8 @@ export class ShipShapesLayer {
     // jak przez lornetkę: znaki dzienne powiększone z odległością, żeby były czytelne
     const d = Math.hypot(cam.x - v.x, cam.z - v.z), k = clamp(d / 110, 1, 7);
     for (const { s, m, mast } of this.items) {
-      const base = Math.min(...v.shapes.filter((q) => q.x === s.x).map((q) => q.y));
+      // wspólna podstawa dla znaków na kadłubie (np. romb na dziobie i kolumna na maszcie), osobna dla każdej holowanej jednostki
+      const own = s.x > -v.L, base = Math.min(...v.shapes.filter((q) => (own ? q.x > -v.L : q.x === s.x)).map((q) => q.y));
       const y = base + (s.y - base) * k;
       m.position.set(s.x, y, s.z * k);
       m.scale.setScalar(k);

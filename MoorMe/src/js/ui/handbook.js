@@ -110,7 +110,10 @@ function shape(k, cx, cy, s) {
   if (k === 'hourglass') return `<polygon points="${cx - s * 0.5},${cy - s * 0.75} ${cx + s * 0.5},${cy - s * 0.75} ${cx},${cy}" fill="${b}"/><polygon points="${cx - s * 0.5},${cy + s * 0.75} ${cx + s * 0.5},${cy + s * 0.75} ${cx},${cy}" fill="${b}"/>`;
   return '';
 }
-function dayView(v, W = 300, H = 150) {
+// znaki na rei: ile znaków jest nad reją (na maszcie) – od tego zależy wysokość rysunku
+const yardTop = (v) => { const sh = v.shapes((v.L[0] + v.L[1]) / 2, () => 0.5, { gearSide: 'starboard' }), y = sh.find((q) => q.k === 'yard'); return y ? sh.filter((q) => q.k !== 'yard' && Math.abs(q.z) < 1 && q.y > y.y).length : -1; };
+const dayH = (v) => Math.max(150, 16 + Math.max(0, yardTop(v)) * 24 + 102);
+function dayView(v, W = 300, H = dayH(v)) {
   const Lm = (v.L[0] + v.L[1]) / 2;
   const shapes = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' }).filter((s) => s.x > -Lm); // holowana jednostka – osobno w opisie
   const towedS = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' }).filter((s) => s.x <= -Lm);
@@ -136,12 +139,15 @@ function dayView(v, W = 300, H = 150) {
   }
   // kształty na maszcie: pionowa kolumna nad pokładem; przesunięte na burtę – obok
   const mx = v.hull === 'yacht' ? x0 + 111 : x0 + hullW * 0.5 + 2;
-  if (v.clear) {
-    // prace na drodze wodnej: znaki na końcach rejki – rysunek jak od rufy (prawa burta statku po prawej)
-    const ty = base - 108, ys = shapes.filter((q) => q.k !== 'yard');
-    g += `<rect x="${mx - 1}" y="${ty}" width="3" height="${base - ty - 20}" fill="${dark}"/><rect x="${mx - 46}" y="${ty + 4}" width="94" height="3" fill="${dark}"/>`;
+  const nTop = yardTop(v);
+  if (nTop >= 0) {
+    // znaki na końcach rei (np. strona przeszkody i wolnego przejścia) – rysunek jak od rufy (prawa burta statku po prawej);
+    // znaki na maszcie nad reją – w pionie nad nią
+    const ty = 16 + nTop * 24, yd = shapes.find((q) => q.k === 'yard'), ys = shapes.filter((q) => q.k !== 'yard');
+    g += `<rect x="${mx - 1}" y="${nTop ? 8 : ty}" width="3" height="${base - (nTop ? 8 : ty) - 20}" fill="${dark}"/><rect x="${mx - 46}" y="${ty + 4}" width="94" height="3" fill="${dark}"/>`;
+    ys.filter((q) => Math.abs(q.z) < 1 && q.y > yd.y).sort((a, b) => b.y - a.y).forEach((q, i) => { g += shape(q.k, mx + 1, 18 + i * 24, 14); });
     for (const sg of [-1, 1]) {
-      const col2 = ys.filter((q) => Math.sign(q.z) === sg).sort((a, b) => b.y - a.y), cx = mx + 1 + sg * 42;
+      const col2 = ys.filter((q) => Math.sign(q.z) === sg && Math.abs(q.z) >= 1).sort((a, b) => b.y - a.y), cx = mx + 1 + sg * 42;
       g += `<line x1="${cx}" y1="${ty + 7}" x2="${cx}" y2="${ty + 14}" stroke="${dark}" stroke-width="1"/>`;
       col2.forEach((q, i) => { g += shape(q.k, cx, ty + 24 + i * 26, 16); });
     }
@@ -150,14 +156,14 @@ function dayView(v, W = 300, H = 150) {
   const sorted = [...shapes].sort((a, b) => b.y - a.y);
   let y = base - (v.hull === 'yacht' ? 92 : 104);
   for (const s of sorted) {
-    if (s.k === 'pennantR') { const px = x0 + hullW - 26; g += `<rect x="${px - 1}" y="${base - 62}" width="2" height="${40}" fill="${dark}"/>` + shape(s.k, px, base - 54, 16); continue; } // proporzec na dziobie
+    if (s.k === 'pennantR' || (shapes.length > 1 && s.x > Lm * 0.3)) { const px = x0 + hullW - 26; g += `<rect x="${px - 1}" y="${base - 62}" width="2" height="${40}" fill="${dark}"/>` + shape(s.k, px, base - 54, 16); continue; } // proporzec na dziobie
     if (Math.abs(s.z) > 1) { g += shape(s.k, mx + 40, base - 52, 16); g += `<path d="M${mx} ${base - 70} L${mx + 40} ${base - 60}" stroke="${dark}" stroke-width="1.5"/>`; continue; }
     g += shape(s.k, mx, y, 16); y += s.k === 'hourglass' ? 30 : s.k === 'diamond' ? 26 : 22;
   }
   if (!shapes.length) g += `<text x="${W / 2}" y="22" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#2f4468">${t('brak znaków')}</text>`;
   return g;
 }
-const dayEntry = (v) => h('div.hb-entry', {}, h('h3', {}, v.name), svgEl(300, 150, dayView(v)), h('p', {}, v.explain));
+const dayEntry = (v) => h('div.hb-entry', {}, h('h3', {}, v.name), svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
 
 export function lightsBook() {
   return [

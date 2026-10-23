@@ -36,11 +36,24 @@ const iConvoy = (L, blue) => [
 ];
 
 // prace na drodze wodnej (śródlądowe): światła/znaki na rejce po obu stronach masztu – strona zamknięta (o.gearSide) i wolna
-const sideZ = (o, closed) => ((o.gearSide === 'port') === closed ? -3 : 3);
+const sideZ = (o, closed, w = 3) => ((o.gearSide === 'port') === closed ? -w : w);
 const iWorkLights = (o, clearCols) => [
   ...clearCols.map((c, i) => ({ x: 0, y: 8 - i * 1.4, z: sideZ(o, false), c, s: 'all' })),
   { x: 0, y: 8, z: sideZ(o, true), c: 'red', s: 'all' }
 ];
+
+// statek holujący: masztowe w pionie (2 – zestaw do 200 m, 3 – ponad), holownik ≥ 50 m – także przednie masztowe niżej;
+// ram – holowanie ograniczające zdolność manewrową: czerwone–białe–czerwone dookólne w pionie pod masztowymi
+const towLights = (L, big, long, ram = false) => {
+  const n = long ? 3 : 2, my = big ? 13 : ram ? 13.6 : 9, mx = big ? -L * 0.05 : L * 0.25;
+  const masts = Array.from({ length: n }, (_, i) => ({ x: mx, y: my + i * 2.2, z: 0, c: 'white', s: 'mast' }));
+  if (big) masts.push({ x: L * 0.38, y: 8, z: 0, c: 'white', s: 'mast' }); // przednie masztowe – niżej niż pion na tylnym maszcie
+  const sy = big ? 7 : 5, st = big ? 5 : 4, hawser = long ? 150 : 60, barge = long ? 90 : 80;
+  return [...masts, ...(ram ? column(mx, 7, ['red', 'white', 'red']) : []), ...sides(L, sy), ...stern(L, st), { x: -L * 0.48, y: st + 2.6, z: 0, c: 'yellow', s: 'tow' },
+    // barka: burtowe na jej dziobie, rufowe na końcu – zestaw ok. 140 m (do 200 m) albo ok. 240 m (ponad 200 m)
+    { x: -L / 2 - hawser, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - hawser, y: 3, z: 6, c: 'green', s: 'stbd' },
+    { x: -L / 2 - hawser - barge, y: 2, z: 0, c: 'white', s: 'stern' }];
+};
 
 // Typy jednostek: name – odpowiedź, lights(L) – zestaw świateł, speed – kn, L – długość (m), moving – czy w drodze
 export const VESSELS = [
@@ -100,6 +113,20 @@ export const VESSELS = [
     lights: (L) => [...column(L * 0.15, 9, ['red', 'white', 'red']), ...underway(L, 15)]
   },
   {
+    id: 'ramObstruct', clear: true, name: 'Statek o ograniczonej zdolności manewrowania przy pracach podwodnych – przeszkoda z jednej strony', L: [60, 100], speed: [1, 3], moving: true,
+    explain: 'Np. pogłębiarka albo statek przy pracach podwodnych, który przeszkadza w żegludze: czerwone–białe–czerwone dookólne w pionie, w drodze także masztowe, burtowe i rufowe, a do tego dwa czerwone dookólne w pionie od strony przeszkody i dwa zielone w pionie od strony, z której można przejść. Przechodź po stronie zielonych! Strony widać, patrząc wzdłuż statku.',
+    lights: (L, r, o) => [...column(L * 0.05, 9, ['red', 'white', 'red']), ...mast2(L, 15), ...sides(L, 8), ...stern(L, 6),
+      // pary na wysięgnikach – dalej od osi niż burtowe i wyżej od nich
+      ...['red', 'red'].map((c, i) => ({ x: -L * 0.12, y: 11.4 - i * 1.4, z: sideZ(o, true, 6), c, s: 'all' })),
+      ...['green', 'green'].map((c, i) => ({ x: -L * 0.12, y: 11.4 - i * 1.4, z: sideZ(o, false, 6), c, s: 'all' }))]
+  },
+  {
+    id: 'mineClear', name: 'Statek zajęty trałowaniem min', L: [30, 48], speed: [3, 6], moving: true,
+    explain: 'Trzy zielone światła dookólne: jedno przy szczycie przedniego masztu i po jednym na każdym końcu rei, do tego w drodze masztowe, burtowe i rufowe. Zbliżanie się na mniej niż 1000 m do trałowca jest niebezpieczne!',
+    lights: (L) => [{ x: L * 0.2, y: 11.5, z: 0, c: 'green', s: 'all' }, { x: L * 0.2, y: 10, z: -4, c: 'green', s: 'all' }, { x: L * 0.2, y: 10, z: 4, c: 'green', s: 'all' },
+      { x: L * 0.3, y: 7.5, z: 0, c: 'white', s: 'mast' }, ...sides(L, 5), ...stern(L, 4)]
+  },
+  {
     id: 'cbd', name: 'Statek ograniczony zanurzeniem', L: [150, 300], speed: [10, 14], moving: true,
     explain: 'Trzy czerwone światła dookólne w pionie oraz światła statku o napędzie mechanicznym (dwa masztowe, burtowe, rufowe).',
     lights: (L) => [...column(-L * 0.1, 12, ['red', 'red', 'red']), ...underwayLarge(L)]
@@ -116,17 +143,13 @@ export const VESSELS = [
       : `${long ? 'Trzy' : 'Dwa'} białe światła masztowe w pionie (holownik krótszy niż 50 m), `) +
       `burtowe, rufowe i żółte światło holownicze nad rufowym. ${long ? 'Trzy' : 'Dwa'} masztowe w pionie – zestaw ${long ? 'dłuższy' : 'nie dłuższy'} niż 200 m (od rufy holownika do rufy holowanej jednostki). ` +
       'Za holownikiem barka z burtowymi na dziobie i rufowym na końcu. Żółte świeci tylko do tyłu (jak rufowe), więc z burty widać dwie pary świateł burtowych, a od rufy wszystkie holowniki wyglądają tak samo – masztowych nie widać.',
-    lights: (L) => {
-      const n = long ? 3 : 2, my = big ? 13 : 9, mx = big ? -L * 0.05 : L * 0.25;
-      const masts = Array.from({ length: n }, (_, i) => ({ x: mx, y: my + i * 2.2, z: 0, c: 'white', s: 'mast' }));
-      if (big) masts.push({ x: L * 0.38, y: 8, z: 0, c: 'white', s: 'mast' }); // przednie masztowe – niżej niż pion na tylnym maszcie
-      const sy = big ? 7 : 5, st = big ? 5 : 4, hawser = long ? 150 : 60, barge = long ? 90 : 80;
-      return [...masts, ...sides(L, sy), ...stern(L, st), { x: -L * 0.48, y: st + 2.6, z: 0, c: 'yellow', s: 'tow' },
-        // barka: burtowe na jej dziobie, rufowe na końcu – zestaw ok. 140 m (do 200 m) albo ok. 240 m (ponad 200 m)
-        { x: -L / 2 - hawser, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - hawser, y: 3, z: 6, c: 'green', s: 'stbd' },
-        { x: -L / 2 - hawser - barge, y: 2, z: 0, c: 'white', s: 'stern' }];
-    }
+    lights: (L) => towLights(L, big, long)
   })),
+  {
+    id: 'towingRam', name: 'Statek holujący o ograniczonej zdolności manewrowania (zestaw ponad 200 m)', L: [25, 40], speed: [3, 6], moving: true,
+    explain: 'Holowanie, które poważnie ogranicza holownik i obiekt holowany w możliwości zejścia z kursu: światła statku holującego (tu trzy masztowe w pionie – zestaw ponad 200 m, burtowe, rufowe, żółte holownicze) i dodatkowo czerwone–białe–czerwone dookólne w pionie pod masztowymi. Od rufy widać czerwone–białe–czerwone nad żółtym i rufowym.',
+    lights: (L) => towLights(L, false, true, true)
+  },
   // drogi śródlądowe (CEVNI / przepisy żeglugowe na śródlądowych drogach wodnych) – inne zasady niż na morzu
   {
     id: 'iTowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
@@ -205,6 +228,17 @@ export const DAY_VESSELS = [
   { id: 'dTowing', name: 'Statek holujący, zestaw ponad 200 m', L: [25, 40], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Romb na holowniku i romb na holowanej jednostce, gdy długość holu przekracza 200 m.',
     shapes: (L) => [{ x: L * 0.2, y: 9, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
+  { id: 'dTowingRam', name: 'Statek holujący o ograniczonej zdolności manewrowania (zestaw ponad 200 m)', L: [25, 40], speed: [3, 6], moving: true, hull: 'tug',
+    explain: 'Kula – romb – kula w pionie (ograniczona zdolność manewrowania), a do tego romb na holowniku i romb na holowanej jednostce – zestaw dłuższy niż 200 m.',
+    shapes: (L) => [...col(L * 0.1, 9.5, ['ball', 'diamond', 'ball']), { x: L * 0.42, y: 6, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
+  { id: 'dRamObstruct', clear: true, name: 'Statek o ograniczonej zdolności manewrowania przy pracach podwodnych – przeszkoda z jednej strony', L: [60, 100], speed: [1, 3], moving: true, hull: 'barge',
+    explain: 'Kula – romb – kula w pionie, a do tego dwie kule w pionie od strony przeszkody i dwa romby w pionie od strony, z której można przejść. Przechodź po stronie rombów.',
+    shapes: (L, r, o) => [...col(0, 10.6, ['ball', 'diamond', 'ball']), { x: 0, y: 9.4, z: 0, k: 'yard' },
+      { x: 0, y: 8.5, z: sideZ(o, true), k: 'ball' }, { x: 0, y: 7.4, z: sideZ(o, true), k: 'ball' },
+      { x: 0, y: 8.5, z: sideZ(o, false), k: 'diamond' }, { x: 0, y: 7.1, z: sideZ(o, false), k: 'diamond' }] },
+  { id: 'dMineClear', name: 'Statek zajęty trałowaniem min', L: [30, 48], speed: [3, 6], moving: true, hull: 'ship',
+    explain: 'Trzy czarne kule: jedna przy szczycie przedniego masztu i po jednej na każdym końcu rei. Nie zbliżaj się na mniej niż 1000 m!',
+    shapes: () => [{ x: 0, y: 10.4, z: 0, k: 'ball' }, { x: 0, y: 9.2, z: 0, k: 'yard' }, { x: 0, y: 8.6, z: -3, k: 'ball' }, { x: 0, y: 8.6, z: 3, k: 'ball' }] },
   { id: 'dITowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Przepisy śródlądowe: na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
     shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, { x: -L / 2 - 60, y: 6, z: 0, k: 'ballY' }, { x: -L / 2 - 140, y: 6, z: 0, k: 'ballY' }] },
