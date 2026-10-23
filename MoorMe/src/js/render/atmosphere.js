@@ -248,7 +248,8 @@ export class Atmosphere {
     {
       const sd = this.sunDisk, e = Math.max(el, -0.04);
       sd.position.set(cam.tx + Math.sin(az) * Math.cos(e) * 1000, Math.sin(e) * 1000, cam.tz - Math.cos(az) * Math.cos(e) * 1000);
-      sd.material.color.copy(lerpC(C(0xfff4dc), C(0xffa055), clamp(1 - elDeg / 12, 0, 1)));
+      // przy horyzoncie ciepła, ale jaśniejsza od poświaty nieba wokół słońca – tarcza nie ginie o zachodzie
+      sd.material.color.copy(lerpC(C(0xfff4dc), C(0xffdca8), clamp(1 - elDeg / 12, 0, 1)));
       sd.material.opacity = clamp((elDeg + 1.5) / 3, 0, 1) * (1 - sky.grey) * (this.blackSky ? 0 : 1);
       sd.visible = sd.material.opacity > 0.01;
     }
