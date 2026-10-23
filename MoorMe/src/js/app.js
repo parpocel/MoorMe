@@ -22,6 +22,7 @@ import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen
 import { FLAGS, FLAG_CODES, flagCanvas } from './render/flags.js';
 import { setIalaRegion } from './data/passage.js';
 import { menuMusic } from './menuMusic.js';
+import { MenuScene } from './render/menuScene.js';
 
 setIalaRegion(getSettings().iala);
 refreshFullscreen();
@@ -107,58 +108,140 @@ function screen(step, body, onNext, nextLabel) {
   app.appendChild(s);
 }
 
-// ---------- Ekran tytułowy ----------
+// ---------- Menu główne: scena 3D low-poly + kafle ----------
+// monochromatyczne ikony kafli (białe, na fasetowanym „klejnocie”)
+const GLYPH = {
+  anchor: '<circle cx="12" cy="5" r="2.2"/><path d="M12 7.5V20M7.5 11h9M4.5 14.5c.6 3.2 3.7 5.5 7.5 5.5s6.9-2.3 7.5-5.5"/>',
+  sail: '<path d="M12 3v14M12 4c4 2.5 6 6 6.5 11H12zM11 6C8 8.5 6.5 11.5 6 15h5z"/><path d="M4 18.5h16l-2.2 3H6.2z"/>',
+  lights: '<path d="M9 21h6M10 18h4M8.5 9.5a3.5 3.5 0 017 0c0 2-1.5 3-1.5 5.5h-4C10 12.5 8.5 11.5 8.5 9.5z"/><path d="M3 9.5h2M19 9.5h2M5.5 3.5l1.4 1.4M18.5 3.5l-1.4 1.4"/>',
+  horn: '<path d="M4 10h3l6-4v12l-6-4H4z"/><path d="M16 8.5c1.6 1.6 1.6 5.4 0 7M18.5 6c3 3 3 9 0 12"/>',
+  compass: '<circle cx="12" cy="12" r="8.5"/><path d="M12 5l2.2 7L12 19l-2.2-7z"/>',
+  buoy: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3.6"/><path d="M6 6l3.4 3.4M18 6l-3.4 3.4M6 18l3.4-3.4M18 18l-3.4-3.4"/>',
+  play: '<path d="M8 5l11 7-11 7z"/>',
+  dice: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="8.6" cy="8.6" r="1.1"/><circle cx="15.4" cy="15.4" r="1.1"/><circle cx="15.4" cy="8.6" r="1.1"/><circle cx="8.6" cy="15.4" r="1.1"/><circle cx="12" cy="12" r="1.1"/>',
+  fast: '<path d="M4 6l7 6-7 6zM12 6l7 6-7 6z"/>',
+  help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.6a2.5 2.5 0 014.8.8c0 1.8-2.4 2-2.4 3.6M12 16.8v.4"/>',
+  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  power: '<path d="M12 3v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>'
+};
+const glyph = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GLYPH[k]}</svg>`;
+// sześciokątny klejnot low-poly: 6 faset oświetlonych z lewej-góry
+function gemHTML(k) {
+  const pts = Array.from({ length: 6 }, (_, i) => { const a = (Math.PI / 3) * i - Math.PI / 2; return [32 + Math.cos(a) * 30, 32 + Math.sin(a) * 30]; });
+  const shade = [0.34, 0.08, -0.22, -0.3, -0.05, 0.22]; // jasność faset (+ biel, − czerń)
+  const tris = pts.map((p, i) => { const q = pts[(i + 1) % 6], s = shade[i];
+    return `<polygon points="32,32 ${p[0].toFixed(1)},${p[1].toFixed(1)} ${q[0].toFixed(1)},${q[1].toFixed(1)}" fill="${s > 0 ? '#fff' : '#000'}" fill-opacity="${Math.abs(s)}"/>`; }).join('');
+  return `<svg class="gem" viewBox="0 0 64 64"><polygon points="${pts.map((p) => p.join(',')).join(' ')}" fill="var(--c)"/>${tris}` +
+    `<polygon points="32,12 46,22 32,26 18,22" fill="#fff" fill-opacity="0.18"/></svg><span class="glyph">${glyph(k, 26)}</span>`;
+}
+
+let menuGL = null; // jedna scena 3D współdzielona przez kolejne ekrany menu
+function menuBackdrop() {
+  const host = h('div.m3-bg');
+  try {
+    if (!menuGL || menuGL._disposed) {
+      const holder = h('div.m3-gl');
+      menuGL = new MenuScene(holder);
+    }
+    host.appendChild(menuGL.el);
+    requestAnimationFrame(() => menuGL && menuGL.resize());
+  } catch (e) {
+    menuGL = null;
+    host.appendChild(sceneryEl()); // bez WebGL – ilustracja SVG
+  }
+  return host;
+}
+
+// items: { id, glyph, color, title, tag, desc, go, disabled }
+function menuScreen({ kicker, items, sel = 0, back }) {
+  app.innerHTML = '';
+  let cur = Math.min(sel, items.length - 1);
+  const heroTitle = h('h2.m3-title'), heroDesc = h('p.m3-desc'), heroGlyph = h('div.m3-hglyph');
+  const goBtn = h('button.m3-go', { onclick: () => activate(cur) }, h('span', {}, 'Start'), raw(glyph('play', 18)));
+  const tiles = items.map((it, i) => h('button.m3-tile', {
+    class: it.disabled ? 'dis' : '', style: { animationDelay: `${0.05 * i + 0.1}s` },
+    onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i)
+  },
+  h('span.m3-num', {}, String(i + 1).padStart(2, '0')),
+  h('div.m3-gem', {}, raw(gemHTML(it.glyph))),
+  h('div.m3-tt', {}, it.title),
+  h('div.m3-tg', {}, it.tag)));
+  tiles.forEach((tl, i) => tl.style.setProperty('--c', items[i].color));
+  function select(i) {
+    cur = i;
+    const it = items[i];
+    tiles.forEach((tl, k) => tl.classList.toggle('on', k === i));
+    heroTitle.textContent = it.title;
+    heroDesc.textContent = it.disabled && it.disabledDesc ? it.disabledDesc : it.desc;
+    heroGlyph.innerHTML = glyph(it.glyph, 22);
+    heroGlyph.style.setProperty('--c', it.color);
+    goBtn.disabled = !!it.disabled;
+    goBtn.style.setProperty('--c', it.color);
+    hero.classList.remove('swap'); void hero.offsetWidth; hero.classList.add('swap');
+  }
+  function activate(i) { const it = items[i]; if (it && !it.disabled) { document.removeEventListener('keydown', onKey); it.go(); } }
+  const onKey = (e) => {
+    if (!s.isConnected) { document.removeEventListener('keydown', onKey); return; }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); select((cur + 1) % items.length); tiles[cur].focus({ preventScroll: true }); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); select((cur + items.length - 1) % items.length); tiles[cur].focus({ preventScroll: true }); }
+    else if (e.key === 'Enter' && !(document.activeElement instanceof HTMLButtonElement)) activate(cur);
+    else if (e.key === 'Escape' && back) { document.removeEventListener('keydown', onKey); back.go(); }
+  };
+  document.addEventListener('keydown', onKey);
+  const quit = window.moorme && window.moorme.quit;
+  const hero = h('div.m3-hero', {},
+    h('div.m3-logo', {}, 'Moor', h('span', {}, 'Me')),
+    h('div.m3-kicker', {}, kicker),
+    h('div.m3-card', {}, h('div.m3-head', {}, heroGlyph, heroTitle), heroDesc, goBtn));
+  const s = h('div.screen.menu3d', {}, menuBackdrop(), h('div.m3-shade'),
+    h('div.m3-top', {},
+      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('div.m3-flags', {}, raw(signalFlagsHTML())),
+      h('div.m3-sp'),
+      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => (back ? showTitle() : showModeSelect())); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
+      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
+    hero,
+    h('div.m3-tiles', {}, tiles),
+    h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
+  app.appendChild(s);
+  select(cur);
+  return s;
+}
+
+// ---------- Ekran tytułowy (cumowanie) ----------
+let titleSel = 0;
 function showTitle() {
   menuMusic.start();
-  app.innerHTML = '';
   const saved = !!loadConfig();
-  const btn = (cls, iconHtml, label, sub, onclick, extra = {}) => h('button.tbtn' + cls, { onclick, ...extra },
-    h('span.ic', {}, raw(iconHtml)), sub ? h('span', {}, label, h('small', {}, sub)) : h('span', {}, label));
-  const main = btn('.main', icon.play, 'Nowa symulacja', null, () => { config.random = false; showStep(0); });
-  main.appendChild(h('span.chev', {}, raw(icon.chev)));
-  const s = h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', {},
-      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'PORT BAŁTYK')),
-      h('div.title-sub', {}, 'SYMULATOR MANEWRÓW PORTOWYCH'),
-      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
-      h('p.desc', {}, 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.'),
-      main,
-      h('div.tbtn-row', {},
-        btn('.sec.rnd', icon.dice, 'Random', null, () => showRandom(), { title: 'Losowe zadanie w losowych warunkach' }),
-        btn('.sec.fast', icon.fast, 'Szybki start', 'ostatnie ustawienia', () => startSim(), saved ? {} : { disabled: true, title: 'Najpierw ustaw i uruchom symulację' })),
-      btn('.help', icon.help, 'Pomoc – sterowanie i praca na cumach', null, () => showHelp()),
-      btn('.help', icon.gear, 'Ustawienia', null, () => showSettings(() => showTitle())),
-      btn('.help', icon.chev2 || icon.down, 'Zmień tryb', null, () => showModeSelect()),
-      window.moorme && window.moorme.quit ? btn('.help.quit', icon.power, 'Wyjdź z gry', null, () => window.moorme.quit()) : null,
-      h('div.title-note', {}, raw(icon.down), h('span', {}, 'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne'))));
-  app.appendChild(s);
+  const keep = (i, fn) => () => { titleSel = i; fn(); };
+  menuScreen({
+    kicker: 'Cumowanie · symulator manewrów portowych', sel: titleSel,
+    back: { label: 'Tryby', go: () => showModeSelect() },
+    items: [
+      { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.', go: keep(0, () => { config.random = false; showStep(0); }) },
+      { glyph: 'dice', color: '#a76bd6', title: 'Random', tag: 'losowe zadanie', desc: 'Losowe zadanie w losowych warunkach', go: keep(1, () => showRandom()) },
+      { glyph: 'fast', color: '#2aa39a', title: 'Szybki start', tag: 'ostatnie ustawienia', desc: 'Uruchom symulację z ostatnimi ustawieniami.', disabledDesc: 'Najpierw ustaw i uruchom symulację', disabled: !saved, go: keep(2, () => startSim()) },
+      { glyph: 'help', color: '#5b78d6', title: 'Pomoc', tag: 'sterowanie i cumy', desc: 'Pomoc – sterowanie i praca na cumach', go: keep(3, () => showHelp()) }
+    ]
+  });
 }
 
 // ---------- Wybór trybu (okno startowe) ----------
+let modeSel = 0;
 function showModeSelect() {
   menuMusic.start();
-  app.innerHTML = '';
-  const card = (cls, ic, title, text, onclick) => h('button.mode-card' + cls, { onclick },
-    h('div.mc-ic', {}, raw(ic)), h('h3', {}, title), h('p', {}, text));
-  app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
-    h('div.title-card', { style: { width: 'min(1060px, 96vw)' } },
-      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'WYBÓR TRYBU')),
-      h('div.big-logo', {}, 'Moor', h('span', {}, 'Me')),
-      h('p.desc', {}, 'Wybierz tryb gry.'),
-      h('div.mode-cards', {},
-        card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
-        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showSailIntro()),
-        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsIntro()),
-        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => showSoundsIntro()),
-        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Kursy i namiary z dewiacją, deklinacją i dryfem, prąd i kurs z poprawką na prąd, pozycja z namiarów i radaru, zliczenie drogi, czas–prędkość–droga, namiar podwójny i zasięg świateł – z mapą do kreślenia i rozwiązaniem krok po kroku.', () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }),
-        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); })),
-      h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia')), quitButton()))));
-}
-
-// wyjście z gry – tylko w aplikacji (w przeglądarce kartę zamyka się samemu)
-function quitButton() {
-  if (typeof window === 'undefined' || !window.moorme || !window.moorme.quit) return null;
-  return h('button.tbtn.sec.quit', { onclick: () => window.moorme.quit(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.power)), h('span', {}, 'Wyjdź z gry'));
+  const keep = (i, fn) => () => { modeSel = i; fn(); };
+  menuScreen({
+    kicker: 'Symulator żeglarski', sel: modeSel,
+    items: [
+      { glyph: 'anchor', color: '#e0705f', title: 'Cumowanie', tag: 'keja, cumy, muringi', desc: 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', go: keep(0, () => showTitle()) },
+      { glyph: 'sail', color: '#2aa39a', title: 'Rejs wzdłuż wybrzeża', tag: 'waypointy i znaki IALA', desc: 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', go: keep(1, () => showSailIntro()) },
+      { glyph: 'lights', color: '#6a6fd6', title: 'Rozpoznawanie świateł', tag: 'statki nocą', desc: 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', go: keep(2, () => showLightsIntro()) },
+      { glyph: 'horn', color: '#e0a33a', title: 'Sygnały dźwiękowe', tag: 'buczki, dzwony, mgła', desc: 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', go: keep(3, () => showSoundsIntro()) },
+      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', tag: 'kursy, namiary, prąd', desc: 'Kursy i namiary z dewiacją, deklinacją i dryfem, prąd i kurs z poprawką na prąd, pozycja z namiarów i radaru, zliczenie drogi, czas–prędkość–droga, namiar podwójny i zasięg świateł – z mapą do kreślenia i rozwiązaniem krok po kroku.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
+      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', tag: 'EPIRB, VHF, MAYDAY', desc: 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
+    ]
+  });
 }
 
 // ---------- Trening albo nauka (podręczniki) ----------

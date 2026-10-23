@@ -241,6 +241,13 @@ export const EN = {
   'Nasza cuma': 'Our line',
 
   // ---- Tryb rejsu ----
+  // menu główne 3D
+  'Symulator żeglarski': 'Sailing simulator', 'Cumowanie · symulator manewrów portowych': 'Mooring · harbour manoeuvring simulator',
+  'Tryby': 'Modes', 'wybór': 'select', 'start': 'start',
+  'keja, cumy, muringi': 'quays, lines, lazy lines', 'waypointy i znaki IALA': 'waypoints and IALA marks', 'statki nocą': 'ships at night',
+  'buczki, dzwony, mgła': 'whistles, bells, fog', 'kursy, namiary, prąd': 'courses, bearings, tidal stream', 'EPIRB, VHF, MAYDAY': 'EPIRB, VHF, MAYDAY',
+  'jacht, keja i pogoda': 'yacht, berth and weather', 'losowe zadanie': 'random task', 'sterowanie i cumy': 'controls and lines',
+  'Uruchom symulację z ostatnimi ustawieniami.': 'Start the simulation with your last settings.',
   'WYBÓR TRYBU': 'CHOOSE A MODE', 'Wybierz tryb gry.': 'Choose a game mode.', 'Zmień tryb': 'Change mode', '← Tryby': '← Modes',
   'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.': 'Harbour manoeuvres: approaching the quay, lines, springs, lazy lines, Y-booms and piles. Mooring and unmooring in various conditions.',
   'Rejs wzdłuż wybrzeża': 'Coastal passage',
