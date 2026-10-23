@@ -85,28 +85,29 @@ export const VESSELS = [
     explain: 'Trzy czerwone światła dookólne w pionie oraz światła statku o napędzie mechanicznym (dwa masztowe, burtowe, rufowe).',
     lights: (L) => [...column(-L * 0.1, 12, ['red', 'red', 'red']), ...underwayLarge(L)]
   },
-  {
-    id: 'towing', name: 'Statek holujący (hol < 200 m)', L: [25, 40], speed: [5, 8], moving: true,
-    explain: 'Dwa białe światła masztowe w pionie, burtowe, rufowe i żółte światło holownicze nad rufowym. Za nim holowana jednostka z burtowymi i rufowym. Żółte świeci tylko do tyłu (jak rufowe), więc z burty widać dwie pary świateł burtowych – holownika i holowanej jednostki – a nad holownikiem dwa białe masztowe.',
-    lights: (L) => [
-      { x: L * 0.25, y: 9, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 11.2, z: 0, c: 'white', s: 'mast' },
-      ...sides(L, 5), ...stern(L, 4), { x: -L * 0.48, y: 6.6, z: 0, c: 'yellow', s: 'tow' },
-      // barka ok. 80 m na holu ok. 60 m: burtowe na jej dziobie, rufowe na końcu – cały zestaw ok. 140 m (< 200 m)
-      { x: -L / 2 - 60, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - 60, y: 3, z: 6, c: 'green', s: 'stbd' },
-      { x: -L / 2 - 140, y: 2, z: 0, c: 'white', s: 'stern' }
-    ]
-  },
-  {
-    id: 'towingLong', name: 'Statek holujący (hol > 200 m)', L: [25, 40], speed: [4, 7], moving: true,
-    explain: 'Trzy białe światła masztowe w pionie (hol dłuższy niż 200 m, liczony od rufy holownika do rufy holowanej jednostki), burtowe, rufowe i żółte światło holownicze nad rufowym. Za nim holowana jednostka z burtowymi i rufowym. Z burty widać dwie pary świateł burtowych; od rufy wygląda tak samo jak holownik z krótszym holem – masztowych nie widać.',
-    lights: (L) => [
-      { x: L * 0.25, y: 9, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 11.2, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 13.4, z: 0, c: 'white', s: 'mast' },
-      ...sides(L, 5), ...stern(L, 4), { x: -L * 0.48, y: 6.6, z: 0, c: 'yellow', s: 'tow' },
-      // barka ok. 90 m na holu ok. 150 m – od rufy holownika do rufy barki ok. 240 m (> 200 m)
-      { x: -L / 2 - 150, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - 150, y: 3, z: 6, c: 'green', s: 'stbd' },
-      { x: -L / 2 - 240, y: 2, z: 0, c: 'white', s: 'stern' }
-    ]
-  },
+  // holowniki: 4 kombinacje – długość holownika (< 50 m / ≥ 50 m) i długość zestawu (do 200 m / ponad 200 m,
+  // liczona od rufy holownika do rufy ostatniej jednostki holowanej). Liczba masztowych w pionie mówi o długości zestawu,
+  // dodatkowe niższe masztowe na dziobie – że holownik ma co najmniej 50 m.
+  ...[[false, false], [false, true], [true, false], [true, true]].map(([big, long]) => ({
+    id: `towing${big ? 'Big' : ''}${long ? 'Long' : ''}`,
+    name: `Statek holujący ${big ? '≥ 50 m' : '< 50 m'}, zestaw ${long ? 'ponad' : 'do'} 200 m`,
+    L: big ? [55, 75] : [25, 40], speed: long ? [4, 7] : [5, 8], moving: true,
+    explain: (big
+      ? `${long ? 'Trzy' : 'Dwa'} białe światła masztowe w pionie na tylnym maszcie i jedno niższe masztowe na dziobie (holownik ma co najmniej 50 m), `
+      : `${long ? 'Trzy' : 'Dwa'} białe światła masztowe w pionie (holownik krótszy niż 50 m), `) +
+      `burtowe, rufowe i żółte światło holownicze nad rufowym. ${long ? 'Trzy' : 'Dwa'} masztowe w pionie – zestaw ${long ? 'dłuższy' : 'nie dłuższy'} niż 200 m (od rufy holownika do rufy holowanej jednostki). ` +
+      'Za holownikiem barka z burtowymi na dziobie i rufowym na końcu. Żółte świeci tylko do tyłu (jak rufowe), więc z burty widać dwie pary świateł burtowych, a od rufy wszystkie holowniki wyglądają tak samo – masztowych nie widać.',
+    lights: (L) => {
+      const n = long ? 3 : 2, my = big ? 13 : 9, mx = big ? -L * 0.05 : L * 0.25;
+      const masts = Array.from({ length: n }, (_, i) => ({ x: mx, y: my + i * 2.2, z: 0, c: 'white', s: 'mast' }));
+      if (big) masts.push({ x: L * 0.38, y: 8, z: 0, c: 'white', s: 'mast' }); // przednie masztowe – niżej niż pion na tylnym maszcie
+      const sy = big ? 7 : 5, st = big ? 5 : 4, hawser = long ? 150 : 60, barge = long ? 90 : 80;
+      return [...masts, ...sides(L, sy), ...stern(L, st), { x: -L * 0.48, y: st + 2.6, z: 0, c: 'yellow', s: 'tow' },
+        // barka: burtowe na jej dziobie, rufowe na końcu – zestaw ok. 140 m (do 200 m) albo ok. 240 m (ponad 200 m)
+        { x: -L / 2 - hawser, y: 3, z: -6, c: 'red', s: 'port' }, { x: -L / 2 - hawser, y: 3, z: 6, c: 'green', s: 'stbd' },
+        { x: -L / 2 - hawser - barge, y: 2, z: 0, c: 'white', s: 'stern' }];
+    }
+  })),
   {
     id: 'pilot', name: 'Statek pilotowy na służbie', L: [15, 25], speed: [6, 12], moving: true,
     explain: 'Białe nad czerwonym dookólne w pionie – „biała czapka, czerwony nos – pilot”. W drodze także burtowe i rufowe.',
@@ -146,7 +147,7 @@ export const DAY_VESSELS = [
   { id: 'dFishingGear', name: 'Statek zajęty połowem z narzędziami wystającymi > 150 m', L: [15, 35], speed: [1, 3], moving: true, hull: 'trawler', gear: true,
     explain: 'Klepsydra oraz stożek wierzchołkiem do góry po tej stronie, w którą wystawione są sieci.',
     shapes: (L, r, o) => [{ x: L * 0.15, y: 9, z: 0, k: 'hourglass' }, { x: L * 0.15, y: 5.5, z: (o.gearSide === 'port' ? -1 : 1) * 3.5, k: 'coneUp' }] },
-  { id: 'dTowing', name: 'Statek holujący (hol > 200 m)', L: [25, 40], speed: [4, 7], moving: true, hull: 'tug',
+  { id: 'dTowing', name: 'Statek holujący, zestaw ponad 200 m', L: [25, 40], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Romb na holowniku i romb na holowanej jednostce, gdy długość holu przekracza 200 m.',
     shapes: (L) => [{ x: L * 0.2, y: 9, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
