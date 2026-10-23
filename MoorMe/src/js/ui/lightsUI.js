@@ -314,7 +314,8 @@ export class ShipShapesLayer {
       const top = s.k === 'yard' ? y : y - 0.5 * k; // do rejki maszt dochodzi w całości
       mast.position.set(s.x, top / 2, s.z * k);
       mast.scale.set(1, Math.max(0.1, top), 1);
-      mast.visible = Math.abs(s.z) < 0.01 && top > 0.5;
+      // znaki przy burcie statku z wolnym przejściem stoją na własnych drzewcach (chyba że wiszą na rei)
+      mast.visible = (Math.abs(s.z) < 0.01 || (v.clear && !v.shapes.some((q) => q.k === 'yard'))) && top > 0.5;
       if (s.k === 'pennantR' || m.userData.face) m.rotation.y = Math.atan2(cam.x - v.x, cam.z - v.z) - g.rotation.y; // płat proporca zawsze widoczny
     }
   }

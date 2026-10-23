@@ -140,6 +140,18 @@ function dayView(v, W = 300, H = dayH(v)) {
   // kształty na maszcie: pionowa kolumna nad pokładem; przesunięte na burtę – obok
   const mx = v.hull === 'yacht' ? x0 + 111 : x0 + hullW * 0.5 + 2;
   const nTop = yardTop(v);
+  if (nTop < 0 && v.clear) {
+    // znaki przy burtach na drzewcach (bez rei) – rysunek jak od rufy; na maszcie kolumna znaków
+    const ys = shapes.filter((q) => Math.abs(q.z) < 1).sort((a, b) => b.y - a.y), deck = base - 18;
+    g += `<rect x="${mx - 1}" y="8" width="3" height="${base - 28}" fill="${dark}"/>`;
+    ys.forEach((q, i) => { g += shape(q.k, mx + 1, 18 + i * 24, 14); });
+    for (const sg of [-1, 1]) {
+      const col2 = shapes.filter((q) => Math.sign(q.z) === sg && Math.abs(q.z) >= 1).sort((a, b) => b.y - a.y), cx = mx + 1 + sg * 48;
+      g += `<rect x="${cx - 1}" y="${deck - 62}" width="2" height="62" fill="${dark}"/>`;
+      col2.forEach((q, i) => { g += shape(q.k, cx, deck - 50 + i * 26, 16); });
+    }
+    return g;
+  }
   if (nTop >= 0) {
     // znaki na końcach rei (np. strona przeszkody i wolnego przejścia) – rysunek jak od rufy (prawa burta statku po prawej);
     // znaki na maszcie nad reją – w pionie nad nią

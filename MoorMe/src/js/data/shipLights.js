@@ -115,7 +115,7 @@ export const VESSELS = [
   {
     id: 'ramObstruct', clear: true, name: 'Statek o ograniczonej zdolności manewrowania przy pracach podwodnych – przeszkoda z jednej strony', L: [60, 100], speed: [1, 3], moving: true,
     explain: 'Np. pogłębiarka albo statek przy pracach podwodnych, który przeszkadza w żegludze: czerwone–białe–czerwone dookólne w pionie, w drodze także masztowe, burtowe i rufowe, a do tego dwa czerwone dookólne w pionie od strony przeszkody i dwa zielone w pionie od strony, z której można przejść. Przechodź po stronie zielonych! Strony widać, patrząc wzdłuż statku.',
-    lights: (L, r, o) => [...column(L * 0.05, 9, ['red', 'white', 'red']), ...mast2(L, 15), ...sides(L, 8), ...stern(L, 6),
+    lights: (L, r, o) => [...column(-L * 0.15, 9, ['red', 'white', 'red']), ...mast2(L, 15), ...sides(L, 8), ...stern(L, 6), // czerwone–białe–czerwone na tylnym maszcie pod masztowym
       // pary na wysięgnikach – dalej od osi niż burtowe i wyżej od nich
       ...['red', 'red'].map((c, i) => ({ x: -L * 0.12, y: 11.4 - i * 1.4, z: sideZ(o, true, 6), c, s: 'all' })),
       ...['green', 'green'].map((c, i) => ({ x: -L * 0.12, y: 11.4 - i * 1.4, z: sideZ(o, false, 6), c, s: 'all' }))]
@@ -233,9 +233,10 @@ export const DAY_VESSELS = [
     shapes: (L) => [...col(L * 0.1, 9.5, ['ball', 'diamond', 'ball']), { x: L * 0.42, y: 6, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
   { id: 'dRamObstruct', clear: true, name: 'Statek o ograniczonej zdolności manewrowania przy pracach podwodnych – przeszkoda z jednej strony', L: [60, 100], speed: [1, 3], moving: true, hull: 'barge',
     explain: 'Kula – romb – kula w pionie, a do tego dwie kule w pionie od strony przeszkody i dwa romby w pionie od strony, z której można przejść. Przechodź po stronie rombów.',
-    shapes: (L, r, o) => [...col(0, 10.6, ['ball', 'diamond', 'ball']), { x: 0, y: 9.4, z: 0, k: 'yard' },
-      { x: 0, y: 8.5, z: sideZ(o, true), k: 'ball' }, { x: 0, y: 7.4, z: sideZ(o, true), k: 'ball' },
-      { x: 0, y: 8.5, z: sideZ(o, false), k: 'diamond' }, { x: 0, y: 7.1, z: sideZ(o, false), k: 'diamond' }] },
+    // kula–romb–kula na maszcie, dwie kule i dwa romby na drzewcach przy burtach (jak na rys. 13.42)
+    shapes: (L, r, o) => [...col(0, 9, ['ball', 'diamond', 'ball']),
+      { x: 0, y: 6.4, z: sideZ(o, true), k: 'ball' }, { x: 0, y: 5.3, z: sideZ(o, true), k: 'ball' },
+      { x: 0, y: 6.6, z: sideZ(o, false), k: 'diamond' }, { x: 0, y: 5.2, z: sideZ(o, false), k: 'diamond' }] },
   { id: 'dMineClear', name: 'Statek zajęty trałowaniem min', L: [30, 48], speed: [3, 6], moving: true, hull: 'ship',
     explain: 'Trzy czarne kule: jedna przy szczycie przedniego masztu i po jednej na każdym końcu rei. Nie zbliżaj się na mniej niż 1000 m!',
     shapes: () => [{ x: 0, y: 10.4, z: 0, k: 'ball' }, { x: 0, y: 9.2, z: 0, k: 'yard' }, { x: 0, y: 8.6, z: -3, k: 'ball' }, { x: 0, y: 8.6, z: 3, k: 'ball' }] },
