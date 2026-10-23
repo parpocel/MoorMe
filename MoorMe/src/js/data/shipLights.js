@@ -122,9 +122,9 @@ export const VESSELS = [
   },
   {
     id: 'mineClear', name: 'Statek zajęty trałowaniem min', L: [30, 48], speed: [3, 6], moving: true,
-    explain: 'Trzy zielone światła dookólne: jedno przy szczycie przedniego masztu i po jednym na każdym końcu rei, do tego w drodze masztowe, burtowe i rufowe. Zbliżanie się na mniej niż 1000 m do trałowca jest niebezpieczne!',
+    explain: 'Trzy zielone światła dookólne: jedno przy szczycie przedniego masztu i po jednym na każdym końcu rei, do tego w drodze masztowe (na samym szczycie masztu, nad zielonymi), burtowe i rufowe. Zbliżanie się na mniej niż 1000 m do trałowca jest niebezpieczne!',
     lights: (L) => [{ x: L * 0.2, y: 11.5, z: 0, c: 'green', s: 'all' }, { x: L * 0.2, y: 10, z: -4, c: 'green', s: 'all' }, { x: L * 0.2, y: 10, z: 4, c: 'green', s: 'all' },
-      { x: L * 0.3, y: 7.5, z: 0, c: 'white', s: 'mast' }, ...sides(L, 5), ...stern(L, 4)]
+      { x: L * 0.2, y: 13.2, z: 0, c: 'white', s: 'mast' }, ...sides(L, 5), ...stern(L, 4)] // masztowe na szczycie tego samego masztu, nad zielonymi
   },
   {
     id: 'cbd', name: 'Statek ograniczony zanurzeniem', L: [150, 300], speed: [10, 14], moving: true,
