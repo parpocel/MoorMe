@@ -97,6 +97,17 @@ export const VESSELS = [
     ]
   },
   {
+    id: 'towingLong', name: 'Statek holujący (hol > 200 m)', L: [25, 40], speed: [4, 7], moving: true,
+    explain: 'Trzy białe światła masztowe w pionie (hol dłuższy niż 200 m, liczony od rufy holownika do rufy holowanej jednostki), burtowe, rufowe i żółte światło holownicze nad rufowym. Za nim holowana jednostka z burtowymi i rufowym. Od rufy wygląda tak samo jak holownik z krótszym holem – masztowych nie widać.',
+    lights: (L) => [
+      { x: L * 0.25, y: 9, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 11.2, z: 0, c: 'white', s: 'mast' }, { x: L * 0.25, y: 13.4, z: 0, c: 'white', s: 'mast' },
+      ...sides(L, 5), ...stern(L, 4), { x: -L * 0.48, y: 5.6, z: 0, c: 'yellow', s: 'tow' },
+      // jednostka holowana – jej rufa ok. 260 m za rufą holownika
+      { x: -L / 2 - 220, y: 3, z: -5, c: 'red', s: 'port' }, { x: -L / 2 - 220, y: 3, z: 5, c: 'green', s: 'stbd' },
+      { x: -L / 2 - 260, y: 3, z: 0, c: 'white', s: 'stern' }
+    ]
+  },
+  {
     id: 'pilot', name: 'Statek pilotowy na służbie', L: [15, 25], speed: [6, 12], moving: true,
     explain: 'Białe nad czerwonym dookólne w pionie – „biała czapka, czerwony nos – pilot”. W drodze także burtowe i rufowe.',
     lights: (L) => [...column(L * 0.1, 8, ['white', 'red']), ...sides(L, 4), ...stern(L, 3.5)]
