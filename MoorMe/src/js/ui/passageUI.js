@@ -1,4 +1,4 @@
-// Ekran rejsu: widok 3D + kartplotter + panel nawigacyjny (kurs, XTE, odległość do waypointu, znaki, głębokość) + autopilot
+// Ekran rejsu: widok 3D + chartploter + panel nawigacyjny (kurs, XTE, odległość do waypointu, znaki, głębokość) + autopilot
 import { h } from './dom.js';
 import { SimScreen } from './simUI.js';
 import { PassageWorld } from '../physics/passage.js';
@@ -99,7 +99,7 @@ export class PassageScreen extends SimScreen {
     ctl.appendChild(this.buildAutopilot());
     sim.appendChild(ctl);
 
-    // kartplotter
+    // chartploter
     const chart = h('div.hud.glass', { id: 'hud-chart' });
     this.chartCv = h('canvas', { width: 420, height: 300 });
     this.chartCv.addEventListener('wheel', (e) => { e.preventDefault(); this.zoomChart(e.deltaY > 0 ? 1.25 : 0.8); }, { passive: false });

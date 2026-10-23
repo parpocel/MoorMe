@@ -1,4 +1,4 @@
-// Kartplotter: mapa 2D akwenu z trasą, znakami IALA, mieliznami i pozycją jachtu.
+// Chartploter: mapa 2D akwenu z trasą, znakami IALA, mieliznami i pozycją jachtu.
 import { DEG } from '../math.js';
 import { lateralColors } from '../data/passage.js';
 import { t } from '../i18n.js';

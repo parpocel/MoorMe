@@ -348,7 +348,7 @@ export class LightsScreen extends PassageScreen {
 
   build() {
     super.build();
-    // w tym module nie ma nawigacji: chowamy panel celu i kartplotter
+    // w tym module nie ma nawigacji: chowamy panel celu i chartploter
     this.goal.style.display = 'none';
     const chart = this.sim.querySelector('#hud-chart');
     if (chart) chart.style.display = 'none';

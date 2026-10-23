@@ -33,7 +33,7 @@ export function buildHelpContent() {
 export const PASSAGE_KEYS = [
   ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo (wyłącza autopilota)'], ['R', 'Ster na zero'],
   ['J', 'Autopilot: włącz / wyłącz utrzymanie kursu'], [', / .', 'Zadany kurs autopilota −1° / +1° (z Shift: ±10°)'],
-  ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal kartplotter (także kółko myszy nad mapą)'],
+  ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal chartploter (także kółko myszy nad mapą)'],
   ['O', 'Pogoda i pora dnia'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (izo, blisko, z góry, za rufą, kapitan)'],
   ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['Touchpad', 'Dwa palce – obrót kamery, szczypanie – zoom, przeciągnięcie – przesuwanie (z Shift/Alt – obrót)'], ['F11', 'Pełny ekran']
 ];

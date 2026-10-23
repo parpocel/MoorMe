@@ -147,11 +147,11 @@ function showModeSelect() {
       h('p.desc', {}, 'Wybierz tryb gry.'),
       h('div.mode-cards', {},
         card('.moor', icon.anchor, 'Cumowanie', 'Manewry w porcie: podejście do kei, liny, szpringi, muringi, Y-bomy i dalby. Cumowanie i odcumowywanie w różnych warunkach.', () => showTitle()),
-        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń po morzu po waypointach, trzymaj kurs i stosuj się do znaków: boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa i wraki.', () => showSailIntro()),
-        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą na morzu, z łodzi wiosłowej płynącej stałym kursem. Na burtach pojawiają się statki – rozpoznaj po światłach, co to za jednostka, co robi i którą stronę widzisz.', () => showLightsIntro()),
-        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Słuchaj buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznaj, co oznacza każdy sygnał.', () => showSoundsIntro()),
-        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Kursy i namiary z dewiacją, deklinacją i dryfem, prąd i kurs z poprawką na prąd, pozycja z namiarów i radaru, zliczenie drogi, czas–prędkość–droga, namiar podwójny i zasięg świateł – z mapą do kreślenia i rozwiązaniem krok po kroku.', () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }),
-        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Mesa jachtu z wyposażeniem ratunkowym: EPIRB, SART, radio VHF DSC, tratwa i kamizelki. Procedury MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji radiowej.', () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); })),
+        card('.sail', icon.sail, 'Rejs wzdłuż wybrzeża', 'Płyń wzdłuż wybrzeża do portu z chartploterem i autopilotem, w dzień i w nocy. Rozpoznawaj znaki IALA po kształcie i rytmie światła i mijaj je z właściwej strony.', () => showSailIntro()),
+        card('.lights', icon.bulb, 'Rozpoznawanie świateł', 'Nocą po światłach, w dzień po znakach dziennych – rozpoznaj jednostkę, co robi, którą stronę widzisz i z której strony ją minąć. Morze i drogi śródlądowe (CEVNI).', () => showLightsIntro()),
+        card('.sounds', icon.horn, 'Sygnały dźwiękowe', 'Buczki, dzwony i gongi statków – w dobrej widoczności, we mgle i na drogach śródlądowych. Rozpoznaj, co oznacza każdy sygnał.', () => showSoundsIntro()),
+        card('.nav', icon.chartic, 'Zadania nawigacyjne', 'Kursy i namiary z dewiacją, deklinacją i dryfem, prąd, pozycja z namiarów (także niejednoczesnych) i radaru, zliczenie drogi i zasięg świateł – z mapą do kreślenia i rozwiązaniem krok po kroku.', () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }),
+        card('.safety', icon.buoy, 'Bezpieczeństwo', 'Wnętrze jachtu z urządzeniami ratunkowymi: EPIRB, AIS-SART, VHF DSC, tratwa, kamizelki, pirotechnika. MAYDAY, PAN-PAN, SÉCURITÉ i test korespondencji.', () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); })),
       h('div.tbtn-row', {}, h('button.tbtn.sec.rnd', { onclick: () => showSettings(), style: { height: '58px', fontSize: '16px', flex: 'none', width: '240px' } }, h('span.ic', {}, raw(icon.gear)), h('span', {}, 'Ustawienia')), quitButton()))));
 }
 
@@ -165,7 +165,7 @@ function quitButton() {
 function showLightsIntro() {
   menuMusic.start();
   showTrainOrLearn(app, { title: 'Rozpoznawanie świateł i znaków dziennych', sceneryEl, icons: { train: raw(icon.bulb), learn: raw(icon.book) },
-    desc: { train: 'Noc albo dzień na morzu: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz i jak przejdą.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron i znaki dzienne.' },
+    desc: { train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).' },
     onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), onExit: () => showModeSelect() });
 }
 function showLightsBook() {
@@ -175,7 +175,7 @@ function showLightsBook() {
 function showSoundsIntro() {
   menuMusic.start();
   showTrainOrLearn(app, { title: 'Sygnały dźwiękowe', sceneryEl, icons: { train: raw(icon.horn), learn: raw(icon.book) },
-    desc: { train: 'Z łodzi na morzu słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności i we mgle – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: wszystkie sygnały manewrowe, ostrzegawcze i mgłowe z zapisem, osią czasu i odsłuchem.' },
+    desc: { train: 'Z łodzi słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności, we mgle i na drogach śródlądowych – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: sygnały manewrowe, ostrzegawcze i mgłowe na morzu oraz sygnały ogólne i alarmowe na drogach śródlądowych – z zapisem, osią czasu i odsłuchem.' },
     onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), onExit: () => showModeSelect() });
 }
 function showSoundsBook() {
@@ -187,7 +187,7 @@ function showSoundsBook() {
 function showSailIntro() {
   menuMusic.start();
   showTrainOrLearn(app, { title: 'Rejs wzdłuż wybrzeża', sceneryEl, icons: { train: raw(icon.sail), learn: raw(icon.book) },
-    desc: { train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła.' },
+    desc: { train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła oraz charakterystyki świateł (Fl, Q, VQ, Iso, Oc, LFl, Mo) z animacją.' },
     onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), onExit: () => showModeSelect() });
 }
 function showMarksBook() {
@@ -246,7 +246,7 @@ function showPassageSetup() {
     h('div.two-col', { style: { marginTop: '18px' } },
       h('div.panel', {}, h('h2', {}, 'Jacht'), boatSeg,
         h('h2', { style: { marginTop: '14px' } }, 'Nawigacja'), assistSeg,
-        h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na kartplotterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
+        h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na chartploterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
         h('div.hint', {}, 'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.')),
       h('div.panel', {}, h('h2', {}, 'Pogoda'),
         h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, 30, 1, w.windKn, (v) => `${v} kn`, (v) => { w.windKn = v; })),

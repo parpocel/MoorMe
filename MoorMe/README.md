@@ -24,9 +24,9 @@ Po uruchomieniu otwiera się okno wyboru trybu:
 - **Akweny:** Bałtyk (piaszczyste mielizny) i Adriatyk (skaliste grzbiety). Układ jest **generowany proceduralnie przy każdym rejsie**: długie, pochyłe bariery z przejściami na przemian od północy i południa tworzą meandry (zmiany kursu powyżej 90°), oznaczone kardynałami; trasa ma ok. 1,7–2 nm (ok. 15–20 min). Znaki boczne (czerwone/zielone) są tylko przy wejściu do portu.
 - **Cel:** przepłyń po kolejnych waypointach (magenta) do mety. Waypoint zalicza się w promieniu ok. 60 m. Panel nawigacyjny pokazuje kurs na waypoint (BRG), odległość, odchylenie od toru (XTE), ETA, głębokość i najbliższe znaki wraz z regułą mijania. Kurs na waypoint jest też zaznaczony na tarczy kompasu.
 - **Znaki:** boczne (czerwony po lewej burcie, zielony po prawej), kardynalne N/E/S/W (miń od odpowiedniej strony), woda bezpieczna, odosobnione niebezpieczeństwo, wrak (nowe niebezpieczeństwo) i znaki szczególne. Znaki mają poprawne kolory, topmarki i charakterystyki świateł (np. VQ, Fl(2)).
-- **Kartplotter:** mapa 2D z lądem, mieliznami, trasą, znakami i pozycją jachtu; przybliżanie, orientacja „północ u góry / kurs u góry”, nazwy znaków, widok całej trasy.
+- **Chartploter:** mapa 2D z lądem, mieliznami, trasą, znakami i pozycją jachtu; przybliżanie, orientacja „północ u góry / kurs u góry”, nazwy znaków, widok całej trasy.
 - **Autopilot** (J, `,` `.`) tylko trzyma zadany kurs – o trasie decydujesz Ty.
-- **Noc:** w trybie nocnym z daleka widać wyłącznie światła pław i latarni, a trasa znika z widoku 3D (zostaje na kartplotterze).
+- **Noc:** w trybie nocnym z daleka widać wyłącznie światła pław i latarni, a trasa znika z widoku 3D (zostaje na chartploterze).
 - **Ocena:** punkty karne za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń (odosobnione niebezpieczeństwo, wrak, znak szczególny), mieliznę/brzeg i zderzenia ze znakami. Czas można przyspieszyć do 8×.
 
 ## Jak to działa (cumowanie)
