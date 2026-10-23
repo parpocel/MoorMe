@@ -116,15 +116,26 @@ export class PlotBoard {
   genChart() {
     const r = rng(this.plot.seed || 7), P = this.toNm(this.plot.sol.point), objs = this.plot.pts.map((p) => this.toNm(p));
     const fix = !!this.plot.sol.lines;
-    const track = fix ? objs.map((o) => [o, P]) : this.plot.sol.vectors ? this.plot.sol.vectors.map((v) => [this.toNm(v.from), this.toNm(v.to)]) : [[objs[0], P]];
+    // odcinki, które muszą zostać na wodzie: droga jachtu i linie widzenia z jachtu na obiekty
+    const vecs = (this.plot.sol.vectors || []).map((v) => [this.toNm(v.from), this.toNm(v.to)]);
+    const track = [], keep = [P];
+    if (fix) {
+      for (const o of objs) track.push([o, P]);
+      // namiary niejednoczesne: wektor d przenosi obiekt, a jacht płynął z P1 = P − d do P (pierwszy namiar wzięty z P1)
+      for (const [a, b] of vecs) {
+        const P1 = { x: P.x - (b.x - a.x), y: P.y - (b.y - a.y) };
+        track.push([P1, P]); for (const o of objs) track.push([o, P1]); keep.push(P1);
+      }
+    } else track.push(...(vecs.length ? vecs : [[objs[0], P]]));
     const lo = this.nm(M, this.H - M), hi = this.nm(this.W - M, M);
     const blob = (c, R) => {
       const ph = [r() * 6, r() * 6, r() * 6, r() * 6], a = [0.16 + r() * 0.1, 0.09 + r() * 0.07, 0.05, 0.03];
       return Array.from({ length: 56 }, (_, i) => { const t = (i / 56) * Math.PI * 2, rr = R * (1 + a[0] * Math.sin(2 * t + ph[0]) + a[1] * Math.sin(3 * t + ph[1]) + a[2] * Math.sin(5 * t + ph[2]) + a[3] * Math.sin(9 * t + ph[3])); return { x: c.x + Math.cos(t) * rr, y: c.y + Math.sin(t) * rr }; });
     };
     const lands = [];
-    const clearOf = (poly, keepIn = null) => polyDist(poly, P) > 0.45 && (fix ? true : polyDist(poly, objs[0]) > 0.45) &&
-      track.every(([a, b]) => { const q = poly.filter((v) => segDist(v, a, b) < 0.12); return keepIn ? q.length < 18 : q.length === 0; }) &&
+    // keepIn – obiekt stojący na tym lądzie: odcinki od niego mogą zaczynać się na brzegu, wszystkie inne nie mogą dotykać lądu
+    const clearOf = (poly, keepIn = null) => keep.every((q) => polyDist(poly, q) > 0.45) && (fix ? true : polyDist(poly, objs[0]) > 0.45) &&
+      track.every(([a, b]) => { const q = poly.filter((v) => segDist(v, a, b) < 0.12); return keepIn && a === keepIn ? q.length < 18 : q.length === 0; }) &&
       lands.every((l) => poly.every((v) => polyDist(l.poly, v) > 0.25));
     // latarnie stoją na lądzie, na cyplu zwróconym w stronę jachtu
     if (fix) for (const o of objs) {
