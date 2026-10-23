@@ -396,6 +396,7 @@ export class LightsScreen extends PassageScreen {
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
     q.phase = 'active';
     this.layer.set(q.vessel);
+    this.aimAt();
     this.pushLog({ msg: this.day ? (q.vessel.side === 'port' ? 'Statek na lewej burcie!' : 'Statek na prawej burcie!') : q.vessel.side === 'port' ? 'Światła na lewej burcie!' : 'Światła na prawej burcie!', type: 'info' });
     this.renderQuiz();
   }
@@ -426,6 +427,28 @@ export class LightsScreen extends PassageScreen {
     const s = this.q.stats;
     s.streak = ok ? s.streak + 1 : 0;
     s.best = Math.max(s.best, s.streak);
+  }
+
+  // Po pojawieniu się statku kamera sama obraca się tak, by był w centrum kadru: w widoku kapitana – kierunek i pochylenie
+  // spojrzenia, w widokach z zewnątrz – azymut kamery (jacht między kamerą a statkiem). Ruch kamery przez gracza przerywa obrót.
+  aimAt() { this._aim = { until: performance.now() + 3000, yaw: null }; }
+  aimCamera(dt) {
+    const a = this._aim, v = this.q.vessel, cam = this.view.cam;
+    if (!a || !v) return;
+    if (a.yaw !== null && (cam.fpvYaw !== a.yaw || cam.fpvPitch !== a.pitch || cam.az !== a.az || cam.mode !== a.mode)) { this._aim = null; return; }
+    const k = clamp(dt * 4, 0, 1), b = this.world.boat;
+    if (cam.mode === 'fpv') {
+      const p = this.view.camera.position, dir = this.view.camera.getWorldDirection(new THREE.Vector3());
+      const want = Math.atan2(v.x - p.x, -(v.z - p.z)), have = Math.atan2(dir.x, -dir.z);
+      cam.fpvYaw -= Math.atan2(Math.sin(want - have), Math.cos(want - have)) * k; // fpvYaw rośnie w lewo – przeciwnie do namiaru
+      const pitch = Math.atan2(6 - p.y, Math.hypot(v.x - p.x, v.z - p.z)); // środek statku ok. 6 m nad wodą
+      cam.fpvPitch += (pitch - cam.fpvPitch) * k;
+    } else if (cam.mode !== 'helm') {
+      const want = Math.atan2(-(v.x - b.x), -(v.z - b.z));
+      cam.az += Math.atan2(Math.sin(want - cam.az), Math.cos(want - cam.az)) * k;
+    }
+    Object.assign(a, { yaw: cam.fpvYaw, pitch: cam.fpvPitch, az: cam.az, mode: cam.mode });
+    if (performance.now() > a.until) this._aim = null;
   }
 
   vesselBearing() {
@@ -572,6 +595,8 @@ export class LightsScreen extends PassageScreen {
       }
     }
     this.layer.update(dt, this.view.camera.position, now / 1000, this.view.water);
+    this.aimCamera(Math.min((now - (this._aimLast || now)) / 1000, 0.1));
+    this._aimLast = now;
     if (q.vessel && q.phase !== 'wait') {
       const d = Math.hypot(q.vessel.x - b.x, q.vessel.z - b.z);
       if (d > 4500) this.next(); // statek odpłynął

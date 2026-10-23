@@ -135,7 +135,7 @@ export class SoundsScreen extends LightsScreen {
     this.view.atmo.setSky(sig.ctx === 'fog' ? 'fog' : 'clear');
     const v = this.placeVessel(sig);
     q.vessel = v;
-    if (sig.ctx !== 'fog') this.layer.set(v); else this.layer.clear();
+    if (sig.ctx !== 'fog') { this.layer.set(v); this.aimAt(); } else { this.layer.clear(); this._aim = null; } // we mgle kamera nie zdradza kierunku
     this.pushLog({ msg: v.side === 'port' ? 'Sygnał z lewej burty!' : 'Sygnał z prawej burty!', type: 'info' });
     this.playSignal();
     this.renderQuiz();
