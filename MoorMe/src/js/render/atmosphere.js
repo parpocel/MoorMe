@@ -210,7 +210,7 @@ export class Atmosphere {
     this.night = night;
 
     // kolory nieba
-    const dayTop = C(0x5aa6dd), dayBot = C(0xd6ecf7);
+    const dayTop = C(0x4f9fdc), dayBot = C(0xc4e2f5);
     const duskTop = C(0x4a5f9a), duskBot = C(0xf2a066);
     const nightTop = C(0x040916), nightBot = C(0x14203a);
     let top = lerpC(dayTop, duskTop, dusk), bot = lerpC(dayBot, duskBot, dusk);
@@ -219,7 +219,7 @@ export class Atmosphere {
     top = lerpC(top, grey, sky.grey); bot = lerpC(bot, grey.clone().offsetHSL(0, 0, 0.06), sky.grey);
     if (this.blackSky) { top = lerpC(top, C(0x000000), night); bot = lerpC(bot, C(0x010203), night); }
     if (this.sky === 'fog') { bot = lerpC(bot, lerpC(C(0xc9ced2), C(0x2a3038), night), 0.85); top = lerpC(top, bot, 0.6); }
-    this.paintSky(top, bot, az, dusk);
+    this.paintSky(top, bot, az, dusk, (1 - night) * (1 - sky.grey));
     this.scene.background = bot;
     this.updateClouds(camDt, this.view.camera.position, night, dusk, sky);
     this.scene.fog.color.copy(bot);
@@ -377,6 +377,23 @@ export class Atmosphere {
       g.add(c);
       this.clouds.push(c);
     }
+    // pas dalekich, płaskich chmur nisko nad horyzontem – widać je też przy wąskim kadrze (lornetka, widok kapitana)
+    this.band = [];
+    for (let i = 0; i < 18; i++) {
+      const c = new THREE.Group(), size = 110 + r() * 170, n = 5 + Math.floor(r() * 4);
+      for (let k = 0; k < n; k++) {
+        const sp = new THREE.Sprite(this.cloudMats[Math.floor(r() * this.cloudMats.length)]);
+        const sc = size * (0.8 + r() * 0.8);
+        sp.scale.set(sc * 2.6, sc * (0.45 + r() * 0.25), 1);
+        sp.position.set((r() - 0.5) * size * 3, (r() - 0.3) * size * 0.18, (r() - 0.5) * size * 0.6);
+        c.add(sp);
+      }
+      const near = !this.view.passage; // w porcie kopuła nieba ma promień 1200 m
+      c.userData = { a: (i / 18) * Math.PI * 2 + (r() - 0.5) * 0.3, d: near ? 850 + r() * 250 : 2600 + r() * 1300, y: near ? 22 + r() * 45 : 45 + r() * 120 };
+      c.renderOrder = -6;
+      g.add(c);
+      this.band.push(c);
+    }
     this.cloudGroup = g;
     this.scene.add(g);
     this.cloudDrift = { x: 0, z: 0 };
@@ -406,10 +423,19 @@ export class Atmosphere {
       c.position.set(cam.x + x, u.y * (this.sky === 'clear' ? 1 : 0.85), cam.z + z);
       c.scale.setScalar(big);
     });
+    const nb = { clear: 11, cloudy: 18, rain: 18, fog: 0 }[this.sky] ?? 8;
+    this.bandAng = (this.bandAng || 0) + dt * 0.0008 * Math.hypot(wv.x, wv.z) / 5;
+    this.band.forEach((c, i) => {
+      const u = c.userData;
+      c.visible = (i * 7) % 18 < nb; // widoczne rozrzucone wokół widnokręgu, nie po kolei
+      if (!c.visible) return;
+      c.position.set(cam.x + Math.cos(u.a + this.bandAng) * u.d, u.y, cam.z + Math.sin(u.a + this.bandAng) * u.d);
+      c.scale.setScalar(this.sky === 'clear' ? 1 : 1.2);
+    });
   }
 
-  paintSky(top, bot, az = 0, dusk = 0) {
-    const key = top.getHex() * 7 + bot.getHex() + Math.round(az * 20) * 13 + Math.round(dusk * 20);
+  paintSky(top, bot, az = 0, dusk = 0, day = 0) {
+    const key = top.getHex() * 7 + bot.getHex() + Math.round(az * 20) * 13 + Math.round(dusk * 20) + Math.round(day * 10) * 31;
     if (key === this._skyKey) return;
     this._skyKey = key;
     const geo = this.view.sky.geometry;
@@ -423,6 +449,9 @@ export class Atmosphere {
       const toward = Math.max(0, (x * sx + z * sz) / L);
       const k = dusk * Math.pow(toward, 3) * (1 - t) * 0.75;
       if (k > 0.001) c.lerp(glow, k);
+      // w dzień jaśniejsza, lekko ciepła połać nieba od strony słońca, po przeciwnej – głębszy błękit
+      const kd = day * (1 - dusk) * (1 - t);
+      if (kd > 0.001) { c.lerp(C(0xfff4e2), kd * 0.35 * Math.pow(toward, 3)); c.lerp(top, kd * 0.22 * Math.pow(Math.max(0, -(x * sx + z * sz) / L), 2)); }
       col.setXYZ(i, c.r, c.g, c.b);
     }
     col.needsUpdate = true;
