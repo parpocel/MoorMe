@@ -92,6 +92,10 @@ function shape(k, cx, cy, s) {
   if (k === 'diamond') return `<polygon points="${cx},${cy - s * 0.7} ${cx + s * 0.45},${cy} ${cx},${cy + s * 0.7} ${cx - s * 0.45},${cy}" fill="${b}"/>`;
   if (k === 'cylinder') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.7}" width="${s * 0.7}" height="${s * 1.4}" fill="${b}"/>`;
   if (k === 'coneDownB') return `<polygon points="${cx},${cy + s * 0.5} ${cx + s * 0.5},${cy - s * 0.5} ${cx - s * 0.5},${cy - s * 0.5}" fill="#1f5fd1"/>`;
+  if (k === 'ballR') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#d62a1e" stroke="#16181c" stroke-width="0.8"/>`;
+  if (k === 'diamondG') return `<polygon points="${cx},${cy - s * 0.7} ${cx + s * 0.45},${cy} ${cx},${cy + s * 0.7} ${cx - s * 0.45},${cy}" fill="#1fa64a" stroke="#16181c" stroke-width="0.8"/>`;
+  if (k === 'flagR') return `<rect x="${cx - s * 0.6}" y="${cy - s * 0.4}" width="${s * 1.2}" height="${s * 0.8}" fill="#d62a1e" stroke="#16181c" stroke-width="0.6"/>`;
+  if (k === 'flagRW') return `<rect x="${cx - s * 0.6}" y="${cy - s * 0.4}" width="${s * 1.2}" height="${s * 0.4}" fill="#d62a1e"/><rect x="${cx - s * 0.6}" y="${cy}" width="${s * 1.2}" height="${s * 0.4}" fill="#f4f4f0"/><rect x="${cx - s * 0.6}" y="${cy - s * 0.4}" width="${s * 1.2}" height="${s * 0.8}" fill="none" stroke="#16181c" stroke-width="0.6"/>`;
   if (k === 'ballG') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#1fa64a" stroke="#16181c" stroke-width="0.8"/>`;
   if (k === 'cylW') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.6}" width="${s * 0.7}" height="${s * 1.2}" fill="#f4f4f0" stroke="#16181c" stroke-width="0.8"/>`;
   if (k === 'pennantR') return `<polygon points="${cx},${cy - s * 0.5} ${cx},${cy + s * 0.2} ${cx - s * 1.4},${cy - s * 0.15}" fill="#d62a1e"/>`;
@@ -132,6 +136,17 @@ function dayView(v, W = 300, H = 150) {
   }
   // kształty na maszcie: pionowa kolumna nad pokładem; przesunięte na burtę – obok
   const mx = v.hull === 'yacht' ? x0 + 111 : x0 + hullW * 0.5 + 2;
+  if (v.clear) {
+    // prace na drodze wodnej: znaki na końcach rejki – rysunek jak od rufy (prawa burta statku po prawej)
+    const ty = base - 108, ys = shapes.filter((q) => q.k !== 'yard');
+    g += `<rect x="${mx - 1}" y="${ty}" width="3" height="${base - ty - 20}" fill="${dark}"/><rect x="${mx - 46}" y="${ty + 4}" width="94" height="3" fill="${dark}"/>`;
+    for (const sg of [-1, 1]) {
+      const col2 = ys.filter((q) => Math.sign(q.z) === sg).sort((a, b) => b.y - a.y), cx = mx + 1 + sg * 42;
+      g += `<line x1="${cx}" y1="${ty + 7}" x2="${cx}" y2="${ty + 14}" stroke="${dark}" stroke-width="1"/>`;
+      col2.forEach((q, i) => { g += shape(q.k, cx, ty + 24 + i * 26, 16); });
+    }
+    return g;
+  }
   const sorted = [...shapes].sort((a, b) => b.y - a.y);
   let y = base - (v.hull === 'yacht' ? 92 : 104);
   for (const s of sorted) {

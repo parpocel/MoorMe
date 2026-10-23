@@ -5,7 +5,7 @@ import { h } from './dom.js';
 import { SimScreen } from './simUI.js';
 import { PassageScreen } from './passageUI.js';
 import { PassageWorld } from '../physics/passage.js';
-import { VESSELS, DAY_VESSELS, typesFor, anyVessel, ASPECTS, GEAR_SIDES, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
+import { VESSELS, DAY_VESSELS, typesFor, anyVessel, ASPECTS, GEAR_SIDES, CLEAR_SIDES, clearSideSeen, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
 import { DEG, KN, clamp, rng, thetaToCompass } from '../math.js';
 
 const NM = 1852;
@@ -156,6 +156,7 @@ const BLUE = new THREE.MeshBasicMaterial({ color: 0x1f5fd1 });
 const WHITE = new THREE.MeshBasicMaterial({ color: 0xf4f4f0 });
 const GREEN = new THREE.MeshBasicMaterial({ color: 0x1fa64a });
 const RED = new THREE.MeshBasicMaterial({ color: 0xd62a1e, side: THREE.DoubleSide });
+const WHITE2 = new THREE.MeshBasicMaterial({ color: 0xf4f4f0, side: THREE.DoubleSide });
 function shapeMesh(k) {
   const g = new THREE.Group();
   const cone = (up, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLACK); m.position.y = y; if (!up) m.rotation.z = Math.PI; return m; };
@@ -167,6 +168,18 @@ function shapeMesh(k) {
   else if (k === 'cylinder') g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 14), BLACK));
   else if (k === 'ballY') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), YELLOW));
   else if (k === 'coneDownB') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLUE); m.rotation.z = Math.PI; g.add(m); }
+  else if (k === 'ballR') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), RED));
+  else if (k === 'diamondG') { for (const [up, y] of [[true, 0.3], [false, -0.3]]) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), GREEN); m.position.y = y; if (!up) m.rotation.z = Math.PI; g.add(m); } }
+  else if (k === 'yard') { // rejka – znaki wiszą na jej końcach na krótkich linkach
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 6.6), MAST));
+    for (const z of [-3, 3]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.6, 4), MAST); l.position.set(0, -0.3, z); g.add(l); }
+  }
+  else if (k === 'flagR' || k === 'flagRW') {
+    // flaga na fale z rejki; płat ustawiany w update() bokiem do obserwatora
+    const quad = (y0, y1, mat) => { const geo = new THREE.PlaneGeometry(1.1, y0 - y1); const m = new THREE.Mesh(geo, mat); m.position.set(-0.55, (y0 + y1) / 2, 0); g.add(m); };
+    if (k === 'flagR') quad(0.4, -0.35, RED); else { quad(0.4, 0.02, RED); quad(0.02, -0.35, WHITE2); }
+    g.userData.face = true;
+  }
   else if (k === 'ballG') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), GREEN));
   else if (k === 'cylW') { g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.0, 14), WHITE)); }
   else if (k === 'pennantR') {
@@ -297,11 +310,11 @@ export class ShipShapesLayer {
       const y = base + (s.y - base) * k;
       m.position.set(s.x, y, s.z * k);
       m.scale.setScalar(k);
-      const top = y - 0.5 * k;
+      const top = s.k === 'yard' ? y : y - 0.5 * k; // do rejki maszt dochodzi w całości
       mast.position.set(s.x, top / 2, s.z * k);
       mast.scale.set(1, Math.max(0.1, top), 1);
       mast.visible = Math.abs(s.z) < 0.01 && top > 0.5;
-      if (s.k === 'pennantR') m.rotation.y = Math.atan2(cam.x - v.x, cam.z - v.z) - g.rotation.y; // płat proporca zawsze widoczny
+      if (s.k === 'pennantR' || m.userData.face) m.rotation.y = Math.atan2(cam.x - v.x, cam.z - v.z) - g.rotation.y; // płat proporca zawsze widoczny
     }
   }
 }
@@ -377,7 +390,8 @@ export class LightsScreen extends PassageScreen {
     q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day, aspect: this._forceAspect || null }); // _forceType – podgląd konkretnego typu (testy)
     { const v = q.vessel, o = this.observer(), rel = relBearing(v.x, v.z, v.hdg, o.x, o.z); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel }, this.scope);
       // strona sieci (światło / stożek przesunięte w bok o 2–6 m) widać tylko od dziobu albo od rufy; z burty przesunięcie leży wzdłuż linii wzroku
-      q.gearDet = Math.abs(Math.cos(rel * DEG)) >= 0.5; }
+      q.gearDet = Math.abs(Math.cos(rel * DEG)) >= 0.5;
+      q.clearTruth = v.clear ? clearSideSeen(v.gearSide, rel) : null; } // prace na drodze wodnej: wolne przejście po lewej/prawej (patrząc od nas)
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
     q.phase = 'active';
     this.layer.set(q.vessel);
@@ -390,8 +404,8 @@ export class LightsScreen extends PassageScreen {
     const okType = q.pick === v.type;
     const realAspect = aspectOf(relBearing(v.x, v.z, v.hdg, b.x, b.z), v.moving);
     const askAspect = v.moving && !this.day;
-    const askGear = v.gear && q.gearDet;
-    const okAspect = (!askAspect || q.aspectPick === realAspect) && (!askGear || q.gearPick === v.gearSide);
+    const askGear = (v.gear || v.clear) && q.gearDet;
+    const okAspect = (!askAspect || q.aspectPick === realAspect) && (!askGear || q.gearPick === (v.clear ? q.clearTruth : v.gearSide));
     const s = q.stats;
     s.n++; if (okType) s.ok++;
     if (askAspect || askGear) { s.an++; if (okAspect) s.aok++; }
@@ -458,11 +472,21 @@ export class LightsScreen extends PassageScreen {
       el.appendChild(h('div.small.muted', {}, 'Co to za statek i co robi?'));
       const list = h('div.quiz-opts');
       for (const id of q.options) {
-        list.appendChild(h('button.btn.sm', { class: q.pick === id ? 'on' : '', onclick: () => { q.pick = id; this.renderQuiz(); } }, anyVessel(id).name));
+        list.appendChild(h('button.btn.sm', { class: q.pick === id ? 'on' : '', onclick: () => { if (q.pick !== id) q.gearPick = null; q.pick = id; this.renderQuiz(); } }, anyVessel(id).name));
       }
       el.appendChild(list);
       // pytanie o stronę sieci – dopiero po wybraniu typu z sieciami (samo pytanie nie zdradza odpowiedzi)
-      const pickGear = q.pick && anyVessel(q.pick).gear;
+      const pickGear = q.pick && anyVessel(q.pick).gear, pickClear = q.pick && anyVessel(q.pick).clear;
+      if (pickClear && q.gearDet) {
+        el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Z której strony jest wolne przejście?'));
+        const gs = h('div.quiz-opts.two');
+        for (const a of ['left', 'right']) gs.appendChild(h('button.btn.sm', { class: q.gearPick === a ? 'on' : '', onclick: () => { q.gearPick = a; this.renderQuiz(); } }, CLEAR_SIDES[a]));
+        el.appendChild(gs);
+      } else if (pickClear) {
+        el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, this.day
+          ? 'Z tego kierunku nie ocenisz, z której strony jest wolne przejście – znaki są w jednej linii. Strony widać, patrząc wzdłuż statku.'
+          : 'Z tego kierunku nie ocenisz, z której strony jest wolne przejście – światła są w jednej linii. Strony widać, patrząc wzdłuż statku.'));
+      }
       if (pickGear && q.gearDet) {
         el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Z której strony statku są wystawione sieci?'));
         const gs = h('div.quiz-opts.two');
@@ -479,10 +503,10 @@ export class LightsScreen extends PassageScreen {
         for (const a of ['bow', 'starboard', 'port', 'stern']) asp.appendChild(h('button.btn.sm', { class: q.aspectPick === a ? 'on' : '', onclick: () => { q.aspectPick = a; this.renderQuiz(); } }, ASPECTS[a]));
         el.appendChild(asp);
       }
-      const ready = q.pick && (!v.moving || this.day || q.aspectPick) && (!(pickGear && q.gearDet) || q.gearPick);
+      const ready = q.pick && (!v.moving || this.day || q.aspectPick) && (!((pickGear || pickClear) && q.gearDet) || q.gearPick);
       el.appendChild(h('div', { style: { display: 'flex', gap: '6px', marginTop: '10px' } },
         h('button.btn.primary', { disabled: ready ? null : true, onclick: () => this.check() }, 'Sprawdź'),
-        h('button.btn', { onclick: () => { q.stats.n++; q.stats.streak = 0; q.result = { okType: false, okAspect: false, skipped: true, askGear: v.gear && q.gearDet, realAspect: aspectOf(relBearing(v.x, v.z, v.hdg, this.world.boat.x, this.world.boat.z), v.moving) }; q.phase = 'feedback'; this.renderQuiz(); } }, 'Nie wiem')));
+        h('button.btn', { onclick: () => { q.stats.n++; q.stats.streak = 0; q.result = { okType: false, okAspect: false, skipped: true, askGear: (v.gear || v.clear) && q.gearDet, realAspect: aspectOf(relBearing(v.x, v.z, v.hdg, this.world.boat.x, this.world.boat.z), v.moving) }; q.phase = 'feedback'; this.renderQuiz(); } }, 'Nie wiem')));
       return;
     }
     if (q.phase === 'observe' || q.phase === 'pass') {
@@ -507,7 +531,8 @@ export class LightsScreen extends PassageScreen {
       const line = (k, val) => el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, k), ' ', h('b', {}, val)));
       if (r.skipped || !r.okType) line('Poprawna odpowiedź:', V.name);
       if (v.moving && !this.day && (r.skipped || q.aspectPick !== r.realAspect)) line('Widzisz:', ASPECTS[r.realAspect]);
-      if (r.askGear && (r.skipped || q.gearPick !== v.gearSide)) line('Sieci:', GEAR_SIDES[v.gearSide]);
+      if (r.askGear && v.clear && (r.skipped || q.gearPick !== q.clearTruth)) line('Wolne przejście:', CLEAR_SIDES[q.clearTruth]);
+      else if (r.askGear && !v.clear && (r.skipped || q.gearPick !== v.gearSide)) line('Sieci:', GEAR_SIDES[v.gearSide]);
       if (r.passAsked && !r.passOk) line('Przejście:', PASS_SIDES[r.passTruth]);
     }
     el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => this.next() }, 'Następny statek →'));

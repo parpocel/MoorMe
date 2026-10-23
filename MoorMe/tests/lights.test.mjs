@@ -1,4 +1,4 @@
-import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, lightSignature, typeSignatures } from '../src/js/data/shipLights.js';
+import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, lightSignature, typeSignatures, clearSideSeen } from '../src/js/data/shipLights.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -14,6 +14,12 @@ check(colors(visibleLights(P, -60)) === 'red,white', `z lewej burty: masztowe + 
 check(colors(visibleLights(P, 180)) === 'white', `od rufy: tylko rufowe (${colors(visibleLights(P, 180))})`);
 check(visibleLights(VESSEL_BY_ID.sailing.lights(12, () => 0.9), 0).every((l) => l.c !== 'white'), 'jacht żaglowy od dziobu: bez białego masztowego');
 check(visibleLights(VESSEL_BY_ID.anchor.lights(30), 137).length === 1, 'kotwiczne widać ze wszystkich stron');
+// prace na drodze wodnej (śródlądowe): czerwone po stronie zamkniętej; wolne przejście widziane od nas
+{
+  const W = VESSEL_BY_ID.iWork.lights(30, () => 0.5, { gearSide: 'starboard' });
+  check(W.find((l) => l.c === 'red').z > 0 && W.filter((l) => l.c === 'green').every((l) => l.z < 0), 'prace: czerwone na burcie zamkniętej, zielone na wolnej');
+  check(clearSideSeen('starboard', 180) === 'left' && clearSideSeen('starboard', 0) === 'right' && clearSideSeen('port', 170) === 'right' && clearSideSeen('port', -10) === 'left', 'prace: wolne przejście po lewej/prawej zależnie od tego, czy patrzymy od dziobu, czy od rufy');
+}
 check(visibleLights(VESSEL_BY_ID.towing.lights(30), 180).some((l) => l.c === 'yellow'), 'holujący od rufy: żółte światło holownicze');
 
 // 2) kąt względny i aspekt

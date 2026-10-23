@@ -35,6 +35,13 @@ const iConvoy = (L, blue) => [
   { x: -L / 2 - 170, y: 2, z: 0, c: 'white', s: 'stern' }
 ];
 
+// prace na drodze wodnej (śródlądowe): światła/znaki na rejce po obu stronach masztu – strona zamknięta (o.gearSide) i wolna
+const sideZ = (o, closed) => ((o.gearSide === 'port') === closed ? -3 : 3);
+const iWorkLights = (o, clearCols) => [
+  ...clearCols.map((c, i) => ({ x: 0, y: 8 - i * 1.4, z: sideZ(o, false), c, s: 'all' })),
+  { x: 0, y: 8, z: sideZ(o, true), c: 'red', s: 'all' }
+];
+
 // Typy jednostek: name – odpowiedź, lights(L) – zestaw świateł, speed – kn, L – długość (m), moving – czy w drodze
 export const VESSELS = [
   {
@@ -142,6 +149,16 @@ export const VESSELS = [
     lights: (L) => [...column(L * 0.1, 8, ['green', 'green', 'white']), ...sides(L, 4.5), ...stern(L, 3.5)]
   },
   {
+    id: 'iWork', inland: true, clear: true, name: 'Urządzenie pływające przy pracy lub statek wykonujący prace na drodze wodnej – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false,
+    explain: 'Przepisy śródlądowe: od strony, z której szlak jest wolny – dwa zielone dookólne w pionie; od strony zamkniętej – czerwone dookólne na wysokości górnego zielonego. Przechodź po stronie zielonych! Strony widać, patrząc wzdłuż statku – z boku światła są w jednej linii.',
+    lights: (L, r, o) => iWorkLights(o, ['green', 'green'])
+  },
+  {
+    id: 'iWorkWash', inland: true, clear: true, name: 'Prace na drodze wodnej z ochroną przed falowaniem albo statek na mieliźnie lub zatopiony – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false,
+    explain: 'Przepisy śródlądowe: od strony wolnej – czerwone nad białym (dookólne, w pionie, ok. 1 m), od strony zamkniętej – czerwone dookólne. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie czerwonego nad białym, zwolnij i nie rób fali.',
+    lights: (L, r, o) => iWorkLights(o, ['red', 'white'])
+  },
+  {
     id: 'iSmall', inland: true, name: 'Mała łódź bez napędu mechanicznego lub mały żaglowy (< 7 m) – drogi śródlądowe', L: [4, 7], speed: [0, 0], moving: false,
     explain: 'Przepisy śródlądowe: jedno białe światło widoczne ze wszystkich stron (np. łódź wiosłowa) – kierunku ruchu po nim nie ocenisz. Mały statek żaglowy krótszy niż 7 m może nieść tylko takie światło, a przy zbliżaniu się innych statków pokazuje drugie białe. Tak samo łódź z wyposażenia statku pracująca w jego pobliżu – gdy zbliżają się inne statki.',
     lights: () => [{ x: 0, y: 1.6, z: 0, c: 'white', s: 'all' }]
@@ -203,6 +220,12 @@ export const DAY_VESSELS = [
   { id: 'dIPriority', inland: true, name: 'Statek z pierwszeństwem przejścia – drogi śródlądowe', L: [40, 90], speed: [6, 10], moving: true, hull: 'ship',
     explain: 'Przepisy śródlądowe: czerwony trójkątny proporzec w przedniej części statku – pierwszeństwo przejścia nadane przez dyrektora urzędu żeglugi w miejscach z ustaloną kolejnością przejścia (np. śluzy). Oprócz niego statek niesie inne wymagane znaki.',
     shapes: (L) => [{ x: L * 0.42, y: 5, z: 0, k: 'pennantR' }] },
+  { id: 'dIWork', inland: true, clear: true, name: 'Urządzenie pływające przy pracy lub statek wykonujący prace na drodze wodnej – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false, hull: 'barge',
+    explain: 'Przepisy śródlądowe: od strony, z której szlak jest wolny – dwa zielone podwójne stożki (romby) w pionie; od strony zamkniętej – czerwona kula na wysokości górnego rombu. Przechodź po stronie zielonych rombów. Te znaki pokazuje też urządzenie lub statek wymagający ochrony przed falowaniem.',
+    shapes: (L, r, o) => [{ x: 0, y: 8.9, z: 0, k: 'yard' }, { x: 0, y: 8, z: sideZ(o, false), k: 'diamondG' }, { x: 0, y: 6.4, z: sideZ(o, false), k: 'diamondG' }, { x: 0, y: 8, z: sideZ(o, true), k: 'ballR' }] },
+  { id: 'dIWorkWash', inland: true, clear: true, name: 'Prace na drodze wodnej z ochroną przed falowaniem albo statek na mieliźnie lub zatopiony – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false, hull: 'barge',
+    explain: 'Przepisy śródlądowe: od strony wolnej – flaga czerwono-biała (albo dwie flagi w pionie: czerwona nad białą), od strony zamkniętej – flaga czerwona. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie flagi czerwono-białej i nie rób fali.',
+    shapes: (L, r, o) => [{ x: 0, y: 8.9, z: 0, k: 'yard' }, { x: 0, y: 8, z: sideZ(o, false), k: 'flagRW' }, { x: 0, y: 8, z: sideZ(o, true), k: 'flagR' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
     explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',
     shapes: () => [{ x: 1.5, y: 6, z: 0, k: 'coneDown' }] }
@@ -218,6 +241,9 @@ export const ASPECTS = {
   none: 'Stoi – kierunek nieistotny'
 };
 export const GEAR_SIDES = { port: 'Z lewej burty statku', starboard: 'Z prawej burty statku' };
+export const CLEAR_SIDES = { left: 'Po lewej (patrząc od nas)', right: 'Po prawej (patrząc od nas)' };
+// strona wolnego przejścia widziana przez obserwatora: od rufy (|rel| > 90°) prawa burta statku jest po prawej
+export const clearSideSeen = (gearSide, rel) => ((Math.abs(rel) > 90) === (gearSide === 'starboard') ? 'left' : 'right');
 
 // Kąt względny obserwatora (od dziobu statku, + w prawo) z pozycji statku i kursu
 export function relBearing(vx, vz, hdgDeg, ox, oz) {
@@ -283,7 +309,7 @@ export function spawnVessel(r, observer, opts = {}) {
   // aspekt widziany z łodzi; przy sieciach – burta statku z sieciami ma być widoczna lub oczywista z pozycji świateł
   const pick = r();
   const aspect = opts.aspect && v.moving ? opts.aspect : !v.moving ? 'none' : v.gear ? (pick < 0.5 ? 'starboard' : 'port') : pick < 0.2 ? 'bow' : pick < 0.45 ? 'starboard' : pick < 0.7 ? 'port' : 'stern';
-  const rel = aspect === 'bow' ? (r() - 0.5) * 4 : aspect === 'starboard' ? 20 + r() * 80 : aspect === 'port' ? -(20 + r() * 80) : aspect === 'stern' ? 130 + r() * 100 : r() * 360;
+  const rel = v.clear ? (r() < 0.5 ? 0 : 180) + (r() - 0.5) * 110 : aspect === 'bow' ? (r() - 0.5) * 4 : aspect === 'starboard' ? 20 + r() * 80 : aspect === 'port' ? -(20 + r() * 80) : aspect === 'stern' ? 130 + r() * 100 : r() * 360;
   // kurs statku: namiar od statku do łodzi minus kąt względny
   const back = (Math.atan2(observer.x - x, -(observer.z - z)) * 180) / Math.PI;
   const hdg = (((back - rel) % 360) + 360) % 360;
@@ -321,7 +347,7 @@ export function spawnVessel(r, observer, opts = {}) {
     }
     if (best) { pos = best.pos; pass = best.side; obsT = best.obs; }
   }
-  const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, obsT, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, gearSide: v.gear ? o.gearSide : null, day: !!opts.day };
+  const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, obsT, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, clear: !!v.clear, gearSide: v.gear || v.clear ? o.gearSide : null, day: !!opts.day };
   if (opts.day) return { ...base, hull: v.hull, shapes: v.shapes(L, r, o), lights: [] };
   return { ...base, lights: v.lights(L, r, o) };
 }
