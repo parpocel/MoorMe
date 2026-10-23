@@ -142,7 +142,8 @@ class ShipLightsLayer {
       // jasność maleje z odległością, wielkość punktu stała kątowo
       const deck = l.c === 'deck'; // oświetlenie pokładu – słabsze i mniejsze niż światła nawigacyjne
       sp.material.opacity = clamp(1.2 - d / 4500, 0.5, 1) * (deck ? 0.7 : 1);
-      sp.scale.setScalar(clamp(d * 0.0105, 0.4, 55) * (deck ? 0.65 : 1));
+      // żółte holownicze trochę większe – żeby nie ginęło przy białym rufowym tuż pod nim
+      sp.scale.setScalar(clamp(d * 0.0105, 0.4, 55) * (deck ? 0.65 : l.c === 'yellow' ? 1.25 : 1));
     }
   }
 }
