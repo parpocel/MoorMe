@@ -22,7 +22,7 @@ const VIEWS = [
 ];
 function vesselLights(v) {
   const Lm = (v.L[0] + v.L[1]) / 2;
-  return { Lm, lights: v.lights(Lm, () => 0.9, { gearSide: 'starboard' }) };
+  return { Lm, lights: v.lights(Lm, () => 0.5, { gearSide: 'starboard' }) };
 }
 // zasięg kadru w danym widoku: kadłub i wszystkie światła (także niewidoczne)
 function viewSpan(view, Lm, lights) {
@@ -129,7 +129,10 @@ export function lightsBook() {
       svgEl(320, 220, sectorDiagram()),
       h('p', {}, L('Masztowe (białe) świeci 225° do przodu, burtowe po 112,5°: zielone na prawej, czerwone na lewej burcie. Rufowe (białe) – 135° do tyłu. Światła dookólne widać z każdej strony. Kolory widziane z boku i z dziobu mówią, w którą stronę płynie statek.', 'The masthead light (white) shows over 225° ahead, the sidelights over 112.5° each: green to starboard, red to port. The sternlight (white) shows over 135° astern. All-round lights are seen from every direction. The colours you see tell you which way a vessel is heading.')),
       h('p', {}, L('Pamiętaj: patrząc na statek od dziobu widzisz jego zieloną burtę po swojej lewej, a czerwoną po prawej.', 'Remember: looking at a vessel head-on, its green side is on your left and its red side on your right.')))] },
-    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.map(lightsEntry) },
+    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.flatMap((v) => (v.id !== 'sailing' ? [lightsEntry(v)] : [lightsEntry(v),
+      // wariant jachtu: dodatkowe czerwone nad zielonym na topie masztu
+      lightsEntry({ ...v, name: L('Jednostka żaglowa w drodze – czerwone nad zielonym', 'Sailing vessel underway – red over green'), lights: (Lm, r, o) => v.lights(Lm, () => 0.9, o),
+        explain: L('Oprócz świateł burtowych i rufowego jednostka żaglowa może nieść na topie masztu dwa światła dookólne w pionie: czerwone nad zielonym („czerwone nad zielonym – żeglarz”). Nie wolno ich łączyć z latarnią trójsektorową. Nie myl ich z czerwonym nad białym (rybak) ani zielonym nad białym (trawler).', 'In addition to the sidelights and sternlight a sailing vessel may show at the masthead two all-round lights in a vertical line: red over green (“red over green, sailing machine”). They must not be combined with a tricolour lantern. Do not confuse them with red over white (fishing) or green over white (trawling).') })])) },
     { id: 'day', name: L('Znaki dzienne', 'Day shapes'), entries: DAY_VESSELS.map(dayEntry) }
   ];
 }

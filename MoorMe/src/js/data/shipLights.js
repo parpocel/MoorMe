@@ -39,10 +39,12 @@ export const VESSELS = [
   },
   {
     id: 'sailing', name: 'Jednostka żaglowa w drodze', L: [9, 16], speed: [4, 7], moving: true,
-    explain: 'Tylko światła burtowe i rufowe – bez światła masztowego. Mały jacht może zamiast nich nieść jedną latarnię trójsektorową na topie masztu.',
-    lights: (L, r) => (r() < 0.4
+    explain: 'Tylko światła burtowe i rufowe – bez światła masztowego. Mały jacht może zamiast nich nieść jedną latarnię trójsektorową na topie masztu. Może też dodatkowo nieść na topie masztu dwa światła dookólne w pionie: czerwone nad zielonym („czerwone nad zielonym – żeglarz”) – ale nie razem z latarnią trójsektorową.',
+    // warianty: latarnia trójsektorowa na topie / burtowe i rufowe / burtowe i rufowe + czerwone nad zielonym dookólne na topie
+    lights: (L, r) => { const k = r(); return k < 0.35
       ? [{ x: 0, y: 15, z: -0.1, c: 'red', s: 'port' }, { x: 0, y: 15, z: 0.1, c: 'green', s: 'stbd' }, { x: -0.1, y: 15, z: 0, c: 'white', s: 'stern' }]
-      : [...sides(L, 1.6), ...stern(L, 1.4)])
+      : k > 0.72 ? [{ x: 0, y: 15.4, z: 0, c: 'red', s: 'all' }, { x: 0, y: 13.4, z: 0, c: 'green', s: 'all' }, ...sides(L, 1.6), ...stern(L, 1.4)]
+        : [...sides(L, 1.6), ...stern(L, 1.4)]; }
   },
   {
     id: 'anchor', name: 'Statek na kotwicy (< 50 m)', L: [20, 45], speed: [0, 0], moving: false,
@@ -289,7 +291,7 @@ export function typeSignatures(id) {
   const v = VESSEL_BY_ID[id], out = new Set();
   if (v) {
     const Lm = (v.L[0] + v.L[1]) / 2;
-    for (const rv of [0.1, 0.9]) for (const gearSide of ['port', 'starboard']) {
+    for (const rv of [0.1, 0.5, 0.9]) for (const gearSide of ['port', 'starboard']) {
       const ls = v.lights(Lm, () => rv, { gearSide });
       for (let rel = -178; rel < 180; rel += 4) if (Math.abs(Math.abs(rel) - 112.5) > 1.5) out.add(lightSignature(ls, rel));
     }
