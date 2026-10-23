@@ -382,6 +382,8 @@ export const EN = {
   "Kula – romb – kula w pionie, a do tego dwie kule w pionie od strony przeszkody i dwa romby w pionie od strony, z której można przejść. Przechodź po stronie rombów.": "Ball – diamond – ball in a vertical line, plus two balls in a vertical line on the side of the obstruction and two diamonds in a vertical line on the side where another vessel may pass. Pass on the diamond side.",
   "Trzy czarne kule: jedna przy szczycie przedniego masztu i po jednej na każdym końcu rei. Nie zbliżaj się na mniej niż 1000 m!": "Three black balls: one near the foremast head and one at each end of the fore yard. Do not approach within 1000 m!",
   "Odległość mijania (latarnia w kącie 90°)": "Passing distance (lighthouse at 90° on the bow)",
+  "⌫ Usuń": "⌫ Erase",
+  "Najedź na namiar, odcinek, okrąg, punkt albo pomiar cyrklem (podświetli się na czerwono) i kliknij, aby go usunąć. „Cofnij” usuwa ostatnio narysowany element, „Wyczyść” – wszystkie.": "Hover over a bearing line, segment, circle, point or dividers measurement (it lights up red) and click to delete it. “Undo” removes the last item drawn, “Clear” removes them all.",
   'Bałtyk – piaszczyste wybrzeże z mielizną': 'Baltic – sandy coast with a shoal',
   'Płaski, piaszczysty brzeg z lasem i wsiami. Na trasie mielizna oznaczona kardynałami, wrak, skała oznaczona znakiem odosobnionego niebezpieczeństwa i strefa regat. Płyniesz z zachodu na wschód do portu za główkami.': 'A flat sandy shore with forest and villages. On the route: a shoal marked by cardinal marks, a wreck, a rock marked with an isolated danger mark and a regatta zone. You sail from west to east to a port behind the pierheads.',
   'Adriatyk – kanały między wyspami': 'Adriatic – channels between islands',

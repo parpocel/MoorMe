@@ -190,13 +190,13 @@ export class PlotBoard {
       for (const [c, n] of PlotBoard.COLORS) this.colorBtns.appendChild(h('button.pb-color', { class: this.color === c ? 'on' : '', title: tr(n), 'aria-label': tr(n), style: { background: c }, onclick: () => { this.color = c; renderColors(); } }));
     };
     renderColors();
-    const tools = [['pan', '✋ Przesuń'], ['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt']];
+    const tools = [['pan', '✋ Przesuń'], ['drag', '✎ Linia'], ['bearing', '∠ Namiar przez punkt'], ['course', '→ Kurs i droga'], ['plotter', '📐 Trójkąt nawigacyjny'], ['parallel', '⫽ Linijka równoległa'], ['dividers', '⟨⟩ Cyrkiel'], ['circle', '◯ Okrąg'], ['point', '• Punkt'], ['erase', '⌫ Usuń']];
     this.edgeBtn = h('button.btn.xs', { onclick: () => this.drawAlongPlotter() }, '📐 Kreśl wzdłuż krawędzi');
     const renderTools = () => {
       this.toolBtns.innerHTML = '';
-      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; this.drag = null; renderTools(); this.updateHint(); this.draw(); } }, n));
+      for (const [k, n] of tools) this.toolBtns.appendChild(h('button', { class: this.tool === k ? 'on' : '', onclick: () => { this.tool = k; this.sel = null; this.delHover = null; this.drag = null; renderTools(); this.updateHint(); this.draw(); } }, n));
       this.edgeBtn.style.display = this.tool === 'plotter' ? '' : 'none';
-      this.cv.style.cursor = this.tool === 'pan' ? 'grab' : 'crosshair';
+      this.cv.style.cursor = this.tool === 'pan' ? 'grab' : this.tool === 'erase' ? 'pointer' : 'crosshair';
     };
     this.zoomLbl = h('span.pb-zoom', {}, '1×');
     this.bigBtn = h('button.btn.xs', { onclick: () => this.setBig(!this.big), style: this.fill ? { display: 'none' } : {} }, '⛶ Duża mapa');
@@ -209,8 +209,8 @@ export class PlotBoard {
         h('label.pb-in', {}, h('span', {}, 'Kąt'), this.angIn, '°'),
         h('label.pb-in', {}, h('span', {}, this.vec ? 'Długość' : 'Droga'), this.distIn, this.unit),
         this.edgeBtn,
-        h('button.btn.xs', { onclick: () => { this.items.pop(); this.draw(); } }, '↶ Cofnij'),
-        h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.draw(); } }, 'Wyczyść'),
+        h('button.btn.xs', { onclick: () => { this.items.pop(); this.delHover = null; this.draw(); } }, '↶ Cofnij'),
+        h('button.btn.xs', { onclick: () => { this.items = []; this.plotter = null; this.sel = null; this.delHover = null; this.draw(); } }, 'Wyczyść'),
         h('span.pb-zoombox', {},
           h('button.btn.xs', { title: tr('Pomniejsz'), onclick: () => this.setZoom(this.zoom / 1.5) }, '−'),
           this.zoomLbl,
@@ -257,7 +257,7 @@ export class PlotBoard {
     };
     this.cv.addEventListener('pointerup', end);
     this.cv.addEventListener('pointercancel', end);
-    this.cv.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.draw(); } });
+    this.cv.addEventListener('pointerleave', () => { if (!this.drag) { this.hover = null; this.delHover = null; this.draw(); } });
     // kółko myszy / gest szczypania na touchpadzie – powiększenie wokół kursora; przy trójkącie kółko obraca trójkąt (Ctrl + kółko – powiększa)
     this.cv.addEventListener('wheel', (e) => {
       e.preventDefault();
@@ -288,6 +288,7 @@ export class PlotBoard {
       pan: 'Przeciągnij mapę, aby ją przesunąć. Kółko myszy lub szczypanie – powiększenie (także przyciski + i −); prawy przycisk myszy przesuwa mapę przy każdym narzędziu.',
       drag: 'Przeciągnij od punktu albo kliknij początek i koniec, aby narysować linię – widać jej kierunek i długość. Linie przyciągają się do obiektów i przecięć.',
       bearing: 'Wpisz kąt (np. namiar rzeczywisty) i kliknij obiekt – przez punkt zostanie wykreślona linia pozycyjna.',
+      erase: 'Najedź na namiar, odcinek, okrąg, punkt albo pomiar cyrklem (podświetli się na czerwono) i kliknij, aby go usunąć. „Cofnij” usuwa ostatnio narysowany element, „Wyczyść” – wszystkie.',
       course: 'Wpisz kurs i drogę, potem kliknij punkt startu – odłożony zostanie odcinek z punktem końcowym.',
       plotter: 'Kliknij, aby położyć trójkąt; przeciągnij go, by przesunąć, a za uchwyt (kółko) – by obrócić (także kółko myszy, z Shift ±10°). Kąt krawędzi trafia do pola „Kąt”.',
       parallel: 'Kliknij istniejącą linię, a potem punkt – przez punkt zostanie wykreślona linia równoległa.',
@@ -345,7 +346,28 @@ export class PlotBoard {
     return best;
   }
 
+  // element gracza najbliżej kursora (piksele): linia, odcinek, okrąg, punkt albo pomiar cyrklem
+  nearestItem(p, maxD = 10) {
+    let best = null, bd = maxD;
+    this.items.forEach((it, i) => {
+      let d = Infinity;
+      if (it.kind === 'line' || it.kind === 'seg') {
+        const a = this.px(it.kind === 'seg' ? it : { x: it.x - it.dx * 200, y: it.y - it.dy * 200 }), b = this.px(it.kind === 'seg' ? { x: it.x + it.dx * it.len, y: it.y + it.dy * it.len } : { x: it.x + it.dx * 200, y: it.y + it.dy * 200 });
+        d = segDist(p, a, b);
+      } else if (it.kind === 'circle') { const c = this.px(it); d = Math.abs(Math.hypot(p.x - c.x, p.y - c.y) - it.r * this.k); }
+      else if (it.kind === 'meas') d = segDist(p, this.px(it.a), this.px(it.b));
+      else { const q = this.px(it); d = Math.hypot(p.x - q.x, p.y - q.y); }
+      if (d < bd) { bd = d; best = i; }
+    });
+    return best;
+  }
+
   down(p) {
+    if (this.tool === 'erase') {
+      const i = this.nearestItem(p);
+      if (i !== null) { this.items.splice(i, 1); this.sel = null; }
+      this.delHover = this.nearestItem(p); this.draw(); return;
+    }
     const n = this.snap(p);
     if (this.tool === 'drag' || this.tool === 'dividers') {
       // drugi klik w trybie „klik – klik”: koniec linii / drugie ramię cyrkla
@@ -396,7 +418,8 @@ export class PlotBoard {
       this.drag.b = this.snap(p);
       if (this.drag.a.scale && this.drag.b.scale) this.drag.b.x = this.drag.a.x; // na skali mierzymy tylko w pionie
     }
-    this.hover = this.snap(p, 9);
+    this.hover = this.tool === 'erase' ? null : this.snap(p, 9);
+    this.delHover = this.tool === 'erase' ? this.nearestItem(p) : null;
     this.draw();
   }
   up() {
@@ -463,10 +486,11 @@ export class PlotBoard {
     }
     // elementy gracza
     this.items.forEach((it, i) => {
-      const col = it.color || '#2f4468';
+      const del = i === this.delHover, col = del ? '#d0453b' : it.color || '#2f4468';
       ctx.save();
-      ctx.strokeStyle = col; ctx.lineWidth = i === this.sel ? 3.2 : 1.8;
+      ctx.strokeStyle = col; ctx.lineWidth = i === this.sel || del ? 3.2 : 1.8;
       if (i === this.sel) { ctx.shadowColor = 'rgba(255,170,40,0.95)'; ctx.shadowBlur = 8; }
+      if (del) { ctx.shadowColor = 'rgba(208,69,59,0.8)'; ctx.shadowBlur = 8; } // do usunięcia
       this.lc = col;
       if (it.kind === 'line') this.strokeLine(ctx, it);
       else if (it.kind === 'seg') {
@@ -497,7 +521,7 @@ export class PlotBoard {
     if (this.hover && this.hover.snapped && !this.hover.scale) { const q = this.px(this.hover); ctx.strokeStyle = '#1f93c9'; ctx.lineWidth = 1.5; ctx.strokeRect(q.x - 6, q.y - 6, 12, 12); }
     ctx.restore();
     // cyrkiel – także na skali szerokości przy brzegu mapy (1' szerokości = 1 Mm)
-    this.items.forEach((it) => { if (it.kind === 'meas') { this.lc = it.color; this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.8); this.lc = null; } });
+    this.items.forEach((it, i) => { if (it.kind === 'meas') { this.lc = i === this.delHover ? '#d0453b' : it.color; this.drawDividers(ctx, this.px(it.a), this.px(it.b), it.len, 0.8); this.lc = null; } });
     if (this.drag && this.tool === 'dividers') {
       const d = this.drag, len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y), a = this.px(d.a);
       if (d.click && len * this.k < 6) { ctx.fillStyle = '#1f93c9'; ctx.beginPath(); ctx.arc(a.x, a.y, 4, 0, Math.PI * 2); ctx.fill(); }
