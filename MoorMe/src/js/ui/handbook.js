@@ -10,7 +10,7 @@ import { getLang, t } from '../i18n.js';
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
 const NS = 'http://www.w3.org/2000/svg';
 const svgEl = (w, hgt, inner, cls = '') => { const d = document.createElement('div'); d.className = 'hb-svg ' + cls; d.innerHTML = `<svg xmlns="${NS}" viewBox="0 0 ${w} ${hgt}" width="${w}" height="${hgt}">${inner}</svg>`; return d; };
-const LCOL = { white: '#fff6e0', red: '#ff3b2f', green: '#29e05a', yellow: '#ffd166', deck: '#ffd9a0' };
+const LCOL = { white: '#fff6e0', red: '#ff3b2f', green: '#29e05a', yellow: '#ffd166', blue: '#3a8bff', deck: '#ffd9a0' };
 
 // ---------- światła statków ----------
 // widok: rel – kąt obserwatora od dziobu; mapowanie (x, z) statku na oś ekranu
@@ -91,6 +91,7 @@ function shape(k, cx, cy, s) {
   if (k === 'coneDown') return `<polygon points="${cx},${cy + s * 0.5} ${cx + s * 0.5},${cy - s * 0.5} ${cx - s * 0.5},${cy - s * 0.5}" fill="${b}"/>`;
   if (k === 'diamond') return `<polygon points="${cx},${cy - s * 0.7} ${cx + s * 0.45},${cy} ${cx},${cy + s * 0.7} ${cx - s * 0.45},${cy}" fill="${b}"/>`;
   if (k === 'cylinder') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.7}" width="${s * 0.7}" height="${s * 1.4}" fill="${b}"/>`;
+  if (k === 'coneDownB') return `<polygon points="${cx},${cy + s * 0.5} ${cx + s * 0.5},${cy - s * 0.5} ${cx - s * 0.5},${cy - s * 0.5}" fill="#1f5fd1"/>`;
   if (k === 'ballY') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#f2c230" stroke="#16181c" stroke-width="0.8"/>`;
   if (k === 'cylYB') {
     // żółty walec: od góry biały, czarny, żółty, czarny, biały pas

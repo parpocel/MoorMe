@@ -11,7 +11,7 @@ export const SECTORS = {
   all: () => true // dookólne
 };
 
-export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xffd166, deck: 0xffd9a0 };
+export const COLORS = { white: 0xfff1dc, red: 0xff1008, green: 0x00e81c, yellow: 0xffd166, blue: 0x3a8bff, deck: 0xffd9a0 };
 
 // pomocnicze zestawy świateł
 const sides = (L, y) => [
@@ -123,6 +123,11 @@ export const VESSELS = [
     ]
   },
   {
+    id: 'iDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true,
+    explain: 'Przepisy śródlądowe: oprócz zwykłych świateł statku w drodze (masztowe, burtowe, rufowe) – jedno niebieskie światło widoczne ze wszystkich stron. Niebieski kolor oznacza ładunek niebezpieczny: jedno światło – materiały palne (dwa – szkodliwe dla zdrowia, trzy – wybuchowe).',
+    lights: (L) => [...mast1(L, 8), ...sides(L, 4.5), ...stern(L, 3.5), { x: L * 0.05, y: 6.5, z: 0, c: 'blue', s: 'all' }]
+  },
+  {
     id: 'pilot', name: 'Statek pilotowy na służbie', L: [15, 25], speed: [6, 12], moving: true,
     explain: 'Białe nad czerwonym dookólne w pionie – „biała czapka, czerwony nos – pilot”. W drodze także burtowe i rufowe.',
     lights: (L) => [...column(L * 0.1, 8, ['white', 'red']), ...sides(L, 4), ...stern(L, 3.5)]
@@ -167,6 +172,9 @@ export const DAY_VESSELS = [
   { id: 'dITowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Przepisy śródlądowe: na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
     shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, { x: -L / 2 - 60, y: 6, z: 0, k: 'ballY' }, { x: -L / 2 - 140, y: 6, z: 0, k: 'ballY' }] },
+  { id: 'dIDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true, hull: 'ship',
+    explain: 'Przepisy śródlądowe: niebieski stożek wierzchołkiem w dół – ładunek niebezpieczny palny (dwa stożki – szkodliwy dla zdrowia, trzy – wybuchowy). Niesie go także każdy statek zestawu holowanego z takim ładunkiem.',
+    shapes: () => [{ x: 0, y: 9, z: 0, k: 'coneDownB' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
     explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',
     shapes: () => [{ x: 1.5, y: 6, z: 0, k: 'coneDown' }] }

@@ -152,6 +152,7 @@ class ShipLightsLayer {
 const BLACK = new THREE.MeshBasicMaterial({ color: 0x050505 });
 const MAST = new THREE.MeshStandardMaterial({ color: 0x9aa1a9, roughness: 0.8 });
 const YELLOW = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
+const BLUE = new THREE.MeshBasicMaterial({ color: 0x1f5fd1 });
 const WHITE = new THREE.MeshBasicMaterial({ color: 0xf4f4f0 });
 function shapeMesh(k) {
   const g = new THREE.Group();
@@ -163,6 +164,7 @@ function shapeMesh(k) {
   else if (k === 'hourglass') g.add(cone(false, 0.3), cone(true, -0.3));
   else if (k === 'cylinder') g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 14), BLACK));
   else if (k === 'ballY') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), YELLOW));
+  else if (k === 'coneDownB') { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLUE); m.rotation.z = Math.PI; g.add(m); }
   else if (k === 'cylYB') {
     // żółty walec z pasami: od góry biały, czarny, żółty, czarny, biały (białe na skrajach)
     [[WHITE, 0.12], [BLACK, 0.16], [YELLOW, 0.64], [BLACK, 0.16], [WHITE, 0.12]].reduce((y, [m, hgt]) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, hgt, 14), m); c.position.y = y - hgt / 2; g.add(c); return y - hgt; }, 0.6);
