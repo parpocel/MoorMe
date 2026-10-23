@@ -115,8 +115,8 @@ export const VESSELS = [
   },
   {
     id: 'fishingGear', name: 'Statek rybacki z narzędziami połowowymi wystającymi > 150 m', L: [15, 35], speed: [1, 3], moving: true, gear: true,
-    explain: 'Czerwone nad białym jak statek rybacki, a do tego niżej białe światło dookólne przesunięte w stronę wystawionych sieci (2–6 m od głównych świateł). Nie przecinaj tej strony!',
-    lights: (L, r, o) => [...column(L * 0.2, 8, ['red', 'white']), { x: L * 0.2, y: 4.5, z: (o.gearSide === 'port' ? -1 : 1) * 5, c: 'white', s: 'all' }, ...sides(L, 4), ...stern(L, 3.5)]
+    explain: 'Czerwone nad białym jak statek rybacki, a do tego niżej białe światło dookólne przesunięte w stronę wystawionych sieci (2–6 m od głównych świateł). Stronę sieci rozpoznasz od dziobu albo od rufy – światło sieci jest wtedy z boku, po stronie zielonego albo czerwonego burtowego. Z burty leży w linii z pozostałymi i strony nie da się ocenić. Nie przecinaj strony z sieciami!',
+    lights: (L, r, o) => [...column(L * 0.2, 8, ['red', 'white']), { x: L * 0.2, y: 5.8, z: (o.gearSide === 'port' ? -1 : 1) * 6, c: 'white', s: 'all' }, ...sides(L, 4), ...stern(L, 3.5)]
   },
   {
     id: 'aground', name: 'Statek na mieliźnie', L: [40, 120], speed: [0, 0], moving: false,

@@ -348,7 +348,9 @@ export class LightsScreen extends PassageScreen {
   spawn() {
     const q = this.q;
     q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day, aspect: this._forceAspect || null }); // _forceType – podgląd konkretnego typu (testy)
-    { const v = q.vessel, o = this.observer(); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel: relBearing(v.x, v.z, v.hdg, o.x, o.z) }); }
+    { const v = q.vessel, o = this.observer(), rel = relBearing(v.x, v.z, v.hdg, o.x, o.z); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel });
+      // strona sieci (światło / stożek przesunięte w bok o 2–6 m) widać tylko od dziobu albo od rufy; z burty przesunięcie leży wzdłuż linii wzroku
+      q.gearDet = Math.abs(Math.cos(rel * DEG)) >= 0.5; }
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
     q.phase = 'active';
     this.layer.set(q.vessel);
@@ -361,11 +363,12 @@ export class LightsScreen extends PassageScreen {
     const okType = q.pick === v.type;
     const realAspect = aspectOf(relBearing(v.x, v.z, v.hdg, b.x, b.z), v.moving);
     const askAspect = v.moving && !this.day;
-    const okAspect = (!askAspect || q.aspectPick === realAspect) && (!v.gear || q.gearPick === v.gearSide);
+    const askGear = v.gear && q.gearDet;
+    const okAspect = (!askAspect || q.aspectPick === realAspect) && (!askGear || q.gearPick === v.gearSide);
     const s = q.stats;
     s.n++; if (okType) s.ok++;
-    if (askAspect || v.gear) { s.an++; if (okAspect) s.aok++; }
-    q.result = { okType, okAspect, realAspect };
+    if (askAspect || askGear) { s.an++; if (okAspect) s.aok++; }
+    q.result = { okType, okAspect, realAspect, askGear };
     q.phase = 'feedback';
     // statek idzie prosto na nas: po chwili obserwacji namiaru trzeba ocenić, czy przejdzie przed dziobem, czy za rufą
     if (askAspect && q.aspectPick === 'bow' && realAspect === 'bow' && v.pass) {
@@ -431,11 +434,17 @@ export class LightsScreen extends PassageScreen {
         list.appendChild(h('button.btn.sm', { class: q.pick === id ? 'on' : '', onclick: () => { q.pick = id; this.renderQuiz(); } }, anyVessel(id).name));
       }
       el.appendChild(list);
-      if (v.gear) {
+      // pytanie o stronę sieci – dopiero po wybraniu typu z sieciami (samo pytanie nie zdradza odpowiedzi)
+      const pickGear = q.pick && anyVessel(q.pick).gear;
+      if (pickGear && q.gearDet) {
         el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Z której strony statku są wystawione sieci?'));
         const gs = h('div.quiz-opts.two');
         for (const a of ['port', 'starboard']) gs.appendChild(h('button.btn.sm', { class: q.gearPick === a ? 'on' : '', onclick: () => { q.gearPick = a; this.renderQuiz(); } }, GEAR_SIDES[a]));
         el.appendChild(gs);
+      } else if (pickGear) {
+        el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, this.day
+          ? 'Z tego kierunku nie ocenisz, po której stronie są sieci – stożek jest w linii z klepsydrą. Stronę sieci widać od dziobu albo od rufy.'
+          : 'Z tego kierunku nie ocenisz, po której stronie są sieci – białe światło sieci jest w linii z pozostałymi. Stronę sieci widać od dziobu albo od rufy.'));
       }
       if (v.moving && !this.day) {
         el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Którą stronę statku widzisz?'));
@@ -443,10 +452,10 @@ export class LightsScreen extends PassageScreen {
         for (const a of ['bow', 'starboard', 'port', 'stern']) asp.appendChild(h('button.btn.sm', { class: q.aspectPick === a ? 'on' : '', onclick: () => { q.aspectPick = a; this.renderQuiz(); } }, ASPECTS[a]));
         el.appendChild(asp);
       }
-      const ready = q.pick && (!v.moving || this.day || q.aspectPick) && (!v.gear || q.gearPick);
+      const ready = q.pick && (!v.moving || this.day || q.aspectPick) && (!(pickGear && q.gearDet) || q.gearPick);
       el.appendChild(h('div', { style: { display: 'flex', gap: '6px', marginTop: '10px' } },
         h('button.btn.primary', { disabled: ready ? null : true, onclick: () => this.check() }, 'Sprawdź'),
-        h('button.btn', { onclick: () => { q.stats.n++; q.stats.streak = 0; q.result = { okType: false, okAspect: false, skipped: true, realAspect: aspectOf(relBearing(v.x, v.z, v.hdg, this.world.boat.x, this.world.boat.z), v.moving) }; q.phase = 'feedback'; this.renderQuiz(); } }, 'Nie wiem')));
+        h('button.btn', { onclick: () => { q.stats.n++; q.stats.streak = 0; q.result = { okType: false, okAspect: false, skipped: true, askGear: v.gear && q.gearDet, realAspect: aspectOf(relBearing(v.x, v.z, v.hdg, this.world.boat.x, this.world.boat.z), v.moving) }; q.phase = 'feedback'; this.renderQuiz(); } }, 'Nie wiem')));
       return;
     }
     if (q.phase === 'observe' || q.phase === 'pass') {
@@ -471,7 +480,7 @@ export class LightsScreen extends PassageScreen {
       const line = (k, val) => el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, k), ' ', h('b', {}, val)));
       if (r.skipped || !r.okType) line('Poprawna odpowiedź:', V.name);
       if (v.moving && !this.day && (r.skipped || q.aspectPick !== r.realAspect)) line('Widzisz:', ASPECTS[r.realAspect]);
-      if (v.gear && (r.skipped || q.gearPick !== v.gearSide)) line('Sieci:', GEAR_SIDES[v.gearSide]);
+      if (r.askGear && (r.skipped || q.gearPick !== v.gearSide)) line('Sieci:', GEAR_SIDES[v.gearSide]);
       if (r.passAsked && !r.passOk) line('Przejście:', PASS_SIDES[r.passTruth]);
     }
     el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => this.next() }, 'Następny statek →'));
