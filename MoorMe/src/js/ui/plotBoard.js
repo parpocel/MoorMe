@@ -54,7 +54,7 @@ export class PlotBoard {
     this.items = []; // { kind: 'line'|'seg'|'pt'|'circle'|'meas', ... }
     this.vec = plot.mode === 'vector'; // trójkąt prędkości: wektory w węzłach odkładane dla 1 h (1 kn = 1 Mm)
     this.unit = this.vec ? 'kn' : 'Mm';
-    this.tool = plot.sol.segs || plot.sol.vectors ? 'course' : 'bearing';
+    this.tool = !plot.sol.lines && (plot.sol.segs || plot.sol.vectors) ? 'course' : 'bearing';
     this.showSol = false;
     this.hover = null; this.drag = null; this.plotter = null; this.sel = null;
     // zasięg mapy: obiekty + rozwiązanie z zapasem, proporcje płótna

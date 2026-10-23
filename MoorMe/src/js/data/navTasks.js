@@ -308,6 +308,32 @@ const VAR_GEN = {
         steps: [`NR = ${deg3(NK)} ${plus(p, 1)} = ${deg3(NR)}`, L(`Z latarni wykreśl linię w kierunku zwrotnym ${deg3(NR + 180)} i okrąg o promieniu ${num(dist)} Mm (narzędzie „Okrąg”)`, `From the lighthouse draw the reciprocal ${deg3(NR + 180)} and a circle of radius ${num(dist)} NM (the “Circle” tool)`), L(`Pozycja: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
         plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR }], circles: [{ p: A, r: dist }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
       };
+    },
+    // dwa namiary niejednoczesne jednego obiektu i przebyta droga (przeniesiona linia pozycyjna)
+    (r) => {
+      let P2, A, KDd, SOG, mins, P1, b1, b2;
+      for (let k = 0; k < 50; k++) {
+        P2 = { lat: BASE.lat + rf(r, -0.08, 0.08, 600), lon: BASE.lon + rf(r, -0.12, 0.12, 600) };
+        b2 = ri(r, 0, 359); A = move(P2, b2, rf(r, 2, 5, 10));
+        KDd = norm(b2 + (r() < 0.5 ? 1 : -1) * ri(r, 55, 125)); SOG = rf(r, 4, 7, 2); mins = ri(r, 4, 12) * 5;
+        P1 = move(P2, KDd + 180, (SOG * mins) / 60); b1 = rhumb(P1, A).brg;
+        if (Math.abs(angDiff(b1, b2)) >= 30) break;
+      }
+      const dist = (SOG * mins) / 60, dev = ri(r, -4, 4), d = rf(r, -5, 5, 2), p = dev + d;
+      const NK1 = norm(Math.round(b1 - p)), NK2 = norm(Math.round(b2 - p)), NR1 = norm(NK1 + p), NR2 = norm(NK2 + p);
+      // przeniesiona linia NR1: przesunięta o drogę d w kierunku KDd; jej przecięcie z NR2 to pozycja o drugim namiarze
+      const A1 = move(A, KDd, dist), sol = intersect(A1, NR1, A, NR2);
+      const t0 = ri(r, 9 * 12, 15 * 12) * 5;
+      return {
+        cat: 'fix',
+        text: L(`O ${fmtTime(t0)} latarnię A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) namierzono: NK = ${deg3(NK1)}. Jacht płynie KDd = ${deg3(KDd)} z SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0 + mins)} tę samą latarnię namierzono ponownie: NK = ${deg3(NK2)}. Poprawka: δ = ${signed(dev)}, d = ${signed(d, 1)}. Wyznacz pozycję obserwowaną o ${fmtTime(t0 + mins)}.`, `At ${fmtTime(t0)} lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) bore NK = ${deg3(NK1)} by compass. The yacht makes good KDd = ${deg3(KDd)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0 + mins)} the same lighthouse bore NK = ${deg3(NK2)}. Corrections: δ = ${signed(dev)}, d = ${signed(d, 1)}. Find the observed position at ${fmtTime(t0 + mins)}.`),
+        answers: [ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(sol.lat)}°`, latMin(sol.lat), 'min', 0.3), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(sol.lon)).padStart(3, '0')}°`, lonMin(sol.lon), 'min', 0.4)],
+        steps: [`NR₁ = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR₂ = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
+          L(`Droga przebyta między namiarami: d = ${num(SOG)} kn · ${mins} min = ${num(dist, 2)} Mm`, `Distance run between the bearings: d = ${num(SOG)} kn · ${mins} min = ${num(dist, 2)} NM`),
+          L(`Wykreśl z latarni linię pierwszego namiaru (kierunek zwrotny ${deg3(NR1 + 180)}). Z dowolnego jej punktu odłóż drogę ${num(dist, 2)} Mm w kierunku KDd ${deg3(KDd)} i przez koniec odcinka poprowadź równoległą do NR₁ – to przeniesiona linia pozycyjna (narzędzia „Kurs i droga” i „Linijka równoległa”).`, `From the lighthouse draw the first position line (reciprocal ${deg3(NR1 + 180)}). From any point on it lay off ${num(dist, 2)} NM along KDd ${deg3(KDd)} and draw a parallel to NR₁ through the end – the transferred position line (the “Course and distance” and “Parallel ruler” tools).`),
+          L(`Wykreśl linię drugiego namiaru (kierunek zwrotny ${deg3(NR2 + 180)}). Przecięcie z przeniesioną linią to pozycja obserwowana: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Draw the second position line (reciprocal ${deg3(NR2 + 180)}). Its intersection with the transferred line is the observed position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
+        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR1 }, { p: A1, brg: NR1 }, { p: A, brg: NR2 }], vectors: [{ from: A, to: A1, label: 'd', unit: 'Mm' }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
+      };
     }
   ],
   dr: [

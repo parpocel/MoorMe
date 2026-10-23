@@ -96,6 +96,18 @@ check(checkAnswer({ kind: 'deg', value: 359.6, tol: 1 }, '000') && !checkAnswer(
   }
   check(worst < 1e-9, 'podwojenie kąta kursowego: trawers = d · sin 2α');
 }
+// 5e) pozycja z dwóch namiarów niejednoczesnych: z pozycji PO latarnia jest na NR₂, a z pozycji cofniętej o drogę d – na NR₁
+{
+  const r = rng(23);
+  let worst = 0;
+  const brg = (p, q) => { const cl = Math.cos(((p.lat + q.lat) / 2) * D2R); return norm(Math.atan2((q.lon - p.lon) * 60 * cl, (q.lat - p.lat) * 60) / D2R); };
+  for (let i = 0; i < 60; i++) {
+    const tk = GENERATORS.fix(r, 2), P = tk.plot.sol.point, A = tk.plot.pts[0], [l1, , l2] = tk.plot.sol.lines, v = tk.plot.sol.vectors[0];
+    const back = { lat: P.lat - (v.to.lat - v.from.lat), lon: P.lon - (v.to.lon - v.from.lon) };
+    worst = Math.max(worst, Math.abs(angDiff(brg(P, A), l2.brg)), Math.abs(angDiff(brg(back, A), l1.brg)), Math.abs(angDiff(l1.brg, l2.brg)) < 20 ? 99 : 0);
+  }
+  check(worst < 0.3, `namiary niejednoczesne: PO na NR₂, pozycja sprzed drogi d na NR₁, kąt między namiarami ≥ 20° (max ${worst.toFixed(3)}°)`);
+}
 // 6) wersja angielska treści
 setLang('en');
 const tk = GENERATORS.current(rng(3));
