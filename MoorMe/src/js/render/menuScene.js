@@ -1,4 +1,4 @@
-// Tło menu: żywa scena 3D low-poly – zatoka o złotej godzinie, falujące morze, kołyszący się jacht,
+// Tło menu: żywa scena 3D low-poly – zatoka o zachodzie słońca, falujące morze, kołyszący się jacht,
 // wyspy, latarnia i boje. Płaskie cieniowanie, miękkie cienie i mgła dają efekt „renderu”.
 import * as THREE from 'three';
 import { BOATS } from '../data/boats.js';
@@ -6,8 +6,9 @@ import { buildBoat } from './boatModel.js';
 import { boatIdentity } from '../settings.js';
 import { rng } from '../math.js';
 
-const SKY_TOP = new THREE.Color(0x4f6fa8), SKY_MID = new THREE.Color(0xd9a9b8), SKY_HOR = new THREE.Color(0xffd3a1);
-const FOG = 0xf0bfa5;
+const SKY_TOP = new THREE.Color(0x2b3a78), SKY_MID = new THREE.Color(0xc0577a), SKY_HOR = new THREE.Color(0xff9a52);
+const FOG = 0xe88a6a;
+const SUN_AZ = -1.9; // kierunek zachodzącego słońca (za jachtem, w kadrze)
 
 const flat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.82, metalness: 0, ...extra });
 
@@ -86,7 +87,7 @@ function buoy(color, top) {
 }
 
 function cloud(seed, s) {
-  const R = rng(seed), g = new THREE.Group(), m = flat(0xfff3ee, { roughness: 1, emissive: 0xffd6c4, emissiveIntensity: 0.25 });
+  const R = rng(seed), g = new THREE.Group(), m = flat(0xffc2a8, { roughness: 1, emissive: 0xff7a5a, emissiveIntensity: 0.35 });
   for (let i = 0; i < 5; i++) {
     const b = new THREE.Mesh(jagged(new THREE.IcosahedronGeometry(s * (0.5 + R() * 0.4), 0), s * 0.2, R, false), m);
     b.position.set((i - 2) * s * 0.55 + (R() - 0.5) * s * 0.3, (R() - 0.3) * s * 0.3, (R() - 0.5) * s * 0.4);
@@ -108,7 +109,7 @@ function skyDome() {
         vec3 c = mix(hor, mid, smoothstep(0.0, 0.16, y));
         c = mix(c, top, smoothstep(0.12, 0.65, y));
         float s = max(dot(normalize(vp), normalize(sunDir)), 0.0);
-        c += vec3(1.0, 0.82, 0.55) * (pow(s, 12.0) * 0.45 + pow(s, 600.0) * 1.6);
+        c += vec3(1.0, 0.62, 0.3) * (pow(s, 6.0) * 0.55 + pow(s, 40.0) * 0.5) + vec3(1.0, 0.9, 0.7) * pow(s, 900.0) * 2.0;
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`
@@ -123,7 +124,7 @@ export class MenuScene {
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 1.08;
+    r.toneMappingExposure = 1.0;
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer = r;
@@ -131,13 +132,13 @@ export class MenuScene {
     el.appendChild(r.domElement);
 
     const scene = this.scene = new THREE.Scene();
-    scene.fog = new THREE.Fog(FOG, 140, 900);
+    scene.fog = new THREE.Fog(FOG, 160, 1000);
     this.camera = new THREE.PerspectiveCamera(36, 1, 0.5, 3000);
 
     // światło: ciepłe, niskie słońce + niebo/odbicie od morza
-    const sunDir = new THREE.Vector3(-0.55, 0.32, -0.77).normalize();
-    scene.add(new THREE.HemisphereLight(0xffe2cf, 0x3f6f86, 1.25));
-    const sun = new THREE.DirectionalLight(0xffc98f, 3.4);
+    const sunDir = new THREE.Vector3(Math.cos(SUN_AZ), 0.028, Math.sin(SUN_AZ)).normalize();
+    scene.add(new THREE.HemisphereLight(0xffb08f, 0x3a5f8f, 1.5));
+    const sun = new THREE.DirectionalLight(0xff8a45, 3.6);
     sun.position.copy(sunDir).multiplyScalar(160);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -145,7 +146,7 @@ export class MenuScene {
     sun.shadow.bias = -0.0006;
     sun.shadow.normalBias = 0.04;
     scene.add(sun, sun.target);
-    const rim = new THREE.DirectionalLight(0x9fb8ff, 0.7);
+    const rim = new THREE.DirectionalLight(0xb48cff, 0.9);
     rim.position.set(60, 40, 80);
     scene.add(rim);
 
@@ -154,7 +155,7 @@ export class MenuScene {
     scene.add(sky);
 
     // słońce nad horyzontem
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(38, 24), new THREE.MeshBasicMaterial({ color: 0xfff0c8, fog: false }));
+    const disc = new THREE.Mesh(new THREE.CircleGeometry(46, 32), new THREE.MeshBasicMaterial({ color: 0xffe3a6, fog: false, toneMapped: false }));
     disc.position.copy(sunDir).multiplyScalar(1300);
     disc.lookAt(0, 0, 0);
     scene.add(disc);
@@ -163,7 +164,7 @@ export class MenuScene {
     const seaGeo = new THREE.PlaneGeometry(1600, 1600, 110, 110).toNonIndexed();
     seaGeo.rotateX(-Math.PI / 2);
     this.seaBase = Float32Array.from(seaGeo.attributes.position.array);
-    const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3f9fb0, flatShading: true, roughness: 0.32, metalness: 0.1 }));
+    const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3d86ad, flatShading: true, roughness: 0.3, metalness: 0.1 }));
     sea.receiveShadow = true;
     scene.add(sea);
 
@@ -186,7 +187,8 @@ export class MenuScene {
     const R = rng(31);
     for (let i = 0; i < 16; i++) {
       const a = -2.6 + i * 0.16, d = 820 + R() * 120;
-      const m = new THREE.Mesh(jagged(new THREE.ConeGeometry(70 + R() * 90, 60 + R() * 110, 6, 1), 30, R), flat(0x9a8fb5));
+      if (Math.abs(a - SUN_AZ) < 0.32) continue; // otwarty horyzont pod słońcem
+      const m = new THREE.Mesh(jagged(new THREE.ConeGeometry(70 + R() * 90, 60 + R() * 110, 6, 1), 30, R), flat(0x6a4f86));
       m.position.set(Math.cos(a) * d, -4, Math.sin(a) * d);
       scene.add(m);
     }
