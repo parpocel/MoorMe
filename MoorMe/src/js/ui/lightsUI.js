@@ -454,13 +454,13 @@ export class LightsScreen extends PassageScreen {
       el.appendChild(h('div.small', {}, h('span.muted', {}, 'Namiar na początku:'), ' ', h('b', {}, `${this.fmtBrg(q.brg0)}°`), '  ', h('span.muted', {}, 'teraz:'), ' ', h('b', { class: 'live-brg' }, `${this.fmtBrg(this.vesselBearing())}°`)));
       if (q.phase === 'observe') {
         el.appendChild(h('div.quiz-title', { style: { marginTop: '8px' } }, h('span', {}, 'Obserwuj jeszcze:'), ' ', h('span', { class: 'obs-t' }, `${Math.ceil(q.obsT)} s`)));
-        el.appendChild(h('div.small.muted', {}, 'Możesz przyspieszyć czas przyciskami 2×–8×.'));
-      } else {
-        el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Gdzie przejdzie statek?'));
-        const ps = h('div.quiz-opts.two');
-        for (const a of ['ahead', 'astern']) ps.appendChild(h('button.btn.sm', { onclick: () => this.answerPass(a) }, PASS_SIDES[a]));
-        el.appendChild(ps);
+        el.appendChild(h('div.small.muted', {}, 'Możesz przyspieszyć czas przyciskami 2×–8× albo odpowiedzieć wcześniej, jeśli zmiana namiaru jest już pewna.'));
       }
+      // odpowiedź można dać w każdej chwili – także przed końcem obserwacji
+      el.appendChild(h('div.small.muted', { style: { marginTop: '8px' } }, 'Gdzie przejdzie statek?'));
+      const ps = h('div.quiz-opts.two');
+      for (const a of ['ahead', 'astern']) ps.appendChild(h('button.btn.sm', { onclick: () => this.answerPass(a) }, PASS_SIDES[a]));
+      el.appendChild(ps);
       return;
     }
     // informacja zwrotna: tylko czy dobrze, a jeśli nie – poprawna odpowiedź
