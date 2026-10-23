@@ -243,6 +243,7 @@ export const EN = {
   // ---- Tryb rejsu ----
   // menu główne 3D
   'Symulator żeglarski': 'Sailing simulator', 'Cumowanie · symulator manewrów portowych': 'Mooring · harbour manoeuvring simulator',
+  'manewry portowe': 'harbour manoeuvres', 'locja': 'pilotage', 'ROZPOZNAWANIE STATKÓW': 'VESSEL RECOGNITION',
   'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'światła i znaki dzienne': 'lights and day shapes',
   'Manewry portowe · cumowanie i odcumowanie': 'Harbour manoeuvres · mooring and unmooring',
   'Cumowanie i odcumowywanie łodzi.': 'Mooring and unmooring a boat.',

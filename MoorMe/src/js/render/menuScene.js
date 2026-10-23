@@ -109,7 +109,7 @@ function skyDome() {
         vec3 c = mix(hor, mid, smoothstep(0.0, 0.16, y));
         c = mix(c, top, smoothstep(0.12, 0.65, y));
         float s = max(dot(normalize(vp), normalize(sunDir)), 0.0);
-        c += vec3(1.0, 0.45, 0.22) * (pow(s, 6.0) * 0.5 + pow(s, 40.0) * 0.45);
+        c += vec3(1.0, 0.6, 0.3) * pow(s, 6.0) * 0.5 + vec3(1.0, 0.85, 0.55) * pow(s, 40.0) * 0.5;
         gl_FragColor = vec4(c, 1.0);
         #include <colorspace_fragment>
       }`
@@ -138,7 +138,7 @@ export class MenuScene {
     // światło: ciepłe, niskie słońce + niebo/odbicie od morza
     const sunDir = new THREE.Vector3(Math.cos(SUN_AZ), 0.028, Math.sin(SUN_AZ)).normalize();
     scene.add(new THREE.HemisphereLight(0xffb08f, 0x3a5f8f, 1.5));
-    const sun = new THREE.DirectionalLight(0xff6a35, 3.6);
+    const sun = new THREE.DirectionalLight(0xff9a55, 3.6);
     sun.position.copy(sunDir).multiplyScalar(160);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -155,7 +155,7 @@ export class MenuScene {
     scene.add(sky);
 
     // słońce nad horyzontem
-    // słońce nad horyzontem: czerwona tarcza z jaśniejszym środkiem i poświata
+    // słońce nad horyzontem: jasna, prawie biała tarcza i ciepła poświata
     const radial = (stops) => {
       const c = document.createElement('canvas'); c.width = c.height = 256;
       const g = c.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
@@ -164,11 +164,11 @@ export class MenuScene {
       const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace; return tx;
     };
     const sunPos = sunDir.clone().multiplyScalar(1300);
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, 'rgba(255,110,50,0.75)'], [0.25, 'rgba(255,70,40,0.35)'], [0.6, 'rgba(230,50,60,0.1)'], [1, 'rgba(200,40,60,0)']]),
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, 'rgba(255,240,190,0.8)'], [0.22, 'rgba(255,200,120,0.35)'], [0.6, 'rgba(255,150,90,0.1)'], [1, 'rgba(255,120,80,0)']]),
       blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
     halo.scale.set(520, 520, 1);
     halo.position.copy(sunPos).multiplyScalar(1.01);
-    const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, '#ffd27a'], [0.45, '#ff8a3a'], [0.8, '#ff4a24'], [0.93, '#f0381e'], [1, 'rgba(240,56,30,0)']]), fog: false, toneMapped: false }));
+    const disc = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, '#ffffff'], [0.5, '#fffbe6'], [0.85, '#fff2b8'], [0.95, '#ffe9a0'], [1, 'rgba(255,233,160,0)']]), fog: false, toneMapped: false }));
     disc.scale.set(100, 100, 1);
     disc.position.copy(sunPos);
     scene.add(halo, disc);

@@ -92,7 +92,7 @@ function beaufort(kn) {
 function header(step) {
   return h('div.screen-header', {},
     h('div.logo', {}, 'Moor', h('span', {}, 'Me')),
-    h('div.muted', {}, 'symulator cumowania jachtów'),
+    h('div.muted', {}, 'manewry portowe'),
     h('div.steps', {}, STEPS.map((s, i) => h('div.step', { class: i === step ? 'active' : i < step ? 'done' : '' }, `${i + 1}. ${s}`))));
 }
 
@@ -247,7 +247,7 @@ function showModeSelect() {
 // ---------- Trening albo nauka (podręczniki) ----------
 function showLightsIntro() {
   menuMusic.start();
-  showTrainOrLearn(app, { title: 'Rozpoznawanie świateł i znaków dziennych', sceneryEl, icons: { train: raw(icon.bulb), learn: raw(icon.book) },
+  showTrainOrLearn(app, { title: 'Rozpoznawanie statków', sceneryEl, icons: { train: raw(icon.bulb), learn: raw(icon.book) },
     desc: { train: 'Noc albo dzień na morzu: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz i jak przejdą.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron i znaki dzienne.' },
     onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), onExit: () => showModeSelect() });
 }
@@ -269,7 +269,7 @@ function showSoundsBook() {
 }
 function showSailIntro() {
   menuMusic.start();
-  showTrainOrLearn(app, { title: 'Rejs wzdłuż wybrzeża', sceneryEl, icons: { train: raw(icon.sail), learn: raw(icon.book) },
+  showTrainOrLearn(app, { title: 'Locja', sceneryEl, icons: { train: raw(icon.sail), learn: raw(icon.book) },
     desc: { train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła.' },
     onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), onExit: () => showModeSelect() });
 }
@@ -339,7 +339,7 @@ function showPassageSetup() {
         h('div.field', {}, h('label', {}, 'Pora dnia'), seg([{ value: 11, label: '☀ Dzień' }, { value: 19.3, label: '🌇 Zmierzch' }, { value: 23.5, label: '🌙 Noc – widać tylko światła' }], [11, 19.3, 23.5].includes(w.hour) ? w.hour : null, (v) => { w.hour = v; showPassageSetup(); }), slider(0, 23.75, 0.25, w.hour, fmtH, (v) => { w.hour = v; })),
         h('div.field', {}, h('label', {}, 'Niebo'), seg([{ value: 'clear', label: '☀ Słonecznie' }, { value: 'cloudy', label: '☁ Pochmurno' }, { value: 'rain', label: '🌧 Deszcz' }, { value: 'fog', label: '🌫 Mgła' }], w.sky || 'clear', (v) => { w.sky = v; })))));
   app.appendChild(h('div.screen', {}, sceneryEl(),
-    h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'rejs wzdłuż wybrzeża')),
+    h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.muted', {}, 'locja')),
     h('div.screen-body', {}, body),
     h('div.screen-footer', {}, h('button.btn', { onclick: () => { savePassageCfg(); showModeSelect(); } }, '← Tryby'), h('button.btn.primary.big', { onclick: () => startPassage() }, '⛵ Wypłyń'))));
 }
@@ -354,7 +354,7 @@ function showLightsSetup() {
   const card = (cls, title, text, onclick) => h('button.mode-card' + cls, { onclick }, h('h3', {}, title), h('p', {}, text));
   app.appendChild(h('div.screen.title-screen', {}, sceneryEl(),
     h('div.title-card', { style: { width: 'min(820px, 94vw)' } },
-      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'ROZPOZNAWANIE ŚWIATEŁ')),
+      h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'ROZPOZNAWANIE STATKÓW')),
       h('p.desc', {}, 'Wybierz porę: nocą statki rozpoznajesz po światłach, w dzień – po czarnych znakach dziennych.'),
       h('div.field', { style: { margin: '0 0 12px' } }, h('label', {}, 'Przepisy'), seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v }))),
       h('div.mode-cards', { style: { gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))' } },
