@@ -72,8 +72,8 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
   }
   for (const l of vis) {
     const cx = X(view.ax(l)), cy = Y(l.y), c = LCOL[l.c];
-    const rr = l.c === 'deck' ? 2.2 : 3.6;
-    g += `<circle cx="${cx}" cy="${cy}" r="${rr * 2.5}" fill="${c}" opacity="0.18"/><circle cx="${cx}" cy="${cy}" r="${rr}" fill="${c}"/>`;
+    const rr = l.c === 'deck' ? 2.2 : 4; // samo światło, bez poświaty – w kolumnie świateł poświaty zlewały się ze sobą
+    g += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="${c}"/>`;
   }
   return g;
 }
