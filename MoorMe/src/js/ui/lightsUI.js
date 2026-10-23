@@ -5,7 +5,7 @@ import { h } from './dom.js';
 import { SimScreen } from './simUI.js';
 import { PassageScreen } from './passageUI.js';
 import { PassageWorld } from '../physics/passage.js';
-import { VESSELS, DAY_VESSELS, anyVessel, ASPECTS, GEAR_SIDES, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
+import { VESSELS, DAY_VESSELS, typesFor, anyVessel, ASPECTS, GEAR_SIDES, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
 import { DEG, KN, clamp, rng, thetaToCompass } from '../math.js';
 
 const NM = 1852;
@@ -151,6 +151,8 @@ class ShipLightsLayer {
 // Dzień: czarna sylwetka statku i znaki dzienne (kule, stożki, romby, walec) na maszcie
 const BLACK = new THREE.MeshBasicMaterial({ color: 0x050505 });
 const MAST = new THREE.MeshStandardMaterial({ color: 0x9aa1a9, roughness: 0.8 });
+const YELLOW = new THREE.MeshBasicMaterial({ color: 0xf2c230 });
+const WHITE = new THREE.MeshBasicMaterial({ color: 0xf4f4f0 });
 function shapeMesh(k) {
   const g = new THREE.Group();
   const cone = (up, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLACK); m.position.y = y; if (!up) m.rotation.z = Math.PI; return m; };
@@ -160,6 +162,11 @@ function shapeMesh(k) {
   else if (k === 'diamond') g.add(cone(true, 0.3), cone(false, -0.3));
   else if (k === 'hourglass') g.add(cone(false, 0.3), cone(true, -0.3));
   else if (k === 'cylinder') g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 1.2, 14), BLACK));
+  else if (k === 'ballY') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), YELLOW));
+  else if (k === 'cylYB') {
+    // żółty walec z pasami: od góry biały, czarny, żółty, czarny, biały (białe na skrajach)
+    [[WHITE, 0.12], [BLACK, 0.16], [YELLOW, 0.64], [BLACK, 0.16], [WHITE, 0.12]].reduce((y, [m, hgt]) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, hgt, 14), m); c.position.y = y - hgt / 2; g.add(c); return y - hgt; }, 0.6);
+  }
   return g;
 }
 // Kadłub w rzucie z góry: ostry dziób (x > 0), pawęż na rufie – wyciągnięty w górę daje burty
@@ -239,6 +246,11 @@ export class ShipShapesLayer {
     this.vessel = v;
     const g = new THREE.Group();
     g.add(hullMesh(v.hull, v.L, v.moving && v.speed > 0));
+    if (v.type === 'dITowing') { // śródlądowy zestaw: dwie barki po ok. 60 m na krótkich holach
+      for (const bx of [-v.L / 2 - 60, -v.L / 2 - 140]) { const barge = hullMesh('barge', 60, true); barge.position.x = bx; g.add(barge); }
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 30, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
+      g.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2 - 90, 1.5, 0), new THREE.Vector3(-v.L / 2 - 110, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a })));
+    }
     if (v.type === 'dTowing') { // holowana barka 230 m za rufą i hol
       const barge = hullMesh('barge', 40, true); barge.position.x = -v.L / 2 - 230; g.add(barge);
       const tow = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-v.L / 2, 1.5, 0), new THREE.Vector3(-v.L / 2 - 210, 1.5, 0)]), new THREE.LineBasicMaterial({ color: 0x6d737a }));
@@ -296,7 +308,8 @@ export class LightsScreen extends PassageScreen {
     this.chart = { range: 1800, headUp: false, labels: false };
     this.rand = rng(config.seed || 1 + Math.floor(Math.random() * 1e9));
     this.day = !!config.day;
-    this.nextType = makeDeck(this.rand, this.day); // każdy typ raz na „talię” – bez ciągłego statku na kotwicy
+    this.scope = config.scope || 'all'; // 'sea' – tylko przepisy morskie, 'all' – także śródlądowe
+    this.nextType = makeDeck(this.rand, this.day, this.scope); // każdy typ raz na „talię” – bez ciągłego statku na kotwicy
     this.q = { phase: 'wait', timer: 2, vessel: null, pick: null, aspectPick: null, gearPick: null, stats: { n: 0, ok: 0, an: 0, aok: 0, streak: 0, best: 0 } };
   }
 
@@ -348,7 +361,7 @@ export class LightsScreen extends PassageScreen {
   spawn() {
     const q = this.q;
     q.vessel = spawnVessel(this.rand, this.observer(), { type: this._forceType || this.nextType(), day: this.day, aspect: this._forceAspect || null }); // _forceType – podgląd konkretnego typu (testy)
-    { const v = q.vessel, o = this.observer(), rel = relBearing(v.x, v.z, v.hdg, o.x, o.z); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel });
+    { const v = q.vessel, o = this.observer(), rel = relBearing(v.x, v.z, v.hdg, o.x, o.z); q.options = answerOptions(this.rand, v.type, 6, { lights: v.lights, rel }, this.scope);
       // strona sieci (światło / stożek przesunięte w bok o 2–6 m) widać tylko od dziobu albo od rufy; z burty przesunięcie leży wzdłuż linii wzroku
       q.gearDet = Math.abs(Math.cos(rel * DEG)) >= 0.5; }
     q.pick = null; q.aspectPick = null; q.gearPick = null; q.result = null;
@@ -586,7 +599,7 @@ export class LightsScreen extends PassageScreen {
     const m = h('div.modal.glass', { style: { width: '820px', maxHeight: '86vh', overflow: 'auto' } },
       h('h2', {}, this.day ? 'Ściąga – znaki dzienne' : 'Ściąga – światła statków'),
       h('p.small', {}, this.day ? 'Znaki dzienne to czarne kształty (kule, stożki, romby, walec) wywieszane w miejscu dobrze widocznym. Rozglądaj się, przeciągając myszą; kółkiem przybliżasz widok.' : 'Światło masztowe (białe) świeci do przodu w sektorze 225°, burtowe – czerwone z lewej i zielone z prawej po 112,5°, rufowe (białe) do tyłu w sektorze 135°. Światła dookólne widać ze wszystkich stron. Rozglądaj się, przeciągając myszą; kółkiem przybliżasz widok.'),
-      h('table.spec-table', {}, ...(this.day ? DAY_VESSELS : VESSELS).map((v) => h('tr', {}, h('td', { style: { fontWeight: 700, width: '38%' } }, v.name), h('td', {}, v.explain)))),
+      h('table.spec-table', {}, ...typesFor(this.day, this.scope).map((v) => h('tr', {}, h('td', { style: { fontWeight: 700, width: '38%' } }, v.name), h('td', {}, v.explain)))),
       h('div', { style: { textAlign: 'right', marginTop: '10px' } }, h('button.btn.primary', { onclick: () => back.remove() }, 'OK')));
     back.appendChild(m);
     this.sim.appendChild(back);

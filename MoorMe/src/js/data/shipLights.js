@@ -110,6 +110,18 @@ export const VESSELS = [
         { x: -L / 2 - hawser - barge, y: 2, z: 0, c: 'white', s: 'stern' }];
     }
   })),
+  // drogi śródlądowe (CEVNI / przepisy żeglugowe na śródlądowych drogach wodnych) – inne zasady niż na morzu
+  {
+    id: 'iTowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
+    explain: 'Przepisy śródlądowe: dwa białe światła masztowe jedno nad drugim (ok. 1 m odstępu) w przedniej części, światła burtowe i ŻÓŁTE światło rufowe zamiast białego. Każdy statek zestawu holowanego niesie jasne białe światło widoczne ze wszystkich stron, a ostatni – także białe rufowe.',
+    lights: (L) => [
+      { x: L * 0.3, y: 6, z: 0, c: 'white', s: 'mast' }, { x: L * 0.3, y: 7.2, z: 0, c: 'white', s: 'mast' },
+      ...sides(L, 4.5), { x: -L * 0.48, y: 3.5, z: 0, c: 'yellow', s: 'stern' },
+      // dwie barki po ok. 60 m: białe dookólne na każdej, ostatnia – także rufowe
+      { x: -L / 2 - 60, y: 6, z: 0, c: 'white', s: 'all' }, { x: -L / 2 - 140, y: 6, z: 0, c: 'white', s: 'all' },
+      { x: -L / 2 - 170, y: 2, z: 0, c: 'white', s: 'stern' }
+    ]
+  },
   {
     id: 'pilot', name: 'Statek pilotowy na służbie', L: [15, 25], speed: [6, 12], moving: true,
     explain: 'Białe nad czerwonym dookólne w pionie – „biała czapka, czerwony nos – pilot”. W drodze także burtowe i rufowe.',
@@ -152,6 +164,9 @@ export const DAY_VESSELS = [
   { id: 'dTowing', name: 'Statek holujący, zestaw ponad 200 m', L: [25, 40], speed: [4, 7], moving: true, hull: 'tug',
     explain: 'Romb na holowniku i romb na holowanej jednostce, gdy długość holu przekracza 200 m.',
     shapes: (L) => [{ x: L * 0.2, y: 9, z: 0, k: 'diamond' }, { x: -L / 2 - 230, y: 5, z: 0, k: 'diamond' }] },
+  { id: 'dITowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
+    explain: 'Przepisy śródlądowe: na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
+    shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, { x: -L / 2 - 60, y: 6, z: 0, k: 'ballY' }, { x: -L / 2 - 140, y: 6, z: 0, k: 'ballY' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
     explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',
     shapes: () => [{ x: 1.5, y: 6, z: 0, k: 'coneDown' }] }
@@ -203,11 +218,13 @@ export function passSide(v, own) {
 export const PASS_SIDES = { ahead: 'Przejdzie przed naszym dziobem', astern: 'Przejdzie za naszą rufą' };
 
 // „Talia” typów: każdy typ pojawia się raz w losowej kolejności, potem talia jest tasowana od nowa
-export function makeDeck(r, day = false) {
+// zakres przepisów: 'sea' – tylko morskie (MPZZM/COLREG), 'all' – także śródlądowe (CEVNI)
+export const typesFor = (day, scope = 'all') => (day ? DAY_VESSELS : VESSELS).filter((v) => scope === 'all' || !v.inland);
+export function makeDeck(r, day = false, scope = 'all') {
   let deck = [], last = null;
   return () => {
     if (!deck.length) {
-      deck = (day ? DAY_VESSELS : VESSELS).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
+      deck = typesFor(day, scope).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);
       if (deck[0] === last && deck.length > 1) deck.push(deck.shift());
     }
     last = deck.shift();
@@ -303,8 +320,8 @@ export function typeSignatures(id) {
 // Opcje odpowiedzi: poprawna + n-1 losowych innych z tego samego katalogu.
 // shown = { lights, rel } – to, co widzi obserwator; pomijamy typy, które mogłyby wyglądać identycznie
 // (np. pojedyncze białe: rufowe statku w drodze = kotwiczne małego statku) – wtedy pasuje tylko jedna odpowiedź.
-export function answerOptions(r, correctId, n = 6, shown = null) {
-  const list = DAY_BY_ID[correctId] ? DAY_VESSELS : VESSELS;
+export function answerOptions(r, correctId, n = 6, shown = null, scope = 'all') {
+  const list = typesFor(!!DAY_BY_ID[correctId], scope);
   const sig = shown && !DAY_BY_ID[correctId] ? lightSignature(shown.lights, shown.rel) : null;
   const others = list.filter((v) => v.id !== correctId && !(sig && typeSignatures(v.id).has(sig))).map((v) => [r(), v.id]).sort((a, b) => a[0] - b[0]).slice(0, n - 1).map((x) => x[1]);
   return [...others, correctId].map((id) => [r(), id]).sort((a, b) => a[0] - b[0]).map((x) => x[1]);

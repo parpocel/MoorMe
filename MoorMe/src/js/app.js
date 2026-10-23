@@ -273,6 +273,7 @@ function showLightsSetup() {
     h('div.title-card', { style: { width: 'min(820px, 94vw)' } },
       h('div.title-flags', {}, h('div.fl', {}, raw(signalFlagsHTML())), h('div.tag', {}, 'ROZPOZNAWANIE ŚWIATEŁ')),
       h('p.desc', {}, 'Wybierz porę: nocą statki rozpoznajesz po światłach, w dzień – po czarnych znakach dziennych.'),
+      h('div.field', { style: { margin: '0 0 12px' } }, h('label', {}, 'Przepisy'), seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v }))),
       h('div.mode-cards', { style: { gridTemplateColumns: 'repeat(2, minmax(220px, 1fr))' } },
         card('.lights', '🌙 Noc – światła', 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', () => startLights(false)),
         card('.sail', '☀ Dzień – znaki dzienne', 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', () => startLights(true))),
@@ -312,7 +313,7 @@ function startLights(day = false) {
   app.appendChild(root);
   const equip = defaultEquipment(BOATS.C34);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'lights', boatId: 'C34', equip, day, weather: day ? { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 13, sky: 'clear' } : { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear', blackSky: true } };
+  const config = { mode: 'lights', boatId: 'C34', equip, day, scope: getSettings().lightsScope || 'all', weather: day ? { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 13, sky: 'clear' } : { windKn: 7, windFrom: 250, gust: 0.15, currentKn: 0, currentTo: 90, hour: 23.5, sky: 'clear', blackSky: true } };
   window.__sim = new LightsScreen(root, config, { restart: () => startLights(day), exit: () => showLightsSetup() });
 }
 

@@ -91,14 +91,30 @@ function shape(k, cx, cy, s) {
   if (k === 'coneDown') return `<polygon points="${cx},${cy + s * 0.5} ${cx + s * 0.5},${cy - s * 0.5} ${cx - s * 0.5},${cy - s * 0.5}" fill="${b}"/>`;
   if (k === 'diamond') return `<polygon points="${cx},${cy - s * 0.7} ${cx + s * 0.45},${cy} ${cx},${cy + s * 0.7} ${cx - s * 0.45},${cy}" fill="${b}"/>`;
   if (k === 'cylinder') return `<rect x="${cx - s * 0.35}" y="${cy - s * 0.7}" width="${s * 0.7}" height="${s * 1.4}" fill="${b}"/>`;
+  if (k === 'ballY') return `<circle cx="${cx}" cy="${cy}" r="${s * 0.5}" fill="#f2c230" stroke="#16181c" stroke-width="0.8"/>`;
+  if (k === 'cylYB') {
+    // żółty walec: od góry biały, czarny, żółty, czarny, biały pas
+    const w = s * 0.7, x = cx - w / 2, H = s * 1.5, y0 = cy - H / 2, parts = [['#f4f4f0', 0.1], ['#16181c', 0.13], ['#f2c230', 0.54], ['#16181c', 0.13], ['#f4f4f0', 0.1]];
+    let y = y0, out = '';
+    for (const [c, f] of parts) { out += `<rect x="${x}" y="${y}" width="${w}" height="${H * f}" fill="${c}"/>`; y += H * f; }
+    return out + `<rect x="${x}" y="${y0}" width="${w}" height="${H}" fill="none" stroke="#16181c" stroke-width="0.8"/>`;
+  }
   if (k === 'hourglass') return `<polygon points="${cx - s * 0.5},${cy - s * 0.75} ${cx + s * 0.5},${cy - s * 0.75} ${cx},${cy}" fill="${b}"/><polygon points="${cx - s * 0.5},${cy + s * 0.75} ${cx + s * 0.5},${cy + s * 0.75} ${cx},${cy}" fill="${b}"/>`;
   return '';
 }
 function dayView(v, W = 300, H = 150) {
   const Lm = (v.L[0] + v.L[1]) / 2;
   const shapes = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' }).filter((s) => s.x > -Lm); // holowana jednostka – osobno w opisie
+  const towedS = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' }).filter((s) => s.x <= -Lm);
   let g = `<rect width="${W}" height="${H}" fill="#cfe6f4"/><rect y="${H - 22}" width="${W}" height="22" fill="#7fb4cf"/>`;
-  const base = H - 22, hullW = 220, x0 = (W - hullW) / 2;
+  const base = H - 22, hullW = towedS.length ? 130 : 220, x0 = towedS.length ? W - hullW - 12 : (W - hullW) / 2;
+  // zestaw holowany (śródlądowy): barki z lewej, każda ze swoim znakiem na krótkim maszcie, połączone holem
+  towedS.sort((a, b) => a.x - b.x).forEach((s, i) => {
+    const bx = 8 + i * 72, bw = 60;
+    g += `<polygon points="${bx},${base - 12} ${bx + bw},${base - 12} ${bx + bw - 6},${base} ${bx + 4},${base}" fill="#8b929b"/>`;
+    g += `<rect x="${bx + bw / 2 - 1}" y="${base - 46}" width="2" height="34" fill="#6f767f"/>` + shape(s.k, bx + bw / 2, base - 52, 14);
+    g += `<line x1="${bx + bw}" y1="${base - 8}" x2="${i === towedS.length - 1 ? x0 + 4 : bx + 72}" y2="${base - 8}" stroke="#6f767f" stroke-width="1.2"/>`;
+  });
   const grey = '#8b929b', dark = '#6f767f';
   if (v.hull === 'yacht') {
     g += `<polygon points="${x0 + 50},${base - 14} ${x0 + 175},${base - 14} ${x0 + 160},${base} ${x0 + 62},${base}" fill="${grey}"/><rect x="${x0 + 110}" y="${base - 112}" width="3" height="98" fill="${dark}"/><polygon points="${x0 + 113},${base - 108} ${x0 + 170},${base - 18} ${x0 + 113},${base - 18}" fill="#eef2f5"/>`;
@@ -129,11 +145,18 @@ export function lightsBook() {
       svgEl(320, 220, sectorDiagram()),
       h('p', {}, L('Masztowe (białe) świeci 225° do przodu, burtowe po 112,5°: zielone na prawej, czerwone na lewej burcie. Rufowe (białe) – 135° do tyłu. Światła dookólne widać z każdej strony. Kolory widziane z boku i z dziobu mówią, w którą stronę płynie statek.', 'The masthead light (white) shows over 225° ahead, the sidelights over 112.5° each: green to starboard, red to port. The sternlight (white) shows over 135° astern. All-round lights are seen from every direction. The colours you see tell you which way a vessel is heading.')),
       h('p', {}, L('Pamiętaj: patrząc na statek od dziobu widzisz jego zieloną burtę po swojej lewej, a czerwoną po prawej.', 'Remember: looking at a vessel head-on, its green side is on your left and its red side on your right.')))] },
-    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.flatMap((v) => (v.id !== 'sailing' ? [lightsEntry(v)] : [lightsEntry(v),
+    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.filter((v) => !v.inland).flatMap((v) => (v.id !== 'sailing' ? [lightsEntry(v)] : [lightsEntry(v),
       // wariant jachtu: dodatkowe czerwone nad zielonym na topie masztu
       lightsEntry({ ...v, name: L('Jednostka żaglowa w drodze – czerwone nad zielonym', 'Sailing vessel underway – red over green'), lights: (Lm, r, o) => v.lights(Lm, () => 0.9, o),
         explain: L('Oprócz świateł burtowych i rufowego jednostka żaglowa może nieść na topie masztu dwa światła dookólne w pionie: czerwone nad zielonym („czerwone nad zielonym – żeglarz”). Nie wolno ich łączyć z latarnią trójsektorową. Nie myl ich z czerwonym nad białym (rybak) ani zielonym nad białym (trawler).', 'In addition to the sidelights and sternlight a sailing vessel may show at the masthead two all-round lights in a vertical line: red over green (“red over green, sailing machine”). They must not be combined with a tricolour lantern. Do not confuse them with red over white (fishing) or green over white (trawling).') })])) },
-    { id: 'day', name: L('Znaki dzienne', 'Day shapes'), entries: DAY_VESSELS.map(dayEntry) }
+    { id: 'day', name: L('Znaki dzienne', 'Day shapes'), entries: DAY_VESSELS.filter((v) => !v.inland).map(dayEntry) },
+    { id: 'inland', name: L('Drogi śródlądowe (CEVNI)', 'Inland waterways (CEVNI)'), entries: [
+      h('div.hb-entry', {}, h('h3', {}, L('Inne przepisy niż na morzu', 'Different rules from the sea')),
+        h('p', {}, L('Na rzekach, kanałach i jeziorach obowiązują przepisy żeglugowe na śródlądowych drogach wodnych (oparte na europejskim kodeksie CEVNI), a nie MPZZM. Część świateł i znaków wygląda tam inaczej – np. holownik nosi żółte światło rufowe zamiast białego, a w dzień żółty walec w pasy; statki zestawu holowanego – białe światło dookólne i żółtą kulę.', 'On rivers, canals and lakes the inland navigation rules (based on the European CEVNI code) apply instead of COLREG. Some lights and shapes look different there – e.g. a tug shows a yellow sternlight instead of a white one and by day a banded yellow cylinder; vessels of the towed convoy show a white all-round light and a yellow ball.')),
+        h('p.small.muted', {}, L('W treningu przepisy śródlądowe włączysz wyborem „Morze i drogi śródlądowe”.', 'In training, include the inland rules by choosing “Sea and inland waterways”.'))),
+      ...VESSELS.filter((v) => v.inland).map(lightsEntry),
+      ...DAY_VESSELS.filter((v) => v.inland).map(dayEntry)
+    ] }
   ];
 }
 function sectorDiagram() {
