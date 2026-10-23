@@ -23,29 +23,38 @@ function vesselLights(v) {
   const Lm = (v.L[0] + v.L[1]) / 2;
   return { Lm, lights: v.lights(Lm, () => 0.9, { gearSide: 'starboard' }) };
 }
-function lightView(v, view, W = 200, H = 120) {
-  const { Lm, lights } = vesselLights(v);
-  const vis = visibleLights(lights, view.rel);
-  // zasięg: kadłub i wszystkie światła (także niewidoczne – ten sam kadr w każdym widoku)
+// zasięg kadru w danym widoku: kadłub i wszystkie światła (także niewidoczne)
+function viewSpan(view, Lm, lights) {
   const beam = Math.min(14, Math.max(5, Lm * 0.16));
   const xs = lights.map(view.ax).concat(view.kind === 'side' ? [-Lm / 2, Lm / 2] : [-beam / 2, beam / 2]);
-  const ys = lights.map((l) => l.y).concat([0]);
-  const x0 = Math.min(...xs), x1 = Math.max(...xs), y1 = Math.max(...ys, 6);
-  const sc = Math.min((W - 30) / Math.max(1, x1 - x0), (H - 30) / y1);
-  const X = (x) => W / 2 + (x - (x0 + x1) / 2) * sc, Y = (y) => H - 14 - y * sc;
+  return { x0: Math.min(...xs), x1: Math.max(...xs), beam };
+}
+// skala pionowa wspólna dla wszystkich czterech widoków statku (światła na tej samej wysokości w każdym obrazku);
+// w poziomie długi kadłub widziany z burty jest w razie potrzeby skrócony, żeby zmieścił się w kadrze
+function vesselScale(v, W = 200, H = 120) {
+  const { lights } = vesselLights(v);
+  return (H - 30) / Math.max(...lights.map((l) => l.y), 6);
+}
+function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
+  const { Lm, lights } = vesselLights(v);
+  const vis = visibleLights(lights, view.rel);
+  const { x0, x1, beam } = viewSpan(view, Lm, lights);
+  const sx = Math.min(sc, (W - 30) / Math.max(1, x1 - x0));
+  const X = (x) => W / 2 + (x - (x0 + x1) / 2) * sx, Y = (y) => H - 14 - y * sc;
   let g = `<rect width="${W}" height="${H}" fill="#0b1220"/><rect y="${H - 14}" width="${W}" height="14" fill="#0f1c2e"/>`;
   // zarys kadłuba (bardzo ciemny – nocą widać tylko światła)
   const hullCol = '#1d2635';
   if (view.kind === 'side') {
     const s = view.rel > 0 ? 1 : -1, a = X(-s * Lm / 2), b = X(s * Lm / 2), hh = Math.max(1.2, Lm * 0.05) * sc;
     g += `<polygon points="${a},${Y(0)} ${b - s * 6},${Y(0)} ${b},${Y(0) - hh} ${a},${Y(0) - hh}" fill="${hullCol}"/>`;
-    if (Lm > 20) g += `<rect x="${Math.min(a, a + s * Lm * 0.15 * sc)}" y="${Y(0) - hh * 1.8}" width="${Lm * 0.15 * sc}" height="${hh * 0.8}" fill="${hullCol}"/>`;
+    if (Lm > 20) g += `<rect x="${Math.min(a, a + s * Lm * 0.15 * sx)}" y="${Y(0) - hh * 1.8}" width="${Lm * 0.15 * sx}" height="${hh * 0.8}" fill="${hullCol}"/>`;
     else g += `<rect x="${X(0) - 1}" y="${Y(14)}" width="2" height="${Y(0) - Y(14) - hh}" fill="${hullCol}"/>`;
   } else {
-    const hb = (beam / 2) * sc;
-    g += `<polygon points="${X(0) - hb},${Y(0) - 4} ${X(0) + hb},${Y(0) - 4} ${X(0) + hb * 0.8},${Y(0)} ${X(0) - hb * 0.8},${Y(0)}" fill="${hullCol}"/>`;
-    if (Lm > 20) g += `<rect x="${X(0) - hb * 0.6}" y="${Y(0) - 4 - Math.max(1.2, Lm * 0.04) * sc}" width="${hb * 1.2}" height="${Math.max(1.2, Lm * 0.04) * sc}" fill="${hullCol}"/>`;
-    else g += `<rect x="${X(0) - 1}" y="${Y(14)}" width="2" height="${Y(0) - Y(14) - 4}" fill="${hullCol}"/>`;
+    const hb = (beam / 2) * sx;
+    const hh = Math.max(1.2, Lm * 0.05) * sc;
+    g += `<polygon points="${X(0) - hb},${Y(0) - hh} ${X(0) + hb},${Y(0) - hh} ${X(0) + hb * 0.8},${Y(0)} ${X(0) - hb * 0.8},${Y(0)}" fill="${hullCol}"/>`;
+    if (Lm > 20) g += `<rect x="${X(0) - hb * 0.6}" y="${Y(0) - hh * 1.8}" width="${hb * 1.2}" height="${hh * 0.8}" fill="${hullCol}"/>`;
+    else g += `<rect x="${X(0) - 1}" y="${Y(14)}" width="2" height="${Y(0) - Y(14) - hh}" fill="${hullCol}"/>`;
   }
   for (const l of vis) {
     const cx = X(view.ax(l)), cy = Y(l.y), c = LCOL[l.c];
@@ -55,7 +64,8 @@ function lightView(v, view, W = 200, H = 120) {
   return g;
 }
 function lightsEntry(v) {
-  const views = h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw)), h('figcaption', {}, vw.name))));
+  const sc = vesselScale(v);
+  const views = h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
   return h('div.hb-entry', {}, h('h3', {}, v.name), views, h('p', {}, v.explain));
 }
 
