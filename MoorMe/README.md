@@ -17,6 +17,8 @@ Po uruchomieniu otwiera się okno wyboru trybu:
 
 - **Manewry portowe** – cumowanie i odcumowywanie w porcie (opis niżej).
 - **Locja** – rejs wzdłuż wybrzeża: płyniesz po morzu po waypointach i stosujesz się do znaków nawigacyjnych IALA (region A).
+- **Sygnalizacja świetlna, Sygnalizacja dźwiękowa, Zadania nawigacyjne i Meteorologia** – opisane w osobnych rozdziałach niżej.
+- **Bezpieczeństwo** – mesa jachtu w 3D z wyposażeniem ratunkowym, kartami procedur i radiem VHF DSC (z testem korespondencji).
 
 ### Locja (rejs wzdłuż wybrzeża)
 
@@ -175,3 +177,15 @@ Tryb z losowo generowanymi zadaniami do rozwiązania na kartce, z kalkulatorem a
 
 Konwencja: poprawki na E i dryf w prawo są dodatnie.
 
+
+## Meteorologia
+
+Dział z treningiem i podręcznikiem (karta „Meteorologia” w menu głównym).
+
+- **Skala Beauforta (3D):** otwarte morze wokół jachtu od ciszy po bardzo silny sztorm. Fale Gerstnera liczone na karcie graficznej mają wysokość wg WMO i okres typowy dla krótkiej fali bałtyckiej. Udział białych grzyw, pasma piany, bryzgi i zamglenie rosną z siłą wiatru. Trzeba ocenić siłę wiatru (0–12°B); pomyłka o 1°B jest oznaczana jako „blisko”.
+- **Rodzaje chmur (3D):** 10 rodzajów WMO – Ci, Cc, Cs (z halo 22°), Ac, As (słońce jak przez matowe szkło), Ns (z deszczem), Sc, St, Cu i Cb (wieża z kowadłem, ulewą i wyładowaniami). Trzeba rozpoznać rodzaj chmur i to, co zapowiadają.
+- **Mapa synoptyczna:** losowe układy niżów, wyżów i frontów nad Europą Północną (uproszczona linia brzegowa) z izobarami co 4 hPa. Wiatr przy powierzchni morza liczony jest z gradientu ciśnienia: geostroficzny, skręcony o ok. 20° do niżu, ok. 70% prędkości. Pytania dotyczą kierunku wiatru, tego, gdzie wieje silniej, ciśnienia, nadchodzącej pogody względem frontów, prawa Buys-Ballota i odczytu symboli wiatru ze stacji.
+- **Barometr:** zapis barografu z ostatniej doby z tendencją 3-godzinną (terminologia prognoz morskich) i jej znaczeniem.
+- **Zjawiska i praktyka:** bryza, mgła adwekcyjna i radiacyjna, odległość burzy, szkwał, skręcanie i cofanie się wiatru, porywy, wiatr pozorny, cyrkulacja w niżu i wyżu, widzialność w prognozach.
+- **Test mieszany:** pytania ze wszystkich części na zmianę.
+- **Podręcznik:** ciśnienie i wiatr, skala Beauforta z miniaturami morza renderowanymi przez symulator (podgląd 3D na żywo), atlas chmur, niże, wyże i fronty z przekrojami i tabelami przejścia frontów, czytanie mapy synoptycznej (odstęp izobar a siła wiatru, symbole wiatru), barometr, mgły, bryza, burze i prognozy.

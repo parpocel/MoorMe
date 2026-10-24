@@ -16,6 +16,8 @@ import { SoundsScreen, ShipAudio, volumeSlider } from './ui/soundsUI.js';
 import { showHandbook, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
+import { showMeteoTraining } from './ui/meteoUI.js';
+import { meteoBook } from './ui/meteoBook.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
 import { drawChart } from './ui/chart.js';
 import { getSettings, saveSettings, setGfxPreset, toggleFullscreen, isFullscreen, refreshFullscreen, applyUiScale, GFX_PRESETS } from './settings.js';
@@ -137,7 +139,11 @@ const GLYPH = {
   moon: '<path d="M19.5 14.5A8 8 0 019.5 4.5a8 8 0 1010 10z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/>',
   wave: '<path d="M3 9c2-2 4-2 6 0s4 2 6 0 4-2 6 0M3 15c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
-  river: '<path d="M7 3c3 4-3 7 0 11s-3 5-1 7M17 3c3 4-3 7 0 11s-3 5-1 7"/>'
+  river: '<path d="M7 3c3 4-3 7 0 11s-3 5-1 7M17 3c3 4-3 7 0 11s-3 5-1 7"/>',
+  cloud: '<path d="M6.5 15.5h10a3.5 3.5 0 0 0 .4-6.98 5.2 5.2 0 0 0-10-.6A3.8 3.8 0 0 0 6.5 15.5z"/><path d="M4 19.5h9M15.5 19.5h3"/>',
+  map: '<path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2z"/><path d="M9 4v14M15 6v14"/>',
+  gauge: '<circle cx="12" cy="13" r="8"/><path d="M12 13l4-4M7.5 13h1M15.5 13h1M12 8.5v1"/>',
+  bolt: '<path d="M13 3L6 13h5l-1 8 7-10h-5z"/>'
 };
 const glyph = (k, size = 24) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${GLYPH[k]}</svg>`;
 // sześciokątny klejnot low-poly: 6 faset oświetlonych z lewej-góry
@@ -215,7 +221,7 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
     hero,
-    h('div.m3-tiles', {}, tiles),
+    h('div.m3-tiles', { class: tiles.length >= 7 ? 'many' : '' }, tiles),
     h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
   app.appendChild(s);
   select(cur);
@@ -267,7 +273,8 @@ function showModeSelect() {
       { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja świetlna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
-      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
+      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
+      { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Skala Beauforta, rodzaje chmur, mapa synoptyczna, barometr i zjawiska pogodowe ważne dla żeglarza.', go: keep(6, () => showMeteoIntro()) }
     ]
   });
 }
@@ -305,6 +312,34 @@ function showSoundsBook() {
 function showSailIntro() {
   menuMusic.start();
   trainOrLearn({ kicker: 'Locja', glyph: 'sail', color: '#2aa39a', trainTag: 'rejs wzdłuż wybrzeża', learnTag: 'znaki IALA, charakterystyki świateł', train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła oraz charakterystyki świateł (Fl, Q, VQ, Iso, Oc, LFl, Mo) z animacją.', onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), self: () => showSailIntro() });
+}
+function showMeteoIntro() {
+  menuMusic.start();
+  trainOrLearn({ kicker: 'Meteorologia', glyph: 'cloud', color: '#2f9ed8', trainTag: 'morze 3D, chmury, mapy', learnTag: 'Beaufort, chmury, fronty, prognozy', train: 'Oceniaj siłę wiatru po wyglądzie morza, rozpoznawaj chmury na niebie, czytaj mapy synoptyczne i zapis barografu, przewiduj zjawiska pogodowe.', learn: 'Podręcznik: ciśnienie i wiatr, skala Beauforta z widokami morza, atlas chmur, niże, wyże i fronty, mapa synoptyczna, barometr, mgły, bryza, burze i prognozy dla żeglarzy.', onTrain: () => showMeteoSetup(), onLearn: () => showMeteoBook(), self: () => showMeteoIntro() });
+}
+function showMeteoBook() {
+  menuMusic.start();
+  showHandbook(app, { title: 'podręcznik – meteorologia', sections: meteoBook(), sceneryEl, onExit: () => showMeteoIntro(), onTrain: () => showMeteoSetup() });
+}
+let meteoSel = 0;
+function showMeteoSetup() {
+  menuMusic.start();
+  const keep = (i, k) => () => { meteoSel = i; startMeteo(k); };
+  menuScreen({
+    kicker: 'Meteorologia · trening', sel: meteoSel, back: { label: 'Wstecz', go: () => showMeteoIntro() }, settingsBack: () => showMeteoSetup(),
+    items: [
+      { glyph: 'wave', color: '#2a8fd6', title: 'Skala Beauforta', desc: 'Morze w 3D – od ciszy po sztorm. Oceń siłę wiatru po falach, białych grzywach, pasmach piany i bryzgach.', go: keep(0, 'bft') },
+      { glyph: 'cloud', color: '#6a8fc0', title: 'Rodzaje chmur', desc: 'Niebo w 3D: rozpoznaj 10 rodzajów chmur – od pierzastych Ci po burzowe Cb – i powiedz, co zapowiadają.', go: keep(1, 'cloud') },
+      { glyph: 'map', color: '#4f9d5c', title: 'Mapa synoptyczna', desc: 'Izobary, niże, wyże i fronty nad Bałtykiem i Morzem Północnym: kierunek i siła wiatru, ciśnienie, nadchodząca pogoda, symbole wiatru.', go: keep(2, 'map') },
+      { glyph: 'gauge', color: '#a76bd6', title: 'Barometr', desc: 'Zapis barografu z ostatniej doby: tendencja ciśnienia i to, co z niej wynika dla jachtu.', go: keep(3, 'baro') },
+      { glyph: 'bolt', color: '#e0a33a', title: 'Zjawiska i praktyka', desc: 'Bryza, mgły, burze i szkwały, skręcanie wiatru, porywy, wiatr pozorny, prawo Buys-Ballota.', go: keep(4, 'phen') },
+      { glyph: 'dice', color: '#e0705f', title: 'Test mieszany', desc: 'Pytania ze wszystkich części na zmianę – sprawdzian przed egzaminem.', go: keep(5, 'mix') }
+    ]
+  });
+}
+function startMeteo(kind) {
+  menuMusic.stop();
+  showMeteoTraining(app, { kind, sceneryEl, onExit: () => showMeteoSetup() });
 }
 function showMarksBook() {
   menuMusic.start();
