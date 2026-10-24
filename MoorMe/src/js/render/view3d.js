@@ -388,7 +388,7 @@ export class View3D {
     }
     if (best == null) return null;
     const line = this.world.lines.find((l) => l.id === best);
-    return line ? { line } : null;
+    return line ? { line, d: bd } : null;
   }
 
   pickBollard() {
@@ -396,15 +396,19 @@ export class View3D {
     return p && p.bollard ? p.bollard : null;
   }
 
-  // Zwraca { deckItem } albo { bollard } pod kursorem (pokład ma pierwszeństwo)
+  // Zwraca { deckItem }, { line } albo { bollard } pod kursorem (pokład ma pierwszeństwo).
+  // Poler trafiony bezpośrednio wygrywa z liną leżącą obok (np. muringiem na kei), a podczas prowadzenia
+  // nowej liny lub podawania liny na poler (preferBollard) liny w ogóle nie zasłaniają polerów.
   pick() {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const d = this.raycaster.intersectObjects(this.deckHits, false);
     if (d.length) return { deckItem: d[0].object.userData.deckItem };
-    const rope = this.pickRope();
-    if (rope) return rope;
     const hits = this.raycaster.intersectObjects(this.harbor.bollardMeshes, false);
-    return hits.length ? { bollard: hits[0].object.userData.bollard } : null;
+    const bol = hits.length ? { bollard: hits[0].object.userData.bollard } : null;
+    if (bol && this.preferBollard && this.preferBollard()) return bol;
+    const rope = this.pickRope();
+    if (rope && (!bol || rope.d < 6)) return { line: rope.line };
+    return bol;
   }
 
   // Podświetlenie elementów pokładu: filter(item) -> kolor (hex) albo null

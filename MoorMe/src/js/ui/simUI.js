@@ -35,6 +35,7 @@ export class SimScreen {
       if (d < 90) this.sound.gull(clamp(1 - d / 90, 0.1, 1));
     };
     this.view.onClick = (p) => this.onViewClick(p);
+    this.view.preferBollard = () => !!(this.pickLine || (this.rig && this.rig.cleat));
     this.view.onHover = (p) => this.onViewHover(p);
     this.last = performance.now();
     this.running = true;
