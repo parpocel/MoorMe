@@ -4,29 +4,60 @@ import { LightsScreen } from './lightsUI.js';
 import { SIGNALS, SIGNAL_BY_ID, CONTEXTS, notation, schedule, signalOptions, makeSignalDeck } from '../data/soundSignals.js';
 import { spawnVessel } from '../data/shipLights.js';
 
-// Synteza dźwięków statkowych (Web Audio)
+// Głośność sygnałów (0–1.5, wspólna dla treningu i podręcznika, zapamiętywana; zmiana od razu słychać w trakcie odtwarzania)
+const VOL_KEY = 'moorme.shipVolume', VOL_EVT = 'moorme-shipvolume';
+export function shipVolume() {
+  try { const v = parseFloat(localStorage.getItem(VOL_KEY)); return Number.isFinite(v) ? Math.max(0, Math.min(1.5, v)) : 1; } catch (e) { return 1; }
+}
+function setShipVolume(v) {
+  try { localStorage.setItem(VOL_KEY, String(v)); } catch (e) { /* brak zapisu – głośność tylko do końca sesji */ }
+  window.dispatchEvent(new CustomEvent(VOL_EVT, { detail: v }));
+}
+// Suwak głośności (przy tworzeniu pokazuje aktualną wartość)
+export function volumeSlider() {
+  const pct = (v) => `${Math.round(v * 100)}%`;
+  const val = h('span.vol-val', {}, pct(shipVolume()));
+  const input = h('input', { type: 'range', min: '0', max: '150', step: '5', value: String(Math.round(shipVolume() * 100)),
+    oninput: () => { setShipVolume(input.value / 100); val.textContent = pct(input.value / 100); } });
+  return h('label.vol-slider', {}, h('span', {}, '🔊 Głośność'), input, val);
+}
+
+// Synteza dźwięków statkowych (Web Audio). Głośność stała – nie zależy od odległości ani kierunku statku.
+const BASE_GAIN = 2;
 export class ShipAudio {
   constructor() {
     const AC = window.AudioContext || window.webkitAudioContext;
     this.ctx = AC ? new AC() : null;
     this.nodes = [];
+    this.master = null;
+    this.onVol = (e) => { if (this.master && this.ctx) this.master.gain.setTargetAtTime(BASE_GAIN * e.detail, this.ctx.currentTime, 0.02); };
+    window.addEventListener(VOL_EVT, this.onVol);
   }
   stop() {
     for (const n of this.nodes) { try { n.stop(); } catch (e) { /* już zatrzymany */ } }
     this.nodes = [];
   }
+  close() {
+    this.stop();
+    window.removeEventListener(VOL_EVT, this.onVol);
+    if (this.ctx) this.ctx.close();
+  }
   out(pan) {
-    const c = this.ctx, g = c.createGain();
-    g.gain.value = 0.5;
-    if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(c.destination); } else g.connect(c.destination);
+    const c = this.ctx, g = c.createGain(), lim = c.createDynamicsCompressor();
+    g.gain.value = BASE_GAIN * shipVolume();
+    this.master = g;
+    // limiter – przy głośności powyżej 100% szczyty nie przesterowują
+    lim.threshold.value = -4; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.003; lim.release.value = 0.25;
+    lim.connect(c.destination);
+    if (c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; g.connect(p); p.connect(lim); } else g.connect(lim);
     return g;
   }
   horn(t0, dur, dst) {
     const c = this.ctx, env = c.createGain(), lp = c.createBiquadFilter();
     lp.type = 'lowpass'; lp.frequency.value = 900;
     env.gain.setValueAtTime(0, t0);
-    env.gain.linearRampToValueAtTime(0.55, t0 + 0.08);
-    env.gain.setValueAtTime(0.55, t0 + dur - 0.15);
+    env.gain.linearRampToValueAtTime(1, t0 + 0.08);
+    env.gain.setValueAtTime(1, t0 + dur - 0.15);
     env.gain.linearRampToValueAtTime(0, t0 + dur);
     for (const [f, a] of [[146, 1], [219, 0.6], [292, 0.35]]) {
       const o = c.createOscillator(), g = c.createGain();
@@ -51,16 +82,16 @@ export class ShipAudio {
   }
   play(pattern, pan = 0) {
     if (!this.ctx) return 0;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
     this.stop();
     const dst = this.out(pan), now = this.ctx.currentTime + 0.1;
     const { parts, total } = schedule(pattern);
     for (const p of parts) {
       const t0 = now + p.t0;
       if (p.kind === 'horn') this.horn(t0, p.dur, dst);
-      else if (p.kind === 'stroke') this.strike(t0, dst, 1150, 1.6, 0.45);
+      else if (p.kind === 'stroke') this.strike(t0, dst, 1150, 1.6, 0.2);
       else if (p.kind === 'bell') for (let t = 0; t < p.dur; t += 0.16) this.strike(t0 + t, dst, 1150, 0.5, 0.25);
-      else if (p.kind === 'gong') for (let t = 0; t < p.dur; t += 0.9) this.strike(t0 + t, dst, 140, 2.2, 0.5);
+      else if (p.kind === 'gong') for (let t = 0; t < p.dur; t += 0.9) this.strike(t0 + t, dst, 140, 2.2, 0.3);
     }
     return total;
   }
@@ -144,10 +175,10 @@ export class SoundsScreen extends LightsScreen {
   playSignal() {
     const q = this.q, v = q.vessel, b = this.world.boat;
     if (!q.signal || !v) return;
-    // panorama stereo wg namiaru względem kierunku patrzenia
+    // lekka panorama stereo wg namiaru względem kierunku patrzenia – obie słuchawki zawsze dobrze słychać
     const dir = this.view.camera.getWorldDirection(this.view.camera.position.clone());
     const look = Math.atan2(dir.x, -dir.z), brg = Math.atan2(v.x - b.x, -(v.z - b.z));
-    this.audio.play(q.signal.p, Math.max(-0.9, Math.min(0.9, Math.sin(brg - look))));
+    this.audio.play(q.signal.p, 0.25 * Math.sin(brg - look));
   }
 
   check() {
@@ -187,6 +218,7 @@ export class SoundsScreen extends LightsScreen {
     }
     el.appendChild(h('div.quiz-title', {}, CONTEXTS[q.signal.ctx]));
     el.appendChild(h('button.btn.sm', { style: { margin: '4px 0 6px' }, onclick: () => this.playSignal() }, '▶ Odtwórz ponownie'));
+    el.appendChild(volumeSlider());
     if (q.phase === 'active') {
       el.appendChild(h('div.small.muted', {}, 'Co oznacza ten sygnał?'));
       const list = h('div.quiz-opts');
@@ -225,7 +257,7 @@ export class SoundsScreen extends LightsScreen {
   }
 
   destroy() {
-    if (this.audio) { this.audio.stop(); if (this.audio.ctx) this.audio.ctx.close(); }
+    if (this.audio) this.audio.close();
     super.destroy();
   }
 }

@@ -605,3 +605,9 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .screen:has(> .scenery3d) .step { color: rgba(255, 245, 238, 0.82); border-color: rgba(255, 255, 255, 0.3); background: rgba(255, 255, 255, 0.1); }
 .screen:has(> .scenery3d) .step.active { background: #fff; color: #22304f; border-color: #fff; }
 .screen:has(> .scenery3d) .step.done { color: #fff; border-color: rgba(120, 230, 170, 0.7); }
+
+/* suwak głośności sygnałów dźwiękowych (trening i podręcznik) */
+.vol-slider { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; font-size: 13px; font-weight: 700; white-space: nowrap; }
+.vol-slider input[type=range] { flex: 1; min-width: 110px; width: auto; }
+.vol-slider .vol-val { min-width: 3.2em; text-align: right; font-variant-numeric: tabular-nums; }
+.screen-footer .vol-slider { margin: 0; width: min(320px, 40vw); }

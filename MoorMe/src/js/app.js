@@ -12,7 +12,7 @@ import { Preview3D } from './render/preview.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
-import { SoundsScreen, ShipAudio } from './ui/soundsUI.js';
+import { SoundsScreen, ShipAudio, volumeSlider } from './ui/soundsUI.js';
 import { showHandbook, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
@@ -299,8 +299,8 @@ function showSoundsIntro() {
 function showSoundsBook() {
   menuMusic.stop(0.6);
   const audio = new ShipAudio();
-  const close = () => { audio.stop(); if (audio.ctx) audio.ctx.close(); };
-  showHandbook(app, { title: 'podręcznik – sygnały dźwiękowe', sections: soundsBook((p) => audio.play(p)), sceneryEl, onExit: () => { close(); showSoundsIntro(); }, onTrain: () => { close(); showSoundsSetup(); } });
+  const close = () => audio.close();
+  showHandbook(app, { title: 'podręcznik – sygnały dźwiękowe', sections: soundsBook((p) => audio.play(p)), tools: volumeSlider, sceneryEl, onExit: () => { close(); showSoundsIntro(); }, onTrain: () => { close(); showSoundsSetup(); } });
 }
 function showSailIntro() {
   menuMusic.start();
