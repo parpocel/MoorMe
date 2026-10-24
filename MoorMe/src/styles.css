@@ -533,7 +533,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .m3-chip.quit { width: 42px; padding: 0; justify-content: center; }
 .m3-chip.quit:hover { background: rgba(216, 72, 74, 0.75); }
 
-.m3-hero { align-self: center; max-width: 560px; }
+.m3-hero { align-self: start; margin-top: clamp(12px, 11vh, 150px); max-width: 560px; } /* stała wysokość napisu MoorMe na wszystkich ekranach menu */
 .m3-logo { font-family: 'Baloo 2', 'Nunito', sans-serif; font-weight: 800; font-size: clamp(64px, 8vw, 116px); line-height: 0.95; letter-spacing: 0.5px; color: #fff7f1;
   text-shadow: 0 2px 0 rgba(255, 255, 255, 0.2), 0 6px 0 rgba(30, 40, 80, 0.25), 0 18px 40px rgba(20, 20, 60, 0.45); }
 .m3-logo span { color: #ff8c75; }
@@ -581,7 +581,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .m3-hint { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 12px; font-size: 12.5px; font-weight: 700; color: rgba(255, 245, 238, 0.75); }
 .m3-hint kbd { min-width: 24px; padding: 2px 7px; border-radius: 6px; font-family: inherit; font-size: 11.5px; text-align: center; color: #fff; background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.3); border-bottom-width: 2px; }
 .m3-hint span { margin: 0 8px 0 2px; }
-@media (max-height: 760px) { .m3-logo { font-size: 64px; } .m3-desc { font-size: 14.5px; } .m3-tile { min-height: 140px; } .m3-gem { width: 50px; height: 50px; margin-bottom: 4px; } }
+@media (max-height: 760px) { .m3-hero { margin-top: 3vh; } .m3-logo { font-size: 64px; } .m3-desc { font-size: 14.5px; } .m3-tile { min-height: 140px; } .m3-gem { width: 50px; height: 50px; margin-bottom: 4px; } }
 @media (prefers-reduced-motion: reduce) { .m3-tile, .m3-hero.swap .m3-card > * { animation: none; } }
 
 /* podmenu w stylu menu głównego: dodatkowy wybór w karcie, tło 3D na ekranach ustawień */

@@ -219,6 +219,20 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
     h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
   app.appendChild(s);
   select(cur);
+  // Opis rezerwuje wysokość najdłuższego tekstu z ekranu – wyśrodkowany panel (i napis MoorMe) nie skacze przy zmianie kafla
+  const descs = items.flatMap((it) => [it.desc, it.disabledDesc].filter(Boolean).map(t));
+  const fitDesc = () => {
+    if (!s.isConnected) { window.removeEventListener('resize', fitDesc); return; }
+    const shown = heroDesc.textContent;
+    heroDesc.style.minHeight = '';
+    let hMax = 0;
+    for (const d of descs) { heroDesc.textContent = d; hMax = Math.max(hMax, heroDesc.offsetHeight); }
+    heroDesc.textContent = shown;
+    heroDesc.style.minHeight = `${hMax}px`;
+  };
+  fitDesc();
+  window.addEventListener('resize', fitDesc);
+  if (document.fonts) document.fonts.ready.then(fitDesc);
   return s;
 }
 
