@@ -244,7 +244,7 @@ export const EN = {
   // menu główne 3D
   'Symulator żeglarski': 'Sailing simulator', 'Cumowanie · symulator manewrów portowych': 'Mooring · harbour manoeuvring simulator',
   'manewry portowe': 'harbour manoeuvres', 'locja': 'pilotage', 'ROZPOZNAWANIE STATKÓW': 'VESSEL RECOGNITION',
-  'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'światła i znaki dzienne': 'lights and day shapes',
+  'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'Sygnalizacja świetlna': 'Light signals', 'Sygnalizacja dźwiękowa': 'Sound signals', 'Sygnalizacja świetlna · trening': 'Light signals · training', 'Sygnalizacja dźwiękowa · trening': 'Sound signals · training', 'światła i znaki dzienne': 'lights and day shapes',
   'Manewry portowe · cumowanie i odcumowanie': 'Harbour manoeuvres · mooring and unmooring',
   'Cumowanie i odcumowywanie łodzi.': 'Mooring and unmooring a boat.',
   'Pławy, stawy oraz światła elementów nawigacyjnych.': 'Buoys, leading marks and the lights of navigational aids.',

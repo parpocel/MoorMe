@@ -180,7 +180,7 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
   h('span.m3-num', {}, String(i + 1).padStart(2, '0')),
   h('div.m3-gem', {}, raw(gemHTML(it.glyph))),
   h('div.m3-tt', {}, it.title),
-  h('div.m3-tg', {}, it.tag)));
+  it.tag ? h('div.m3-tg', {}, it.tag) : null));
   tiles.forEach((tl, i) => tl.style.setProperty('--c', items[i].color));
   function select(i) {
     cur = i;
@@ -262,12 +262,12 @@ function showModeSelect() {
   menuScreen({
     kicker: 'Symulator żeglarski', sel: modeSel,
     items: [
-      { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', tag: 'keja, cumy, muringi', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
-      { glyph: 'sail', color: '#2aa39a', title: 'Locja', tag: 'waypointy i znaki IALA', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
-      { glyph: 'lights', color: '#6a6fd6', title: 'Rozpoznawanie statków', tag: 'światła i znaki dzienne', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
-      { glyph: 'horn', color: '#e0a33a', title: 'Sygnały dźwiękowe', tag: 'buczki, dzwony, mgła', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
-      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', tag: 'kursy, namiary, prąd', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
-      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', tag: 'EPIRB, VHF, MAYDAY', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
+      { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
+      { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
+      { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja świetlna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
+      { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
+      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
+      { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) }
     ]
   });
 }
@@ -286,7 +286,7 @@ function trainOrLearn({ kicker, glyph: g, color, trainTag, learnTag, train, lear
 
 function showLightsIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Rozpoznawanie statków', glyph: 'lights', color: '#6a6fd6', trainTag: 'noc i dzień, morze i śródlądowe', learnTag: 'światła z czterech stron, znaki dzienne', train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).', onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), self: () => showLightsIntro() });
+  trainOrLearn({ kicker: 'Sygnalizacja świetlna', glyph: 'lights', color: '#6a6fd6', trainTag: 'noc i dzień, morze i śródlądowe', learnTag: 'światła z czterech stron, znaki dzienne', train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).', onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), self: () => showLightsIntro() });
 }
 function showLightsBook() {
   menuMusic.start();
@@ -294,7 +294,7 @@ function showLightsBook() {
 }
 function showSoundsIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Sygnały dźwiękowe', glyph: 'horn', color: '#e0a33a', trainTag: 'morze, mgła, drogi śródlądowe', learnTag: 'zapis, oś czasu, odsłuch', train: 'Z łodzi słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności, we mgle i na drogach śródlądowych – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: sygnały manewrowe, ostrzegawcze i mgłowe na morzu oraz sygnały ogólne i alarmowe na drogach śródlądowych – z zapisem, osią czasu i odsłuchem.', onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), self: () => showSoundsIntro() });
+  trainOrLearn({ kicker: 'Sygnalizacja dźwiękowa', glyph: 'horn', color: '#e0a33a', trainTag: 'morze, mgła, drogi śródlądowe', learnTag: 'zapis, oś czasu, odsłuch', train: 'Z łodzi słuchasz buczków, dzwonów i gongów statków – w dobrej widoczności, we mgle i na drogach śródlądowych – i rozpoznajesz ich znaczenie.', learn: 'Podręcznik: sygnały manewrowe, ostrzegawcze i mgłowe na morzu oraz sygnały ogólne i alarmowe na drogach śródlądowych – z zapisem, osią czasu i odsłuchem.', onTrain: () => showSoundsSetup(), onLearn: () => showSoundsBook(), self: () => showSoundsIntro() });
 }
 function showSoundsBook() {
   menuMusic.stop(0.6);
@@ -387,7 +387,7 @@ function showLightsSetup() {
   const scope = h('div.m3-seg', {}, h('span.m3-lbl', {}, 'Przepisy'),
     seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
   menuScreen({
-    kicker: 'Rozpoznawanie statków · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
+    kicker: 'Sygnalizacja świetlna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
     items: [
       { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => startLights(false) },
       { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => startLights(true) }
@@ -398,7 +398,7 @@ function showLightsSetup() {
 function showSoundsSetup() {
   menuMusic.start();
   menuScreen({
-    kicker: 'Sygnały dźwiękowe · trening', back: { label: 'Wstecz', go: () => showSoundsIntro() }, settingsBack: () => showSoundsSetup(),
+    kicker: 'Sygnalizacja dźwiękowa · trening', back: { label: 'Wstecz', go: () => showSoundsIntro() }, settingsBack: () => showSoundsSetup(),
     items: [
       { glyph: 'wave', color: '#2aa39a', title: 'Morze (MPZZM / COLREG)', tag: 'manewrowe, mgła, pomoc', desc: 'Sygnały manewrowe i ostrzegawcze, sygnały we mgle i wzywanie pomocy na morzu.', go: () => startSounds(['sight', 'fog']) },
       { glyph: 'river', color: '#4f9d5c', title: 'Drogi śródlądowe (CEVNI)', tag: 'rzeki, kanały, jeziora', desc: 'Sygnały na rzekach, kanałach i jeziorach – m.in. „uwaga”, „nie mogę manewrować”, „człowiek za burtą”.', go: () => startSounds(['inland']) },

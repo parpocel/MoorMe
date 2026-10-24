@@ -140,7 +140,7 @@ Workflow GitHub Actions (`.github/workflows/build-windows.yml` w katalogu głów
 
 ## Rozpoznawanie świateł
 
-Trzeci tryb (karta „Rozpoznawanie świateł” w oknie wyboru trybu). Jest noc (czarne niebo, przygaszony księżyc), a zwykła łódź wiosłowa – bez masztu i olinowania, które zasłaniałyby widok – płynie stałym kursem 090°. Patrzysz z pozycji wioślarza i rozglądasz się, przeciągając myszą (kółko przybliża). Co kilka sekund na lewej albo prawej burcie, w odległości 0,25–0,65 nm, pojawia się statek widoczny wyłącznie po światłach (MPZZM/COLREG, część C). Trzeba rozpoznać:
+Trzeci tryb (karta „Sygnalizacja świetlna” w oknie wyboru trybu). Jest noc (czarne niebo, przygaszony księżyc), a zwykła łódź wiosłowa – bez masztu i olinowania, które zasłaniałyby widok – płynie stałym kursem 090°. Patrzysz z pozycji wioślarza i rozglądasz się, przeciągając myszą (kółko przybliża). Co kilka sekund na lewej albo prawej burcie, w odległości 0,25–0,65 nm, pojawia się statek widoczny wyłącznie po światłach (MPZZM/COLREG, część C). Trzeba rozpoznać:
 
 - **co to za jednostka i co robi** – 6 odpowiedzi do wyboru, a w katalogu jest 13 typów: statek o napędzie mechanicznym < 50 m i ≥ 50 m, jednostka żaglowa, statek na kotwicy < 50 m i ≥ 50 m, trałowiec, statek rybacki, niezdolny do manewrowania, o ograniczonej zdolności manewrowania, ograniczony zanurzeniem, holujący (z holowaną jednostką), pilotowy i statek na mieliźnie;
 - **którą stronę statku widzisz** – dziób, prawą burtę, lewą burtę albo rufę (dla statków w ruchu).
@@ -155,7 +155,7 @@ Typy losowane są „talią”: każdy pojawia się raz w rundzie, w losowej kol
 
 ## Sygnały dźwiękowe
 
-Kolejny tryb (karta „Sygnały dźwiękowe”). Z łodzi wiosłowej słychać sygnały statków (MPZZM/COLREG, część D), odtwarzane w stereo z kierunku, z którego płynie dźwięk. Sygnały to buczek (krótki ok. 1 s, długi 4,5 s), dzwon i gong. Każdy sygnał trzeba rozpoznać spośród 5 odpowiedzi; „Odtwórz ponownie” powtarza sygnał. Po odpowiedzi wyświetla się tylko wynik, poprawna odpowiedź i zapis sygnału (• — 🔔 ◎).
+Kolejny tryb (karta „Sygnalizacja dźwiękowa”). Z łodzi wiosłowej słychać sygnały statków (MPZZM/COLREG, część D), odtwarzane w stereo z kierunku, z którego płynie dźwięk. Sygnały to buczek (krótki ok. 1 s, długi 4,5 s), dzwon i gong. Każdy sygnał trzeba rozpoznać spośród 5 odpowiedzi; „Odtwórz ponownie” powtarza sygnał. Po odpowiedzi wyświetla się tylko wynik, poprawna odpowiedź i zapis sygnału (• — 🔔 ◎).
 
 - **Dobra widoczność** (statek widać na horyzoncie): • w prawo, •• w lewo, ••• wstecz, ••••• wątpliwość, —— • / —— •• wyprzedzanie w wąskim przejściu z prawej/lewej burty, — • — • zgoda, — zakręt.
 - **Mgła** (statku nie widać): — w drodze z szybkością, — — zatrzymany, — • • specjalne statki, — • • • holowany, •••• pilot, dzwon (kotwica < 100 m), dzwon + gong (kotwica ≥ 100 m), 3 uderzenia + dzwon + 3 uderzenia (mielizna), • — • ostrzeżenie statku na kotwicy.
