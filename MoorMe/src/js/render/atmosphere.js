@@ -142,7 +142,7 @@ export class Atmosphere {
     // światło kotwiczne (topowe, dookólne) – gdy jacht stoi; światło silnikowe (białe, w połowie masztu) – w ruchu
     add(heel, 0xffffff, 1.6, 0.1 * L, v.boat.userData.mastTop + 0.2, 0).userData.mode = 'anchor';
     const sp = v.boat.userData.steamPos;
-    sec(add(heel, 0xfff6e0, 1.5, sp[0], sp[1], sp[2]), 'mast').userData.mode = 'moving';
+    sec(add(heel, 0xffffff, 1.5, sp[0], sp[1], sp[2]), 'mast').userData.mode = 'moving';
     // światło salingowe oświetlające pokład (prawdziwe źródło światła)
     this.deckLight = new THREE.PointLight(0xfff1d6, 0, 14, 1.6);
     const perch = v.boat.userData.perches && v.boat.userData.perches[0];
