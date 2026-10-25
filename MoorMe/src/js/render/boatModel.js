@@ -41,22 +41,22 @@ function sheerHeight(spec, x) {
 }
 
 // Kadłub: stacje poprzeczne, pasy z kolorami (burta, pas okien, linia wodna, antyfouling)
-function buildHull(spec, hullColor, stripeColor) {
+// Stacje poprzeczne kadłuba: punkty pasów (x, y, w – półszerokość) – wspólne dla kadłuba i elementów leżących na burcie
+const HULL_N = 23; // gęstsza siatka kadłuba (+25% wierzchołków)
+const HULL_BANDS = [
+  // [wysokość względna do wolnej burty lub bezwzględna, szerokość względna]
+  { h: (fb) => fb, w: 1.0 },
+  { h: (fb) => fb * 0.83, w: 1.0 },
+  { h: (fb) => fb * 0.66, w: 0.995 },
+  { h: (fb) => fb * 0.34, w: 0.97 },
+  { h: () => 0.02, w: 0.9 },
+  { h: () => -0.1, w: 0.86 },
+  { h: (fb, d) => -d * 0.72, w: 0.55 },
+  { h: (fb, d) => -d, w: 0.0 }
+];
+function hullStations(spec) {
   const { xs, xb } = hullExtents(spec);
-  const N = 23; // gęstsza siatka kadłuba (+25% wierzchołków)
-  const bands = [
-    // [wysokość względna do wolnej burty lub bezwzględna, szerokość względna, kolor]
-    { h: (fb) => fb, w: 1.0 },
-    { h: (fb) => fb * 0.83, w: 1.0 },
-    { h: (fb) => fb * 0.66, w: 0.995 },
-    { h: (fb) => fb * 0.34, w: 0.97 },
-    { h: () => 0.02, w: 0.9 },
-    { h: () => -0.1, w: 0.86 },
-    { h: (fb, d) => -d * 0.72, w: 0.55 },
-    { h: (fb, d) => -d, w: 0.0 }
-  ];
-  const bandColors = [hullColor, stripeColor, hullColor, hullColor, COL.boot, COL.antifoul, COL.antifoul];
-  const stations = [];
+  const N = HULL_N, stations = [];
   for (let i = 0; i <= N; i++) {
     const t = i / N;
     const x = xs + (xb - xs) * Math.pow(t, 0.92);
@@ -64,9 +64,9 @@ function buildHull(spec, hullColor, stripeColor) {
     const fb = sheerHeight(spec, x);
     let d = spec.canoeDraft * (t > 0.82 ? Math.max(0.05, (1 - t) / 0.18) : t < 0.06 ? 0.45 + t * 9 : 1);
     if (i === 0) d = 0.12; // pawęż nad wodą
-    const pts = bands.map((bd) => {
+    const pts = HULL_BANDS.map((bd) => {
       let y = bd.h(fb, d);
-      let w = bd.w;
+      const w = bd.w;
       if (i === 0 && y < 0.12) y = Math.max(y, 0.12 - (1 - w) * 0.2);
       // stewa dziobowa – prawie pionowa
       const bowPull = t > 0.9 ? (t - 0.9) / 0.1 : 0;
@@ -75,6 +75,31 @@ function buildHull(spec, hullColor, stripeColor) {
     });
     stations.push(pts);
   }
+  return stations;
+}
+// Półszerokość fasetowej powierzchni burty w punkcie (x, y) – dokładnie na trójkątach siatki kadłuba
+function hullSurfaceW(stations, x, y, spec) {
+  for (let i = 0; i < stations.length - 1; i++) {
+    const A = stations[i], B = stations[i + 1];
+    if (x < Math.min(A[0].x, A[A.length - 1].x) - 1e-6 || x > Math.max(B[0].x, B[B.length - 1].x) + 1e-6) continue;
+    for (let j = 0; j < A.length - 1; j++) {
+      const p1 = A[j], p2 = B[j], p3 = B[j + 1], p4 = A[j + 1];
+      for (const [a, b, c] of [[p1, p2, p3], [p1, p3, p4]]) {
+        const det = (b.y - c.y) * (a.x - c.x) + (c.x - b.x) * (a.y - c.y);
+        if (Math.abs(det) < 1e-12) continue;
+        const l1 = ((b.y - c.y) * (x - c.x) + (c.x - b.x) * (y - c.y)) / det, l2 = ((c.y - a.y) * (x - c.x) + (a.x - c.x) * (y - c.y)) / det, l3 = 1 - l1 - l2;
+        if (l1 >= -1e-6 && l2 >= -1e-6 && l3 >= -1e-6) return l1 * a.w + l2 * b.w + l3 * c.w;
+      }
+    }
+  }
+  return halfBeamAt(spec, x);
+}
+
+function buildHull(spec, hullColor, stripeColor) {
+  const bands = HULL_BANDS;
+  const N = HULL_N;
+  const bandColors = [hullColor, stripeColor, hullColor, hullColor, COL.boot, COL.antifoul, COL.antifoul];
+  const stations = hullStations(spec);
   const pos = [], col = [];
   const c = new THREE.Color();
   const pushTri = (a, b, cc, color) => {
@@ -484,14 +509,30 @@ function addBoatDetails(heel, root, spec, d) {
   const { xs, xb } = hullExtents(spec);
   const L = spec.loa;
   const glass = { rough: 0.15, metal: 0.5 };
-  // okna w burtach (charakterystyczne dla serii C): długie okno salonu + mniejsze kabinowe
+  // okna w burtach (charakterystyczne dla serii C): długie okno salonu + mniejsze kabinowe.
+  // Każde okno to pas siatki leżący na fasetowej powierzchni burty (podąża za jej krzywizną i za linią pokładu), z zaokrąglonymi końcami.
+  const stations = hullStations(spec);
+  const winMat = mat(0x16202b, { ...glass, side: THREE.DoubleSide });
   for (const side of [-1, 1]) {
     for (const [x0, x1, hRel] of [[-0.02 * L, 0.2 * L, 0.72], [0.24 * L, 0.3 * L, 0.74], [-0.32 * L, -0.24 * L, 0.73]]) {
-      const xm = (x0 + x1) / 2, len = x1 - x0;
-      const slope = (halfBeamAt(spec, x1) - halfBeamAt(spec, x0)) / len;
-      const w = box(len, 0.13 + L * 0.004, 0.02, 0x16202b, xm, sheerHeight(spec, xm) * hRel, side * (halfBeamAt(spec, xm) * 0.995 + 0.012), glass);
-      w.rotation.y = -side * Math.atan(slope);
-      heel.add(w);
+      const H = 0.13 + L * 0.004, len = x1 - x0, n = Math.max(8, Math.round(len / 0.12)), er = Math.min(0.5, (H * 0.6) / len);
+      const pos = [];
+      const col = (k) => {
+        const u = k / n, x = x0 + len * u, yc = sheerHeight(spec, x) * hRel;
+        const e = Math.max(0, Math.abs(2 * u - 1) - (1 - 2 * er)) / (2 * er); // 0 w środku, 1 na końcu okna
+        const hh = (H / 2) * Math.sqrt(Math.max(0, 1 - e * e));
+        return [-1, 1].map((sg) => { const y = yc + sg * hh; return [x, y, side * (hullSurfaceW(stations, x, y, spec) + 0.006)]; });
+      };
+      let prev = col(0);
+      for (let k = 1; k <= n; k++) {
+        const cur = col(k), [b0, t0] = prev, [b1, t1] = cur;
+        pos.push(...b0, ...b1, ...t1, ...b0, ...t1, ...t0);
+        prev = cur;
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.computeVertexNormals();
+      heel.add(new THREE.Mesh(g, winMat));
     }
     // teakowa listwa na krawędzi pokładu i ciemna odbojnica pod nią
     sheerStrip(heel, spec, side, 0.04, 0.03, 0.03, COL.teak);
