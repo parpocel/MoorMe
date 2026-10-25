@@ -355,7 +355,7 @@ function loadPassageCfg() {
   } catch (e) { /* brak zapisu */ }
   return null;
 }
-let passageCfg = loadPassageCfg() || { passageId: 'baltic', boatId: 'C34', weather: { ...PASSAGES.baltic.weather } };
+let passageCfg = loadPassageCfg() || { passageId: 'offshore', boatId: 'C34', weather: { ...PASSAGES.offshore.weather } };
 
 function showPassageSetup() {
   menuMusic.start();
@@ -397,7 +397,7 @@ function showPassageSetup() {
     h('div.two-col', { style: { marginTop: '18px' } },
       h('div.panel', {}, h('h2', {}, 'Jacht'), boatSeg,
         h('h2', { style: { marginTop: '14px' } }, 'Nawigacja'), assistSeg,
-        h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na chartploterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
+        h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' && cfg.passageId === 'offshore' ? 'Znasz tylko kurs (BRG) i odległość do kolejnego punktu kontrolnego, a prosta do niego prowadzi przez niebezpieczeństwa. Mielizn, trasy ani nazw znaków nie widać – pławy wyłaniają się przed dziobem, rozpoznajesz je po kształcie, kolorach i światłach i sam decydujesz, którędy je ominąć.' : (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na chartploterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
         h('div.hint', {}, 'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.')),
       h('div.panel', {}, h('h2', {}, 'Pogoda'),
         h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, 30, 1, w.windKn, (v) => `${v} kn`, (v) => { w.windKn = v; })),

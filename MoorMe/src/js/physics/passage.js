@@ -16,6 +16,7 @@ const bearingDeg = (dx, dz) => ((Math.atan2(dx, -dz) * 180) / Math.PI + 360) % 3
 // Kąt (w stopniach, kompas) od znaku do jachtu mieści się w sektorze kardynalnym?
 const SECTOR = { N: 0, E: 90, S: 180, W: 270 };
 const SECTOR_HALF = 65; // z zakrętami toru znak mija się pod kątem, więc sektory są szersze niż 90°
+export const SEEN_RANGE = 1300; // z tej odległości znak w dzień wyłania się nad horyzontem fali (otwarte morze)
 export function inCardinalSector(rule, brgFromMark) {
   const d = Math.abs(((brgFromMark - SECTOR[rule] + 540) % 360) - 180);
   return d <= SECTOR_HALF;
@@ -27,17 +28,25 @@ export class PassageWorld extends World {
    */
   constructor(cfg) {
     const H = cfg.harbor || buildPassage(cfg.passageId, cfg.seed);
-    super({ ...cfg, harbor: H, scenario: 'passage', start: cfg.start || { x: H.start.x, z: H.start.z, compass: H.start.compass, speedKn: 0 } });
+    const K = cfg.blind && H.keyRoute;
+    const compass = K ? bearingDeg(K[1].x - K[0].x, K[1].z - K[0].z) : H.start.compass;
+    super({ ...cfg, harbor: H, scenario: 'passage', start: cfg.start || { x: H.start.x, z: H.start.z, compass, speedKn: 0 } });
     this.isPassage = true;
     this.blind = !!cfg.blind; // bez trasy i waypointów: tylko BRG na port, znaki rozpoznawane po światłach
     H.blind = this.blind;
     this.fenderOut = { port: false, starboard: false, stern: false };
     this.route = H.route;
+    // na otwartym morzu tryb „tylko BRG” prowadzi po punktach kontrolnych leżących na prostej przez niebezpieczeństwa
+    this.navRoute = this.blind && H.keyRoute ? H.keyRoute : H.route;
     this.next = 1; // indeks waypointu, do którego płyniemy
-    this.autopilot = { on: false, hdg: H.start.compass };
-    if (this.blind) this.next = H.route.length - 1;
+    this.autopilot = { on: false, hdg: compass };
+    if (this.blind && !H.keyRoute) this.next = H.route.length - 1;
+    this.instruction = null; // bieżące polecenie (np. którym torem płynąć za rozwidleniem)
+    this._notes = (H.notes || []).map((n) => ({ ...n, fired: false }));
+    this.wrongFork = {};
+    this.seenShoals = new Set();
     this.nav = { next: this.next, dtw: 0, brg: 0, xte: 0, along: 0, legLen: 0, legBrg: 0, eta: 0, remaining: H.routeLength, cog: 0, sog: 0, depth: 0 };
-    this.pstats = { xteSum: 0, xteTime: 0, offTime: 0, wrongSide: 0, missed: 0, avoid: 0, markHits: 0, groundings: 0, wpReached: 0, dist: 0 };
+    this.pstats = { xteSum: 0, xteTime: 0, offTime: 0, wrongSide: 0, missed: 0, avoid: 0, markHits: 0, groundings: 0, wpReached: 0, dist: 0, wrongChannel: 0 };
     this.breakdown = null;
     this._navAcc = 0;
     this._contact = { kind: null, clear: 0 };
@@ -53,7 +62,7 @@ export class PassageWorld extends World {
       }
       const lateral = m.rule === 'port' || m.rule === 'starboard';
       const cardinal = SECTOR[m.rule] !== undefined;
-      return { ...m, dRoute, legDir, required: lateral || (cardinal && dRoute < 160), state: 'pending', minD: Infinity, atMin: null, inside: false, inZone: false };
+      return { ...m, dRoute, legDir, required: (lateral && !m.off) || (cardinal && dRoute < 160), seen: false, state: 'pending', minD: Infinity, atMin: null, inside: false, inZone: false };
     });
     for (const m of this.marks) {
       const poly = ngon(m.x, m.z, 1.4, 8);
@@ -125,9 +134,10 @@ export class PassageWorld extends World {
 
   updateNav(dt) {
     if (this.result) return;
-    const b = this.boat, R = this.route, ps = this.pstats;
+    const b = this.boat, R = this.navRoute, ps = this.pstats;
     const px = b.x, pz = b.z;
-    if (this.blind) {
+    this.updateAware(px, pz);
+    if (this.blind && !this.H.keyRoute) {
       const goal = R[R.length - 1], n = this.nav;
       const dtw = Math.hypot(goal.x - px, goal.z - pz);
       n.next = R.length - 1; n.dtw = dtw; n.remaining = dtw; n.xte = 0;
@@ -158,7 +168,8 @@ export class PassageWorld extends World {
       n.remaining = rest;
       const vmg = Math.max(0.5, b.speed);
       n.eta = rest / vmg;
-      const reached = dtw < 60 || (along > len && dtw < 260);
+      // punkt za rozwidleniem (tryb z BRG) jest osiągnięty także przy końcu któregokolwiek z torów
+      const reached = dtw < 60 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
       if (reached) {
         ps.wpReached++;
         if (k >= R.length - 1) { this.finishPassage(); return; }
@@ -170,17 +181,41 @@ export class PassageWorld extends World {
     }
     if (this.result) return;
     const n = this.nav;
-    ps.xteSum += Math.abs(n.xte) * dt;
-    ps.xteTime += dt;
-    if (Math.abs(n.xte) > 150) ps.offTime += dt;
+    if (!this.blind) {
+      ps.xteSum += Math.abs(n.xte) * dt;
+      ps.xteTime += dt;
+      if (Math.abs(n.xte) > 150) ps.offTime += dt;
+    }
     this.updateMarks(px, pz, dt);
     this.updateContact(dt);
+  }
+
+  // Polecenia na trasie (tor wodny, rozwidlenie) i to, co już widać z pokładu (do chartplotera na otwartym morzu)
+  updateAware(px, pz) {
+    for (const n of this._notes) {
+      if (!n.fired && Math.hypot(n.x - px, n.z - pz) < n.r) {
+        n.fired = true;
+        this.instruction = n;
+        this.log(n.text, 'info');
+      }
+    }
+    if (this.instruction && Math.hypot(this.instruction.end.x - px, this.instruction.end.z - pz) < 150) this.instruction = null;
+    if (this.H.offshore) {
+      for (const s of this.H.shoals) if (!this.seenShoals.has(s) && distToPoly(s.poly, px, pz).dist < SEEN_RANGE - 200) this.seenShoals.add(s);
+    }
   }
 
   updateMarks(px, pz, dt) {
     const ps = this.pstats;
     for (const m of this.marks) {
       const d = Math.hypot(px - m.x, pz - m.z);
+      if (d < SEEN_RANGE) m.seen = true;
+      // znak toru, którego nie wybrano za rozwidleniem: wpłynięcie w niego to błąd wyboru toru
+      if (m.off && d < 45 && !this.wrongFork[m.fork]) {
+        this.wrongFork[m.fork] = true;
+        ps.wrongChannel++;
+        this.log('Wpłynąłeś w niewłaściwy tor!', 'bad');
+      }
       if (m.rule === 'avoid') {
         if (!m.inZone && d < m.radius) {
           m.inZone = true;
@@ -271,6 +306,7 @@ export class PassageWorld extends World {
     add('Wejścia w strefy zagrożenia', Math.min(32, ps.avoid * 8));
     add('Zderzenia ze znakami', Math.min(20, ps.markHits * 10));
     add('Mielizna i kontakt z brzegiem', Math.min(40, ps.groundings * 15));
+    add('Wybór niewłaściwego toru', Math.min(30, ps.wrongChannel * 15));
     add('Zbyt długi rejs', Math.min(10, Math.max(0, (t - nominal * 1.6) / 120)));
     const loss = items.reduce((s, i) => s + i.pts, 0);
     const score = Math.round(clamp(100 - loss, 0, 100));

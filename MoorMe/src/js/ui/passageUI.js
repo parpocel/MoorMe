@@ -38,7 +38,8 @@ export class PassageScreen extends SimScreen {
   introLog(config) {
     const P = this.world.H;
     this.pushLog({ msg: `Rejs: ${P.name}`, type: 'info' });
-    this.pushLog({ msg: this.world.blind ? 'Płyń na port według BRG. Rozpoznawaj znaki po światłach i mijaj je z właściwej strony' : 'Płyń po waypointach (magenta), mijaj znaki z właściwej strony i omijaj mielizny', type: 'info' });
+    const w = this.world;
+    this.pushLog({ msg: w.blind && P.keyRoute ? 'Płyń od punktu do punktu według BRG. Pławy wyłaniają się przed dziobem – rozpoznaj je i omiń niebezpieczeństwa z właściwej strony' : w.blind ? 'Płyń na port według BRG. Rozpoznawaj znaki po światłach i mijaj je z właściwej strony' : 'Płyń po waypointach (magenta), mijaj znaki z właściwej strony i omijaj mielizny', type: 'info' });
   }
 
   build() {
@@ -134,7 +135,7 @@ export class PassageScreen extends SimScreen {
     this.apHdg = h('div.big-num', { style: { textAlign: 'center', margin: '8px 0 4px' } }, '---°');
     const row = h('div', { style: { display: 'flex', gap: '4px', justifyContent: 'center' } },
       ...[[-10, '−10'], [-1, '−1'], [1, '+1'], [10, '+10']].map(([d, l]) => h('button.btn.xs', { onclick: () => { this.world.adjustAutopilot(d); }, title: 'Zmiana zadanego kursu' }, l)));
-    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: this.world.blind ? 'Ustaw zadany kurs na kurs do portu' : 'Ustaw zadany kurs na kurs do waypointu' }, this.world.blind ? '→ kurs na port' : '→ kurs na WP'),
+    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: this.world.blind && !this.world.H.keyRoute ? 'Ustaw zadany kurs na kurs do portu' : 'Ustaw zadany kurs na kurs do waypointu' }, this.world.blind ? (this.world.H.keyRoute ? '→ kurs na punkt' : '→ kurs na port') : '→ kurs na WP'),
       h('div.small.muted', { style: { marginTop: '6px', maxWidth: '170px' } }, 'Autopilot tylko trzyma kurs – o trasie decydujesz Ty.'));
     return panel;
   }
@@ -224,7 +225,7 @@ export class PassageScreen extends SimScreen {
     void u;
 
     // panel nawigacyjny
-    const wp = w.route[n.next];
+    const wp = w.navRoute[n.next];
     const err = wrapPi((n.brg - hdg) * DEG) / DEG; // + = trzeba skręcić w prawo
     const xteSide = n.xte > 0 ? 'w prawo od toru' : 'w lewo od toru';
     const xteBar = clamp(50 + (n.xte / 200) * 50, 2, 98);
@@ -233,9 +234,10 @@ export class PassageScreen extends SimScreen {
     const nextMarks = w.marks
       .filter((m) => m.state === 'pending' && Math.hypot(m.x - b.x, m.z - b.z) < 700 && (m.required || m.rule === 'avoid'))
       .sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z)).slice(0, 3);
-    const blind = w.blind;
-    let gh = `<div style="font-weight:700;margin-bottom:2px">${blind ? 'Do portu' : `Do ${wp.name || 'WP' + n.next} <span class="muted">(${n.next}/${w.route.length - 1})</span>`}</div>
-      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="small muted">${blind ? 'Kurs na port (BRG)' : 'Kurs na waypoint (BRG)'}</div><div class="big-num" style="color:#ff7ae0">${pad3(n.brg)}°</div></div>
+    const blind = w.blind, toPort = blind && !w.H.keyRoute;
+    let gh = w.instruction ? `<div class="small" style="margin:-2px 0 6px;padding:5px 7px;border-radius:6px;background:rgba(255,209,102,0.16);color:#ffd166;font-weight:600">${w.instruction.text}</div>` : '';
+    gh += `<div style="font-weight:700;margin-bottom:2px">${toPort ? 'Do portu' : blind ? `Punkt ${n.next}/${w.navRoute.length - 1}${/^Punkt/.test(wp.name) ? '' : ` <span class="muted">– ${wp.name}</span>`}` : `Do ${wp.name || 'WP' + n.next} <span class="muted">(${n.next}/${w.navRoute.length - 1})</span>`}</div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="small muted">${toPort ? 'Kurs na port (BRG)' : blind ? 'Kurs na punkt (BRG)' : 'Kurs na waypoint (BRG)'}</div><div class="big-num" style="color:#ff7ae0">${pad3(n.brg)}°</div></div>
       <div style="text-align:right"><div class="small muted">Odległość</div><div class="big-num">${fmtDist(n.dtw)}</div></div></div>
       <div class="small" style="margin:4px 0 0;color:${Math.abs(err) < 5 ? '#7ff0b5' : '#ffd166'}">${Math.abs(err) < 3 ? 'Kurs zgodny z BRG' : `Skręć ${err > 0 ? 'w prawo' : 'w lewo'} o ${Math.abs(err).toFixed(0)}°`}</div>
       ${blind ? '' : `<div class="xte"><i style="left:${xteBar}%"></i></div>`}
@@ -253,12 +255,13 @@ export class PassageScreen extends SimScreen {
       gh += '</div>';
     }
     const ps = w.pstats;
-    if (ps.wrongSide || ps.avoid || ps.groundings || ps.markHits) {
+    if (ps.wrongSide || ps.avoid || ps.groundings || ps.markHits || ps.wrongChannel) {
       const errs = [];
       if (ps.wrongSide) errs.push(`znaki ${ps.wrongSide}`);
       if (ps.avoid) errs.push(`strefy ${ps.avoid}`);
       if (ps.groundings) errs.push(`mielizna ${ps.groundings}`);
       if (ps.markHits) errs.push(`zderzenia ${ps.markHits}`);
+      if (ps.wrongChannel) errs.push(`zły tor ${ps.wrongChannel}`);
       gh += `<div class="small" style="margin-top:6px;color:#ff9a9a"><span>Błędy:</span> <span>${errs.join(' · ')}</span></div>`;
     }
     this.goal.innerHTML = gh;
@@ -366,7 +369,8 @@ export class PassageScreen extends SimScreen {
         tr('Znaki z niewłaściwej strony', `${s.wrongSide}`),
         tr('Wejścia w strefy zagrożeń', `${s.avoid}`),
         tr('Mielizna / brzeg', `${s.groundings}`),
-        tr('Zderzenia ze znakami', `${s.markHits}`)),
+        tr('Zderzenia ze znakami', `${s.markHits}`),
+        ...(this.world.H.forks.length ? [tr('Wybór toru na rozwidleniu', s.wrongChannel ? 'niewłaściwy' : 'właściwy')] : [])),
       r.items.length ? h('div', { style: { marginTop: '10px' } }, h('h4', { style: { margin: '0 0 4px' } }, 'Punkty karne'),
         h('table.spec-table', {}, ...r.items.map((i) => tr(i.label, `−${i.pts}`)))) : h('div.hint', {}, 'Bez punktów karnych – żegluga wzorowa!'),
       h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' } },

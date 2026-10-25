@@ -35,6 +35,7 @@ for (const [id, seed] of CASES) {
       if (!best || d < best.d) best = { d, px, pz, cross: dx * (m.z - pz) - dz * (m.x - px) };
     }
     if (process.env.DBG2) console.log(m.type, m.x, m.z, best.d.toFixed(0), best.cross.toFixed(0));
+    if (m.off) continue; // znaki toru niewybranego za rozwidleniem
     if (m.rule === 'port' && !(best.cross < 0)) bad++;
     if (m.rule === 'starboard' && !(best.cross > 0)) bad++;
     if (m.required && !/^Bariera/.test(m.label) && ['N', 'E', 'S', 'W'].includes(m.rule) && ![-20, 0, 20].some((o) => inCardinalSector(m.rule, (bearing(best.px - m.x, best.pz - m.z) + o + 360) % 360))) { bad++; console.log('  zły sektor:', m.label, m.x, m.z, bearing(best.px - m.x, best.pz - m.z).toFixed(0)); }
@@ -58,6 +59,7 @@ for (const [id, seed] of CASES) {
   for (let i = 1; i < along.length; i++) maxGap = Math.max(maxGap, along[i] - along[i - 1]);
   const lat = w.marks.filter((m) => m.rule === 'port' || m.rule === 'starboard');
   const latFrom = Math.min(...lat.map((m) => w.marks.indexOf(m) && along0(m)));
+  if (H.offshore) continue;
   check(w.marks.length >= 12 && lat.length >= 3 && lat.length <= 14 && latFrom >= 0.6 * cum[cum.length - 1], `${id}#${seed}: ${w.marks.length} znaków, w tym ${lat.length} bocznych dopiero od ${(100 * latFrom / cum[cum.length - 1]).toFixed(0)}% trasy; największa przerwa ${maxGap.toFixed(0)} m`);
 }
 
@@ -95,6 +97,52 @@ for (const [id, seed] of Object.keys(PASSAGES).flatMap((i) => [1, 2, 3].map((sd)
     check(w.pstats.wrongSide === 0 && w.pstats.avoid === 0, `${id}: znaki mijane poprawnie, bez wejścia w strefy (${w.pstats.wrongSide}/${w.pstats.avoid})`);
     check(w.result.score >= 80, `${id}: wynik ${w.result.score} (średni XTE ${w.result.stats.avgXte.toFixed(0)} m, max ${maxX.toFixed(0)} m)`);
   }
+}
+
+// 2b) otwarte morze: brak lądu, sytuacje na linii kursu, rozwidlenie toru
+for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+  const H = buildPassage('offshore', seed);
+  const types = new Set(H.marks.map((m) => m.type));
+  check(H.coasts.length === 0 && H.offshore && H.keyRoute.length >= 7, `offshore#${seed}: bez lądu, ${H.keyRoute.length} punktów kontrolnych, ${H.route.length} waypointów`);
+  check(['cardN', 'cardE', 'cardS', 'cardW'].some((t) => types.has(t)) && types.has('lateralPort') && types.has('lateralStbd') && (types.has('prefStbd') || types.has('prefPort')) && types.has('safe'), `offshore#${seed}: znaki kardynalne, boczne, rozgałęzienia i wody bezpiecznej (${[...types].join(',')})`);
+  // linia z samym BRG prowadzi przez niebezpieczeństwa – trzeba je omijać według znaków
+  const K = H.keyRoute;
+  let hits = 0;
+  for (const s of H.shoals.filter((q) => q.name === 'Mielizna' || q.name === 'Skała')) {
+    let dmin = Infinity;
+    for (let i = 0; i < K.length - 1; i++) {
+      const a = K[i], b = K[i + 1], n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 8);
+      for (let k = 0; k <= n; k++) dmin = Math.min(dmin, distToPoly(s.poly, a.x + ((b.x - a.x) * k) / n, a.z + ((b.z - a.z) * k) / n).dist);
+    }
+    if (dmin < 0) hits++;
+  }
+  check(hits >= 2, `offshore#${seed}: prosta między punktami kontrolnymi przecina ${hits} mielizn/skał`);
+  const f = H.forks[0], pref = H.marks.find((m) => m.type.startsWith('pref'));
+  const want = (pref.type === 'prefStbd') === (f.take === 'main') ? 'port' : 'starboard';
+  check(pref.rule === want && H.marks.some((m) => m.off) && !H.marks.some((m) => m.off && m.channel === f.take), `offshore#${seed}: znak rozgałęzienia (${pref.type}, tor ${f.take}) mija się ${pref.rule}, znaki drugiego toru oznaczone`);
+}
+{
+  // w trybie z samym BRG: płynąc trasą wzorcową dochodzimy do mety po punktach kontrolnych
+  const spec = BOATS.C34;
+  const w = new PassageWorld({ spec, equip: defaultEquipment(spec), passageId: 'offshore', seed: 3, weather: { windKn: 6, windFrom: 270, gust: 0, currentKn: 0 }, random: rng(3), blind: true });
+  w.boat.throttle = 0.6;
+  const R = w.route;
+  let i = 1, t = 0, instr = 0;
+  w.setAutopilot(true, w.H.start.compass);
+  while (!w.result && t < 3600) {
+    if (Math.hypot(R[i].x - w.boat.x, R[i].z - w.boat.z) < 50 && i < R.length - 1) i++;
+    if (Math.floor(t * 10) % 20 === 0) w.setAutopilot(true, bearing(R[i].x - w.boat.x, R[i].z - w.boat.z));
+    if (w.instruction) instr++;
+    w.step(1 / 60); t += 1 / 60;
+  }
+  check(!!w.result && w.pstats.groundings === 0 && w.pstats.wrongChannel === 0 && w.pstats.wrongSide === 0, `offshore blind: rejs po punktach kontrolnych ukończony (${(t / 60).toFixed(0)} min, punkty ${w.pstats.wpReached}, wynik ${w.result && w.result.score})`);
+  check(instr > 0 && w.marks.filter((m) => m.seen).length === w.marks.length, 'offshore blind: polecenia toru wyświetlone, wszystkie znaki zobaczone po drodze');
+  // niewłaściwy tor za rozwidleniem
+  const w2 = new PassageWorld({ spec, equip: defaultEquipment(spec), passageId: 'offshore', seed: 3, weather: { windKn: 0, windFrom: 0, gust: 0 }, random: rng(3) });
+  const off = w2.marks.find((m) => m.off);
+  w2.boat.reset(off.x + 20, off.z + 20, 0);
+  w2.step(0.2); w2.step(0.2);
+  check(w2.pstats.wrongChannel === 1, `wpłynięcie w niewłaściwy tor jest wykryte (${w2.pstats.wrongChannel})`);
 }
 
 // 3) błędy żeglarskie są wykrywane

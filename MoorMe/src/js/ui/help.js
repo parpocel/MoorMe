@@ -47,6 +47,8 @@ export const PASSAGE_TEXT = [
   ['Woda bezpieczna', 'Czerwono-biała kula z czerwoną kulką oznacza otwartą, bezpieczną wodę (np. początek toru). Możesz minąć ją z dowolnej strony.'],
   ['Odosobnione niebezpieczeństwo', 'Czarna pława z czerwonym pasem i dwiema czarnymi kulami stoi na skale lub mieliźnie. Omijaj ją szerokim łukiem (strefa ok. 75 m).'],
   ['Wrak i znaki szczególne', 'Niebiesko-żółta pława z krzyżem oznacza nowy wrak – trzymaj się z dala (ok. 120 m). Żółty znak z X wyznacza strefę specjalną (kabel, regaty) – nie wpływaj w nią.'],
+  ['Rozwidlenie toru', 'Tam, gdzie tor się rozwidla, stoi znak rozgałęzienia: czerwony z zielonym pasem (beczka, Fl(2+1) R) – tor główny prowadzi w prawo, zielony z czerwonym pasem (stożek, Fl(2+1) G) – tor główny w lewo (w regionie B kolory odwrócone). Płynąc torem głównym mijasz go jak zwykły znak boczny jego koloru, torem bocznym – odwrotnie.'],
+  ['Otwarte morze', 'Bez lądu na horyzoncie pławy wyłaniają się z odległości ok. 1,3 km i dopiero wtedy pojawiają się na mapie. W trybie z samym BRG prosta do kolejnego punktu kontrolnego prowadzi przez niebezpieczeństwa – omijasz je według znaków. Polecenia (np. którym torem płynąć za rozwidleniem) pojawiają się nad panelem nawigacyjnym.'],
   ['Mielizny i brzeg', 'Jasne plamy na wodzie i na mapie to mielizny. Wejście na mieliznę lub na ląd oraz zderzenie ze znakiem to poważne błędy. Głębokość pod stępką widzisz w panelu nawigacyjnym – czerwony ostrzega przed płyciznami.'],
   ['Ocena', 'Za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń, mieliznę i zderzenia odejmowane są punkty. Rejs można przyspieszyć przyciskami 2×, 4×, 8×.']
 ];

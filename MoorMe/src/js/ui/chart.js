@@ -3,6 +3,7 @@ import { DEG } from '../math.js';
 import { lateralColors } from '../data/passage.js';
 import { t } from '../i18n.js';
 
+const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const STATE_COLOR = { ok: '#2faa5c', wrong: '#e03a3a', violated: '#e03a3a', missed: '#e0a13a' };
 
 // Rysuje symbol znaku nawigacyjnego (środek w 0,0, promień r)
@@ -23,6 +24,21 @@ export function drawMarkSymbol(ctx, type, r) {
     case 'lateralStbd':
       ctx.fillStyle = '#' + lateralColors().stbd.toString(16).padStart(6, '0'); ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
       break;
+    case 'prefStbd': { // beczka koloru lewego z pasem koloru prawego
+      const c = lateralColors();
+      ctx.fillStyle = hex(c.port); ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
+      ctx.fillStyle = hex(c.stbd); ctx.fillRect(-r * 0.8, -r * 0.27, r * 1.6, r * 0.54);
+      ctx.strokeRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
+      break;
+    }
+    case 'prefPort': { // stożek koloru prawego z pasem koloru lewego
+      const c = lateralColors();
+      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath();
+      ctx.fillStyle = hex(c.stbd); ctx.fill();
+      ctx.save(); ctx.clip(); ctx.fillStyle = hex(c.port); ctx.fillRect(-r, -r * 0.1, r * 2, r * 0.45); ctx.restore();
+      ctx.stroke();
+      break;
+    }
     case 'cardN': stripes([B, Y]); break;
     case 'cardS': stripes([Y, B]); break;
     case 'cardE': stripes([B, Y, B]); break;
@@ -77,7 +93,10 @@ export function drawChart(ctx, W, Hh, opts) {
     for (const q of lands) { if (q.kind === 'land') { path(q.poly); ctx.stroke(); } }
   }
   // mielizny
+  // na otwartym morzu mapa pokazuje tylko mielizny i znaki, które już widać z pokładu
+  const seenMark = (m) => !P.offshore || m.seen;
   for (const sh of (w.blind ? [] : P.shoals)) {
+    if (P.offshore && !(w.seenShoals && w.seenShoals.has(sh))) continue;
     path(sh.poly);
     ctx.fillStyle = N ? 'rgba(40,96,120,0.95)' : 'rgba(84,170,196,0.95)'; ctx.fill();
     ctx.setLineDash([4, 3]); ctx.strokeStyle = '#2b6f86'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
@@ -93,6 +112,7 @@ export function drawChart(ctx, W, Hh, opts) {
   }
   // wraki
   for (const wr of (w.blind ? [] : P.wrecks)) {
+    if (P.offshore && !w.marks.some((m) => m.type === 'wreck' && m.seen && Math.hypot(m.x - wr.x, m.z - wr.z) < 60)) continue;
     const x = X(wr.x, wr.z), y = Y(wr.x, wr.z);
     ctx.strokeStyle = '#17506a'; ctx.lineWidth = 1.6;
     ctx.beginPath(); ctx.moveTo(x - 6, y - 4); ctx.lineTo(x + 6, y + 4); ctx.moveTo(x + 6, y - 4); ctx.lineTo(x - 6, y + 4); ctx.stroke();
@@ -120,7 +140,7 @@ export function drawChart(ctx, W, Hh, opts) {
 
   // strefy zagrożeń
   for (const m of w.marks) {
-    if (m.rule !== 'avoid') continue;
+    if (m.rule !== 'avoid' || !seenMark(m)) continue;
     ctx.setLineDash([5, 4]);
     ctx.strokeStyle = m.state === 'violated' ? '#e03a3a' : 'rgba(200,50,50,0.7)'; ctx.lineWidth = 1.3;
     ctx.beginPath(); ctx.arc(X(m.x, m.z), Y(m.x, m.z), m.radius * s, 0, Math.PI * 2); ctx.stroke();
@@ -131,13 +151,13 @@ export function drawChart(ctx, W, Hh, opts) {
   ctx.font = '10px Segoe UI'; ctx.textAlign = 'left';
   for (const m of w.marks) {
     const x = X(m.x, m.z), y = Y(m.x, m.z);
-    if (x < -20 || y < -20 || x > W + 20 || y > Hh + 20) continue;
+    if (x < -20 || y < -20 || x > W + 20 || y > Hh + 20 || !seenMark(m)) continue;
     ctx.save();
     ctx.translate(x, y);
     drawMarkSymbol(ctx, m.type, rs);
     if (STATE_COLOR[m.state]) { ctx.strokeStyle = STATE_COLOR[m.state]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, rs + 4, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
-    if (opts.labels && s > 0.03) {
+    if (opts.labels && s > 0.03 && !/^lateral/.test(m.type)) { // znaki boczne są czytelne z samego symbolu
       ctx.fillStyle = N ? '#a9c3d8' : '#243447';
       ctx.fillText(t(m.label), x + rs + 4, y + 3);
     }

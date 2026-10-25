@@ -164,7 +164,9 @@ const PATTERNS = {
   ISO: (t) => flashes(t, [[0, 2]], 4),
   FL2: (t) => flashes(t, [[0, 0.4], [1.2, 1.6]], 5),
   FLY: (t) => flashes(t, [[0, 0.5]], 5),
-  WRECK: (t) => flashes(t, [[0, 1], [1.5, 2.5]], 3)
+  WRECK: (t) => flashes(t, [[0, 1], [1.5, 2.5]], 3),
+  FL21R: (t) => flashes(t, [[0, 0.4], [1, 1.4], [3, 3.4]], 10), // Fl(2+1) 10 s – znak rozgałęzienia toru
+  FL21G: (t) => flashes(t, [[0, 0.4], [1, 1.4], [3, 3.4]], 10)
 };
 
 // ---------- Znaki nawigacyjne ----------
@@ -208,6 +210,30 @@ export function buildMarkMesh(type) {
       const c = lateralColors().stbd;
       floatBase(c, 0.9);
       g.add(cone(0.95, 2.2, c, 0.45));
+      g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
+      g.add(cone(0.3, 0.6, c, 3.4));
+      lightY = 4.3; lightColor = c === RED ? 0xff1008 : 0x00e81c;
+      break;
+    }
+    case 'prefStbd': { // rozgałęzienie, tor główny w prawo: beczka koloru lewego z szerokim pasem koloru prawego
+      const c = lateralColors().port, band = lateralColors().stbd;
+      floatBase(c, 0.9);
+      g.add(cyl(0.7, 0.7, 0.55, c, 12, 0.45));
+      g.add(cyl(0.72, 0.72, 0.5, band, 12, 1.0));
+      g.add(cyl(0.7, 0.7, 0.55, c, 12, 1.5));
+      g.add(cyl(0.06, 0.06, 1.3, BLACK, 5, 2.0));
+      g.add(cyl(0.28, 0.28, 0.55, c, 10, 3.2));
+      lightY = 4.0; lightColor = c === RED ? 0xff1008 : 0x00e81c;
+      break;
+    }
+    case 'prefPort': { // rozgałęzienie, tor główny w lewo: stożek koloru prawego z szerokim pasem koloru lewego
+      const c = lateralColors().stbd, band = lateralColors().port;
+      floatBase(c, 0.9);
+      for (const [rb, rt, y, col] of [[0.95, 0.62, 0.45, c], [0.62, 0.3, 1.18, band], [0.3, 0.02, 1.91, c]]) {
+        const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, 0.73, 10), M(col));
+        m.position.y = y + 0.365; m.castShadow = true;
+        g.add(m);
+      }
       g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
       g.add(cone(0.3, 0.6, c, 3.4));
       lightY = 4.3; lightColor = c === RED ? 0xff1008 : 0x00e81c;
@@ -456,7 +482,7 @@ export function buildSea(H, scene) {
     mesh.userData.mark = m;
     mesh.userData.phase = r() * 6;
     dyn.add(mesh);
-    marks.push({ def: m, mesh, pattern: PATTERNS[m.type.startsWith('lateralPort') ? MARK_TYPES.lateralPort.flash : m.type.startsWith('lateralStbd') ? MARK_TYPES.lateralStbd.flash : m.flash] || PATTERNS.VQ });
+    marks.push({ def: m, mesh, pattern: PATTERNS[MARK_TYPES[m.type] ? MARK_TYPES[m.type].flash : m.flash] || PATTERNS.VQ });
   }
   // światła główek portu (lewa czerwona, prawa zielona przy wejściu od południa)
   const heads = [];
@@ -516,9 +542,10 @@ export function buildSea(H, scene) {
         mesh.rotation.x = Math.sin(t * 0.9 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         mesh.rotation.z = Math.cos(t * 0.7 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         const sp = mesh.userData.light;
-        // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~260 m, pełny kształt dopiero z bliska (~80 m)
+        // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~260 m, pełny kształt dopiero z bliska (~80 m);
+        // na otwartym morzu także w dzień znak wyłania się zza fal dopiero z ok. 1,3 km – kolejne pławy pojawiają się przed dziobem
         const dn = cam.distanceTo(mesh.position);
-        const vis = lightsOn > 0.3 ? clamp((260 - dn) / 180, 0, 1) : 1;
+        const vis = lightsOn > 0.3 ? clamp((260 - dn) / 180, 0, 1) : H.offshore ? clamp((1300 - dn) / 260, 0, 1) : 1;
         if (mesh.userData.vis !== vis) {
           mesh.userData.vis = vis;
           const glowK = lightsOn * 0.28 * (0.4 + 0.6 * vis);
@@ -526,7 +553,7 @@ export function buildSea(H, scene) {
             if (!o.isMesh || !o.material) return;
             o.visible = vis > 0.02;
             // nocą materiał jest stale przezroczysty (bez przełączania przy pełnej widoczności – inaczej znak „wyskakuje”)
-            o.material.transparent = lightsOn > 0.3;
+            o.material.transparent = lightsOn > 0.3 || vis < 1;
             o.material.opacity = vis;
             o.material.depthWrite = true;
             if (o.material.emissive) {
