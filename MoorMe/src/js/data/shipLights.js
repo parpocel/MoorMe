@@ -316,7 +316,8 @@ export const PASS_SIDES = { ahead: 'Przejdzie przed naszym dziobem', astern: 'Pr
 
 // „Talia” typów: każdy typ pojawia się raz w losowej kolejności, potem talia jest tasowana od nowa
 // zakres przepisów: 'sea' – tylko morskie (MPZZM/COLREG), 'all' – także śródlądowe (CEVNI)
-export const typesFor = (day, scope = 'all') => (day ? DAY_VESSELS : VESSELS).filter((v) => scope === 'all' || !v.inland);
+// scope: 'sea' – tylko przepisy morskie, 'inland' – tylko śródlądowe (CEVNI), 'all' – oba naraz
+export const typesFor = (day, scope = 'all') => (day ? DAY_VESSELS : VESSELS).filter((v) => scope === 'all' || (scope === 'inland' ? !!v.inland : !v.inland));
 export function makeDeck(r, day = false, scope = 'all') {
   let deck = [], last = null;
   return () => {

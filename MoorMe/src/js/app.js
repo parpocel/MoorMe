@@ -420,7 +420,7 @@ function showLightsSetup() {
   menuMusic.start();
   // zakres przepisów – wybór w karcie nad przyciskiem Start
   const scope = h('div.m3-seg', {}, h('span.m3-lbl', {}, 'Przepisy'),
-    seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'all', label: '🌊 + 🏞 Morze i drogi śródlądowe (CEVNI)' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
+    seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'inland', label: '🏞 Drogi śródlądowe (CEVNI)' }, { value: 'all', label: '🌊 + 🏞 Oba naraz' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
   menuScreen({
     kicker: 'Sygnalizacja świetlna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
     items: [

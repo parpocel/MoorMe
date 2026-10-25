@@ -1,4 +1,4 @@
-import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, lightSignature, typeSignatures, clearSideSeen } from '../src/js/data/shipLights.js';
+import { VESSELS, VESSEL_BY_ID, DAY_VESSELS, ASPECTS, GEAR_SIDES, PASS_SIDES, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, lightSignature, typeSignatures, clearSideSeen, typesFor } from '../src/js/data/shipLights.js';
 import { setLang, t } from '../src/js/i18n.js';
 import { rng } from '../src/js/math.js';
 
@@ -126,6 +126,16 @@ const missing = strs.filter((s) => t(s) === s || PL.test(t(s)));
 check(missing.length === 0, `nazwy i opisy świateł mają tłumaczenie (${strs.length})${missing.length ? ': ' + missing.slice(0, 3).join(' | ') : ''}`);
 check(t('Błąd – to: Statek pilotowy na służbie') === 'Wrong – it was: Pilot vessel on duty', 'komunikat o błędzie tłumaczy nazwę statku');
 setLang('pl');
+
+// zakres przepisów: tylko morze, tylko drogi śródlądowe, oba naraz
+for (const day of [false, true]) {
+  const sea = typesFor(day, 'sea'), inl = typesFor(day, 'inland'), all = typesFor(day, 'all');
+  check(sea.every((v) => !v.inland) && inl.length >= 6 && inl.every((v) => v.inland) && sea.length + inl.length === all.length, `${day ? 'dzień' : 'noc'}: morze ${sea.length}, śródlądowe ${inl.length}, razem ${all.length}`);
+  const d = makeDeck(rng(4), day, 'inland'), ids = Array.from({ length: inl.length }, () => d());
+  check(ids.every((id) => inl.some((v) => v.id === id)), `${day ? 'dzień' : 'noc'}: talia „śródlądowe” losuje tylko statki śródlądowe`);
+  const o = answerOptions(rng(5), inl[0].id, 6, null, 'inland');
+  check(o.includes(inl[0].id) && o.every((id) => inl.some((v) => v.id === id)), `${day ? 'dzień' : 'noc'}: odpowiedzi tylko spośród śródlądowych (${o.length})`);
+}
 
 if (fails) process.exit(1);
 console.log('Wszystko OK');

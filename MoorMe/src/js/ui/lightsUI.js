@@ -337,7 +337,7 @@ export class LightsScreen extends PassageScreen {
     this.chart = { range: 1800, headUp: false, labels: false };
     this.rand = rng(config.seed || 1 + Math.floor(Math.random() * 1e9));
     this.day = !!config.day;
-    this.scope = config.scope || 'all'; // 'sea' – tylko przepisy morskie, 'all' – także śródlądowe
+    this.scope = config.scope || 'all'; // 'sea' – tylko przepisy morskie, 'inland' – tylko śródlądowe, 'all' – oba
     this.nextType = makeDeck(this.rand, this.day, this.scope); // każdy typ raz na „talię” – bez ciągłego statku na kotwicy
     this.q = { phase: 'wait', timer: 2, vessel: null, pick: null, aspectPick: null, gearPick: null, stats: { n: 0, ok: 0, an: 0, aok: 0, streak: 0, best: 0 } };
   }
