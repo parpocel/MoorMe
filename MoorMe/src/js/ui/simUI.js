@@ -127,7 +127,7 @@ export class SimScreen {
     // nad rzutem: karta lin wybranej knagi; pod spodem rzut jachtu z góry z okienkami na knagach
     this.linesList = h('div', { id: 'lines-list' });
     this.plan = h('div.deck-plan');
-    lines.append(this.linesList, this.plan);
+    lines.append(h('div.lines-body', {}, this.plan, this.linesList));
     this.buildPlan();
     sim.appendChild(lines);
 
@@ -135,6 +135,8 @@ export class SimScreen {
     sim.appendChild(this.pickBanner);
     this.tooltip = h('div.tooltip', { style: { display: 'none' } });
     sim.appendChild(this.tooltip);
+    this.planTip = h('div.tooltip.plan-tip', { style: { display: 'none' } });
+    sim.appendChild(this.planTip);
     this.pausedEl = h('div.paused-banner', { style: { display: 'none' } }, 'PAUZA');
     sim.appendChild(this.pausedEl);
     this.sim = sim;
@@ -364,7 +366,14 @@ export class SimScreen {
       card.appendChild(acts);
       this.linesList.appendChild(card);
     });
-    if (!oc) this.linesList.appendChild(h('div.small.muted', { style: { padding: '2px 4px 6px' } }, w.lines.length ? 'Kliknij okienko knagi na rzucie, aby pracować na cumie.' : 'Brak aktywnych lin. Kliknij okienko knagi na rzucie albo knagę na jachcie w widoku 3D, a potem poler.'));
+    if (!oc) {
+      this.linesList.appendChild(h('div.small.muted', { style: { padding: '2px 4px 6px' } }, w.lines.length ? 'Pracuj na cumach na rzucie: przeciągnij koniec liny do jachtu – wybieraj, od jachtu – luzuj. Najedź na linę – opis, kliknij linę albo okienko knagi – wszystkie opcje.' : 'Brak aktywnych lin. Kliknij okienko knagi na rzucie albo knagę na jachcie w widoku 3D, a potem poler.'));
+      // skrót: wszystkie liny jednym rzutem oka (klik otwiera knagę)
+      w.lines.forEach((line, idx) => {
+        const st = h('span.small.muted', {}, LINE_STATE_LABEL[line.state] || line.state);
+        this.linesList.appendChild(h('div.line-row', { onclick: () => this.selectLine(line) }, h('b', {}, `${idx + 1}`), h('span', {}, line.name), st));
+      });
+    }
     this.updateLineBars();
   }
 
@@ -391,32 +400,35 @@ export class SimScreen {
   buildPlan() {
     const w = this.world, spec = w.spec;
     const { xs, xb } = hullExtents(spec);
-    const W = 440, s = (W - 70) / spec.loa, H = Math.round(spec.beam * s + 64);
-    const P = this.planGeo = { W, H, s, toPx: (x, y) => [W / 2 + (x - (xs + xb) / 2) * s, H / 2 + y * s] };
+    // jacht pionowo, dziób do góry (lewa burta po lewej) – sam obrys kadłuba
+    const H = 380, s = (H - 70) / spec.loa, W = Math.round(spec.beam * s + 150);
+    const P = this.planGeo = { W, H, s, toPx: (x, y) => [W / 2 + y * s, H / 2 - (x - (xs + xb) / 2) * s] };
     const NS = 'http://www.w3.org/2000/svg';
     const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'plan-svg' });
     const pts = hullOutline(spec, 30).map(([x, y]) => P.toPx(x, y).map((v) => v.toFixed(1)).join(',')).join(' ');
     el('polygon', { points: pts, class: 'plan-hull' }, svg);
-    // kokpit, nadbudówka, maszt – tylko dla orientacji
-    const L = spec.loa;
-    const [c0x] = P.toPx(xs + 0.03 * L, 0), [c1x] = P.toPx(xs + 0.3 * L, 0);
-    el('rect', { x: c0x, y: H / 2 - spec.beam * 0.3 * s, width: c1x - c0x, height: spec.beam * 0.6 * s, rx: 6, class: 'plan-cockpit' }, svg);
-    const [k0x] = P.toPx(xs + 0.3 * L, 0), [k1x] = P.toPx(xb - 0.3 * L, 0);
-    el('rect', { x: k0x, y: H / 2 - spec.beam * 0.24 * s, width: k1x - k0x, height: spec.beam * 0.48 * s, rx: 10, class: 'plan-cabin' }, svg);
-    const [mx, my] = P.toPx(0.1 * L, 0);
-    el('circle', { cx: mx, cy: my, r: 3.5, class: 'plan-mast' }, svg);
     for (const f of w.fairleads()) { const [fx, fy] = P.toPx(f.x, f.y); el('circle', { cx: fx, cy: fy, r: 2.6, class: 'plan-fl' }, svg); }
     const lbl = (x, y, txt, anchor) => { const tx = el('text', { x, y, class: 'plan-lbl', 'text-anchor': anchor }, svg); tx.textContent = t(txt); };
-    lbl(W / 2, 13, 'LEWA BURTA', 'middle'); lbl(W / 2, H - 4, 'PRAWA BURTA', 'middle'); lbl(W - 4, H / 2 - spec.beam * 0.5 * s - 6, 'DZIÓB →', 'end');
+    lbl(W / 2, 12, 'DZIÓB', 'middle'); lbl(6, H / 2, 'L', 'start'); lbl(W - 6, H / 2, 'P', 'end');
     this.planLinesG = el('g', {}, svg);
+    this.planLineEls = new Map();
     this.plan.innerHTML = '';
     this.plan.style.aspectRatio = `${W} / ${H}`;
     this.plan.appendChild(svg);
     this.planSvgEl = el;
     this.cleatDots = new Map();
-    for (const c of w.cleats()) {
-      const [px, py] = P.toPx(c.x, c.y);
+    // pozycje okienek: na knagach, ale rozsunięte, gdy dwie knagi leżą zbyt blisko siebie (np. na dziobie)
+    const cl = w.cleats(), pos = cl.map((c) => P.toPx(c.x, c.y));
+    for (let it = 0; it < 6; it++) for (let i = 0; i < pos.length; i++) for (let j = i + 1; j < pos.length; j++) {
+      const dx = pos[j][0] - pos[i][0], dy = pos[j][1] - pos[i][1], d = Math.hypot(dx, dy), min = 30;
+      if (d >= min) continue;
+      const ux = d > 0.1 ? dx / d : 1, uy = d > 0.1 ? dy / d : 0, push = (min - d) / 2;
+      pos[i][0] -= ux * push; pos[i][1] -= uy * push; pos[j][0] += ux * push; pos[j][1] += uy * push;
+    }
+    this.dotPos = new Map(cl.map((c, i) => [c.id, pos[i]]));
+    for (const [i, c] of cl.entries()) {
+      const [px, py] = pos[i];
       const dot = h('button.cleat-dot', { style: { left: `${(px / W) * 100}%`, top: `${(py / H) * 100}%` }, title: t(c.label), onclick: (e) => { e.stopPropagation(); this.openCleat(c); } });
       this.cleatDots.set(c.id, dot);
       this.plan.appendChild(dot);
@@ -434,7 +446,7 @@ export class SimScreen {
   // nowa lina z knagi wskazanej na rzucie (dalej: kluza/półkluza i poler w widoku 3D)
   rigFromCleat(c) {
     if (this.pickLine) this.cancelPick();
-    this.rig = { stage: 'route', mode: this.rigMode || 'slip', cleat: c, fairlead: undefined };
+    this.rig = { stage: 'route', mode: 'slip', cleat: c, fairlead: undefined };
     this.updateRig();
   }
 
@@ -457,24 +469,109 @@ export class SimScreen {
       if (dot.className !== full) dot.className = full;
       dot.style.borderColor = col;
     }
-    // linie od kluzy w stronę celu (przycięte do krawędzi rzutu)
+    // linie od kluzy w stronę celu (przycięte do krawędzi rzutu) – interaktywne: klik otwiera kartę,
+    // przeciągnięcie końca do jachtu wybiera, od jachtu luzuje (dopóki trzymasz)
     const g = this.planLinesG;
-    while (g.firstChild) g.removeChild(g.firstChild);
+    this.planLineEls = this.planLineEls || new Map();
+    const seen = new Set();
     for (const line of w.lines) {
       const tgt = line.state === 'attached' || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.state === 'pending' ? line.pendingTarget : null;
       const tp = tgt && (line.isMooring ? tgt.anchor : tgt);
       if (!tp) continue;
+      seen.add(line.id);
+      let e = this.planLineEls.get(line.id);
+      if (!e) e = this.makePlanLine(line);
       const lead = w.leadLocal(line), loc = worldToLocal(b.x, b.z, b.th, tp.x, tp.z);
       const [ax, ay] = P.toPx(lead.x, lead.y);
       let [tx, ty] = P.toPx(loc.x, loc.y);
       const dx = tx - ax, dy = ty - ay, len = Math.hypot(dx, dy) || 1;
-      const maxLen = Math.min(len, 110);
+      const maxLen = Math.min(len, 64);
       tx = clamp(ax + dx / len * maxLen, 4, P.W - 4); ty = clamp(ay + dy / len * maxLen, 4, P.H - 4);
+      e.dir = { x: dx / len, y: dy / len };
       const attached = line.state === 'attached';
       const col = attached ? hex(line.tension / bl) : '#ffd166';
-      this.planSvgEl('line', { x1: ax, y1: ay, x2: tx, y2: ty, stroke: col, 'stroke-width': line === this.selectedLine ? 3 : 2, 'stroke-dasharray': attached ? '' : '4 3', 'stroke-linecap': 'round' }, g);
-      if (len <= 110 && attached) this.planSvgEl('circle', { cx: tx, cy: ty, r: 3.5, fill: col }, g);
+      const sel = line === this.selectedLine, act = e.drag && e.drag.mode;
+      for (const el of [e.vis, e.hit]) { el.setAttribute('x1', ax); el.setAttribute('y1', ay); el.setAttribute('x2', tx); el.setAttribute('y2', ty); }
+      e.vis.setAttribute('stroke', col);
+      e.vis.setAttribute('stroke-width', sel || act ? 3.5 : 2);
+      e.vis.setAttribute('stroke-dasharray', attached ? '' : '4 3');
+      e.end.setAttribute('cx', tx); e.end.setAttribute('cy', ty); e.end.setAttribute('fill', col);
+      e.end.setAttribute('r', attached ? (sel || act ? 6 : 4.5) : 3);
+      e.g.setAttribute('class', `plan-line${attached ? ' live' : ''}`);
     }
+    for (const [id, e] of this.planLineEls) if (!seen.has(id)) { e.g.remove(); this.planLineEls.delete(id); }
+    if (this.hoverLine && !seen.has(this.hoverLine.id)) this.hoverLine = null;
+    this.updatePlanTip();
+  }
+
+  // dymek z opisem liny pod kursorem (rzut jachtu)
+  updatePlanTip() {
+    const tip = this.planTip, line = this.hoverLine, w = this.world;
+    if (!tip) return;
+    if (!line || !this.tipPos) { tip.style.display = 'none'; return; }
+    const cleat = w.deckItem(line.cleatId), fl = line.fairleadId ? w.deckItem(line.fairleadId) : null;
+    const attached = line.state === 'attached';
+    const tgt = attached || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.pendingTarget;
+    const mode = line.isMooring ? t('muring') : line.mode === 'slip' ? t('na biegowo') : t('na stałe');
+    const rows = [
+      `<b>${w.lines.indexOf(line) + 1}. ${t(line.name)}</b>`,
+      `${t(LINE_STATE_LABEL[line.state] || line.state)}${attached ? ' · ' + t(TENDING_LABEL[line.tending]) : ''} · ${mode} · ${line.length} m${line.winch ? ' · ' + t('kabestan') : ''}`,
+      line.isMooring ? '' : `${cleat ? t(cleat.label) : '?'}${fl ? ' → ' + t(fl.label) : ''} → ${tgt && tgt.label ? t(tgt.label) : '?'}`,
+      attached ? `${t('Naciąg')}: <b>${(line.tension / 1000).toFixed(2)} kN</b> · ${line.slack > 0.05 ? t('luz') + ' ' + line.slack.toFixed(1) + ' m' : t('napięta')}` : '',
+      `<span class="muted">${attached ? t('Przeciągnij do jachtu – wybieraj, od jachtu – luzuj. Kliknij – więcej opcji.') : t('Kliknij – więcej opcji.')}</span>`
+    ].filter(Boolean);
+    const html = rows.join('<br>');
+    if (tip._html !== html) { tip.innerHTML = html; tip._html = html; }
+    tip.style.display = 'block';
+    tip.style.left = `${this.tipPos.x + 16}px`;
+    tip.style.top = `${this.tipPos.y - 14}px`;
+    tip.style.transform = 'translateY(-100%)'; // nad kursorem – panel lin leży przy dolnej krawędzi
+  }
+
+  makePlanLine(line) {
+    const el = this.planSvgEl, g = el('g', {}, this.planLinesG);
+    const e = { g, line };
+    e.vis = el('line', { 'stroke-linecap': 'round', class: 'pl-vis' }, g);
+    e.hit = el('line', { stroke: 'transparent', 'stroke-width': 14, 'stroke-linecap': 'round', class: 'pl-hit' }, g);
+    e.end = el('circle', { class: 'pl-end' }, g);
+
+    const w = this.world;
+    const down = (ev) => {
+      ev.stopPropagation(); ev.preventDefault();
+      this.sound.init();
+      (ev.currentTarget).setPointerCapture(ev.pointerId);
+      e.drag = { x: ev.clientX, y: ev.clientY, mode: null, target: ev.currentTarget };
+    };
+    const move = (ev) => {
+      const d = e.drag;
+      if (!d || line.state !== 'attached') return;
+      // rzut przesunięcia na kierunek liny: + od jachtu (luzuj), − do jachtu (wybieraj)
+      const along = (ev.clientX - d.x) * e.dir.x + (ev.clientY - d.y) * e.dir.y;
+      const mode = along < -6 ? 'haul' : along > 6 ? 'ease' : d.mode;
+      if (mode && mode !== d.mode) { d.mode = mode; w.setTending(line, mode); this.renderLines(true); }
+      this.tipPos = { x: ev.clientX, y: ev.clientY };
+    };
+    const up = () => {
+      const d = e.drag;
+      e.drag = null;
+      if (!d) return;
+      this.hoverLine = null;
+      if (d.mode) { if (line.tending === d.mode) w.setTending(line, 'hold'); this.renderLines(true); }
+      else { this.selectedLine = null; this.selectLine(line); }
+    };
+    const hover = (ev) => { this.hoverLine = line; this.tipPos = { x: ev.clientX, y: ev.clientY }; this.updatePlanTip(); };
+    const leave = () => { if (!e.drag && this.hoverLine === line) { this.hoverLine = null; this.updatePlanTip(); } };
+    for (const t0 of [e.hit, e.end]) {
+      t0.addEventListener('pointerenter', hover);
+      t0.addEventListener('pointermove', hover);
+      t0.addEventListener('pointerleave', leave);
+      t0.addEventListener('pointerdown', down);
+      t0.addEventListener('pointermove', move);
+      t0.addEventListener('pointerup', up);
+      t0.addEventListener('pointercancel', up);
+    }
+    this.planLineEls.set(line.id, e);
+    return e;
   }
 
   attachOrPick(line) {
@@ -519,7 +616,7 @@ export class SimScreen {
   // ---------- Wskazywanie liny myszą: knaga -> (kluza/półkluza) -> poler ----------
   startRig() {
     if (this.pickLine) this.cancelPick();
-    this.rig = { stage: 'cleat', mode: this.rigMode || 'slip' };
+    this.rig = { stage: 'cleat', mode: 'slip' };
     this.updateRig();
   }
 
@@ -539,9 +636,6 @@ export class SimScreen {
     this.pickBanner.appendChild(head);
     if (r.stage === 'cleat') {
       this.pickBanner.appendChild(h('div.small.muted', { style: { marginTop: '4px' } }, 'Kliknij podświetloną knagę (żółte pierścienie na pokładzie).'));
-      const m0 = h('div.seg', { style: { margin: '6px 0 2px' } });
-      for (const [v, l] of [['fixed', 'Na stałe (oko)'], ['slip', 'Na biegowo']]) m0.appendChild(h('button', { class: r.mode === v ? 'on' : '', onclick: () => { r.mode = v; this.rigMode = v; this.updateRig(); } }, l));
-      this.pickBanner.appendChild(m0);
       this.view.highlightDeck((it) => (it.kind === 'cleat' ? 0xffd166 : null));
       this.view.highlightBollards(null);
       return;
@@ -550,8 +644,8 @@ export class SimScreen {
     this.pickBanner.appendChild(h('div.small', { style: { margin: '4px 0' } },
       'Prowadzenie: ', h('b', {}, fl ? fl.label : 'prosto z knagi'), r.fairlead === undefined && fl ? h('span.muted', {}, ' (auto)') : null));
     this.pickBanner.appendChild(h('div.small.muted', { style: { marginBottom: '6px' } }, 'Opcjonalnie kliknij kluzę / półkluzę (niebieskie), potem poler na kei (zielony = w zasięgu).'));
+    // lina zawsze na biegowo (tryb zmienisz potem na karcie liny) – tu tylko prowadzenie
     const modeSeg = h('div.seg', { style: { marginBottom: '4px' } });
-    for (const [v, l] of [['fixed', 'Na stałe (oko)'], ['slip', 'Na biegowo']]) modeSeg.appendChild(h('button', { class: r.mode === v ? 'on' : '', onclick: () => { r.mode = v; this.rigMode = v; this.updateRig(); } }, l));
     modeSeg.appendChild(h('button', { class: r.fairlead === null ? 'on' : '', onclick: () => { r.fairlead = r.fairlead === null ? undefined : null; this.updateRig(); } }, 'Bez kluzy'));
     this.pickBanner.appendChild(modeSeg);
     this.view.highlightDeck((it) => (it === r.cleat ? 0xffd166 : it.kind !== 'cleat' ? (it === fl ? 0x5ec8ff : 0x2a6f97) : null));
@@ -684,7 +778,7 @@ export class SimScreen {
     if (p.deckItem) {
       const it = p.deckItem;
       if (it.kind === 'cleat') {
-        if (!this.rig) this.rig = { mode: this.rigMode || 'slip' };
+        if (!this.rig) this.rig = { mode: 'slip' };
         this.rig.stage = 'route';
         this.rig.cleat = it;
         this.rig.fairlead = undefined;
@@ -766,7 +860,6 @@ export class SimScreen {
       h('div.field', {}, h('label', {}, 'Knaga na jachcie'), sel(cleats.map((c) => [c.id, c.label]), st.cleatId, (v) => (st.cleatId = v))),
       h('div.field', {}, h('label', {}, 'Prowadzenie przez'), sel([['auto', 'Automatycznie (najbliższa kluza/półkluza)'], ['none', 'Bez kluzy – prosto z knagi'], ...fls.map((f) => [f.id, f.label])], 'auto', (v) => (st.fairleadId = v))),
       h('div.field', {}, h('label', {}, 'Długość'), h('div.row', {}, lenInp, lenOut)),
-      h('div.field', {}, h('label', {}, 'Sposób założenia'), (() => { const s = h('div.seg'); const r = () => { s.innerHTML = ''; for (const [v, l] of [['fixed', 'Na stałe (oko na poler)'], ['slip', 'Na biegowo (wraca na jacht)']]) s.appendChild(h('button', { class: st.mode === v ? 'on' : '', onclick: () => { st.mode = v; r(); } }, l)); }; r(); return s; })()),
       h('div.field', {}, h('label', {}, h('input', { type: 'checkbox', onchange: (e) => (st.winch = e.target.checked) }), ' Obsługa na kabestanie (większa siła, wolniej)')),
       h('div.hint', {}, 'Na stałe: oko rzucasz na poler z pokładu (do ~3.4 m) – zdjąć je może tylko załoga na lądzie. Na biegowo: lina okłada poler i wraca na jacht – potrzebny bliższy dostęp (~1.5 m), ale oddasz ją z pokładu.'),
       h('div', { style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' } },

@@ -141,11 +141,11 @@ export class HarbourLife {
     const list = [];
     const up = 0.24; // tułów mewy nad drzewcem / polerem
     const own = this.view.boat.userData;
-    for (const p of own.perches || []) list.push({ weight: 3, own: true, get: (v) => own.heel.localToWorld(v.set(p[0], p[1] + up, p[2])) });
-    for (const n of this.world.H.neighbors) {
+    for (const p of own.perches || []) list.push({ weight: 3, own: true, group: 'own', get: (v) => own.heel.localToWorld(v.set(p[0], p[1] + up, p[2])) });
+    for (const [ni, n] of this.world.H.neighbors.entries()) {
       const m = n._mesh;
       if (!m || !m.userData.perches) continue;
-      for (const p of m.userData.perches) list.push({ weight: 0.35, get: (v) => m.localToWorld(v.set(p[0], p[1] + up, p[2])) });
+      for (const p of m.userData.perches) list.push({ weight: 0.35, group: 'n' + ni, get: (v) => m.localToWorld(v.set(p[0], p[1] + up, p[2])) });
     }
     for (const b of this.world.H.bollards) {
       if (b.kind === 'pile') list.push({ weight: 1, get: (v) => v.set(b.x, b.h + 0.95, b.z) });
@@ -185,7 +185,9 @@ export class HarbourLife {
   }
 
   pickPerch() {
-    const free = this.perches.filter((p) => !this.gulls.some((g) => g.perch === p));
+    // na jednym maszcie (salingi + top) siada najwyżej jedna mewa
+    const taken = new Set(this.gulls.filter((g) => g.perch).map((g) => g.perch.group || g.perch));
+    const free = this.perches.filter((p) => !taken.has(p.group || p));
     const total = free.reduce((s, p) => s + p.weight, 0);
     let x = this.r() * total;
     for (const p of free) { x -= p.weight; if (x <= 0) return p; }

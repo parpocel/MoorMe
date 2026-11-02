@@ -671,7 +671,7 @@ export class View3D {
       const cl = w.deckItem(busyLine.cleatId);
       if (cl) this.deckhandTarget.set(cl.x - Math.sign(cl.x) * 0.5, sheerHeight(spec, cl.x) + 0.02, cl.y * 0.55);
     }
-    this.deckhand.visible = !(w.crew.ashore);
+    this.deckhand.visible = !(w.crew.ashore) && this.cam.mode !== 'fpv';
     this.deckhand.position.lerp(this.deckhandTarget, clamp(dt * 1.5, 0, 1));
     this.shoreCrew.visible = w.crew.ashore;
     if (w.crew.ashore) {
@@ -777,12 +777,12 @@ export class View3D {
       cam.tz += (b.z - cam.tz) * clamp(camDt * 3, 0, 1);
     }
     const fpv = cam.mode === 'fpv';
+    // w widoku kapitana załoga na pokładzie zasłaniałaby widok – chowamy ją (załoga na lądzie zostaje widoczna)
     this.helmsman.visible = !fpv;
-    if (this.world.isPassage) {
-      // w widoku kapitana załoga w kokpicie zasłaniałaby widok – chowamy ją
-      this.mate1.visible = this.mate2.visible = !fpv;
-      this.deckhand.visible = !fpv;
-    }
+    this.mate1.visible = this.mate2.visible = !fpv;
+    if (fpv) this.deckhand.visible = false;
+    else if (!this.world.isPassage) this.deckhand.visible = !this.world.crew.ashore;
+    else this.deckhand.visible = true;
     if (fpv) {
       // oczy kapitana przy kole sterowym; kamera kołysze się razem z jachtem
       const heel = this.boat.userData.heel;
