@@ -183,7 +183,6 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
     class: it.disabled ? 'dis' : '', style: { animationDelay: `${0.05 * i + 0.1}s` },
     onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i)
   },
-  h('span.m3-num', {}, String(i + 1).padStart(2, '0')),
   h('div.m3-gem', {}, raw(gemHTML(it.glyph))),
   h('div.m3-tt', {}, it.title),
   it.tag ? h('div.m3-tg', {}, it.tag) : null));
