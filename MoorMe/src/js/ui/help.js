@@ -12,7 +12,7 @@ export const KEYS = [
 
 export const LINES = [
   ['Zakładanie liny', 'Kliknij knagę na jachcie, opcjonalnie kluzę lub półkluzę, a potem poler (dalbę, pal) na nabrzeżu. Rolę liny (dziobowa, rufowa, szpring, brest) program rozpozna sam z położenia polera. Jeśli poler jest poza zasięgiem, lina czeka w kolejce, a załoga założy ją sama, gdy jacht podejdzie.'],
-  ['Na stałe i na biegowo', 'Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Na biegowo: lina okłada poler i wraca na jacht (potrzebny bliższy dostęp, ok. 1,5 m), oddasz ją z pokładu. Tryb zmienisz przyciskiem „⇄” na karcie liny.'],
+  ['Na stałe i na biegowo', 'Domyślnie liny zakładasz na biegowo: lina okłada poler i wraca na jacht (z pokładu do ok. 1,5 m, dalbę do ok. 3 m), oddasz ją z pokładu. Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Tryb zmienisz przyciskiem „⇄” na karcie liny – przy dalbach i polerach tuż przy burcie załoga przekłada linę z pokładu.'],
   ['Wybieranie i luzowanie', 'Na karcie liny (lewy dolny róg) lub w menu kołowym po kliknięciu liny: Wybieraj (przytrzymaj – wybiera), Wybierz (wybiera samo do napięcia liny), Luzuj (popuszczanie), Luz (lina bez naciągu), Knaguj (zablokuj długość), Oddaj. Kabestan daje większą siłę, ale wybiera wolniej.'],
   ['Kolor liny', 'Zielona – luźna lub lekko napięta, żółta – wyraźnie napięta, czerwona – duży naciąg, blisko zerwania. Ten sam kolor ma pasek naciągu na karcie liny.'],
   ['Muring', 'Przy cumowaniu rufą lub dziobem z muringiem podejmij linkę pilotową z kei („Podejmij muring”), wybierz ją i zaknaguj. Oddany muring tonie – nie włączaj biegu, żeby nie złapać go na śrubę.'],

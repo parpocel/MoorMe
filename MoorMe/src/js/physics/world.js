@@ -248,7 +248,7 @@ export class World {
    * fairleadId: id, null (prosto z knagi) lub undefined (automatycznie).
    * Jeśli poler jest w zasięgu – zakładanie od razu, inaczej lina czeka przygotowana z zaplanowanym celem.
    */
-  rigLine(cleatId, fairleadId, bollard, mode = 'fixed') {
+  rigLine(cleatId, fairleadId, bollard, mode = 'slip') {
     const cleat = this.deckItem(cleatId);
     const role = this.inferRole(cleat, bollard);
     const tmp = { cleatId, fairleadId: fairleadId === undefined ? (this.autoFairlead(cleat)?.id ?? null) : fairleadId, jumped: false };
@@ -400,7 +400,7 @@ export class World {
   lineReach(line, bollard) {
     // zasięg zakładania z pokładu
     if (bollard.kind === 'ring') return 1.3;
-    if (line.mode === 'slip') return 1.5;
+    if (line.mode === 'slip') return bollard.kind === 'pile' ? 3.2 : 1.5; // dalbę okłada się z pokładu (bosakiem), nie z lądu
     return 3.4; // rzut okiem liny (lasso)
   }
 
@@ -744,6 +744,14 @@ export class World {
     if (line.state === 'attached') this.toggleMode(line); // załoga przekłada linę (zejdzie na ląd, jeśli może)
   }
 
+  // Czy załoga sięgnie celu liny z pokładu (dalba, poler tuż przy burcie) – wtedy przekłada linę bez schodzenia na ląd
+  reachFromDeck(line) {
+    const t = line.target;
+    if (!t || line.isMooring) return false;
+    const l = this.leadWorld(line), p = this.targetPoint(line);
+    return Math.hypot(p.x - l.x, p.z - l.z) <= (t.onQuay ? 1.5 : 3.2);
+  }
+
   // Przełożenie liny na biegowo / na stałe (tylko gdy przygotowana)
   toggleMode(line) {
     if (line.isMooring) return;
@@ -752,8 +760,8 @@ export class World {
       line.rest = line.length;
       return;
     }
-    if (line.state === 'attached' && !this.crew.ashore && this.canStepAshore()) this.crewAshore(true);
-    if (line.state === 'attached' && this.crew.ashore) {
+    if (line.state === 'attached' && !this.crew.ashore && !this.reachFromDeck(line) && this.canStepAshore()) this.crewAshore(true);
+    if (line.state === 'attached' && (this.crew.ashore || this.reachFromDeck(line))) {
       // załoga przekłada cumę
       line.mode = line.mode === 'slip' ? 'fixed' : 'slip';
       const lead = this.leadWorld(line), t = this.targetPoint(line);
@@ -765,7 +773,7 @@ export class World {
       }
       this.log(`${line.name}: przełożona ${line.mode === 'slip' ? 'na biegowo' : 'na stałe'}`);
     } else if (line.state === 'attached') {
-      this.log('Przełożenie założonej cumy wymaga załogi na lądzie', 'warn');
+      this.log(line.target && !line.target.onQuay ? `${line.name}: podejdź bliżej, żeby przełożyć linę z pokładu` : 'Przełożenie założonej cumy wymaga załogi na lądzie (albo polera w zasięgu z pokładu)', 'warn');
     }
   }
 

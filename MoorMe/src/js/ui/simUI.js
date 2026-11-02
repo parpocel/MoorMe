@@ -414,7 +414,7 @@ export class SimScreen {
   // ---------- Wskazywanie liny myszą: knaga -> (kluza/półkluza) -> poler ----------
   startRig() {
     if (this.pickLine) this.cancelPick();
-    this.rig = { stage: 'cleat', mode: this.rigMode || 'fixed' };
+    this.rig = { stage: 'cleat', mode: this.rigMode || 'slip' };
     this.updateRig();
   }
 
@@ -579,7 +579,7 @@ export class SimScreen {
     if (p.deckItem) {
       const it = p.deckItem;
       if (it.kind === 'cleat') {
-        if (!this.rig) this.rig = { mode: this.rigMode || 'fixed' };
+        if (!this.rig) this.rig = { mode: this.rigMode || 'slip' };
         this.rig.stage = 'route';
         this.rig.cleat = it;
         this.rig.fairlead = undefined;
@@ -642,7 +642,7 @@ export class SimScreen {
     const w = this.world;
     const cleats = w.cleats();
     const fls = w.fairleads();
-    const st = { role: 'bow', cleatId: cleats[0]?.id, fairleadId: 'auto', length: 25, mode: 'fixed', winch: false };
+    const st = { role: 'bow', cleatId: cleats[0]?.id, fairleadId: 'auto', length: 25, mode: 'slip', winch: false };
     const back = h('div.modal-back');
     const m = h('div.modal.glass');
     const sel = (opts, val, on) => {

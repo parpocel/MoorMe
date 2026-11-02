@@ -129,8 +129,8 @@ export const EN = {
   'Kliknij knagę na jachcie, opcjonalnie kluzę lub półkluzę, a potem poler (dalbę, pal) na nabrzeżu. Rolę liny (dziobowa, rufowa, szpring, brest) program rozpozna sam z położenia polera. Jeśli poler jest poza zasięgiem, lina czeka w kolejce, a załoga założy ją sama, gdy jacht podejdzie.':
     'Click a cleat on the yacht, optionally a fairlead or chock, then a bollard (pile, post) on the quay. The game works out the role of the line (bow, stern, spring, breast) from the bollard position. If the bollard is out of reach, the line waits in the queue and the crew rigs it by itself once the yacht gets close.',
   'Na stałe i na biegowo.': 'Fixed and slip.',
-  'Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Na biegowo: lina okłada poler i wraca na jacht (potrzebny bliższy dostęp, ok. 1,5 m), oddasz ją z pokładu. Tryb zmienisz przyciskiem „⇄” na karcie liny.':
-    'Fixed: you throw the eye over the bollard from the deck (up to about 3.4 m) and only the crew ashore can take it off. Slip: the line goes round the bollard and back to the yacht (you need to be closer, about 1.5 m) and you can release it from the deck. Change the mode with the “⇄” button on the line card.',
+  'Domyślnie liny zakładasz na biegowo: lina okłada poler i wraca na jacht (z pokładu do ok. 1,5 m, dalbę do ok. 3 m), oddasz ją z pokładu. Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Tryb zmienisz przyciskiem „⇄” na karcie liny – przy dalbach i polerach tuż przy burcie załoga przekłada linę z pokładu.':
+    'By default lines are rigged as slip lines: the line goes round the bollard and back to the yacht (from the deck up to about 1.5 m, a pile up to about 3 m) and you can release it from the deck. Fixed: you throw the eye over the bollard from the deck (up to about 3.4 m) and only the crew ashore can take it off. Change the mode with the “⇄” button on the line card – at piles and bollards right by the hull the crew re-rigs the line from the deck.',
   'Wybieranie i luzowanie.': 'Hauling and easing.',
   'Na karcie liny (lewy dolny róg) lub w menu kołowym po kliknięciu liny: Wybieraj (przytrzymaj – wybiera), Wybierz (wybiera samo do napięcia liny), Luzuj (popuszczanie), Luz (lina bez naciągu), Knaguj (zablokuj długość), Oddaj. Kabestan daje większą siłę, ale wybiera wolniej.':
     'On the line card (bottom left) or in the radial menu after clicking the line: Haul (hold to haul), Take up (hauls by itself until the line is taut), Ease (pay out), Slack (line without tension), Make fast (lock the length), Release. A winch gives more power but hauls more slowly.',
@@ -213,6 +213,7 @@ export const EN = {
   'TAK': 'YES', 'nie': 'no', 'Zostań w symulacji': 'Stay in the simulation', '↺ Jeszcze raz': '↺ Once more', 'Menu': 'Menu',
 
   // ---- Komunikaty (część po „:” albo pełne) ----
+  'podejdź bliżej, żeby przełożyć linę z pokładu': 'get closer to re-rig the line from the deck',
   'lina nie jest gotowa': 'line is not ready', 'brak celu': 'no target', 'anulowano zakładanie': 'rigging cancelled', 'przerwano zakładanie': 'rigging aborted',
   'oddana – wybieranie na pokład': 'released – hauling aboard', 'lina napięta – najpierw poluzuj': 'line is taut – ease it first', 'zdjęta z polera z pokładu': 'taken off the bollard from the deck',
   'oko jest na polerze – załoga zejdzie i je zdejmie, gdy jacht będzie przy kei': 'the eye is on the bollard – the crew will go ashore and take it off once the yacht is at the quay',
@@ -220,7 +221,7 @@ export const EN = {
   'za krótka, by założyć na biegowo': 'too short to rig as a slip line', 'na pokładzie': 'aboard',
   'lina napięta – załoga nie może zdjąć oka. Poluzuj!': 'line is taut – the crew cannot take the eye off. Ease it!', 'zdjęta z polera, podana na jacht': 'taken off the bollard, passed aboard',
   'nie udało się – jacht odszedł za daleko': 'failed – the yacht has moved too far away', 'chybiony rzut – załoga zbiera linę i rzuca jeszcze raz': 'missed throw – the crew gathers the line and throws again',
-  'Przełożenie założonej cumy wymaga załogi na lądzie': 'Changing a rigged line requires the crew ashore',
+  'Przełożenie założonej cumy wymaga załogi na lądzie (albo polera w zasięgu z pokładu)': 'Changing a rigged line requires the crew ashore (or a bollard within reach of the deck)',
   'Muring: załoga podejmuje linkę pilotową i przechodzi z nią na drugi koniec jachtu…': 'Lazy line: the crew picks up the pilot line and carries it to the other end of the yacht…',
   'Muring oddany – tonie. Nie włączaj biegu przez kilka sekund, żeby nie złapać go na śrubę!': 'Lazy line released – it is sinking. Do not engage gear for a few seconds so it does not foul the propeller!',
   'Muring na knadze – wybieraj, aby naprężyć': 'Lazy line on the cleat – haul to tension it', 'Muring wkręcony w śrubę! Silnik zgasł.': 'Lazy line wrapped round the propeller! The engine stalled.',

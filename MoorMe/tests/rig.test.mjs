@@ -105,5 +105,15 @@ check(far.state === 'attached' && far.target === farTgt, `po podejściu do kei z
   check(/^Cuma dziobowa/.test(before) && mid === before && line.name === 'Szpring dziobowy L' && line.role === 'springFwd', `cuma pracująca jak szpring zmienia nazwę po chwili (${before} → ${line.name})`);
 }
 
+// dalby: przełożenie liny na stałe/na biegowo z pokładu, bez schodzenia załogi na ląd
+for (const method of ['pilesBow', 'pilesStern']) for (const id of Object.keys(BOATS)) {
+  const spec = BOATS[id];
+  const H = generateHarbor({ port: 'ystad', method, side: 'port', boatSpec: spec, seed: 3 });
+  const w = new World({ spec, equip: defaultEquipment(spec), harbor: H, weather: { windKn: 0, windFrom: 0, gust: 0 }, scenario: 'unmoor', random: rng(1) });
+  w.crew.ashore = false;
+  const pl = w.lines.filter((l) => l.target && l.target.kind === 'pile');
+  for (const l of pl) w.toggleMode(l);
+  check(pl.length === 2 && pl.every((l) => l.mode === 'fixed') && !w.crew.ashore, `${id} ${method}: liny na dalbach przełożone z pokładu (${pl.map((l) => l.mode).join(', ')})`);
+}
 console.log(fails ? `${fails} błędów` : 'Wszystko OK');
 process.exit(fails ? 1 : 0);
