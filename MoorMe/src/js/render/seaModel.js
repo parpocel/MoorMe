@@ -129,7 +129,7 @@ function groundAt(H, x, z) {
 }
 
 // ---------- Światła znaków ----------
-const LIGHT_RANGE = 926; // 0,5 Nm – dalej światła nie są widoczne
+const LIGHT_RANGE = 2400; // ok. 1,3 Nm – dalej światła nie są widoczne
 // punkcik o stałej wielkości kątowej, gasnący pod koniec zasięgu
 function dotLight(sp, d, on, lightsOn) {
   // natężenie maleje z odległością: z bliska pełne, na granicy zasięgu ledwo widoczne
@@ -138,7 +138,7 @@ function dotLight(sp, d, on, lightsOn) {
   sp.visible = on > 0 && fade > 0.01;
   if (!sp.visible) return;
   sp.material.opacity = on * lightsOn * fade;
-  sp.scale.setScalar(clamp(d * 0.007, 0.7, 6) * (0.55 + 0.45 * k));
+  sp.scale.setScalar(clamp(d * 0.007, 0.7, 12) * (0.55 + 0.45 * k)); // dalekie światło zostaje widocznym punktem
   const fl = sp.userData.flare;
   if (fl) fl.material.opacity = sp.material.opacity * 0.5;
 }
