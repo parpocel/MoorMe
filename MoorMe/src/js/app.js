@@ -760,7 +760,7 @@ function stepHarbor() {
     sideField,
     widthField,
     h('h3', {}, 'Zadanie'),
-    seg([{ value: 'moor', label: 'Cumowanie (podejście do kei)' }, { value: 'unmoor', label: 'Odcumowanie (wyjście)' }], config.scenario, (v) => { config.scenario = v; }),
+    seg([{ value: 'moor', label: 'Cumowanie (podejście do kei)' }, { value: 'unmoor', label: 'Odcumowanie (wyjście)' }, { value: 'free', label: 'Swobodne manewrowanie (bez zadania)' }], config.scenario, (v) => { config.scenario = v; }),
     h('div.small.muted', { style: { marginTop: '6px' } }, 'Przy odcumowaniu startujesz zacumowany – liny założone na biegowo, jedna osoba na kei.'),
     h('h3', {}, 'Sąsiedzi'),
     h('div.row', {}, h('button.btn.sm', { onclick: () => { config.seed = Math.floor(Math.random() * 1000); drawMap(); } }, '🎲 Losuj rozmieszczenie jachtów')));
@@ -840,18 +840,18 @@ function stepWeather() {
     const wd = compassVec(w.windFrom + 180);
     for (let i = 0; i < 5; i++) drawArrow(ctx, 90 + i * 200, 60, Math.atan2(wd.z, wd.x), 60, 'rgba(94,200,255,0.8)', 3);
     if (w.currentKn > 0) { const cd = compassVec(w.currentTo); drawArrow(ctx, 110, mapCv.height - 50, Math.atan2(cd.z, cd.x), 50, 'rgba(255,209,102,0.9)', 3); }
-    if (config.scenario === 'moor') {
+    if (config.scenario !== 'unmoor') {
       const [px, pz] = T.toPx(st.x, st.z);
       drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (st.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
       ctx.fillStyle = '#fff'; ctx.font = 'bold 14px Segoe UI';
       ctx.fillText(t('START'), px + 14, pz - 12);
     }
     ctx.fillStyle = '#fff'; ctx.font = '13px Segoe UI';
-    ctx.fillText(t(config.scenario === 'moor' ? 'Kliknij, aby ustawić start. Przeciągnij, aby ustawić kurs.' : 'Odcumowanie – start ze stanowiska (zielone).'), 14, mapCv.height - 14);
+    ctx.fillText(t(config.scenario !== 'unmoor' ? 'Kliknij, aby ustawić start. Przeciągnij, aby ustawić kurs.' : 'Odcumowanie – start ze stanowiska (zielone).'), 14, mapCv.height - 14);
   };
   let dragStart = null;
   mapCv.addEventListener('pointerdown', (e) => {
-    if (config.scenario !== 'moor') return;
+    if (config.scenario === 'unmoor') return;
     const r = mapCv.getBoundingClientRect();
     const [x, z] = T.toWorld((e.clientX - r.left) * (mapCv.width / r.width), (e.clientY - r.top) * (mapCv.height / r.height));
     const bb = H.bounds;
@@ -886,7 +886,7 @@ function stepWeather() {
     h('div.field', {}, h('label', {}, 'Kierunek prądu (dokąd płynie)'), h('div.row', {}, curDir, curDirOut)),
     h('div.field', {}, h('label', {}, 'Pora dnia'), h('div.row', {}, hourInp, hourOut)),
     h('div.field', {}, h('label', {}, 'Niebo'), seg([{ value: 'clear', label: '☀ Słonecznie' }, { value: 'cloudy', label: '☁ Pochmurno' }, { value: 'rain', label: '🌧 Deszcz' }, { value: 'fog', label: '🌫 Mgła' }], w.sky || 'clear', (v) => { w.sky = v; })),
-    config.scenario === 'moor' ? h('div', {},
+    config.scenario !== 'unmoor' ? h('div', {},
       h('h3', {}, 'Miejsce startu'),
       presetSeg,
       h('div.field', {}, h('label', {}, 'Prędkość początkowa'), h('div.row', {}, spdInp, spdOut))) : null,
@@ -988,7 +988,7 @@ function showRandom(cfg = randomConfig()) {
   const skyName = { clear: '☀ słonecznie', cloudy: '☁ pochmurno', rain: '🌧 deszcz', fog: '🌫 mgła' }[w.sky];
   const hh = `${String(Math.floor(w.hour)).padStart(2, '0')}:${String(Math.round((w.hour % 1) * 60) % 60).padStart(2, '0')}`;
   const night = w.hour < 5.5 || w.hour > 20.5;
-  const task = cfg.scenario === 'moor' ? `Zacumuj: ${METHODS[cfg.method].name.toLowerCase()}` : `Odcumuj i wyjdź ze stanowiska (${METHODS[cfg.method].name.toLowerCase()})`;
+  const task = cfg.scenario === 'free' ? 'Swobodne manewrowanie – bez zadania' : cfg.scenario === 'moor' ? `Zacumuj: ${METHODS[cfg.method].name.toLowerCase()}` : `Odcumuj i wyjdź ze stanowiska (${METHODS[cfg.method].name.toLowerCase()})`;
   const clear = slotKind(cfg.method) ? slotClearFor(cfg) : null;
   const mapCv = h('canvas', { width: 700, height: 460, style: { width: '100%', borderRadius: '12px' } });
   app.innerHTML = '';
@@ -1010,8 +1010,8 @@ function showRandom(cfg = randomConfig()) {
           row('Względem kei', windRelative(cfg)),
           w.currentKn ? row('Prąd', `${w.currentKn} kn na ${w.currentTo}°`) : null,
           row('Pora / niebo', `${hh}${night ? ' (noc)' : ''} · ${skyName}`),
-          cfg.scenario === 'moor' ? row('Start', `${cfg.start.preset === 'custom' ? 'własny' : ({ entrance: 'wejście do portu', basin: 'środek basenu', near: 'blisko stanowiska', east: 'wschodnia część basenu' }[cfg.start.preset] || cfg.start.preset)}${cfg.start.speedKn ? `, w ruchu ${cfg.start.speedKn} kn` : ''}`) : null),
-        h('div.hint', {}, cfg.scenario === 'moor' ? 'Stanowisko jest zaznaczone na zielono. Cumy przygotujesz w trakcie – kliknij knagę, a potem poler.' : 'Liny są założone na biegowo, jedna osoba jest na kei. Oddaj liny, zabierz załogę i wyjdź ze stanowiska.')))),
+          cfg.scenario !== 'unmoor' ? row('Start', `${cfg.start.preset === 'custom' ? 'własny' : ({ entrance: 'wejście do portu', basin: 'środek basenu', near: 'blisko stanowiska', east: 'wschodnia część basenu' }[cfg.start.preset] || cfg.start.preset)}${cfg.start.speedKn ? `, w ruchu ${cfg.start.speedKn} kn` : ''}`) : null),
+        h('div.hint', {}, cfg.scenario === 'free' ? 'Bez zadania i oceny – pływaj po porcie, cumuj na dowolnym polerze i odcumowuj.' : cfg.scenario === 'moor' ? 'Stanowisko jest zaznaczone na zielono. Cumy przygotujesz w trakcie – kliknij knagę, a potem poler.' : 'Liny są założone na biegowo, jedna osoba jest na kei. Oddaj liny, zabierz załogę i wyjdź ze stanowiska.')))),
     h('div.screen-footer', {},
       h('button.btn', { onclick: () => showTitle() }, '← Menu'),
       h('div', { style: { display: 'flex', gap: '10px' } },
@@ -1025,7 +1025,7 @@ function showRandom(cfg = randomConfig()) {
   drawHarborMap(ctx, H, T, { spec, bollards: false });
   const wd = compassVec(w.windFrom + 180);
   for (let i = 0; i < 4; i++) drawArrow(ctx, 80 + i * 180, 50, Math.atan2(wd.z, wd.x), 50, 'rgba(94,200,255,0.85)', 3);
-  if (cfg.scenario === 'moor') {
+  if (cfg.scenario !== 'unmoor') {
     const [px, pz] = T.toPx(cfg.start.x, cfg.start.z);
     drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (cfg.start.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
     ctx.fillStyle = '#fff'; ctx.font = 'bold 13px Segoe UI'; ctx.fillText(t('START'), px + 12, pz - 10);

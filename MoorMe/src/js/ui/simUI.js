@@ -57,7 +57,7 @@ export class SimScreen {
     });
   }
   introLog(config) {
-    this.pushLog({ msg: config.scenario === 'moor' ? `Cel: zacumuj – ${METHODS[config.method].name.toLowerCase()}` : 'Cel: odcumuj i wyjdź ze stanowiska', type: 'info' });
+    this.pushLog({ msg: config.scenario === 'free' ? 'Swobodne manewrowanie – bez zadania i oceny. Pływaj po porcie, cumuj i odcumowuj, gdzie chcesz.' : config.scenario === 'moor' ? `Cel: zacumuj – ${METHODS[config.method].name.toLowerCase()}` : 'Cel: odcumuj i wyjdź ze stanowiska', type: 'info' });
     if (config.scenario === 'unmoor') this.pushLog({ msg: 'Liny założone na biegowo, jedna osoba załogi na kei.', type: 'info' });
   }
 
@@ -812,8 +812,11 @@ export class SimScreen {
     const sc = w.cfg.scenario;
     const ck = (ok, txt) => `<div class="ck ${ok ? 'ok' : ''}"><i>${ok ? '✓' : ''}</i>${txt}</div>`;
     const t = w.H.berth;
-    let gh = `<div style="font-weight:600;margin-bottom:4px">${sc === 'moor' ? 'Cumowanie' : 'Odcumowanie'} · ${METHODS[w.H.method].name}</div>`;
-    if (sc === 'moor') {
+    let gh = `<div style="font-weight:600;margin-bottom:4px">${sc === 'free' ? 'Swobodne manewrowanie' : `${sc === 'moor' ? 'Cumowanie' : 'Odcumowanie'} · ${METHODS[w.H.method].name}`}</div>`;
+    if (sc === 'free') {
+      gh += `<div class="small muted">Bez zadania i oceny – pływaj, cumuj na dowolnym polerze i odcumowuj.</div>`;
+      gh += `<div class="small muted">Założone liny: ${w.lines.filter((l) => l.state === 'attached').length}</div>`;
+    } else if (sc === 'moor') {
       gh += `<div class="small muted">Do stanowiska: ${distB.toFixed(1)} m</div>`;
       gh += ck(Math.abs(e.along) < t.tolAlong && Math.abs(e.across) < t.tolAcross, `Pozycja (${e.along.toFixed(1)} / ${e.across.toFixed(1)} m)`);
       gh += ck(Math.abs(e.dth) < t.tolTh, `Ustawienie (${e.dth.toFixed(0)}°)`);

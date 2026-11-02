@@ -347,7 +347,7 @@ export class World {
     }
     for (const p of plan) {
       // przy cumowaniu lista zawiera tylko aktywne liny – cumy tworzysz sam (knaga → poler); muring czeka przy kei
-      if (this.cfg.scenario === 'moor' && p.role !== 'mooring') continue;
+      if (this.cfg.scenario !== 'unmoor' && p.role !== 'mooring') continue; // cumowanie i swobodne manewry: tylko muring czeka przy kei
       let side = p.side;
       if (p.pileSide !== undefined || p.role === 'side') {
         // dobierz burtę jachtu najbliższą celowi
@@ -1206,6 +1206,7 @@ export class World {
   evaluate(dt) {
     if (this.result) return;
     const b = this.boat;
+    if (this.cfg.scenario === 'free') { this.stats.path += b.speed * dt; return; } // swobodne manewry – bez zadania i oceny
     if (!this._p0) this._p0 = { x: b.x, z: b.z };
     this.stats.path += b.speed * dt;
     for (const l of this.lines) if (l.state === 'attached' && l.tension > this.stats.maxTens) this.stats.maxTens = l.tension;
