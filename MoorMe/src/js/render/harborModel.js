@@ -1046,7 +1046,7 @@ export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = Math.round((this.follow ? 110 : 150) * (opts.detail || 1)); // na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 80 : 110) * (opts.detail || 1)); // na otwartym morzu większe trójkąty (styl low-poly)
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;
@@ -1060,7 +1060,7 @@ export class Water {
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
     // styl low-poly: płaskie cieniowanie trójkątów, bez tekstur – fasety fal widać dzięki oświetleniu
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x6d93b0, shininess: 38, transparent: true, opacity: 0.97, vertexColors: true });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x4a6478, shininess: 38, transparent: true, opacity: 0.97, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
     const fadeEdge = this.follow;
@@ -1113,7 +1113,7 @@ export class Water {
       this.farTex.needsUpdate = true;
       this.farTex.repeat.set(24000 / 22, 24000 / 22);
       this.farTex.anisotropy = 16;
-      farMat = new THREE.MeshPhongMaterial({ color: 0x123c66, flatShading: true, specular: 0x6d93b0, shininess: 38 });
+      farMat = new THREE.MeshPhongMaterial({ color: 0x123c66, flatShading: true, specular: 0x4a6478, shininess: 38 });
       farMat.onBeforeCompile = this.patchWater(false);
     } else farMat = new THREE.MeshLambertMaterial({ color: 0x2a7b98 });
     const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 3000, this.follow ? 24000 : 3000), farMat);

@@ -11,7 +11,7 @@ export const BOATS = {
     draft: 1.95,
     displacement: 6300, // kg (z załogą i zapasami)
     engineHp: 30,
-    maxSpeedKn: 7.0,
+    maxSpeedKn: 7.6, // przy pełnych obrotach na płaskiej wodzie ok. 7,5 kn
     freeboard: 1.25,
     mastHeight: 16.0,
     keelArea: 1.9,

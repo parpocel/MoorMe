@@ -61,6 +61,8 @@ export class PassageScreen extends SimScreen {
       throw err;
     }
     this.view.cam.dist = 120;
+    this.view.setView('fpv'); // domyślnie widok kapitana – znaki widać tak jak z pokładu
+    this._vi = 4;
 
     this.info = h('div.hud.glass', { id: 'hud-info' });
     sim.appendChild(this.info);

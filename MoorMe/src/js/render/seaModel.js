@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { coastZ, lateralColors, MARK_TYPES } from '../data/passage.js';
 import { rng, clamp } from '../math.js';
+import { lightSequence, lightAt } from '../data/lightChar.js';
 
 // ---------- Szum wartościowy (deterministyczny) ----------
 const hash = (x, z) => {
@@ -138,6 +139,33 @@ function dotLight(sp, d, on, lightsOn) {
   if (!sp.visible) return;
   sp.material.opacity = on * lightsOn * fade;
   sp.scale.setScalar(clamp(d * 0.007, 0.7, 6) * (0.55 + 0.45 * k));
+  const fl = sp.userData.flare;
+  if (fl) fl.material.opacity = sp.material.opacity * 0.5;
+}
+// bardzo delikatna flara wokół światła: miękka poświata i cienkie promienie (dziecko sprite'u – dziedziczy skalę i widoczność)
+let flareTex = null;
+function flareTexture() {
+  if (flareTex) return flareTex;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const g = c.getContext('2d');
+  const halo = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  halo.addColorStop(0, 'rgba(255,255,255,0.45)'); halo.addColorStop(0.25, 'rgba(255,255,255,0.12)'); halo.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = halo; g.fillRect(0, 0, 128, 128);
+  for (const [w, h] of [[128, 2], [2, 70]]) {
+    const ray = g.createRadialGradient(64, 64, 0, 64, 64, Math.max(w, h) / 2);
+    ray.addColorStop(0, 'rgba(255,255,255,0.55)'); ray.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = ray; g.fillRect(64 - w / 2, 64 - h / 2, w, h);
+  }
+  flareTex = new THREE.CanvasTexture(c);
+  return flareTex;
+}
+function addFlare(sp, color) {
+  const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: flareTexture(), color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));
+  fl.scale.setScalar(4.5);
+  fl.renderOrder = 29;
+  sp.add(fl);
+  sp.userData.flare = fl;
 }
 let glowTex = null;
 function glowTexture() {
@@ -153,6 +181,7 @@ function glowTexture() {
 }
 
 // Wzory świateł: zwracają natężenie 0..1 oraz kolor (dla naprzemiennych)
+const FL21 = lightSequence('Fl(2+1) R 10s');
 const flashes = (t, list, period) => { const x = t % period; return list.some(([a, b]) => x >= a && x < b) ? 1 : 0; };
 const PATTERNS = {
   R: (t) => flashes(t, [[0, 0.6]], 4),
@@ -165,8 +194,9 @@ const PATTERNS = {
   FL2: (t) => flashes(t, [[0, 0.4], [1.2, 1.6]], 5),
   FLY: (t) => flashes(t, [[0, 0.5]], 5),
   WRECK: (t) => flashes(t, [[0, 1], [1.5, 2.5]], 3),
-  FL21R: (t) => flashes(t, [[0, 0.4], [1, 1.4], [3, 3.4]], 10), // Fl(2+1) 10 s – znak rozgałęzienia toru
-  FL21G: (t) => flashes(t, [[0, 0.4], [1, 1.4], [3, 3.4]], 10)
+  // Fl(2+1) 10 s – znak rozgałęzienia toru; taktowanie jak w podręczniku (0,5 s błysku, przerwy 1 s i 2,5 s)
+  FL21R: (t) => (lightAt(FL21, t).on ? 1 : 0),
+  FL21G: (t) => (lightAt(FL21, t).on ? 1 : 0)
 };
 
 // ---------- Znaki nawigacyjne ----------
@@ -315,6 +345,7 @@ export function buildMarkMesh(type) {
   sp.position.y = lightY;
   sp.visible = false;
   sp.renderOrder = 30; // światło zawsze na wierzchu bryły znaku
+  addFlare(sp, lightColor);
   g.add(sp);
   g.userData.light = sp;
   g.userData.lightColor = lightColor;
@@ -497,6 +528,7 @@ export function buildSea(H, scene) {
     group.add(post);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: col, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, depthTest: false, opacity: 0 }));
     sp.position.set(hx, 8.8, hz - 3);
+    addFlare(sp, col);
     sp.visible = false;
     dyn.add(sp);
     heads.push({ sprite: sp, pattern: PATTERNS.R });
@@ -568,6 +600,7 @@ export function buildSea(H, scene) {
         let col = mesh.userData.lightColor;
         if (def.type === 'wreck') col = Math.floor((t + mesh.userData.phase) % 3) === 0 ? 0x1f6bff : 0xffb800;
         sp.material.color.setHex(col);
+        if (sp.userData.flare) sp.userData.flare.material.color.setHex(col);
         sp.getWorldPosition(tmp);
         dotLight(sp, cam.distanceTo(tmp), on, lightsOn);
       }

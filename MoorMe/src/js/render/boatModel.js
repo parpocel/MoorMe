@@ -579,7 +579,7 @@ function addBoatDetails(heel, root, spec, d) {
   }
   // antena GPS na relingu rufowym
   heel.add(cyl(0.04, 0.05, 0.1, 0xf2f2f2, 8).translateX(xs + 0.3).translateY(sheerHeight(spec, xs + 0.3) + 0.67).translateZ(spec.beam * 0.16));
-  // maszt: kołnierz u podstawy, kicker (vang), trawelerz i szot grota
+  // maszt: kołnierz u podstawy, kicker (vang) i trawelerz (bez liny talii grota)
   {
     const bY = d.topY + 1.9;
     const col = cyl(0.13, 0.16, 0.16, COL.mast, 10, { metal: 0.5, rough: 0.4 });
@@ -589,9 +589,6 @@ function addBoatDetails(heel, root, spec, d) {
     const tx = d.ck1 - 0.35, ty = d.fbC + 0.09;
     heel.add(box(0.05, 0.04, d.ckw * 0.75, COL.metal, tx, ty, 0, { metal: 0.8, rough: 0.3 }));
     heel.add(box(0.12, 0.06, 0.1, COL.dark, tx, ty + 0.05, 0));
-    const bx = d.mastX - (d.mastX - (xs + 0.12 * L)) * 0.65;
-    heel.add(strut([bx, bY - 0.04, 0], [tx, ty + 0.08, 0], 0.013, COL.rope, 4));
-    heel.add(box(0.07, 0.07, 0.07, COL.dark, bx, bY - 0.07, 0));
   }
   // dach nadbudówki: panel słoneczny, luk i grzybki wentylacyjne
   {
