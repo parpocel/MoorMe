@@ -1070,18 +1070,7 @@ export class World {
     if (f.T > 0) b.addWorldForce(lead.x, lead.z, f.fx, f.fz);
     line.maxTension = Math.max(line.maxTension, f.T);
 
-    // półkluza – lina może wyskoczyć przy dużym kącie (kierunek pierwszego odcinka od kluzy)
-    const fl = line.fairleadId ? this.deckItem(line.fairleadId) : null;
-    if (fl && fl.kind === 'halfFairlead' && f.T > 200) {
-      const nx = route.pts.length > 1 ? route.pts[1] : t;
-      const dirL = worldToLocal(0, 0, b.th, nx.x - route.pts[0].x, nx.z - route.pts[0].z);
-      const n = hullNormalAt(this.spec, fl.x, Math.sign(fl.y) || 1);
-      const cosA = (dirL.x * n.x + dirL.y * n.y) / (Math.hypot(dirL.x, dirL.y) || 1);
-      if (!line.jumped && cosA < -0.2) {
-        line.jumped = true;
-        this.log(`${line.name}: lina wyskoczyła z półkluzy!`, 'warn');
-      } else if (line.jumped && cosA > 0.3) line.jumped = false;
-    }
+    // półkluza trzyma linę – lina z niej nie wyskakuje (line.jumped zostaje false)
 
     if (f.T > this.lineParams.breakLoad) {
       line.state = 'broken';
