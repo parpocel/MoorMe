@@ -1,8 +1,9 @@
 name: Build Windows installer
 
+# Instalator buduje się tylko na żądanie (Actions → Run workflow) albo przy tagu v*.
+# Na co dzień grę testuje się w przeglądarce (web.yml → GitHub Pages).
 on:
   push:
-    branches: ['**']
     tags: ['v*']
   workflow_dispatch:
 

@@ -4,9 +4,15 @@ MoorMe to aplikacja na Windows do ćwiczenia cumowania i odcumowywania jachtu ż
 Grafika jest low-poly 3D, a kamera patrzy z ukosa z góry, jak w grach strategicznych (Age of Empires).
 Modele jachtów oparto na danych Bavarii C34, C46 i C50.
 
+## Wersja w przeglądarce
+
+Każdy push publikuje grę na GitHub Pages (workflow „Publish browser version”): https://parpocel.github.io/MoorMe/ – bez instalacji.
+W przeglądarce nie ma tylko funkcji okna aplikacji (skala interfejsu, przycisk wyjścia); pełny ekran działa przez Fullscreen API.
+
 ## Instalacja (dla użytkownika)
 
 1. Pobierz plik `MoorMe-Setup-1.0.0.exe` z zakładki **Releases** albo z artefaktów GitHub Actions („MoorMe-Setup”).
+   Instalator buduje się tylko na żądanie: Actions → „Build Windows installer” → Run workflow (albo przy tagu `v*`).
 2. Uruchom instalator. Przy pierwszym uruchomieniu Windows SmartScreen może ostrzec, że aplikacja jest niepodpisana.
    Wybierz wtedy „Więcej informacji”, a potem „Uruchom mimo to”.
 3. Instalator pozwala wybrać folder instalacji. Tworzy skróty na pulpicie i w menu Start.

@@ -1,0 +1,69 @@
+name: Publish browser version
+
+# Wersja przeglądarkowa gry na GitHub Pages – aktualizowana przy każdym pushu.
+# Instalator .exe buduje osobny workflow (build-windows.yml), uruchamiany ręcznie.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MoorMe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: MoorMe/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --omit=dev
+
+      - name: Tests
+        run: npm test
+
+      # Ten sam układ katalogów co w aplikacji: src/ i node_modules/three/build (mapa importów w src/index.html)
+      - name: Assemble site
+        run: |
+          mkdir -p ../_site/node_modules/three/build
+          cp -r src ../_site/src
+          cp node_modules/three/build/three.module.js ../_site/node_modules/three/build/
+          cat > ../_site/index.html <<'EOF'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>MoorMe</title>
+          <meta http-equiv="refresh" content="0; url=src/index.html">
+          <a href="src/index.html">MoorMe</a>
+          EOF
+          touch ../_site/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}src/index.html
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
