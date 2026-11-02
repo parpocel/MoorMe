@@ -268,9 +268,10 @@ export function buildBoat(spec, opts = {}) {
   bulb.rotation.z = Math.PI / 2;
   bulb.position.set(0.0, -spec.draft + 0.12, 0);
   heel.add(bulb);
-  // podwójne płetwy sterowe
-  for (const s of [-1, 1]) {
-    const r = box(0.45, spec.draft * 0.65, 0.07, COL.keel, xs + 0.07 * L, -spec.draft * 0.33, s * spec.beam * 0.28);
+  // płetwy sterowe: podwójne (poza osią) albo pojedyncza w osi
+  for (const s of opts.rudders === 'single' ? [0] : [-1, 1]) {
+    const r = s ? box(0.45, spec.draft * 0.65, 0.07, COL.keel, xs + 0.07 * L, -spec.draft * 0.33, s * spec.beam * 0.28)
+      : box(0.6, spec.draft * 0.78, 0.08, COL.keel, xs + 0.07 * L, -spec.draft * 0.39, 0);
     r.rotation.x = s * 0.1;
     r.name = 'rudder';
     heel.add(r);
@@ -743,6 +744,21 @@ export function buildFender(r) {
   const cap2 = cyl(r, r * 0.6, r * 0.4, 0x1d3557, 8);
   cap2.position.y = -r * 2.3;
   g.add(cap2);
+  return g;
+}
+
+// Kula odbijacza
+export function buildBallFender(r) {
+  const g = new THREE.Group();
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat(0xe2673e, { rough: 0.55 }));
+  ball.castShadow = true;
+  g.add(ball);
+  const eye = new THREE.Mesh(new THREE.TorusGeometry(r * 0.16, r * 0.05, 6, 12), mat(0x1d3557));
+  eye.position.y = r * 1.02;
+  g.add(eye);
+  const rope = cyl(0.008, 0.008, 0.5, 0xeeeeee, 4);
+  rope.position.y = r + 0.25;
+  g.add(rope);
   return g;
 }
 

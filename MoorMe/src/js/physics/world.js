@@ -4,7 +4,7 @@ import { clamp, localToWorld, worldToLocal, pointInConvex, distToPoly, closestOn
 import { BoatPhysics } from './boatPhysics.js';
 import { Environment } from './environment.js';
 import { MooringLine, lineForce, tendLine, breakLoadFor, LINE_STATE_LABEL } from './lines.js';
-import { hullNormalAt, halfBeamAt } from '../data/boats.js';
+import { hullNormalAt, halfBeamAt, fenderGeom } from '../data/boats.js';
 import { neighborPolys, ROLE_NAMES } from '../data/harbors.js';
 
 const DT = 1 / 240;
@@ -819,20 +819,12 @@ export class World {
 
   // ---------- Odbijacze ----------
   fenderPoints() {
-    const b = this.boat, sp = this.spec, rf = this.equip.fenderRadius;
+    const sp = this.spec, rf = this.equip.fenderRadius;
     const pts = [];
     for (const f of this.equip.fenders) {
-      if (f.stern) {
-        if (!this.fenderOut.stern) continue;
-        const lx = b.xs - rf * 0.9, ly = f.side * sp.beam * 0.28;
-        pts.push({ id: f.id, lx, ly, r: rf, n: { x: -1, y: 0 } });
-        continue;
-      }
-      if (f.side < 0 && !this.fenderOut.port) continue;
-      if (f.side > 0 && !this.fenderOut.starboard) continue;
-      const hb = halfBeamAt(sp, f.x);
-      const n = hullNormalAt(sp, f.x, f.side);
-      pts.push({ id: f.id, lx: f.x + n.x * rf, ly: f.side * hb + n.y * rf, r: rf, n });
+      if (f.stern ? !this.fenderOut.stern : f.side < 0 ? !this.fenderOut.port : !this.fenderOut.starboard) continue;
+      const g = fenderGeom(sp, f, rf);
+      pts.push({ id: f.id, lx: g.x, ly: g.y, r: g.r, n: g.n, ball: g.ball });
     }
     return pts;
   }

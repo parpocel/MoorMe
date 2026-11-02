@@ -1,5 +1,5 @@
 // Rysunki 2D: widok jachtu z góry, mapa portu
-import { hullExtents, hullOutline, halfBeamAt } from '../data/boats.js';
+import { hullExtents, hullOutline, halfBeamAt, fenderGeom } from '../data/boats.js';
 import { t } from '../i18n.js';
 import { distToPoly, rng } from '../math.js';
 
@@ -170,20 +170,24 @@ export function drawDeckItem(ctx, it, sel) {
 }
 
 export function fenderLocal(spec, f, rf) {
-  const { xs } = hullExtents(spec);
-  if (f.stern) return { x: xs - rf, y: f.side * spec.beam * 0.28, stern: true };
-  return { x: f.x, y: f.side * (halfBeamAt(spec, f.x) + rf) };
+  const g = fenderGeom(spec, f, rf);
+  return { x: g.x, y: g.y, stern: g.stern, ball: g.ball, r: g.r, n: g.n };
 }
 
 export function drawFender(ctx, spec, f, rf, sel) {
   const p = fenderLocal(spec, f, rf);
   ctx.save();
-  ctx.fillStyle = sel ? '#ffd166' : '#f5f5f5';
   ctx.strokeStyle = '#1d3557';
   ctx.lineWidth = 0.04;
   ctx.beginPath();
-  if (p.stern) ctx.ellipse(p.x, p.y, rf, rf * 2.2, 0, 0, Math.PI * 2);
-  else ctx.ellipse(p.x, p.y, rf * 2.2, rf, 0, 0, Math.PI * 2);
+  if (p.ball) {
+    ctx.fillStyle = sel ? '#ffd166' : '#e2673e';
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+  } else {
+    ctx.fillStyle = sel ? '#ffd166' : '#f5f5f5';
+    const ang = p.stern ? Math.PI / 2 : Math.atan2(p.n.y, p.n.x) + Math.PI / 2;
+    ctx.ellipse(p.x, p.y, rf * 2.2, rf, ang, 0, Math.PI * 2);
+  }
   ctx.fill();
   ctx.stroke();
   ctx.restore();

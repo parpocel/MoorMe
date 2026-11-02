@@ -1,4 +1,4 @@
-# MoorMe – symulator cumowania jachtów
+# MoorMe
 
 MoorMe to aplikacja na Windows do ćwiczenia cumowania i odcumowywania jachtu żaglowego.
 Grafika jest low-poly 3D, a kamera patrzy z ukosa z góry, jak w grach strategicznych (Age of Empires).
@@ -195,4 +195,4 @@ Dział z treningiem i podręcznikiem (karta „Meteorologia” w menu głównym)
 - **Barometr:** zapis barografu z ostatniej doby z tendencją 3-godzinną (terminologia prognoz morskich) i jej znaczeniem.
 - **Zjawiska i praktyka:** bryza, mgła adwekcyjna i radiacyjna, odległość burzy, szkwał, skręcanie i cofanie się wiatru, porywy, wiatr pozorny, cyrkulacja w niżu i wyżu, widzialność w prognozach.
 - **Test mieszany:** pytania ze wszystkich części na zmianę.
-- **Podręcznik:** ciśnienie i wiatr, skala Beauforta z miniaturami morza renderowanymi przez symulator (podgląd 3D na żywo), atlas chmur, niże, wyże i fronty z przekrojami i tabelami przejścia frontów, czytanie mapy synoptycznej (odstęp izobar a siła wiatru, symbole wiatru), barometr, mgły, bryza, burze i prognozy.
+- **Podręcznik:** ciśnienie i wiatr, skala Beauforta z miniaturami morza renderowanymi na żywo w 3D (podgląd 3D na żywo), atlas chmur, niże, wyże i fronty z przekrojami i tabelami przejścia frontów, czytanie mapy synoptycznej (odstęp izobar a siła wiatru, symbole wiatru), barometr, mgły, bryza, burze i prognozy.

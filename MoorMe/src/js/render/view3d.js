@@ -1,13 +1,13 @@
 // Widok 3D symulacji (kamera w rzucie izometrycznym jak w grach RTS)
 import * as THREE from 'three';
 import { Seasick } from './seasick.js';
-import { buildBoat, buildDeckGear, buildFender, buildPerson, sheerHeight, mat } from './boatModel.js';
+import { buildBoat, buildDeckGear, buildFender, buildBallFender, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
 import { Atmosphere } from './atmosphere.js';
 import { wheelClassifier } from './wheel.js';
-import { hullExtents, hullOutline, halfBeamAt, hullNormalAt } from '../data/boats.js';
+import { hullExtents, hullOutline, halfBeamAt, hullNormalAt, fenderGeom, fenderRadiusOf } from '../data/boats.js';
 import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
 import { TARGET_DY } from '../physics/world.js';
 import { getSettings, boatIdentity, crewNames } from '../settings.js';
@@ -80,7 +80,7 @@ export class View3D {
 
     // nasz jacht
     const spec = world.spec;
-    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive, color: 0xffffff, stripe: 0xffffff, ...boatIdentity(), split: true });
+    this.boat = buildBoat(spec, { bowThruster: world.equip.bowThruster, drive: world.equip.drive, rudders: world.equip.rudders, color: 0xffffff, stripe: 0xffffff, ...boatIdentity(), split: true });
     this.boat.userData.heel.add(buildDeckGear(spec, world.equip.deck));
     scene.add(this.boat);
 
@@ -121,7 +121,7 @@ export class View3D {
     // odbijacze
     this.fenders = new Map();
     for (const f of world.equip.fenders) {
-      const m = buildFender(world.equip.fenderRadius);
+      const m = f.ball ? buildBallFender(fenderRadiusOf(f, world.equip.fenderRadius)) : buildFender(world.equip.fenderRadius);
       this.boat.userData.heel.add(m);
       this.fenders.set(f.id, { mesh: m, f });
     }
@@ -657,17 +657,12 @@ export class View3D {
       }
       mesh.visible = true;
       const comp = w.fenderState[f.id] || 0;
-      if (f.stern) {
-        mesh.position.set(b.xs - rf * 0.9, 0.55, f.side * spec.beam * 0.28);
-        mesh.rotation.set(0, 0, 0);
-        mesh.scale.set(1 - comp * 0.5, 1, 1);
-      } else {
-        const hb = halfBeamAt(spec, f.x);
-        const n = hullNormalAt(spec, f.x, f.side);
-        mesh.position.set(f.x + n.x * rf * (1 - comp * 0.5), 0.5 + spec.freeboard * 0.15, f.side * hb + n.y * rf * (1 - comp * 0.5));
-        mesh.rotation.set(0, 0, 0);
-        mesh.scale.set(1, 1, 1 - comp * 0.55);
-      }
+      const g = fenderGeom(spec, f, rf);
+      const k = 1 - comp * 0.5;
+      const hy = f.ball ? Math.max(g.r + 0.05, 0.45 + spec.freeboard * 0.1) : f.stern ? 0.55 : 0.5 + spec.freeboard * 0.15;
+      mesh.position.set(g.x - g.n.x * g.r * (1 - k), hy, g.y - g.n.y * g.r * (1 - k));
+      mesh.rotation.set(0, f.stern ? 0 : -Math.atan2(g.n.y, g.n.x), 0);
+      mesh.scale.set(1 - comp * 0.5, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
     }
 
     // załoga

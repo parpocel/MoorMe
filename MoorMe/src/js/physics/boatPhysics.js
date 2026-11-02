@@ -50,7 +50,8 @@ export class BoatPhysics {
     // Położenia elementów
     this.xKeel = 0.02 * L;
     this.xRudder = ext.xs + 0.07 * L;
-    this.yRudder = spec.beam * 0.28; // podwójne płetwy – przesunięte od osi
+    this.twinRudders = equip.rudders !== 'single';
+    this.yRudder = this.twinRudders ? spec.beam * 0.28 : 0; // podwójne płetwy – przesunięte od osi; pojedyncza – w osi, za śrubą
     this.xProp = equip.drive === 'shaft' ? ext.xs + 0.15 * L : ext.xs + 0.2 * L;
     this.xBow = ext.xb - 0.1 * L;
     this.xStern = ext.xs + 0.08 * L;
@@ -62,8 +63,9 @@ export class BoatPhysics {
     this.Xu = m * 0.03;
     this.Xuu = (this.Tmax * 0.72 - this.Xu * this.vmax) / (this.vmax * this.vmax);
     this.propArea = Math.PI * Math.pow(spec.propDiameter / 2, 2);
-    // Podwójne płetwy sterowe są poza osią – strumień zaśrubowy trafia w nie słabo
-    this.washFrac = equip.drive === 'shaft' ? 0.22 : 0.16;
+    // Podwójne płetwy sterowe są poza osią – strumień zaśrubowy w nie nie trafia (ster działa tylko od prędkości).
+    // Pojedyncza płetwa stoi tuż za śrubą – „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca.
+    this.washFrac = this.twinRudders ? 0 : equip.drive === 'shaft' ? 0.5 : 0.4;
     this.propWalk = equip.drive === 'shaft' ? 0.27 : 0.18; // zarzucanie rufy przez śrubę (zmniejszone o ok. 25%)
     this.propHandSign = equip.propHand === 'left' ? -1 : 1;
 
@@ -198,12 +200,12 @@ export class BoatPhysics {
       const vw = Math.sqrt(Math.max(vw2, 0));
       ur = u + (vw - Math.max(u, 0)) * this.washFrac;
     }
-    for (const side of [-1, 1]) {
+    for (const side of this.twinRudders ? [-1, 1] : [0]) {
       const yR = side * this.yRudder;
       const vloc = v + r * this.xRudder;
       const uloc = ur - r * yR;
-      // płetwa zawietrzna (bardziej zanurzona) – uproszczone równe działanie
-      const f = plateForce(spec.rudderArea * 0.65, uloc, vloc, this.rudder);
+      // płetwa zawietrzna (bardziej zanurzona) – uproszczone równe działanie; pojedyncza płetwa jest głębsza i większa
+      const f = plateForce(spec.rudderArea * (this.twinRudders ? 0.65 : 0.9), uloc, vloc, this.rudder);
       X += f.x; Y += f.y;
       N += this.xRudder * f.y - yR * f.x;
     }

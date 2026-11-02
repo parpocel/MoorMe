@@ -129,6 +129,23 @@ export function hullNormalAt(spec, x, side) {
   return { x: -slope / l, y: side / l };
 }
 
+// Odbijacze: zwykły (walec) lub kula; na burcie (x, side) albo na pawęży rufowej (stern, y)
+export const BALL_FACTOR = 2.3; // promień kuli względem promienia zwykłego odbijacza
+export const fenderRadiusOf = (f, rf) => (f.ball ? rf * BALL_FACTOR : rf);
+export const sternFenderY = (spec, f, r) => {
+  const { xs } = hullExtents(spec);
+  const lim = Math.max(0, halfBeamAt(spec, xs + 0.001) - r * 0.6);
+  const y = f.y !== undefined ? f.y : f.side * spec.beam * 0.28;
+  return Math.max(-lim, Math.min(lim, y));
+};
+export function fenderGeom(spec, f, rf) {
+  const r = fenderRadiusOf(f, rf);
+  const { xs } = hullExtents(spec);
+  if (f.stern) return { x: xs - r * 0.9, y: sternFenderY(spec, f, r), n: { x: -1, y: 0 }, r, stern: true, ball: !!f.ball };
+  const n = hullNormalAt(spec, f.x, f.side);
+  return { x: f.x + n.x * r, y: f.side * halfBeamAt(spec, f.x) + n.y * r, n, r, stern: false, ball: !!f.ball };
+}
+
 // Domyślne rozmieszczenie wyposażenia pokładowego (proporcje długości)
 export function defaultDeckLayout(spec) {
   const { xs, xb } = hullExtents(spec);
@@ -177,6 +194,7 @@ export function defaultEquipment(spec) {
     bowThruster: spec.loa > 12 ? 'onoff' : 'none', // none | onoff | proportional
     sternThruster: false,
     propHand: 'right', // right = prawoskrętna, left = lewoskrętna
+    rudders: 'twin', // twin = dwie płetwy (poza strumieniem śruby), single = jedna za śrubą
     drive: spec.id === 'C34' ? 'saildrive' : spec.id === 'C46' ? 'saildrive' : 'shaft',
     electricWinch: spec.loa > 12
   };

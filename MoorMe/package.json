@@ -2,7 +2,7 @@
   "name": "moorme",
   "productName": "MoorMe",
   "version": "1.0.0",
-  "description": "MoorMe – symulator cumowania i odcumowywania jachtów żaglowych (Bavaria C34, C46, C50)",
+  "description": "MoorMe – cumowanie i odcumowywanie jachtów żaglowych, locja, sygnalizacja, meteorologia",
   "main": "main.js",
   "author": "MoorMe",
   "license": "MIT",

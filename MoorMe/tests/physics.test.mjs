@@ -32,6 +32,13 @@ for (const id of Object.keys(BOATS)) {
   // ster strumieniowy
   b = new BoatPhysics(spec, { ...eq, bowThruster: 'onoff' }); b.bowCmd = 1; run(b, calm(), 10);
   check(b.th > 0.2, `${id}: ster strumieniowy obraca dziób w prawo (${(b.th * 57.3).toFixed(0)}° w 10 s)`);
+  // płetwy: „kopnięcie” silnika z wychylonym sterem z miejsca – pojedyncza obraca wyraźnie, podwójne prawie wcale (bez strumienia)
+  const kick = (rudders) => { const k = new BoatPhysics(spec, { ...eq, rudders }); k.rudderCmd = 35 * Math.PI / 180; run(k, calm(), 4); k.throttle = 0.8; run(k, calm(), 3); return { th: k.th, v: k.speed }; };
+  const ks = kick('single'), kt = kick('twin');
+  check(Math.abs(ks.th) > 2.5 * Math.abs(kt.th) && Math.abs(ks.th) > 0.12, `${id}: kopnięcie silnika – obrót pojedyncza ${(ks.th * 57.3).toFixed(0)}° / podwójne ${(kt.th * 57.3).toFixed(0)}°`);
+  b = new BoatPhysics(spec, { ...eq, rudders: 'single' }); b.throttle = 0.5; run(b, calm(), 40); b.rudderCmd = 35 * Math.PI / 180;
+  mn = 1e9; mx = -1e9; for (let i = 0; i < 120 / DT; i++) { b.step(DT, calm()); mn = Math.min(mn, b.z); mx = Math.max(mx, b.z); }
+  check((mx - mn) / spec.loa > 1.0 && (mx - mn) / spec.loa < 3.5, `${id}: cyrkulacja z jedną płetwą ${((mx - mn) / spec.loa).toFixed(2)} L`);
 }
 console.log(fails ? `${fails} błędów` : 'Wszystko OK');
 process.exit(fails ? 1 : 0);

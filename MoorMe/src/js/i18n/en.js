@@ -3,12 +3,10 @@
 export const EN = {
   // ---- Kreator / menu ----
   'Jacht': 'Yacht', 'Wyposażenie': 'Equipment', 'Keja i cumowanie': 'Quay & mooring', 'Pogoda i start': 'Weather & start',
-  'symulator cumowania jachtów': 'yacht mooring simulator',
-  'MoorMe – symulator cumowania': 'MoorMe – mooring simulator',
   'Dalej →': 'Next →', '← Wstecz': '← Back', '← Menu': '← Menu',
-  'PORT BAŁTYK': 'BALTIC PORT', 'SYMULATOR MANEWRÓW PORTOWYCH': 'HARBOUR MANOEUVRING SIMULATOR',
-  'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.':
-    'A simulator for mooring and unmooring sailing yachts. Wind, leeway, propeller walk, thrusters, mooring lines, springs and lazy lines – practise your harbour manoeuvres with the crew of the yacht Anneliese before you do it for real.',
+  'PORT BAŁTYK': 'BALTIC PORT',
+  'Cumowanie i odcumowywanie jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.':
+    'Mooring and unmooring sailing yachts. Wind, leeway, propeller walk, thrusters, mooring lines, springs and lazy lines – practise your harbour manoeuvres with the crew of the yacht Anneliese before you do it for real.',
   'Nowa symulacja': 'New simulation', 'Random': 'Random', 'Losowe zadanie w losowych warunkach': 'Random task in random conditions',
   'Szybki start': 'Quick start', 'ostatnie ustawienia': 'last settings', 'Najpierw ustaw i uruchom symulację': 'Set up and run a simulation first',
   'Pomoc – sterowanie i praca na cumach': 'Help – controls and handling lines',
@@ -24,7 +22,8 @@ export const EN = {
   'Przeciągnij myszą, żeby obrócić model; kółko – przybliżenie. Najedź na kartę, żeby zobaczyć inny jacht.': 'Drag with the mouse to rotate the model; wheel to zoom. Hover over a card to see another yacht.',
   'Długość całkowita': 'Length overall', 'Szerokość': 'Beam', 'Zanurzenie': 'Draft', 'Wyporność': 'Displacement', 'Silnik': 'Engine',
   'Prędkość maks. na silniku': 'Max speed under engine', 'Pow. nawiewu (bok)': 'Windage (side)', 'Ster strumieniowy (opcja)': 'Thruster (option)',
-  'Płetwy sterowe': 'Rudders', 'podwójne': 'twin',
+  'Płetwy sterowe': 'Rudders', 'podwójne': 'twin', 'do wyboru': 'selectable', 'Dwie': 'Two', 'Jedna': 'One',
+  'Dwie płetwy stoją z boku, poza strumieniem śruby – ster działa tylko, gdy jacht ma prędkość. Jedna płetwa w osi dostaje strumień śruby: krótkie „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca.': 'Twin rudders sit off the centreline, outside the prop wash – they only steer when the yacht is moving. A single centreline rudder gets the prop wash: a short burst of engine with the helm over swings the stern even from a standstill.',
 
   // ---- Krok 2: wyposażenie ----
   'Rozmieść knagi, kluzy (zamknięte), półkluzy (otwarte) oraz odbijacze. Przeciągaj elementy trybem „Wybierz”.':
@@ -36,12 +35,12 @@ export const EN = {
   'Prawoskrętna na biegu wstecz zarzuca rufę w LEWO (na bakburtę), lewoskrętna – w prawo. Na biegu naprzód efekt jest słabszy i odwrotny.':
     'A right-handed propeller in reverse kicks the stern to PORT, a left-handed one to starboard. In forward gear the effect is weaker and reversed.',
   'Typ napędu': 'Drive type', 'Saildrive': 'Saildrive', 'Wał': 'Shaft',
-  'Wał daje silniejsze zarzucanie rufy i lepszy strumień na płetwy sterowe.': 'A shaft drive gives stronger propeller walk and a better prop wash over the rudders.',
+  'Wał daje silniejsze zarzucanie rufy i mocniejszy strumień na pojedynczą płetwę sterową.': 'A shaft drive gives stronger propeller walk and a stronger prop wash over a single rudder.',
   'Stery strumieniowe': 'Thrusters', 'Brak': 'None', 'Włącz/wyłącz': 'On/off', 'Proporcjonalny': 'Proportional', 'Zamontowany': 'Fitted',
   'Stery strumieniowe tracą skuteczność powyżej ~2 kn i przegrzewają się przy długiej pracy.': 'Thrusters lose effectiveness above ~2 kn and overheat when run for long.',
   'Kabestany i odbijacze': 'Winches & fenders', 'Kabestany': 'Winches', 'Ręczne': 'Manual', 'Elektryczne': 'Electric',
   'Rozmiar odbijaczy': 'Fender size', 'Małe': 'Small', 'Średnie': 'Medium', 'Duże': 'Large', 'XL': 'XL', 'Elementy pokładu': 'Deck items',
-  '✋ Wybierz / przesuń': '✋ Select / move', '+ Knaga': '+ Cleat', '+ Kluza': '+ Fairlead', '+ Półkluza': '+ Chock', '+ Odbijacz': '+ Fender', '✖ Usuń': '✖ Delete',
+  '✋ Wybierz / przesuń': '✋ Select / move', '+ Knaga': '+ Cleat', '+ Kluza': '+ Fairlead', '+ Półkluza': '+ Chock', '+ Odbijacz': '+ Fender', '+ Kula odbijacza': '+ Ball fender', '✖ Usuń': '✖ Delete',
   '↺ Domyślne': '↺ Defaults',
   'LEWA BURTA (bakburta)': 'PORT SIDE', 'PRAWA BURTA (sterburta)': 'STARBOARD SIDE', 'DZIÓB →': 'BOW →', 'RUFA': 'STERN',
   'Knaga': 'Cleat', 'Kluza': 'Fairlead', 'Półkluza': 'Chock', 'Poler': 'Bollard', 'Pierścień': 'Ring', 'Dalba': 'Pile',
@@ -145,8 +144,8 @@ export const EN = {
   'Kuba to kapitan, reszta załogi obsługuje liny. Gdy lina wymaga człowieka na lądzie, załoga schodzi sama; przyciskiem „Zejdź na ląd” (L) możesz to zrobić ręcznie. Czekającą linę można anulować przyciskiem „Anuluj”.':
     'Kuba is the skipper, the rest of the crew handle the lines. When a line needs a person ashore, the crew goes by itself; you can also do it manually with the “Go ashore” button (L). A waiting line can be cancelled with the “Cancel” button.',
   'Wskazówki.': 'Tips.',
-  'Śruba prawoskrętna na biegu wstecz ściąga rufę w lewo – wykorzystaj to przy cofaniu. Podwójne płetwy sterowe słabo działają bez prędkości – pomagaj sobie krótkim „kopnięciem” silnika lub sterem strumieniowym (przegrzewa się po ok. 2 minutach ciągłej pracy). Przygotuj liny i odbijacze przed podejściem.':
-    'A right-handed propeller in reverse pulls the stern to port – use it when backing. Twin rudders work poorly without speed – help yourself with a short burst of engine or the thruster (it overheats after about 2 minutes of continuous use). Prepare the lines and fenders before the approach.',
+  'Śruba prawoskrętna na biegu wstecz ściąga rufę w lewo – wykorzystaj to przy cofaniu. Podwójne płetwy sterowe stoją poza strumieniem śruby i działają tylko przy prędkości – pomagaj sobie sterem strumieniowym (przegrzewa się po ok. 2 minutach ciągłej pracy). Z pojedynczą płetwą krótkie „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca. Przygotuj liny i odbijacze przed podejściem.':
+    'A right-handed propeller in reverse pulls the stern to port – use it when backing. Twin rudders sit outside the prop wash and only work with speed – help yourself with the thruster (it overheats after about 2 minutes of continuous use). With a single rudder a short burst of engine with the helm over swings the stern even from a standstill. Prepare the lines and fenders before the approach.',
 
   // ---- Symulacja: pasek, panele ----
   '⏸ Pauza': '⏸ Pause', '▶ Wznów': '▶ Resume', 'Pauza (P)': 'Pause (P)', 'PAUZA': 'PAUSED',
@@ -241,7 +240,7 @@ export const EN = {
 
   // ---- Tryb rejsu ----
   // menu główne 3D
-  'Symulator żeglarski': 'Sailing simulator', 'Cumowanie · symulator manewrów portowych': 'Mooring · harbour manoeuvring simulator',
+  'Szkolenie żeglarskie': 'Sailing training',
   'manewry portowe': 'harbour manoeuvres', 'locja': 'pilotage', 'ROZPOZNAWANIE STATKÓW': 'VESSEL RECOGNITION',
   'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'Sygnalizacja świetlna': 'Light signals', 'Sygnalizacja dźwiękowa': 'Sound signals', 'Sygnalizacja świetlna · trening': 'Light signals · training', 'Sygnalizacja dźwiękowa · trening': 'Sound signals · training', 'światła i znaki dzienne': 'lights and day shapes',
   'Manewry portowe · cumowanie i odcumowanie': 'Harbour manoeuvres · mooring and unmooring',
@@ -540,6 +539,8 @@ export const RULES = [
   R(/^luz (.+) m$/, 'slack {1} m'),
   R(/^(\d+)\. (.+)$/, '{1}. {2}'),
   R(/^Odbijacze: (\d+)$/, 'Fenders: {1}'),
+  R(/^Kule odbijacza: (\d+)$/, 'Ball fenders: {1}'),
+  R(/^rufa (\d+)$/, 'stern {1}'),
   R(/^L (\d+) \/ P (\d+)$/, 'Port {1} / Stbd {2}'),
   R(/^⚓ Załóż na (.+)$/, '⚓ Rig to {1}'),
   R(/^Załóż: (.+)$/, 'Rig: {1}'),

@@ -17,7 +17,7 @@ export const LINES = [
   ['Kolor liny', 'Zielona – luźna lub lekko napięta, żółta – wyraźnie napięta, czerwona – duży naciąg, blisko zerwania. Ten sam kolor ma pasek naciągu na karcie liny.'],
   ['Muring', 'Przy cumowaniu rufą lub dziobem z muringiem podejmij linkę pilotową z kei („Podejmij muring”), wybierz ją i zaknaguj. Oddany muring tonie – nie włączaj biegu, żeby nie złapać go na śrubę.'],
   ['Załoga', 'Kuba to kapitan, reszta załogi obsługuje liny. Gdy lina wymaga człowieka na lądzie, załoga schodzi sama; przyciskiem „Zejdź na ląd” (L) możesz to zrobić ręcznie. Czekającą linę można anulować przyciskiem „Anuluj”.'],
-  ['Wskazówki', 'Śruba prawoskrętna na biegu wstecz ściąga rufę w lewo – wykorzystaj to przy cofaniu. Podwójne płetwy sterowe słabo działają bez prędkości – pomagaj sobie krótkim „kopnięciem” silnika lub sterem strumieniowym (przegrzewa się po ok. 2 minutach ciągłej pracy). Przygotuj liny i odbijacze przed podejściem.']
+  ['Wskazówki', 'Śruba prawoskrętna na biegu wstecz ściąga rufę w lewo – wykorzystaj to przy cofaniu. Podwójne płetwy sterowe stoją poza strumieniem śruby i działają tylko przy prędkości – pomagaj sobie sterem strumieniowym (przegrzewa się po ok. 2 minutach ciągłej pracy). Z pojedynczą płetwą krótkie „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca. Przygotuj liny i odbijacze przed podejściem.']
 ];
 
 export function buildHelpContent() {

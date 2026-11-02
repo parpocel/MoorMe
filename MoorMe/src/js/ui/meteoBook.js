@@ -137,7 +137,7 @@ export function meteoBook() {
         svgBox(phenSVG({ type: 'apparent', tw: 15, bs: 6, down: false }, true)))
     ] },
     { id: 'beaufort', name: L('Skala Beauforta', 'Beaufort scale'), entries: [
-      entry(null, P(L('Skala Beauforta opisuje siłę wiatru po wyglądzie morza. Wysokości fal to wartości prawdopodobne na otwartym morzu; na Bałtyku fale są krótsze i bardziej strome niż na oceanie, a przy wietrze przeciwnym do prądu – jeszcze bardziej. Obrazki w lewej kolumnie są renderowane na żywo przez symulator.', 'The Beaufort scale describes wind force by the state of the sea. Wave heights are probable values in the open sea; on the Baltic the waves are shorter and steeper than on the ocean, and steeper still when the wind is against the current. The pictures in the left column are rendered live by the simulator.'))),
+      entry(null, P(L('Skala Beauforta opisuje siłę wiatru po wyglądzie morza. Wysokości fal to wartości prawdopodobne na otwartym morzu; na Bałtyku fale są krótsze i bardziej strome niż na oceanie, a przy wietrze przeciwnym do prądu – jeszcze bardziej. Obrazki w lewej kolumnie są renderowane na żywo w 3D.', 'The Beaufort scale describes wind force by the state of the sea. Wave heights are probable values in the open sea; on the Baltic the waves are shorter and steeper than on the ocean, and steeper still when the wind is against the current. The pictures in the left column are rendered live in 3D.'))),
       table([L('Widok', 'View'), L('Siła', 'Force'), L('Wiatr', 'Wind'), 'm/s', L('Fala', 'Wave'), L('Wygląd morza', 'Sea state'), L('Na jachcie', 'On a yacht')], bftRows)
     ] },
     { id: 'clouds', name: L('Chmury', 'Clouds'), entries: [

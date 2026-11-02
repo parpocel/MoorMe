@@ -1,7 +1,7 @@
 // Edytor rozmieszczenia knag, kluz, półkluz i odbijaczy (widok z góry)
 import { h } from './dom.js';
 import { drawBoatTop, fenderLocal } from './draw2d.js';
-import { hullExtents, halfBeamAt, ITEM_KIND_LABEL } from '../data/boats.js';
+import { hullExtents, halfBeamAt, ITEM_KIND_LABEL, fenderRadiusOf, sternFenderY } from '../data/boats.js';
 import { t } from '../i18n.js';
 
 export function autoLabel(spec, it) {
@@ -47,6 +47,7 @@ export function createDeckEditor(spec, equip, onChange) {
     ['fairlead', '+ Kluza'],
     ['halfFairlead', '+ Półkluza'],
     ['fender', '+ Odbijacz'],
+    ['ball', '+ Kula odbijacza'],
     ['delete', '✖ Usuń']
   ];
   const toolbar = h('div.tool-bar');
@@ -72,6 +73,18 @@ export function createDeckEditor(spec, equip, onChange) {
     if (it.kind === 'cleat') it.y = side * Math.min(Math.max(Math.abs(it.y), 0.1), hb - 0.15);
     else it.y = side * Math.max(hb - 0.06, 0.1);
     it.x = +it.x.toFixed(2); it.y = +it.y.toFixed(2);
+  }
+
+  // pozycja odbijacza: pawęż rufowa (dowolne miejsce w poprzek) albo dowolne miejsce burty aż po dziób
+  function placeFender(f, p) {
+    f.side = p.y < 0 ? -1 : 1;
+    if (p.x < xs + 0.3) {
+      f.stern = true; f.x = xs;
+      f.y = +sternFenderY(spec, { ...f, y: p.y }, fenderRadiusOf(f, equip.fenderRadius)).toFixed(2);
+    } else {
+      delete f.stern; delete f.y;
+      f.x = +Math.max(xs + 0.3, Math.min(xb - 0.12, p.x)).toFixed(2);
+    }
   }
 
   function hitTest(p) {
@@ -101,10 +114,12 @@ export function createDeckEditor(spec, equip, onChange) {
         else equip.fenders.splice(equip.fenders.indexOf(hit.it), 1);
         relabel(spec, equip.deck);
       }
-    } else if (tool === 'fender') {
-      const side = p.y < 0 ? -1 : 1;
-      if (p.x < xs + 0.5) equip.fenders.push({ id: 'f' + nextId++, x: xs, side, stern: true });
-      else equip.fenders.push({ id: 'f' + nextId++, x: +Math.max(xs + 0.4, Math.min(xb - 1.2, p.x)).toFixed(2), side });
+    } else if (tool === 'fender' || tool === 'ball') {
+      const f = { id: (tool === 'ball' ? 'b' : 'f') + nextId++, x: 0, side: 1 };
+      if (tool === 'ball') f.ball = true;
+      placeFender(f, p);
+      equip.fenders.push(f);
+      selected = f;
     } else {
       const it = { id: tool + nextId++, kind: tool, x: p.x, y: p.y };
       clampItem(it);
@@ -123,9 +138,7 @@ export function createDeckEditor(spec, equip, onChange) {
       drag.it.x = p.x; drag.it.y = p.y;
       clampItem(drag.it);
     } else {
-      const f = drag.it;
-      f.side = p.y < 0 ? -1 : 1;
-      if (!f.stern) f.x = +Math.max(xs + 0.4, Math.min(xb - 1.2, p.x)).toFixed(2);
+      placeFender(drag.it, p);
     }
     render();
   });
@@ -166,7 +179,9 @@ export function createDeckEditor(spec, equip, onChange) {
       list.appendChild(h('div', { class: selected === it ? 'sel' : '', onclick: () => { selected = it; render(); } }, h('span', {}, it.label), h('span.muted', {}, `x ${it.x.toFixed(1)} m`)));
     }
     const nF = equip.fenders.length;
-    list.appendChild(h('div', {}, h('span', {}, `Odbijacze: ${nF}`), h('span.muted', {}, `L ${equip.fenders.filter((f) => f.side < 0).length} / P ${equip.fenders.filter((f) => f.side > 0).length}`)));
+    const nB = equip.fenders.filter((f) => f.ball).length;
+    if (nB) list.appendChild(h('div', {}, h('span', {}, `Kule odbijacza: ${nB}`), h('span.muted', {}, `rufa ${equip.fenders.filter((f) => f.ball && f.stern).length}`)));
+    list.appendChild(h('div', {}, h('span', {}, `Odbijacze: ${nF - nB}`), h('span.muted', {}, `L ${equip.fenders.filter((f) => !f.ball && f.side < 0).length} / P ${equip.fenders.filter((f) => !f.ball && f.side > 0).length}`)));
   }
   render();
   return { canvas, toolbar, list, render };

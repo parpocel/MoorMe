@@ -251,7 +251,7 @@ function showTitle() {
     kicker: 'Manewry portowe · cumowanie i odcumowanie', sel: titleSel,
     back: { label: 'Tryby', go: () => showModeSelect() },
     items: [
-      { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Symulator cumowania i odcumowywania jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.', go: keep(0, () => { config.random = false; showStep(0); }) },
+      { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Cumowanie i odcumowywanie jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.', go: keep(0, () => { config.random = false; showStep(0); }) },
       { glyph: 'dice', color: '#a76bd6', title: 'Random', tag: 'losowe zadanie', desc: 'Losowe zadanie w losowych warunkach', go: keep(1, () => showRandom()) },
       { glyph: 'fast', color: '#2aa39a', title: 'Szybki start', tag: 'ostatnie ustawienia', desc: 'Uruchom symulację z ostatnimi ustawieniami.', disabledDesc: 'Najpierw ustaw i uruchom symulację', disabled: !saved, go: keep(2, () => startSim()) },
       { glyph: 'help', color: '#5b78d6', title: 'Pomoc', tag: 'sterowanie i cumy', desc: 'Pomoc – sterowanie i praca na cumach', go: keep(3, () => showHelp()) }
@@ -265,7 +265,7 @@ function showModeSelect() {
   menuMusic.start();
   const keep = (i, fn) => () => { modeSel = i; fn(); };
   menuScreen({
-    kicker: 'Symulator żeglarski', sel: modeSel,
+    kicker: 'Szkolenie żeglarskie', sel: modeSel,
     items: [
       { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
       { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
@@ -615,7 +615,7 @@ function stepBoat() {
     } },
     h('h3', {}, boatTitle(b)), cv,
     h('table.spec-table', {},
-      [['Długość całkowita', `${b.loa.toFixed(2)} m`], ['Szerokość', `${b.beam.toFixed(2)} m`], ['Zanurzenie', `${b.draft.toFixed(2)} m`], ['Wyporność', `${(b.displacement / 1000).toFixed(1)} t`], ['Silnik', `${b.engineHp} KM`], ['Prędkość maks. na silniku', `~${b.maxSpeedKn} kn`], ['Pow. nawiewu (bok)', `${b.windageSide} m²`], ['Ster strumieniowy (opcja)', `${Math.round(b.bowThrusterN / 9.81)} kgf`], ['Płetwy sterowe', 'podwójne']].map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v)))));
+      [['Długość całkowita', `${b.loa.toFixed(2)} m`], ['Szerokość', `${b.beam.toFixed(2)} m`], ['Zanurzenie', `${b.draft.toFixed(2)} m`], ['Wyporność', `${(b.displacement / 1000).toFixed(1)} t`], ['Silnik', `${b.engineHp} KM`], ['Prędkość maks. na silniku', `~${b.maxSpeedKn} kn`], ['Pow. nawiewu (bok)', `${b.windageSide} m²`], ['Ster strumieniowy (opcja)', `${Math.round(b.bowThrusterN / 9.81)} kgf`], ['Płetwy sterowe', 'do wyboru']].map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v)))));
     cards.appendChild(card);
   }
   const pv = h('div.preview3d', { style: { height: '420px' } });
@@ -658,7 +658,8 @@ function stepEquipment() {
     h('h2', {}, 'Napęd i wyposażenie'),
     h('h3', {}, 'Śruba napędowa'),
     opt('Kierunek obrotu', seg([{ value: 'right', label: 'Prawoskrętna' }, { value: 'left', label: 'Lewoskrętna' }], eq.propHand, (v) => { eq.propHand = v; }), 'Prawoskrętna na biegu wstecz zarzuca rufę w LEWO (na bakburtę), lewoskrętna – w prawo. Na biegu naprzód efekt jest słabszy i odwrotny.'),
-    opt('Typ napędu', seg([{ value: 'saildrive', label: 'Saildrive' }, { value: 'shaft', label: 'Wał' }], eq.drive, (v) => { eq.drive = v; }), 'Wał daje silniejsze zarzucanie rufy i lepszy strumień na płetwy sterowe.'),
+    opt('Typ napędu', seg([{ value: 'saildrive', label: 'Saildrive' }, { value: 'shaft', label: 'Wał' }], eq.drive, (v) => { eq.drive = v; }), 'Wał daje silniejsze zarzucanie rufy i mocniejszy strumień na pojedynczą płetwę sterową.'),
+    opt('Płetwy sterowe', seg([{ value: 'twin', label: 'Dwie' }, { value: 'single', label: 'Jedna' }], eq.rudders || 'twin', (v) => { eq.rudders = v; }), 'Dwie płetwy stoją z boku, poza strumieniem śruby – ster działa tylko, gdy jacht ma prędkość. Jedna płetwa w osi dostaje strumień śruby: krótkie „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca.'),
     h('h3', {}, 'Stery strumieniowe'),
     opt(`Dziobowy (${Math.round(spec.bowThrusterN / 9.81)} kgf)`, seg([{ value: 'none', label: 'Brak' }, { value: 'onoff', label: 'Włącz/wyłącz' }, { value: 'proportional', label: 'Proporcjonalny' }], eq.bowThruster, (v) => { eq.bowThruster = v; editor.render(); })),
     opt(`Rufowy (${Math.round(spec.sternThrusterN / 9.81)} kgf)`, seg([{ value: false, label: 'Brak' }, { value: true, label: 'Zamontowany' }], eq.sternThruster, (v) => { eq.sternThruster = v; editor.render(); }), 'Stery strumieniowe tracą skuteczność powyżej ~2 kn i przegrzewają się przy długiej pracy.'),
@@ -1034,6 +1035,6 @@ window.addEventListener('error', (e) => {
 
 installDomTranslator(document.body);
 document.documentElement.lang = getLang();
-document.title = t('MoorMe – symulator cumowania');
+document.title = t('MoorMe');
 // test dymny (CI) pomija wybór języka
 if (!hasSavedLang() && !location.search.includes('smoke')) showLangPicker(); else if (location.search.includes('smoke')) showTitle(); else showModeSelect();

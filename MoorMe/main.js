@@ -13,7 +13,7 @@ function createWindow() {
     minWidth: 1100,
     minHeight: 700,
     backgroundColor: '#0b1a2a',
-    title: 'MoorMe – symulator cumowania',
+    title: 'MoorMe',
     icon: path.join(__dirname, 'build', 'icon.png'),
     autoHideMenuBar: true,
     fullscreen: !process.env.MOORME_SMOKE_OUT, // domyślnie pełny ekran (F11 przełącza)
