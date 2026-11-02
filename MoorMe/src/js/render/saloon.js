@@ -33,6 +33,16 @@ function soleTex() {
   });
 }
 
+// półszerokość wnętrza na wysokości y (ten sam profil co poszycie) – kamera nie może wyjść za burtę
+function innerHalf(B, x, y) {
+  const b = B(x), pr = [[0.46, 0], [b * 0.72, 0.1], [b * 0.93, 0.35], [b, 0.75], [b - 0.03, 1.22], [b - 0.38, 1.3], [b - 0.55, 1.88], [b - 0.75, 1.98], [0, 2.02]];
+  for (let i = 0; i < pr.length - 1; i++) {
+    const [z0, y0] = pr[i], [z1, y1] = pr[i + 1];
+    if (y >= y0 && y <= y1) return z0 + (z1 - z0) * ((y - y0) / Math.max(1e-6, y1 - y0));
+  }
+  return 0.3;
+}
+
 // ---------- kadłub od środka: profile poprzeczne „loftowane” wzdłuż jachtu ----------
 function hullShell(parent) {
   const xs = [-2.3, -1.8, -1.2, -0.6, 0, 0.6, 1.2, 1.7, 2.1];
@@ -92,8 +102,8 @@ function furniture(parent, B) {
   const back2 = cushion(1.85, 0.42, 0.12, 0.35, 0.78, 1.4, parent); back2.rotation.x = -0.18;
   // szafki nad kanapami (z drzwiczkami) i listwy
   for (const s of [-1, 1]) {
-    box(2.2, 0.32, 0.3, wood, 0.2, 1.42, s * (B(0.2) - 0.42), parent);
-    for (let k = 0; k < 4; k++) box(0.46, 0.24, 0.01, woodD, -0.62 + k * 0.55, 1.42, s * (B(0.2) - 0.57), parent);
+    box(2.2, 0.32, 0.3, wood, 0.2, 1.42, s * (B(0.2) - 0.42), parent).userData.nearFade = true;
+    for (let k = 0; k < 4; k++) box(0.46, 0.24, 0.01, woodD, -0.62 + k * 0.55, 1.42, s * (B(0.2) - 0.57), parent).userData.nearFade = true;
   }
   // stół: płaski blat (skrzydła rozłożone) na dwóch nogach
   const T = { x0: -0.35, x1: 0.95, y: 0.74 };
@@ -354,7 +364,7 @@ export class SaloonView {
     }
     for (const sd of [-1, 1]) { const strip = new THREE.PointLight(0xffc98a, 0.5, 1.6, 1.5); strip.position.set(0.2, 1.22, sd * 1.15); scene.add(strip); }
     const reading = new THREE.SpotLight(0xffc27a, 2.2, 2.2, 0.6, 0.6, 1.5); reading.position.set(-1.35, 1.6, 1.05); reading.target.position.set(-1.5, 0.78, 1.1); scene.add(reading, reading.target);
-    const B = hullShell(scene);
+    const B = this.B = hullShell(scene);
     this.table = furniture(scene, B);
     this.pickables = [];
     const T = this.table, add = (obj, id, x, y, z, ry = 0) => { obj.position.set(x, y, z); obj.rotation.y = ry; obj.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.userData.pick = id; if (Array.isArray(o.material)) o.material = o.material.map((mm) => mm.clone()); else o.material = o.material.clone(); } }); obj.userData.pick = id; scene.add(obj); this.pickables.push(obj); return obj; };
@@ -479,7 +489,8 @@ export class SaloonView {
     const pos = () => new THREE.Vector3(c.tx + Math.cos(c.el) * Math.cos(c.az) * d, c.ty + Math.sin(c.el) * d, c.tz + Math.cos(c.el) * Math.sin(c.az) * d);
     // kamera nie wychodzi poza mesę (skracamy odległość)
     let p = pos();
-    for (let i = 0; i < 20 && (p.x < -2.1 || p.x > 1.55 || p.y > 1.9 || p.y < 0.1 || Math.abs(p.z) > 1.3); i++) { d *= 0.9; p = pos(); }
+    const outside = (q) => q.x < -2.1 || q.x > 1.5 || q.y > 1.85 || q.y < 0.1 || Math.abs(q.z) > Math.min(1.3, innerHalf(this.B, q.x, q.y) - 0.22);
+    for (let i = 0; i < 30 && outside(p); i++) { d *= 0.92; p = pos(); }
     this.camera.position.copy(p);
     this.camera.lookAt(c.tx, c.ty, c.tz);
     this.fadeOccluders(p, new THREE.Vector3(c.tx, c.ty, c.tz), dt);
@@ -507,6 +518,13 @@ export class SaloonView {
       const d = fwd.clone().addScaledVector(right, a).addScaledVector(up, b).normalize();
       ray.set(cam, d); ray.far = 0.45;
       for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
+    }
+    // szafki wiszące na wysokości oczu: znikają, gdy kamera jest blisko nich (nawet jeśli nie leżą dokładnie na linii do celu)
+    const bb = this._fadeBox || (this._fadeBox = new THREE.Box3());
+    for (const o of this.occluders) {
+      if (!o.userData.nearFade) continue;
+      bb.setFromObject(o);
+      if (bb.distanceToPoint(cam) < 1.0) hit.add(o);
     }
     const k = Math.min(1, (dt || 0.016) * 8);
     for (const o of this.occluders) {

@@ -1,4 +1,4 @@
-// Modele łodzi – dane orientacyjne oparte na jachtach Bavaria C34, C46, C50.
+// Modele łodzi C34, C46, C50 – dane orientacyjne.
 // Układ lokalny: x – wzdłuż łodzi (+ do dziobu) od środka ciężkości, y – w poprzek (+ sterburta).
 
 export const BOATS = {

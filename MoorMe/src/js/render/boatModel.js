@@ -1,4 +1,4 @@
-// Proceduralny model jachtu w stylu low-poly (Bavaria serii C)
+// Proceduralny model jachtu w stylu low-poly (nowoczesny jacht turystyczny)
 // Układ modelu: +x do dziobu, +y do góry, +z na sterburtę. Środek = środek ciężkości na linii wodnej.
 import * as THREE from 'three';
 import { hullExtents, halfBeamAt } from '../data/boats.js';
