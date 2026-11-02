@@ -274,7 +274,7 @@ export class BoatPhysics {
   heelAngle() {
     const f = this.dbg.windF || 0;
     const ang = this.dbg.appAngle || 0;
-    return clamp(-Math.sin(ang) * f / (this.m * 9.81) * 18, -0.12, 0.12);
+    return clamp(-Math.sin(ang) * f / (this.m * 9.81) * 9, -0.06, 0.06); // żagle zwinięte – na silniku przechył niewielki (do ok. 3,5°)
   }
 
   halfBeamAt(x) { return halfBeamAt(this.spec, x); }
