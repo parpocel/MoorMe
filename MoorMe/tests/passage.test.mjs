@@ -126,9 +126,10 @@ for (const [id, seed] of Object.keys(PASSAGES).filter((i) => i !== 'offshore').f
     const S = w.spawner.sits;
     let ov = 0;
     for (let i = 0; i < S.length; i++) for (let j = i + 1; j < S.length; j++) if (Math.hypot(S[i].cx - S[j].cx, S[i].cz - S[j].cz) < S[i].rad + S[j].rad) ov++;
-    const wpBlocked = S.some((q) => w.route.slice(1).some((p) => Math.hypot(q.cx - p.x, q.cz - p.z) < q.rad + 100));
+    const wpBlocked = S.some((q) => w.route.slice(1).filter((p) => !p.label).some((p) => Math.hypot(q.cx - p.x, q.cz - p.z) < q.rad + 100)); // waypointy zwrotów z założenia leżą przy sytuacjach
+    const turnsAdded = w.route.filter((p) => p.label).length;
     const maxOff = Math.max(...spawned.map((q) => q.off));
-    check(S.length >= 8 && ov === 0 && !wpBlocked, `offshore#${seed}: ${S.length} sytuacji w 30 min (${[...new Set(S.map((q) => q.kind))].join(',')}), bez nakładania, waypointy wolne`);
+    check(S.length >= 8 && ov === 0 && !wpBlocked, `offshore#${seed}: ${S.length} sytuacji w 30 min (${[...new Set(S.map((q) => q.kind))].join(',')}), bez nakładania, waypointy wolne, zwrotów dodanych: ${turnsAdded}`);
     check(maxOff < 40 && spawned.every((q) => q.d > 400), `offshore#${seed}: nowe sytuacje przed dziobem (maks. ${maxOff.toFixed(0)}° od kierunku, najbliżej ${Math.min(...spawned.map((q) => q.d)).toFixed(0)} m)`);
     check(w.nav.next >= 1 && w.navRoute === w.route, `offshore#${seed}: BRG na bieżący waypoint (${w.nav.next}/${w.route.length - 1})`);
   }

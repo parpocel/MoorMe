@@ -505,24 +505,30 @@ export function buildSea(H, scene) {
     heads.push({ sprite: sp, pattern: PATTERNS.R });
   });
 
-  // trasa i waypointy
+  // trasa i waypointy (na otwartym morzu trasa się zmienia – przebudowa linii i pierścieni)
   const routeGroup = new THREE.Group();
   const R = H.route;
-  const lp = [];
-  for (let i = 0; i < R.length - 1; i++) lp.push(R[i].x, 0.7, R[i].z, R[i + 1].x, 0.7, R[i + 1].z);
-  const lg = new THREE.BufferGeometry();
-  lg.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
-  const routeLine = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.22 }));
+  const routeLine = new THREE.LineSegments(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.22 }));
   routeLine.frustumCulled = false;
   routeGroup.add(routeLine);
-  const wpRings = R.map((p, i) => {
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(i === R.length - 1 ? 30 : 14, 0.45, 6, 36), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.35 }));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(p.x, 0.8, p.z);
-    ring.visible = i > 0;
-    routeGroup.add(ring);
-    return ring;
-  });
+  let wpRings = [];
+  const buildRoute = () => {
+    const lp = [];
+    for (let i = 0; i < R.length - 1; i++) lp.push(R[i].x, 0.7, R[i].z, R[i + 1].x, 0.7, R[i + 1].z);
+    routeLine.geometry.dispose();
+    routeLine.geometry = new THREE.BufferGeometry();
+    routeLine.geometry.setAttribute('position', new THREE.Float32BufferAttribute(lp, 3));
+    for (const ring of wpRings) { routeGroup.remove(ring); ring.geometry.dispose(); }
+    wpRings = R.map((p, i) => {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(i === R.length - 1 ? 30 : 14, 0.45, 6, 36), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.35 }));
+      ring.rotation.x = Math.PI / 2;
+      ring.position.set(p.x, 0.8, p.z);
+      ring.visible = i > 0;
+      routeGroup.add(ring);
+      return ring;
+    });
+  };
+  buildRoute();
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 70, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff4fd8, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false, fog: false }));
   beam.position.y = 35;
   routeGroup.add(beam);
@@ -532,7 +538,8 @@ export function buildSea(H, scene) {
   const api = {
     group, dyn, bollardMeshes: [], lamps: [], lighthouses, marks, routeGroup,
     // otwarte morze: nowa sytuacja wylosowana przed dziobem
-    addSituation({ marks: ms, shoals, wrecks }) {
+    addSituation({ marks: ms, shoals, wrecks, routeChanged }) {
+      if (routeChanged) buildRoute();
       for (const m of ms) addMark(m);
       if (!H.blind) for (const q of shoals) addShoal(q);
       for (const w of wrecks) group.add(wreckMesh(w));

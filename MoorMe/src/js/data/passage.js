@@ -281,7 +281,7 @@ const HAZ = {
   special: { names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
 };
 // rodzaje sytuacji i ich częstość (na otwartym morzu losowane w locie przed dziobem)
-export const SITUATION_KINDS = [['cardinal', 3], ['isolated', 1.2], ['wreck', 0.5], ['special', 0.35], ['channel', 1.6], ['fork', 1.3]];
+export const SITUATION_KINDS = [['cardinal', 3], ['isolated', 0.5], ['wreck', 0.5], ['special', 0.35], ['channel', 1.6], ['fork', 1.3]];
 export function pickSituationKind(r) {
   const tot = SITUATION_KINDS.reduce((s, k) => s + k[1], 0);
   let x = r() * tot;
@@ -292,7 +292,7 @@ export function pickSituationKind(r) {
 // Jedna sytuacja nawigacyjna na otwartym morzu: E – punkt wejścia (od strony jachtu), hdg – kierunek (kompas), id – numer.
 // Zwraca znaki, mielizny, wraki, polecenia i okrąg, w którym się mieści (cx, cz, rad).
 export function makeSituation(kind, E, hdg, r, id = 0) {
-  const shoals = [], marks = [], wrecks = [], notes = [], forks = [];
+  const shoals = [], marks = [], wrecks = [], notes = [], forks = [], turns = []; // turns – waypointy zwrotów prowadzące przez sytuację
   const fr = (h) => { const u = compassVec(h); return { u, v: { x: -u.z, z: u.x } }; }; // v – na prawo od kierunku
   const at = (O, F, a, l) => ({ x: O.x + F.u.x * a + F.v.x * l, z: O.z + F.u.z * a + F.v.z * l });
   const R = (p) => ({ x: Math.round(p.x), z: Math.round(p.z) });
@@ -319,6 +319,7 @@ export function makeSituation(kind, E, hdg, r, id = 0) {
     marks.push({ type: 'safe', ...R(at(E, F, 0, -24)), name: 'Wejście na tor' });
     banks(E, F, a0, a1, [-1, 1]);
     gates(E, F, a0 + 30, a1 - 20, withB);
+    turns.push({ ...R(at(E, F, -40, 0)), label: 'wejście na tor' }, { ...R(at(E, F, a1 + 120, 0)), label: 'wyjście z toru' });
     notes.push({ ...R(E), r: 480, end: R(at(E, F, a1 + 160, 0)), text: withB ? 'Tor wodny przed dziobem – płyniesz z kierunkiem oznakowania (od morza)' : 'Tor wodny przed dziobem – płyniesz pod prąd kierunku oznakowania (w stronę morza)' });
   } else if (kind === 'fork') {
     const T = 260 + r() * 80, a0 = 110, aS = a0 + T, S = at(E, F, aS, 0), fid = 'f' + id;
@@ -348,6 +349,7 @@ export function makeSituation(kind, E, hdg, r, id = 0) {
     }
     notes.push({ ...R(E), r: 480, end: ends[take], text: `Tor wodny z rozwidleniem przed dziobem – za rozwidleniem płyń torem ${take === 'main' ? 'GŁÓWNYM' : 'BOCZNYM'}` });
     forks.push({ id: fid, take, prefType, x: Math.round(S.x), z: Math.round(S.z) });
+    turns.push({ ...R(at(E, F, -40, 0)), label: 'wejście na tor' }, { ...R(S), label: 'rozwidlenie' }, { ...ends[take], label: take === 'main' ? 'tor główny' : 'tor boczny' });
   } else {
     const C = at(E, F, 150, 0);
     if (kind === 'cardinal') {
@@ -356,11 +358,14 @@ export function makeSituation(kind, E, hdg, r, id = 0) {
       shoals.push({ name: 'Mielizna', poly: ell(C.x, C.z, rx, rz, r() * Math.PI, 12), depth: 0.8 + r() * 0.6 });
       const [type, deg] = CARD[Math.round(brgOf(F.v.x * s, F.v.z * s) / 90) % 4], cd = compassVec(deg);
       marks.push({ type, x: Math.round(C.x + cd.x * (Rm + 30)), z: Math.round(C.z + cd.z * (Rm + 30)), gate: 150 });
+      turns.push({ x: Math.round(C.x + cd.x * (Rm + 110)), z: Math.round(C.z + cd.z * (Rm + 110)), label: 'omiń mieliznę' });
     } else {
       const name = HAZ[kind].names[Math.floor(r() * HAZ[kind].names.length)];
       if (kind === 'isolated') shoals.push({ name, poly: ell(C.x, C.z, 14, 11, r() * 3, 10), depth: 0.5 });
       if (kind === 'wreck') wrecks.push({ name, ...R(at(C, F, 25 * (r() - 0.5), 25 * (r() - 0.5))), rot: r() * 3 });
       marks.push({ type: kind, ...R(C), name });
+      const off = { isolated: 135, wreck: 185, special: 115 }[kind], s = r() < 0.5 ? 1 : -1;
+      turns.push({ ...R(at(C, F, 0, s * off)), label: { isolated: 'omiń skałę', wreck: 'omiń wrak', special: 'omiń strefę' }[kind] });
     }
   }
   // okrąg obejmujący sytuację (do rozmieszczania kolejnych bez nakładania)
@@ -368,7 +373,7 @@ export function makeSituation(kind, E, hdg, r, id = 0) {
   const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
   const rad = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))) + (kind === 'wreck' ? 120 : kind === 'special' ? 55 : kind === 'isolated' ? 75 : 20);
-  return { id, kind, shoals, marks, wrecks, notes, forks, cx, cz, rad };
+  return { id, kind, shoals, marks, wrecks, notes, forks, turns, cx, cz, rad };
 }
 
 // Otwarte morze: trasa z kilku waypointów (ok. 3 nm) do boi docelowej; sytuacje pojawiają się w locie przed dziobem (PassageWorld)

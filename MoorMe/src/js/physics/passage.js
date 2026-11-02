@@ -147,7 +147,27 @@ export class PassageWorld extends World {
     H.forks.push(...sit.forks);
     this._notes.push(...sit.notes.map((n) => ({ ...n, fired: false })));
     sp.sits.push(sit);
-    if (this.onSpawn) this.onSpawn({ marks, shoals: sit.shoals, wrecks: sit.wrecks });
+    const routeChanged = this.insertTurns(sit);
+    if (this.onSpawn) this.onSpawn({ marks, shoals: sit.shoals, wrecks: sit.wrecks, routeChanged });
+  }
+
+  // Sytuacja leżąca na dalszym odcinku trasy dostaje waypointy zwrotów (obejście, wejście i wyjście z toru)
+  insertTurns(sit) {
+    const R = this.route;
+    if (!sit.turns || !sit.turns.length) return false;
+    for (let k = Math.max(1, this.next); k < R.length; k++) {
+      const a = R[k - 1], b = R[k], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((sit.cx - a.x) * dx + (sit.cz - a.z) * dz) / L2, 0, 1);
+      if (Math.hypot(sit.cx - a.x - dx * t, sit.cz - a.z - dz * t) > sit.rad + 30) continue;
+      R.splice(k, 0, ...sit.turns.map((p) => ({ x: p.x, z: p.z, label: p.label })));
+      const last = R.length - 1;
+      R.forEach((p, i) => { p.i = i; if (i > 0 && i < last) p.name = `WP${i}${p.label ? ' – ' + p.label : ''}`; });
+      let L = 0;
+      for (let i = 1; i < R.length; i++) L += Math.hypot(R[i].x - R[i - 1].x, R[i].z - R[i - 1].z);
+      this.H.routeLength = L;
+      return true;
+    }
+    return false;
   }
 
   markName(m) { return this.blind ? m.typeName : m.label; }
@@ -247,7 +267,7 @@ export class PassageWorld extends World {
       const vmg = Math.max(0.5, b.speed);
       n.eta = rest / vmg;
       // punkt za rozwidleniem (tryb z BRG) jest osiągnięty także przy końcu któregokolwiek z torów
-      const reached = dtw < 50 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
+      const reached = dtw < 30 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
       if (reached) {
         ps.wpReached++;
         if (k >= R.length - 1) { this.finishPassage(); return; }
