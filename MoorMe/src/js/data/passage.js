@@ -281,7 +281,7 @@ const HAZ = {
   special: { names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
 };
 // rodzaje sytuacji i ich częstość (na otwartym morzu losowane w locie przed dziobem)
-export const SITUATION_KINDS = [['cardinal', 3], ['isolated', 1.2], ['wreck', 1], ['special', 0.35], ['channel', 1.6], ['fork', 1.3]];
+export const SITUATION_KINDS = [['cardinal', 3], ['isolated', 1.2], ['wreck', 0.5], ['special', 0.35], ['channel', 1.6], ['fork', 1.3]];
 export function pickSituationKind(r) {
   const tot = SITUATION_KINDS.reduce((s, k) => s + k[1], 0);
   let x = r() * tot;

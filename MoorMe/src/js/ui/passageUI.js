@@ -121,8 +121,8 @@ export class PassageScreen extends SimScreen {
     sim.appendChild(this.chartShowBtn);
     sim.appendChild(chart);
     this.chartEl = chart;
-    let on = true;
-    try { on = localStorage.getItem('moorme.chart.on') !== '0'; } catch (e) { /* brak zapisu */ }
+    let on = false; // domyślnie schowany – pokazujesz go przyciskiem „🗺 Mapa” (C)
+    try { on = localStorage.getItem('moorme.chart.v2') === '1'; } catch (e) { /* brak zapisu */ }
     this.setChart(on);
     this.updateChartButtons();
 
@@ -163,7 +163,7 @@ export class PassageScreen extends SimScreen {
     this.chartOn = on;
     this.chartEl.style.display = on ? '' : 'none';
     this.chartShowBtn.style.display = on ? 'none' : '';
-    try { localStorage.setItem('moorme.chart.on', on ? '1' : '0'); } catch (e) { /* brak zapisu */ }
+    try { localStorage.setItem('moorme.chart.v2', on ? '1' : '0'); } catch (e) { /* brak zapisu */ }
   }
   toggleChart() { this.setChart(!this.chartOn); }
 

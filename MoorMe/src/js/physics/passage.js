@@ -106,9 +106,11 @@ export class PassageWorld extends World {
     if (Math.hypot(goal.x - b.x, goal.z - b.z) < 900) return; // przed metą już nic nowego
     const wps = this.route.slice(Math.max(1, this.next));
     const r = sp.r;
-    let kind = pickSituationKind(r);
+    // znak nowego niebezpieczeństwa (wrak) – najwyżej raz na rejs
+    const pick = () => { let k = pickSituationKind(r); for (let g = 0; g < 10 && k === 'wreck' && sp.sits.some((q) => q.kind === 'wreck'); g++) k = pickSituationKind(r); return k === 'wreck' && sp.sits.some((q) => q.kind === 'wreck') ? 'cardinal' : k; };
+    let kind = pick();
     for (let tries = 0; tries < 14; tries++) {
-      if (tries === 6) kind = pickSituationKind(r); // duże tory najpierw próbują dalej i pod innym kątem
+      if (tries === 6) kind = pick(); // duże tory najpierw próbują dalej i pod innym kątem
       // pierwsze sytuacje blisko (widać je od razu po starcie), kolejne tuż za zasięgiem wzroku – wyłaniają się przed dziobem
       // kierunek skupiony wokół dziobu (rozkład dzwonowy w ±30°) – najwięcej znaków na bezpośrednim kursie
       const a = hb + (r() + r() + r() - 1.5) * 20 * (tries < 4 ? 0.7 : 1), dist = (sp.n < 4 ? 450 + sp.n * 300 : 1050) + r() * 450 + (tries % 3) * 150;
