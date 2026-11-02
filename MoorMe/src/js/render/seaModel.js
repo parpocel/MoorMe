@@ -284,25 +284,20 @@ export function buildMarkMesh(type) {
       lightY = 4.6;
       break;
     }
-    case 'safe': { // kula w pionowe czerwono-białe pasy z czerwoną kulką
-      floatBase(RED, 0.7);
-      // kolor przypisany do całych trójkątów (siatka bez wspólnych wierzchołków) – ostre pasy zamiast różowego rozmycia
-      const geo = new THREE.SphereGeometry(1.1, 16, 10).toNonIndexed();
-      const colors = [];
-      const p = geo.attributes.position;
-      const cA = new THREE.Color(RED), cB = new THREE.Color(WHITE);
-      for (let i = 0; i < p.count; i += 3) {
-        const a = Math.atan2(p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2), p.getX(i) + p.getX(i + 1) + p.getX(i + 2));
-        const c = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 8) % 2 ? cA : cB;
-        for (let k = 0; k < 3; k++) colors.push(c.r, c.g, c.b);
-      }
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-      const s = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, flatShading: true }));
-      s.position.y = 1.0; s.castShadow = true;
-      g.add(s);
-      g.add(cyl(0.06, 0.06, 0.9, BLACK, 5, 2.0));
-      g.add(sphere(0.3, RED, 3.15));
-      lightY = 3.8;
+    case 'safe': { // pława filarowa w pionowe czerwono-białe pasy, znak szczytowy – czerwona kula, światło białe
+      const stripes = (r0, r1, h, y) => {
+        for (let k = 0; k < 8; k++) {
+          const wedge = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, 4, 1, false, (k * Math.PI) / 4, Math.PI / 4), M(k % 2 ? WHITE : RED));
+          wedge.position.y = y + h / 2;
+          wedge.castShadow = true;
+          g.add(wedge);
+        }
+      };
+      stripes(0.85, 0.9, 0.7, -0.25); // pływak
+      stripes(0.38, 0.45, 2.4, 0.45); // filar
+      g.add(cyl(0.06, 0.06, 0.6, BLACK, 5, 2.85));
+      g.add(sphere(0.32, RED, 3.7));
+      lightY = 4.4;
       break;
     }
     case 'isolated': // czarny z czerwonym pasem i dwiema kulami
