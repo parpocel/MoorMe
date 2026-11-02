@@ -149,7 +149,23 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .route .chip.tg { background: rgba(61, 220, 132, 0.16); color: #bff5d6; }
 .route .chip.none { background: rgba(255, 255, 255, 0.06); color: var(--muted); font-style: italic; }
 #hud-lines .head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px 6px; }
-#lines-list { overflow: auto; padding: 0 8px 8px; }
+#lines-list { overflow: auto; padding: 0 8px 4px; flex: 1 1 auto; min-height: 0; }
+.deck-plan { position: relative; margin: 0 10px 10px; flex: none; }
+.deck-plan .plan-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.plan-hull { fill: rgba(240, 244, 248, 0.92); stroke: #2f4468; stroke-width: 1.6; }
+.plan-cockpit { fill: rgba(201, 149, 102, 0.75); }
+.plan-cabin { fill: rgba(255, 255, 255, 0.9); stroke: rgba(47, 68, 104, 0.35); stroke-width: 1; }
+.plan-mast { fill: #2f4468; }
+.plan-fl { fill: none; stroke: #2f6fa8; stroke-width: 1.4; }
+.plan-lbl { font-size: 11px; font-weight: 700; fill: var(--muted); }
+.cleat-dot { position: absolute; transform: translate(-50%, -50%); min-width: 28px; height: 28px; padding: 0 5px; border-radius: 14px; border: 3px solid #8796ab; background: #fff; color: #2f4468; font: 800 12px/22px 'Nunito', 'Segoe UI', sans-serif; cursor: pointer; box-shadow: 0 2px 6px rgba(20, 30, 60, 0.35); transition: transform 0.12s; z-index: 2; }
+.cleat-dot:hover { transform: translate(-50%, -50%) scale(1.15); }
+.cleat-dot.free { border-style: dashed; color: #8796ab; background: rgba(255, 255, 255, 0.8); }
+.cleat-dot.ready { border-color: #2fb3e8; }
+.cleat-dot.busy { border-color: #ffd166; background: #fff6dd; }
+.cleat-dot.broken { border-color: #d2493f; background: #ffe3e0; color: #b23a30; }
+.cleat-dot.open { box-shadow: 0 0 0 3px rgba(210, 105, 95, 0.75), 0 2px 6px rgba(20, 30, 60, 0.35); }
+.cleat-head { display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 2px 2px 4px; }
 .line-card { border: 1px solid var(--border); border-radius: 9px; padding: 8px 9px; margin: 6px 0; background: rgba(255, 255, 255, 0.03); cursor: pointer; }
 .line-card.selected { border-color: var(--accent); background: rgba(47, 179, 232, 0.1); }
 .line-card .top { display: flex; justify-content: space-between; align-items: center; gap: 6px; }

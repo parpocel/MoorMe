@@ -4,11 +4,11 @@ import { World } from '../physics/world.js';
 import { LINE_STATE_LABEL, TENDING_LABEL } from '../physics/lines.js';
 import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
-import { BOATS } from '../data/boats.js';
+import { BOATS, hullOutline, hullExtents } from '../data/boats.js';
 import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
 import { buildHelpContent } from './help.js';
 import { t, sideLetters } from '../i18n.js';
-import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, tensionColor } from '../math.js';
+import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, worldToLocal, tensionColor } from '../math.js';
 
 export class SimScreen {
   constructor(root, config, callbacks) {
@@ -124,8 +124,11 @@ export class SimScreen {
       h('div', { style: { display: 'flex', gap: '6px' } },
         h('button.btn.sm.on', { onclick: () => this.startRig(), title: 'Kliknij knagę, (kluzę/półkluzę) i poler w widoku 3D (K)' }, '🖱 Knaga → poler'),
         h('button.btn.sm', { onclick: () => this.showPrepareLine() }, '+ Z listy'))));
+    // nad rzutem: karta lin wybranej knagi; pod spodem rzut jachtu z góry z okienkami na knagach
     this.linesList = h('div', { id: 'lines-list' });
-    lines.appendChild(this.linesList);
+    this.plan = h('div.deck-plan');
+    lines.append(this.linesList, this.plan);
+    this.buildPlan();
     sim.appendChild(lines);
 
     this.pickBanner = h('div.hud.glass', { id: 'pick-banner', style: { display: 'none' } });
@@ -255,7 +258,7 @@ export class SimScreen {
 
   // ---------- Liny ----------
   lineSignature() {
-    return this.world.lines.map((l) => `${l.id}:${l.name}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}:${l.plannedTarget ? l.plannedTarget.id : ''}:${l.mooringQueued}:${l.releaseQueued}`).join('|') + `|${this.world.crew.ashore}`;
+    return this.world.lines.map((l) => `${l.id}:${l.name}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}:${l.plannedTarget ? l.plannedTarget.id : ''}:${l.mooringQueued}:${l.releaseQueued}`).join('|') + `|${this.world.crew.ashore}|${this.openCleatId}`;
   }
 
   renderLines(force) {
@@ -267,8 +270,18 @@ export class SimScreen {
     const w = this.world;
     this.linesList.innerHTML = '';
     this.lineBars = new Map();
+    if (this.selectedLine) this.openCleatId = this.selectedLine.cleatId;
+    const oc = this.openCleatId ? w.deckItem(this.openCleatId) : null;
+    if (oc) {
+      this.linesList.appendChild(h('div.cleat-head', {}, h('b', {}, t(oc.label)),
+        h('div', { style: { display: 'flex', gap: '5px' } },
+          h('button.btn.xs.on', { onclick: () => this.rigFromCleat(oc), title: 'Potem kliknij (kluzę/półkluzę) i poler w widoku 3D' }, '＋ Nowa lina z tej knagi'),
+          h('button.btn.xs', { onclick: () => { this.openCleatId = null; this.selectedLine = null; this.renderLines(true); }, title: 'Zamknij' }, '✕'))));
+      if (!w.lines.some((l) => l.cleatId === oc.id)) this.linesList.appendChild(h('div.small.muted', { style: { padding: '4px 2px 8px' } }, 'Na tej knadze nie ma liny.'));
+    }
     w.lines.forEach((line, idx) => {
       line.selected = line === this.selectedLine;
+      if (!oc || line.cleatId !== oc.id) return;
       const cleat = w.deckItem(line.cleatId);
       const fl = line.fairleadId ? w.deckItem(line.fairleadId) : null;
       const card = h('div.line-card', { class: line.selected ? 'selected' : '', onclick: (e) => { if (e.target.tagName !== 'BUTTON') this.selectLine(line); } });
@@ -351,11 +364,12 @@ export class SimScreen {
       card.appendChild(acts);
       this.linesList.appendChild(card);
     });
-    if (!w.lines.length) this.linesList.appendChild(h('div.small.muted', { style: { padding: '10px' } }, 'Brak aktywnych lin. Kliknij knagę na jachcie, a potem poler (albo „🖱 Knaga → poler”).'));
+    if (!oc) this.linesList.appendChild(h('div.small.muted', { style: { padding: '2px 4px 6px' } }, w.lines.length ? 'Kliknij okienko knagi na rzucie, aby pracować na cumie.' : 'Brak aktywnych lin. Kliknij okienko knagi na rzucie albo knagę na jachcie w widoku 3D, a potem poler.'));
     this.updateLineBars();
   }
 
   updateLineBars() {
+    this.updatePlan();
     const bl = this.world.lineParams.breakLoad;
     for (const line of this.world.lines) {
       const e = this.lineBars && this.lineBars.get(line.id);
@@ -369,7 +383,98 @@ export class SimScreen {
 
   selectLine(line) {
     this.selectedLine = this.selectedLine === line ? null : line;
+    if (this.selectedLine) this.openCleatId = line.cleatId;
     this.renderLines(true);
+  }
+
+  // ---------- Rzut jachtu z góry z okienkami knag ----------
+  buildPlan() {
+    const w = this.world, spec = w.spec;
+    const { xs, xb } = hullExtents(spec);
+    const W = 440, s = (W - 70) / spec.loa, H = Math.round(spec.beam * s + 64);
+    const P = this.planGeo = { W, H, s, toPx: (x, y) => [W / 2 + (x - (xs + xb) / 2) * s, H / 2 + y * s] };
+    const NS = 'http://www.w3.org/2000/svg';
+    const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+    const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'plan-svg' });
+    const pts = hullOutline(spec, 30).map(([x, y]) => P.toPx(x, y).map((v) => v.toFixed(1)).join(',')).join(' ');
+    el('polygon', { points: pts, class: 'plan-hull' }, svg);
+    // kokpit, nadbudówka, maszt – tylko dla orientacji
+    const L = spec.loa;
+    const [c0x] = P.toPx(xs + 0.03 * L, 0), [c1x] = P.toPx(xs + 0.3 * L, 0);
+    el('rect', { x: c0x, y: H / 2 - spec.beam * 0.3 * s, width: c1x - c0x, height: spec.beam * 0.6 * s, rx: 6, class: 'plan-cockpit' }, svg);
+    const [k0x] = P.toPx(xs + 0.3 * L, 0), [k1x] = P.toPx(xb - 0.3 * L, 0);
+    el('rect', { x: k0x, y: H / 2 - spec.beam * 0.24 * s, width: k1x - k0x, height: spec.beam * 0.48 * s, rx: 10, class: 'plan-cabin' }, svg);
+    const [mx, my] = P.toPx(0.1 * L, 0);
+    el('circle', { cx: mx, cy: my, r: 3.5, class: 'plan-mast' }, svg);
+    for (const f of w.fairleads()) { const [fx, fy] = P.toPx(f.x, f.y); el('circle', { cx: fx, cy: fy, r: 2.6, class: 'plan-fl' }, svg); }
+    const lbl = (x, y, txt, anchor) => { const tx = el('text', { x, y, class: 'plan-lbl', 'text-anchor': anchor }, svg); tx.textContent = t(txt); };
+    lbl(W / 2, 13, 'LEWA BURTA', 'middle'); lbl(W / 2, H - 4, 'PRAWA BURTA', 'middle'); lbl(W - 4, H / 2 - spec.beam * 0.5 * s - 6, 'DZIÓB →', 'end');
+    this.planLinesG = el('g', {}, svg);
+    this.plan.innerHTML = '';
+    this.plan.style.aspectRatio = `${W} / ${H}`;
+    this.plan.appendChild(svg);
+    this.planSvgEl = el;
+    this.cleatDots = new Map();
+    for (const c of w.cleats()) {
+      const [px, py] = P.toPx(c.x, c.y);
+      const dot = h('button.cleat-dot', { style: { left: `${(px / W) * 100}%`, top: `${(py / H) * 100}%` }, title: t(c.label), onclick: (e) => { e.stopPropagation(); this.openCleat(c); } });
+      this.cleatDots.set(c.id, dot);
+      this.plan.appendChild(dot);
+    }
+  }
+
+  openCleat(c) {
+    if (this.openCleatId === c.id) { this.openCleatId = null; this.selectedLine = null; this.renderLines(true); return; }
+    this.openCleatId = c.id;
+    const ls = this.world.lines.filter((l) => l.cleatId === c.id);
+    this.selectedLine = ls.length ? (ls.includes(this.selectedLine) ? this.selectedLine : ls[0]) : null;
+    this.renderLines(true);
+  }
+
+  // nowa lina z knagi wskazanej na rzucie (dalej: kluza/półkluza i poler w widoku 3D)
+  rigFromCleat(c) {
+    if (this.pickLine) this.cancelPick();
+    this.rig = { stage: 'route', mode: this.rigMode || 'slip', cleat: c, fairlead: undefined };
+    this.updateRig();
+  }
+
+  // stan okienek knag i kierunki lin (co klatkę)
+  updatePlan() {
+    const w = this.world, P = this.planGeo;
+    if (!P) return;
+    const bl = w.lineParams.breakLoad, b = w.boat;
+    const hex = (q) => '#' + tensionColor(q).toString(16).padStart(6, '0');
+    for (const [id, dot] of this.cleatDots) {
+      const ls = w.lines.filter((l) => l.cleatId === id);
+      let col = '', cls = 'free';
+      if (ls.some((l) => l.state === 'broken')) { cls = 'broken'; }
+      else if (ls.some((l) => l.state === 'attached')) { cls = 'attached'; col = hex(Math.max(...ls.filter((l) => l.state === 'attached').map((l) => l.tension / bl))); }
+      else if (ls.some((l) => ['pending', 'queued', 'waitingCrew'].includes(l.state))) cls = 'busy';
+      else if (ls.length) cls = 'ready';
+      const txt = ls.length ? ls.map((l) => w.lines.indexOf(l) + 1).join('·') : '+';
+      if (dot._txt !== txt) { dot.textContent = txt; dot._txt = txt; }
+      const full = `cleat-dot ${cls}${this.openCleatId === id ? ' open' : ''}${this.rig && this.rig.cleat && this.rig.cleat.id === id ? ' open' : ''}`;
+      if (dot.className !== full) dot.className = full;
+      dot.style.borderColor = col;
+    }
+    // linie od kluzy w stronę celu (przycięte do krawędzi rzutu)
+    const g = this.planLinesG;
+    while (g.firstChild) g.removeChild(g.firstChild);
+    for (const line of w.lines) {
+      const tgt = line.state === 'attached' || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.state === 'pending' ? line.pendingTarget : null;
+      const tp = tgt && (line.isMooring ? tgt.anchor : tgt);
+      if (!tp) continue;
+      const lead = w.leadLocal(line), loc = worldToLocal(b.x, b.z, b.th, tp.x, tp.z);
+      const [ax, ay] = P.toPx(lead.x, lead.y);
+      let [tx, ty] = P.toPx(loc.x, loc.y);
+      const dx = tx - ax, dy = ty - ay, len = Math.hypot(dx, dy) || 1;
+      const maxLen = Math.min(len, 110);
+      tx = clamp(ax + dx / len * maxLen, 4, P.W - 4); ty = clamp(ay + dy / len * maxLen, 4, P.H - 4);
+      const attached = line.state === 'attached';
+      const col = attached ? hex(line.tension / bl) : '#ffd166';
+      this.planSvgEl('line', { x1: ax, y1: ay, x2: tx, y2: ty, stroke: col, 'stroke-width': line === this.selectedLine ? 3 : 2, 'stroke-dasharray': attached ? '' : '4 3', 'stroke-linecap': 'round' }, g);
+      if (len <= 110 && attached) this.planSvgEl('circle', { cx: tx, cy: ty, r: 3.5, fill: col }, g);
+    }
   }
 
   attachOrPick(line) {

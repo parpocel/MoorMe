@@ -42,6 +42,10 @@ export const EN = {
   'Rozmiar odbijaczy': 'Fender size', 'Małe': 'Small', 'Średnie': 'Medium', 'Duże': 'Large', 'XL': 'XL', 'Elementy pokładu': 'Deck items',
   '✋ Wybierz / przesuń': '✋ Select / move', '+ Knaga': '+ Cleat', '+ Kluza': '+ Fairlead', '+ Półkluza': '+ Chock', '+ Odbijacz': '+ Fender', '+ Kula odbijacza': '+ Ball fender', '✖ Usuń': '✖ Delete',
   '↺ Domyślne': '↺ Defaults',
+  'LEWA BURTA': 'PORT SIDE', 'PRAWA BURTA': 'STARBOARD SIDE', 'Zamknij': 'Close', '＋ Nowa lina z tej knagi': '＋ New line from this cleat',
+  'Potem kliknij (kluzę/półkluzę) i poler w widoku 3D': 'Then click a (fairlead/chock) and a bollard in the 3D view', 'Na tej knadze nie ma liny.': 'There is no line on this cleat.',
+  'Kliknij okienko knagi na rzucie, aby pracować na cumie.': 'Click a cleat on the deck plan to work the line.',
+  'Brak aktywnych lin. Kliknij okienko knagi na rzucie albo knagę na jachcie w widoku 3D, a potem poler.': 'No active lines. Click a cleat on the deck plan or on the yacht in the 3D view, then a bollard.',
   'LEWA BURTA (bakburta)': 'PORT SIDE', 'PRAWA BURTA (sterburta)': 'STARBOARD SIDE', 'DZIÓB →': 'BOW →', 'RUFA': 'STERN',
   'Knaga': 'Cleat', 'Kluza': 'Fairlead', 'Półkluza': 'Chock', 'Poler': 'Bollard', 'Pierścień': 'Ring', 'Dalba': 'Pile',
   'Pierścień na końcu Y-bomu': 'Ring at end of Y-boom', 'Pierścień na Y-bomie': 'Ring on Y-boom',
@@ -132,8 +136,8 @@ export const EN = {
   'Domyślnie liny zakładasz na biegowo: lina okłada poler i wraca na jacht (z pokładu do ok. 1,5 m, dalbę do ok. 3 m), oddasz ją z pokładu. Na stałe: oko rzucasz na poler z pokładu (do ok. 3,4 m), zdjąć je może tylko załoga na lądzie. Tryb zmienisz przyciskiem „⇄” na karcie liny – przy dalbach i polerach tuż przy burcie załoga przekłada linę z pokładu.':
     'By default lines are rigged as slip lines: the line goes round the bollard and back to the yacht (from the deck up to about 1.5 m, a pile up to about 3 m) and you can release it from the deck. Fixed: you throw the eye over the bollard from the deck (up to about 3.4 m) and only the crew ashore can take it off. Change the mode with the “⇄” button on the line card – at piles and bollards right by the hull the crew re-rigs the line from the deck.',
   'Wybieranie i luzowanie.': 'Hauling and easing.',
-  'Na karcie liny (lewy dolny róg) lub w menu kołowym po kliknięciu liny: Wybieraj (przytrzymaj – wybiera), Wybierz (wybiera samo do napięcia liny), Luzuj (popuszczanie), Luz (lina bez naciągu), Knaguj (zablokuj długość), Oddaj. Kabestan daje większą siłę, ale wybiera wolniej.':
-    'On the line card (bottom left) or in the radial menu after clicking the line: Haul (hold to haul), Take up (hauls by itself until the line is taut), Ease (pay out), Slack (line without tension), Make fast (lock the length), Release. A winch gives more power but hauls more slowly.',
+  'Po kliknięciu okienka knagi na rzucie jachtu (lewy dolny róg) rozwija się karta liny; tam lub w menu kołowym po kliknięciu liny: Wybieraj (przytrzymaj – wybiera), Wybierz (wybiera samo do napięcia liny), Luzuj (popuszczanie), Luz (lina bez naciągu), Knaguj (zablokuj długość), Oddaj. Kabestan daje większą siłę, ale wybiera wolniej.':
+    'Clicking a cleat on the deck plan (bottom left) opens the line card; there or in the radial menu after clicking the line: Haul (hold to haul), Take up (hauls by itself until the line is taut), Ease (pay out), Slack (line without tension), Make fast (lock the length), Release. A winch gives more power but hauls more slowly.',
   'Kolor liny.': 'Line colour.',
   'Zielona – luźna lub lekko napięta, żółta – wyraźnie napięta, czerwona – duży naciąg, blisko zerwania. Ten sam kolor ma pasek naciągu na karcie liny.':
     'Green – slack or lightly loaded, yellow – clearly loaded, red – heavy load, close to breaking. The tension bar on the line card has the same colour.',
