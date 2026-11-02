@@ -254,16 +254,17 @@ export function buildMarkMesh(type) {
       lightY = 4.6;
       break;
     }
-    case 'safe': { // czerwono-biała kula z czerwoną kulką
-      floatBase(WHITE, 0.7);
-      const geo = new THREE.SphereGeometry(1.1, 16, 10);
+    case 'safe': { // kula w pionowe czerwono-białe pasy z czerwoną kulką
+      floatBase(RED, 0.7);
+      // kolor przypisany do całych trójkątów (siatka bez wspólnych wierzchołków) – ostre pasy zamiast różowego rozmycia
+      const geo = new THREE.SphereGeometry(1.1, 16, 10).toNonIndexed();
       const colors = [];
       const p = geo.attributes.position;
       const cA = new THREE.Color(RED), cB = new THREE.Color(WHITE);
-      for (let i = 0; i < p.count; i++) {
-        const a = Math.atan2(p.getZ(i), p.getX(i));
+      for (let i = 0; i < p.count; i += 3) {
+        const a = Math.atan2(p.getZ(i) + p.getZ(i + 1) + p.getZ(i + 2), p.getX(i) + p.getX(i + 1) + p.getX(i + 2));
         const c = Math.floor(((a + Math.PI) / (Math.PI * 2)) * 8) % 2 ? cA : cB;
-        colors.push(c.r, c.g, c.b);
+        for (let k = 0; k < 3; k++) colors.push(c.r, c.g, c.b);
       }
       geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
       const s = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, flatShading: true }));
