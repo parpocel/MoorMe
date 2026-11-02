@@ -273,6 +273,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 
 /* ---------- Pomoc w menu ---------- */
 .help-card { width: min(900px, 94vw); margin: 0 auto; background: #fff7f1; border-radius: 18px; padding: 26px 34px; box-shadow: 12px 12px 0 rgba(120, 110, 160, 0.25); }
+.help-card > h2 { color: #2f4468; text-shadow: none; }
 .help-card .help-h { margin: 18px 0 8px; color: #d2695f; text-transform: uppercase; letter-spacing: 1.5px; font-size: 14px; }
 .help-card .help-grid { grid-template-columns: 170px 1fr; }
 .help-h { margin: 14px 0 6px; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); }
@@ -355,7 +356,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .navtasks .pb.pb-big > .pb-bar, .navtasks .pb.pb-big > .pb-hint, .navtasks .pb.pb-big > .pb-readout { width: min(100%, calc((100vh - 190px) * 740 / 520)); }
 .navtasks .pb.pb-big .pb-cv { max-width: none; width: min(100%, calc((100vh - 190px) * 740 / 520)); }
 .navtasks .pb-readout { font-family: Consolas, 'Courier New', monospace; font-size: 13px; font-weight: 700; margin-top: 4px; color: #2f4468; min-height: 18px; }
-.settings .set-wrap { display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
+.settings .set-wrap { display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; max-width: 1100px; margin: 0 auto; }
 .settings .set-card { padding: 20px 30px; }
 .settings .set-card h2 { margin-bottom: 10px; }
 .settings .set-row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 12px; margin: 8px 0; }
@@ -447,7 +448,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .mode-card.learn { background: #f3e6c8; }
 .mode-card .mc-ic { font-size: 30px; }
 /* podręcznik */
-.screen.handbook .hb-body { flex: 1; display: flex; gap: 18px; padding: 14px 24px; min-height: 0; position: relative; z-index: 1; }
+.screen.handbook .hb-body { flex: 1; display: flex; gap: 18px; padding: 14px 24px; min-height: 0; position: relative; z-index: 1; width: 100%; max-width: 1360px; margin: 0 auto; box-sizing: border-box; } /* podręczniki: na szerokim ekranie wyśrodkowane */
 .handbook .hb-nav { width: 230px; display: flex; flex-direction: column; gap: 8px; flex: none; }
 .handbook .hb-tab { text-align: left; border: 0; border-radius: 12px; padding: 12px 14px; font: 700 15px 'Nunito', sans-serif; background: rgba(255, 247, 241, 0.9); color: #2f4468; cursor: pointer; }
 .handbook .hb-tab.on { background: #2f4468; color: #fff7f1; }
