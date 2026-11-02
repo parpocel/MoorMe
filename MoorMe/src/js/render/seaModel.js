@@ -130,6 +130,7 @@ function groundAt(H, x, z) {
 
 // ---------- Światła znaków ----------
 const LIGHT_RANGE = 2400; // ok. 1,3 Nm – dalej światła nie są widoczne
+const SIL_BODY = new THREE.Color(0x05070a), SIL_GLOW = new THREE.Color(0x1e2733); // nocna sylwetka pławy (bez kolorów)
 // punkcik o stałej wielkości kątowej, gasnący pod koniec zasięgu
 function dotLight(sp, d, on, lightsOn) {
   // natężenie maleje z odległością: z bliska pełne, na granicy zasięgu ledwo widoczne
@@ -557,21 +558,25 @@ export function buildSea(H, scene) {
         // dalekie pławy lekko powiększone (do ok. 2×), żeby na ekranie nie znikały jako pojedyncze piksele
         const big = clamp(1 + (dn - 150) / 650, 1, 2.1);
         mesh.scale.setScalar(1.7 * big);
-        const vis = lightsOn > 0.3 ? clamp((340 - dn) / 220, 0, 1) : H.offshore ? clamp((1800 - dn) / 350, 0, 1) : 1;
-        if (mesh.userData.vis !== vis) {
-          mesh.userData.vis = vis;
-          const glowK = lightsOn * 0.1 * (0.4 + 0.6 * vis); // nocą bryła tylko lekko się zarysowuje, z bliska nie świeci
+        // nocą: sylwetka widoczna w zasięgu światła i słabnąca z odległością; kolory rozróżnialne dopiero z ok. 10 m
+        const night = lightsOn > 0.3;
+        const q = (v) => Math.round(v * 40) / 40;
+        const vis = q(night ? Math.pow(clamp(1 - dn / LIGHT_RANGE, 0, 1), 0.8) : H.offshore ? clamp((1800 - dn) / 350, 0, 1) : 1);
+        const colMix = q(night ? clamp((dn - 6) / 8, 0, 1) * lightsOn : 0); // 0 – pełne kolory, 1 – sama sylwetka
+        if (mesh.userData.vis !== vis || mesh.userData.cm !== colMix) {
+          mesh.userData.vis = vis; mesh.userData.cm = colMix;
           mesh.traverse((o) => {
             if (!o.isMesh || !o.material) return;
             o.visible = vis > 0.02;
             // nocą materiał jest stale przezroczysty (bez przełączania przy pełnej widoczności – inaczej znak „wyskakuje”)
-            o.material.transparent = lightsOn > 0.3 || vis < 1;
+            o.material.transparent = night || vis < 1;
             o.material.opacity = vis;
             o.material.depthWrite = true;
+            if (!o.userData.base) o.userData.base = o.material.color.clone();
+            o.material.color.copy(o.userData.base).lerp(SIL_BODY, colMix);
             if (o.material.emissive) {
-              if (!o.userData.base) o.userData.base = o.material.color.clone();
-              o.material.emissive.copy(o.userData.base).lerp(new THREE.Color(0x6a7a90), 0.25);
-              o.material.emissiveIntensity = lightsOn > 0.3 ? glowK : 0;
+              o.material.emissive.copy(o.userData.base).lerp(SIL_GLOW, colMix);
+              o.material.emissiveIntensity = night ? 0.05 * (1 - colMix) + 0.3 * colMix : 0;
             }
           });
         }

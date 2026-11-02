@@ -212,7 +212,7 @@ export class Atmosphere {
     // kolory nieba
     const dayTop = C(0x4f9fdc), dayBot = C(0xc4e2f5);
     const duskTop = C(0x4a5f9a), duskBot = C(0xf2a066);
-    const nightTop = C(0x02050d), nightBot = C(0x0b1426);
+    const nightTop = C(0x010308), nightBot = C(0x050a15);
     let top = lerpC(dayTop, duskTop, dusk), bot = lerpC(dayBot, duskBot, dusk);
     top = lerpC(top, nightTop, night); bot = lerpC(bot, nightBot, night);
     const grey = lerpC(C(0x9aa4ad), C(0x1c232b), night);
@@ -264,7 +264,8 @@ export class Atmosphere {
 
     // woda przygaszona przy szarym niebie
     const wm = v.water.mesh.material;
-    wm.color.copy(lerpC(C(0xffffff), C(0x9fa9b0), sky.grey * (this.sky === 'fog' ? 0.9 : 0.6)));
+    wm.color.copy(lerpC(C(0xffffff), C(0x9fa9b0), sky.grey * (this.sky === 'fog' ? 0.9 : 0.6))).multiplyScalar(1 - 0.45 * night); // nocą ciemniejsza woda
+    if (v.water.far && v.water.far.material.color) { if (!v.water._farBase) v.water._farBase = v.water.far.material.color.clone(); v.water.far.material.color.copy(v.water._farBase).multiplyScalar(1 - 0.62 * night); }
 
     // relingi i wanty: stalowe, nocą prawie czarne (bez świecenia)
     for (const l of Object.values(LINE_MATS)) l.mat.color.setHex(l.base).multiplyScalar(1 - 0.9 * night);
