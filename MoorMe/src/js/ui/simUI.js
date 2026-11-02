@@ -274,6 +274,15 @@ export class SimScreen {
     // obsługa lin wyłącznie na rzucie: klik w linę albo knagę otwiera menu pracy na cumie
     this.linesList.innerHTML = '';
     this.lineBars = new Map();
+    // zwarta lista lin: stan, naciąg i luz na bieżąco; klik w wiersz – menu pracy na cumie
+    w.lines.forEach((line, idx) => {
+      const tval = h('span.lr-val');
+      const tbar = h('div.lr-bar', {}, h('div'));
+      const row = h('div.line-row', { class: line === this.selectedLine ? 'sel' : '', onclick: (e) => { this.selectedLine = line; this.renderLines(true); const r = row.getBoundingClientRect(); this.openRadial(line, r.right + 10, r.top + r.height / 2); } },
+        h('b', {}, `${idx + 1}`), h('span.lr-name', {}, line.name), h('span.lr-st', { class: line.state }, LINE_STATE_LABEL[line.state] || line.state), tval, line.state === 'attached' ? tbar : null);
+      this.lineBars.set(line.id, { tval, tbar: tbar.firstChild });
+      this.linesList.appendChild(row);
+    });
     this.linesList.appendChild(h('div.small.muted.lines-hint', {}, w.lines.length ? 'Klik w linę lub knagę – menu. Przeciągnij linę do jachtu – wybieraj, od jachtu – luzuj.' : 'Kliknij knagę na rzucie, a potem poler.'));
     this.updateLineBars();
   }
@@ -285,7 +294,7 @@ export class SimScreen {
       const e = this.lineBars && this.lineBars.get(line.id);
       if (!e || line.state !== 'attached') continue;
       const q = line.tension / bl;
-      const txt = `${(line.tension / 1000).toFixed(2)} kN`;
+      const txt = `${(line.tension / 1000).toFixed(2)} kN · ${line.slack > 0.05 ? t('luz') + ' ' + line.slack.toFixed(1) + ' m' : t('napięta')}`;
       if (e.tval.textContent !== txt) e.tval.textContent = txt;
       e.tbar.style.width = `${clamp(q * 100 * 2, 0, 100)}%`;
       e.tbar.style.background = '#' + tensionColor(q).toString(16).padStart(6, '0');
