@@ -64,7 +64,7 @@ export class BoatPhysics {
     this.propArea = Math.PI * Math.pow(spec.propDiameter / 2, 2);
     // Podwójne płetwy sterowe są poza osią – strumień zaśrubowy trafia w nie słabo
     this.washFrac = equip.drive === 'shaft' ? 0.22 : 0.16;
-    this.propWalk = equip.drive === 'shaft' ? 0.36 : 0.24;
+    this.propWalk = equip.drive === 'shaft' ? 0.27 : 0.18; // zarzucanie rufy przez śrubę (zmniejszone o ok. 25%)
     this.propHandSign = equip.propHand === 'left' ? -1 : 1;
 
     // Pasy kadłuba do oporu poprzecznego
