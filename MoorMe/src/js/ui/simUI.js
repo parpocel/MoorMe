@@ -119,7 +119,7 @@ export class SimScreen {
     sim.appendChild(ctl);
 
     // --- Liny ---
-    const lines = h('div.hud.glass', { id: 'hud-lines' });
+    const lines = this.linesPanel = h('div.hud.glass', { id: 'hud-lines' });
     lines.appendChild(h('div.head', {}, h('h3', { style: { fontSize: '15px' } }, 'Cumy i liny'),
       h('div', { style: { display: 'flex', gap: '6px' } },
         h('button.btn.sm.on', { onclick: () => this.startRig(), title: 'Kliknij knagę, (kluzę/półkluzę) i poler w widoku 3D (K)' }, '🖱 Knaga → poler'),
@@ -270,110 +270,11 @@ export class SimScreen {
     if (!force && sig === this._lineSig) { this.updateLineBars(); return; }
     this._lineSig = sig;
     const w = this.world;
+    for (const l of w.lines) l.selected = l === this.selectedLine;
+    // obsługa lin wyłącznie na rzucie: klik w linę albo knagę otwiera menu pracy na cumie
     this.linesList.innerHTML = '';
     this.lineBars = new Map();
-    if (this.selectedLine) this.openCleatId = this.selectedLine.cleatId;
-    const oc = this.openCleatId ? w.deckItem(this.openCleatId) : null;
-    if (oc) {
-      this.linesList.appendChild(h('div.cleat-head', {}, h('b', {}, t(oc.label)),
-        h('div', { style: { display: 'flex', gap: '5px' } },
-          h('button.btn.xs.on', { onclick: () => this.rigFromCleat(oc), title: 'Potem kliknij (kluzę/półkluzę) i poler w widoku 3D' }, '＋ Nowa lina z tej knagi'),
-          h('button.btn.xs', { onclick: () => { this.openCleatId = null; this.selectedLine = null; this.renderLines(true); }, title: 'Zamknij' }, '✕'))));
-      if (!w.lines.some((l) => l.cleatId === oc.id)) this.linesList.appendChild(h('div.small.muted', { style: { padding: '4px 2px 8px' } }, 'Na tej knadze nie ma liny.'));
-    }
-    w.lines.forEach((line, idx) => {
-      line.selected = line === this.selectedLine;
-      if (!oc || line.cleatId !== oc.id) return;
-      const cleat = w.deckItem(line.cleatId);
-      const fl = line.fairleadId ? w.deckItem(line.fairleadId) : null;
-      const card = h('div.line-card', { class: line.selected ? 'selected' : '', onclick: (e) => { if (e.target.tagName !== 'BUTTON') this.selectLine(line); } });
-      const stCls = line.state === 'attached' ? 'attached' : line.state === 'broken' ? 'broken' : '';
-      const modeTxt = line.isMooring ? 'muring' : line.mode === 'slip' ? 'na biegowo' : 'na stałe';
-      card.appendChild(h('div.top', {},
-        h('div', {}, h('span.nm', {}, `${idx + 1}. ${line.name}`), h('div.st', { class: stCls }, `${LINE_STATE_LABEL[line.state] || line.state}${line.state === 'attached' ? ' · ' + TENDING_LABEL[line.tending] : ''}${line.target && line.state === 'attached' && !line.isMooring ? ' · ' + line.target.label : ''}`)),
-        h('div.small.muted', { style: { textAlign: 'right' } }, `${modeTxt} · ${line.length} m${line.winch ? ' · kabestan' : ''}`, line.jumped ? h('div', { style: { color: '#ffb347' } }, 'wyskoczyła z półkluzy!') : null)
-      ));
-      if (!line.isMooring) {
-        const tgt = line.state === 'attached' || line.state === 'waitingCrew' ? line.target : line.state === 'queued' ? line.queuedTarget : line.state === 'pending' ? line.pendingTarget : line.plannedTarget;
-        card.appendChild(h('div.route', {}, h('span.chip', {}, cleat ? cleat.label : '?'), fl ? ['→', h('span.chip.fl', {}, fl.label)] : null, '→', h('span.chip', { class: tgt ? 'tg' : 'none' }, tgt ? tgt.label : 'poler nie wskazany')));
-      }
-      const tval = h('div.small', { style: { display: 'flex', justifyContent: 'space-between', marginTop: '3px' } });
-      const tbar = h('div.tbar', {}, h('div'));
-      if (line.state === 'attached') card.append(tval, tbar);
-      this.lineBars.set(line.id, { tval, tbar: tbar.firstChild });
-      const acts = h('div.acts');
-      const btn = (label, fn, cls = '', title = '') => h('button.btn.xs', { class: cls, onclick: (e) => { e.stopPropagation(); fn(); this.renderLines(true); }, title }, label);
-      const holdBtn = (label, mode, title) => {
-        const b = h('button.btn.xs', { class: line.tending === mode ? 'on' : '', title }, label);
-        b.addEventListener('pointerdown', (e) => { e.stopPropagation(); b.setPointerCapture(e.pointerId); w.setTending(line, mode); b.classList.add('on'); });
-        const up = () => { if (line.tending === mode) w.setTending(line, 'hold'); b.classList.remove('on'); };
-        b.addEventListener('pointerup', up);
-        b.addEventListener('pointercancel', up);
-        return b;
-      };
-      switch (line.state) {
-        case 'ready':
-          if (line.plannedTarget) acts.append(btn(`⚓ Załóż na ${line.plannedTarget.label}`, () => this.attachOrPick(line), 'on', 'Załóż na wskazany poler (B)'));
-          acts.append(
-            btn(line.plannedTarget ? 'Inny poler…' : '⚓ Załóż…', () => this.startPick(line), line.plannedTarget ? '' : 'on', 'Wybierz poler / knagę / dalbę'),
-            btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }, '', 'Obsługa na kabestanie'),
-            btn('−2 m', () => { line.length = Math.max(4, line.length - 2); line.rest = line.length; }),
-            btn('+2 m', () => { line.length = Math.min(40, line.length + 2); line.rest = line.length; }),
-            btn('🗑', () => { w.removeLine(line); if (this.selectedLine === line) this.selectedLine = null; }, 'danger', 'Usuń linę')
-          );
-          break;
-        case 'onQuay':
-          if (line.mooringQueued) acts.append(h('span.small', { style: { color: '#ffd166' } }, 'Załoga podejmie muring przy kei'), btn('Anuluj', () => w.release(line)));
-          else acts.append(btn('⚓ Podejmij muring', () => w.pickupMooring(line), 'on', 'Załoga podejmuje linkę pilotową z kei (B)'));
-          acts.append(btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }));
-          break;
-        case 'queued':
-          acts.append(btn('Anuluj', () => w.release(line)), btn('Inny poler…', () => { w.release(line); this.startPick(line); }));
-          acts.append(btn(line.winch ? 'Kabestan: tak' : 'Kabestan: nie', () => { line.winch = !line.winch; }));
-          break;
-        case 'pending':
-          acts.append(btn('Przerwij', () => w.release(line)));
-          break;
-        case 'waitingCrew':
-          acts.append(btn('Anuluj', () => w.cancelRelease(line), '', 'Załoga wraca – lina zostaje założona'));
-          break;
-        case 'attached':
-          acts.append(
-            holdBtn('⬆ Wybieraj', 'haul', 'Przytrzymaj (T)'),
-            btn('⤒ Wybierz', () => w.setTending(line, 'take'), line.tending === 'take' ? 'on' : '', 'Wybieraj do momentu napięcia liny (U)'),
-            holdBtn('⬇ Luzuj', 'ease', 'Przytrzymaj (G)'),
-            btn('Luz', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '', 'Puść linę luzem'),
-            btn('Knaguj', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '', 'Zablokuj długość (Y)'),
-            btn('✋ Oddaj', () => w.release(line), 'danger', 'Oddaj / zdejmij linę (N)')
-          );
-          acts.append(btn(line.winch ? 'Kabestan ✓' : 'Kabestan ✗', () => { line.winch = !line.winch; }));
-          if (line.releaseQueued) acts.append(btn('Anuluj oddanie', () => w.cancelRelease(line), '', 'Załoga jeszcze nie zeszła – zostaw linę założoną'));
-          break;
-        case 'broken':
-          acts.append(btn('🗑 Usuń', () => { line.state = 'ready'; w.removeLine(line); }, 'danger'));
-          break;
-        default:
-          break;
-      }
-      // wybór sposobu założenia: na stałe (oko) / na biegowo – dostępny przy zakładaniu i na założonej linie
-      if (!line.isMooring && ['ready', 'queued', 'pending', 'attached'].includes(line.state)) {
-        const ms = h('div.seg', { style: { margin: '6px 0 2px' } });
-        for (const [v, l, tt] of [['fixed', 'Na stałe', 'Oko na polerze – zdejmie je tylko załoga na lądzie'], ['slip', 'Na biegowo', 'Lina okłada poler i wraca na jacht – można ją oddać z pokładu']]) {
-          ms.appendChild(h('button.btn.xs', { class: line.mode === v ? 'on' : '', title: tt, onclick: (e) => { e.stopPropagation(); w.setMode(line, v); this.renderLines(true); } }, l));
-        }
-        card.appendChild(ms);
-      }
-      card.appendChild(acts);
-      this.linesList.appendChild(card);
-    });
-    if (!oc) {
-      this.linesList.appendChild(h('div.small.muted', { style: { padding: '2px 4px 6px' } }, w.lines.length ? 'Pracuj na cumach na rzucie: przeciągnij koniec liny do jachtu – wybieraj, od jachtu – luzuj. Najedź na linę – opis, kliknij linę albo okienko knagi – wszystkie opcje.' : 'Brak aktywnych lin. Kliknij okienko knagi na rzucie albo knagę na jachcie w widoku 3D, a potem poler.'));
-      // skrót: wszystkie liny jednym rzutem oka (klik otwiera knagę)
-      w.lines.forEach((line, idx) => {
-        const st = h('span.small.muted', {}, LINE_STATE_LABEL[line.state] || line.state);
-        this.linesList.appendChild(h('div.line-row', { onclick: () => this.selectLine(line) }, h('b', {}, `${idx + 1}`), h('span', {}, line.name), st));
-      });
-    }
+    this.linesList.appendChild(h('div.small.muted.lines-hint', {}, w.lines.length ? 'Kliknij linę lub knagę – menu pracy na cumie. Przeciągnij koniec liny do jachtu – wybieraj, od jachtu – luzuj.' : 'Kliknij knagę na rzucie, a potem poler.'));
     this.updateLineBars();
   }
 
@@ -384,7 +285,8 @@ export class SimScreen {
       const e = this.lineBars && this.lineBars.get(line.id);
       if (!e || line.state !== 'attached') continue;
       const q = line.tension / bl;
-      e.tval.innerHTML = `<span>Naciąg: <b>${(line.tension / 1000).toFixed(2)} kN</b></span><span class="muted">${line.slack > 0.05 ? 'luz ' + line.slack.toFixed(1) + ' m' : 'napięta'} · ${line.dist ? line.dist.toFixed(1) : '-'} m</span>`;
+      const txt = `${(line.tension / 1000).toFixed(2)} kN`;
+      if (e.tval.textContent !== txt) e.tval.textContent = txt;
       e.tbar.style.width = `${clamp(q * 100 * 2, 0, 100)}%`;
       e.tbar.style.background = '#' + tensionColor(q).toString(16).padStart(6, '0');
     }
@@ -392,7 +294,6 @@ export class SimScreen {
 
   selectLine(line) {
     this.selectedLine = this.selectedLine === line ? null : line;
-    if (this.selectedLine) this.openCleatId = line.cleatId;
     this.renderLines(true);
   }
 
@@ -429,17 +330,19 @@ export class SimScreen {
     this.dotPos = new Map(cl.map((c, i) => [c.id, pos[i]]));
     for (const [i, c] of cl.entries()) {
       const [px, py] = pos[i];
-      const dot = h('button.cleat-dot', { style: { left: `${(px / W) * 100}%`, top: `${(py / H) * 100}%` }, title: t(c.label), onclick: (e) => { e.stopPropagation(); this.openCleat(c); } });
+      const dot = h('button.cleat-dot', { style: { left: `${(px / W) * 100}%`, top: `${(py / H) * 100}%` }, title: t(c.label), onclick: (e) => { e.stopPropagation(); this.openCleat(c, e); } });
       this.cleatDots.set(c.id, dot);
       this.plan.appendChild(dot);
     }
   }
 
-  openCleat(c) {
-    if (this.openCleatId === c.id) { this.openCleatId = null; this.selectedLine = null; this.renderLines(true); return; }
-    this.openCleatId = c.id;
+  openCleat(c, ev) {
     const ls = this.world.lines.filter((l) => l.cleatId === c.id);
-    this.selectedLine = ls.length ? (ls.includes(this.selectedLine) ? this.selectedLine : ls[0]) : null;
+    if (!ls.length) { this.rigFromCleat(c); return; }
+    const r = ev && ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : null;
+    const line = ls.includes(this.selectedLine) ? this.selectedLine : ls[0];
+    this.selectedLine = line;
+    this.openRadial(line, r ? r.left + r.width / 2 : 200, r ? r.top + r.height / 2 : 400, { cleat: c, others: ls.filter((l) => l !== line) });
     this.renderLines(true);
   }
 
@@ -465,7 +368,7 @@ export class SimScreen {
       else if (ls.length) cls = 'ready';
       const txt = ls.length ? ls.map((l) => w.lines.indexOf(l) + 1).join('·') : '+';
       if (dot._txt !== txt) { dot.textContent = txt; dot._txt = txt; }
-      const full = `cleat-dot ${cls}${this.openCleatId === id ? ' open' : ''}${this.rig && this.rig.cleat && this.rig.cleat.id === id ? ' open' : ''}`;
+      const full = `cleat-dot ${cls}${this.selectedLine && this.selectedLine.cleatId === id ? ' open' : ''}${this.rig && this.rig.cleat && this.rig.cleat.id === id ? ' open' : ''}`;
       if (dot.className !== full) dot.className = full;
       dot.style.borderColor = col;
     }
@@ -557,7 +460,7 @@ export class SimScreen {
       if (!d) return;
       this.hoverLine = null;
       if (d.mode) { if (line.tending === d.mode) w.setTending(line, 'hold'); this.renderLines(true); }
-      else { this.selectedLine = null; this.selectLine(line); }
+      else { this.selectedLine = line; this.renderLines(true); this.openRadial(line, d.x, d.y); }
     };
     const hover = (ev) => { this.hoverLine = line; this.tipPos = { x: ev.clientX, y: ev.clientY }; this.updatePlanTip(); };
     const leave = () => { if (!e.drag && this.hoverLine === line) { this.hoverLine = null; this.updatePlanTip(); } };
@@ -703,8 +606,10 @@ export class SimScreen {
   }
 
   // ---------- Okrągłe menu liny (klik na linę w 3D) ----------
-  openRadial(line, px, py) {
+  openRadial(line, px, py, extra = {}) {
     this.closeRadial();
+    this.hoverLine = null; if (this.planTip) this.planTip.style.display = 'none';
+
     this.tooltip.style.display = 'none';
     const w = this.world;
     const opts = [];
@@ -728,9 +633,15 @@ export class SimScreen {
       act('Załóż', '⚓', () => this.attachOrPick(line));
       act('Usuń', '🗑', () => w.removeLine(line), 'danger');
     }
-    act('Wybierz', '☰', () => { this.selectedLine = line; });
+    if (['attached', 'ready', 'onQuay', 'queued'].includes(line.state)) act(line.winch ? 'Kabestan ✓' : 'Kabestan', '⚙', () => { line.winch = !line.winch; }, line.winch ? 'on' : '');
+    if (line.state === 'ready' && !line.isMooring) act(line.mode === 'slip' ? 'Na stałe' : 'Na biegowo', '⇄', () => w.toggleMode(line));
+    for (const o of extra.others || []) act(`${w.lines.indexOf(o) + 1}. ${o.name.split(' ').slice(0, 2).join(' ')}`, '↻', () => { const c = extra.cleat; setTimeout(() => { this.selectedLine = o; const r = this.cleatDots.get(c.id).getBoundingClientRect(); this.openRadial(o, r.left + r.width / 2, r.top + r.height / 2, { cleat: c, others: w.lines.filter((l) => l.cleatId === c.id && l !== o) }); }, 0); });
+    const cl = extra.cleat || w.deckItem(line.cleatId);
+    if (cl) act('Nowa lina', '＋', () => this.rigFromCleat(cl));
+    const R = Math.max(78, opts.length * 11), M = R + 42;
+    // menu nie może wyjść poza ekran (rzut leży w rogu)
+    px = clamp(px, M, window.innerWidth - M); py = clamp(py, M, window.innerHeight - M);
     const menu = h('div.radial', { style: { left: `${px}px`, top: `${py}px` } });
-    const R = 78;
     opts.forEach((o, i) => {
       const a = -Math.PI / 2 + (i / opts.length) * Math.PI * 2;
       const b = h('button.rb', { class: o.cls, style: { left: `${Math.cos(a) * R}px`, top: `${Math.sin(a) * R}px` } }, h('span.ic', {}, o.icon), h('span', {}, o.label));
