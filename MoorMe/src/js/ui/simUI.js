@@ -274,7 +274,7 @@ export class SimScreen {
     // obsługa lin wyłącznie na rzucie: klik w linę albo knagę otwiera menu pracy na cumie
     this.linesList.innerHTML = '';
     this.lineBars = new Map();
-    this.linesList.appendChild(h('div.small.muted.lines-hint', {}, w.lines.length ? 'Kliknij linę lub knagę – menu pracy na cumie. Przeciągnij koniec liny do jachtu – wybieraj, od jachtu – luzuj.' : 'Kliknij knagę na rzucie, a potem poler.'));
+    this.linesList.appendChild(h('div.small.muted.lines-hint', {}, w.lines.length ? 'Klik w linę lub knagę – menu. Przeciągnij linę do jachtu – wybieraj, od jachtu – luzuj.' : 'Kliknij knagę na rzucie, a potem poler.'));
     this.updateLineBars();
   }
 

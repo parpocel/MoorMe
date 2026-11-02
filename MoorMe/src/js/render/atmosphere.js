@@ -264,7 +264,7 @@ export class Atmosphere {
 
     // woda przygaszona przy szarym niebie
     const wm = v.water.mesh.material;
-    wm.color.copy(lerpC(C(0xffffff), C(0x9fa9b0), sky.grey * (this.sky === 'fog' ? 0.9 : 0.6))).multiplyScalar(1 - 0.45 * night); // nocą ciemniejsza woda
+    wm.color.copy(lerpC(C(0xc4ced6), C(0x8e98a0), sky.grey * (this.sky === 'fog' ? 0.9 : 0.6))).multiplyScalar(1 - 0.45 * night); // nocą ciemniejsza woda
     if (v.water.far && v.water.far.material.color) { if (!v.water._farBase) v.water._farBase = v.water.far.material.color.clone(); v.water.far.material.color.copy(v.water._farBase).multiplyScalar(1 - 0.62 * night); }
 
     // relingi i wanty: stalowe, nocą prawie czarne (bez świecenia)

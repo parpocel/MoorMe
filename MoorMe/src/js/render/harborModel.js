@@ -1060,7 +1060,7 @@ export class Water {
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
     // styl low-poly: płaskie cieniowanie trójkątów, bez tekstur – fasety fal widać dzięki oświetleniu
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x4a6478, shininess: 38, transparent: true, opacity: 0.97, vertexColors: true });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x5d7688, shininess: 70, transparent: true, opacity: 0.97, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
     const fadeEdge = this.follow;
@@ -1072,8 +1072,9 @@ export class Water {
       sh.fragmentShader = sh.fragmentShader
         .replace('void main() {', 'uniform vec3 uSky;\nvarying vec2 vLocal;\nvoid main() {')
         .replace('#include <dithering_fragment>', `
-          float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
-          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.26, 0.0, 0.26));
+          // Fresnel: z góry woda ciemna (mało odbija), przy płaskim kącie coraz bardziej odbija niebo
+          float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(0.03 + fr * 0.75, 0.0, 0.55));
           ${fade ? 'gl_FragColor.a *= 1.0 - smoothstep(150.0, 252.0, max(abs(vLocal.x), abs(vLocal.y)));' : ''}
           #include <dithering_fragment>`);
     };
@@ -1082,7 +1083,7 @@ export class Water {
     this.sceneRef = scene;
     // kolor wierzchołków: ciemniejsza głęboka woda, jaśniejsza przy brzegu (uzupełniane w setHarbor)
     const vc = new Float32Array(geo.attributes.position.count * 3).fill(1);
-    if (this.follow) for (let i = 0; i < vc.length; i += 3) { vc[i] = 0.05; vc[i + 1] = 0.18; vc[i + 2] = 0.45; }
+    if (this.follow) for (let i = 0; i < vc.length; i += 3) { vc[i] = 0.035; vc[i + 1] = 0.14; vc[i + 2] = 0.30; }
     geo.setAttribute('color', new THREE.BufferAttribute(vc, 3));
     if (this.follow) this.baseCol = vc.slice();
     this.mesh = new THREE.Mesh(geo, matW);
@@ -1113,7 +1114,7 @@ export class Water {
       this.farTex.needsUpdate = true;
       this.farTex.repeat.set(24000 / 22, 24000 / 22);
       this.farTex.anisotropy = 16;
-      farMat = new THREE.MeshPhongMaterial({ color: 0x0f3c72, flatShading: true, specular: 0x4a6478, shininess: 38 });
+      farMat = new THREE.MeshPhongMaterial({ color: 0x0d2f52, flatShading: true, specular: 0x5d7688, shininess: 70 });
       farMat.onBeforeCompile = this.patchWater(false);
     } else farMat = new THREE.MeshLambertMaterial({ color: 0x2a7b98 });
     const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 3000, this.follow ? 24000 : 3000), farMat);
@@ -1135,7 +1136,7 @@ export class Water {
       return Math.hypot(px - (ax + dx * k), pz - (az + dz * k));
     };
     const col = this.geo.attributes.color;
-    const deep = new THREE.Color(0x225c9f), shallow = new THREE.Color(0x78bccb), mid = new THREE.Color(0x4686bd);
+    const deep = new THREE.Color(0x1a4566), shallow = new THREE.Color(0x4a8790), mid = new THREE.Color(0x285f80); // naturalniejsza, ciemniejsza woda portowa
     const c = new THREE.Color();
     for (let i = 0; i < col.count; i++) {
       const x = this.base[i * 3], z = this.base[i * 3 + 2];
@@ -1172,7 +1173,7 @@ export class Water {
   update(dt, windKn, windDir, cx = 0, cz = 0) {
     this.t += dt;
     const fc = this.sceneRef.fog && this.sceneRef.fog.color;
-    if (fc) this.skyU.value.copy(fc).lerp(this._seaBlue || (this._seaBlue = new THREE.Color(0x1f5c9e)), 0.6); // odbicie nieba przyciemnione ku błękitowi – woda nie jest blada
+    if (fc) this.skyU.value.copy(fc).lerp(this._seaBlue || (this._seaBlue = new THREE.Color(0x2a5a86)), 0.45); // odbicie nieba przyciemnione ku błękitowi – woda nie jest blada
     if (this.follow) {
       // siatka przesuwa się skokami co oczko, więc wierzchołki zawsze leżą na tej samej kratce świata
       const cell = this.size / this.seg;
@@ -1207,7 +1208,7 @@ export class Water {
     const cl = this.baseCol ? this.geo.attributes.color.array : null;
     for (let i = 0; i < p.length; i += 3) {
       p[i + 1] = this.wave(this.base[i] + this.ox, this.base[i + 2] + this.oz, this.t, a, windDir, g);
-      if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.22; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
+      if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.16; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
     }
     this.geo.attributes.position.needsUpdate = true;
     if (cl) this.geo.attributes.color.needsUpdate = true;
