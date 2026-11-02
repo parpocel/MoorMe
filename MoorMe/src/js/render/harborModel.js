@@ -1073,7 +1073,7 @@ export class Water {
         .replace('void main() {', 'uniform vec3 uSky;\nvarying vec2 vLocal;\nvoid main() {')
         .replace('#include <dithering_fragment>', `
           float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 4.0);
-          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.42, 0.0, 0.42));
+          gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(fr * 0.32, 0.0, 0.32));
           ${fade ? 'gl_FragColor.a *= 1.0 - smoothstep(150.0, 252.0, max(abs(vLocal.x), abs(vLocal.y)));' : ''}
           #include <dithering_fragment>`);
     };
@@ -1135,7 +1135,7 @@ export class Water {
       return Math.hypot(px - (ax + dx * k), pz - (az + dz * k));
     };
     const col = this.geo.attributes.color;
-    const deep = new THREE.Color(0x3d79b0), shallow = new THREE.Color(0xa9dcd8), mid = new THREE.Color(0x6fa9d0);
+    const deep = new THREE.Color(0x2c66a3), shallow = new THREE.Color(0x8fcbd0), mid = new THREE.Color(0x5592c2);
     const c = new THREE.Color();
     for (let i = 0; i < col.count; i++) {
       const x = this.base[i * 3], z = this.base[i * 3 + 2];
@@ -1172,7 +1172,7 @@ export class Water {
   update(dt, windKn, windDir, cx = 0, cz = 0) {
     this.t += dt;
     const fc = this.sceneRef.fog && this.sceneRef.fog.color;
-    if (fc) this.skyU.value.copy(fc).multiplyScalar(1.08);
+    if (fc) this.skyU.value.copy(fc).lerp(this._seaBlue || (this._seaBlue = new THREE.Color(0x2c6aa3)), 0.4); // odbicie nieba przyciemnione ku błękitowi – woda nie jest blada
     if (this.follow) {
       // siatka przesuwa się skokami co oczko, więc wierzchołki zawsze leżą na tej samej kratce świata
       const cell = this.size / this.seg;
