@@ -496,7 +496,16 @@ export class SaloonView {
     const pts = [[0, 0], [0.22, 0], [-0.22, 0], [0, 0.15], [0, -0.12]].map(([a, b]) => target.clone().addScaledVector(right, a).add(new THREE.Vector3(0, b, 0)));
     for (const t of pts) {
       const d = t.clone().sub(cam), len = d.length();
-      ray.set(cam, d.normalize()); ray.far = Math.max(0, len - 0.06);
+      d.normalize();
+      // promień startuje lekko za kamerą – łapie też element, w którym kamera akurat się znalazła
+      ray.set(cam.clone().addScaledVector(d, -0.3), d); ray.far = Math.max(0, len + 0.3 - 0.06);
+      for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
+    }
+    // to, co jest tuż przed obiektywem (do ok. 45 cm, w środkowej części kadru), też znika – nie zasłania wnętrza przy obracaniu
+    const fwd = target.clone().sub(cam).normalize(), up = new THREE.Vector3().crossVectors(right, fwd).normalize();
+    for (const [a, b] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.25], [0, -0.25], [0.3, 0.2], [-0.3, 0.2], [0.3, -0.2], [-0.3, -0.2]]) {
+      const d = fwd.clone().addScaledVector(right, a).addScaledVector(up, b).normalize();
+      ray.set(cam, d); ray.far = 0.45;
       for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
     }
     const k = Math.min(1, (dt || 0.016) * 8);
