@@ -213,9 +213,6 @@ export class MenuScene {
       this.clouds.push(c);
     }
 
-    this.mouse = { x: 0, y: 0, tx: 0, ty: 0 };
-    this._onMove = (e) => { this.mouse.tx = e.clientX / window.innerWidth - 0.5; this.mouse.ty = e.clientY / window.innerHeight - 0.5; };
-    window.addEventListener('pointermove', this._onMove);
     this._ro = new ResizeObserver(() => this.resize());
     this._ro.observe(el);
     this.resize();
@@ -250,10 +247,8 @@ export class MenuScene {
     this.buoys.forEach((o, i) => { o.position.y = this.wave(o.position.x, o.position.z, t) - 0.3; o.rotation.z = Math.sin(t * 1.3 + i) * 0.12; });
     this.clouds.forEach((c, i) => { c.position.x += 0.02 + i * 0.004; if (c.position.x > 700) c.position.x = -700; });
 
-    const m = this.mouse;
-    m.x += (m.tx - m.x) * 0.04; m.y += (m.ty - m.y) * 0.04;
-    // kamera krąży powoli wokół jachtu; punkt patrzenia przesunięty w lewo, żeby jacht stał po prawej stronie kadru
-    const az = 1.05 + Math.sin(t * 0.04) * 0.1 + m.x * 0.08, d = 60, el = 0.13 + m.y * 0.03;
+    // kamera krąży powoli wokół jachtu (niezależnie od myszy); punkt patrzenia przesunięty w lewo, żeby jacht stał po prawej stronie kadru
+    const az = 1.05 + Math.sin(t * 0.04) * 0.1, d = 60, el = 0.13;
     const cam = this.camera.position.set(Math.cos(az) * Math.cos(el) * d, 5 + Math.sin(el) * d, Math.sin(az) * Math.cos(el) * d);
     const dx = -cam.x, dz = -cam.z, n = Math.hypot(dx, dz);
     const shift = this.camera.aspect > 1.2 ? 11 : 0;
@@ -272,7 +267,6 @@ export class MenuScene {
   dispose() {
     if (this._disposed) return;
     this.alive = false; this._disposed = true;
-    window.removeEventListener('pointermove', this._onMove);
     this._ro.disconnect();
     this.scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
     this.renderer.dispose();
