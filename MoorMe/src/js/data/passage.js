@@ -72,7 +72,7 @@ const DEFS = {
     difficulty: 2,
     depthMax: 28,
     relief: 20,
-    weather: { windKn: 10, windFrom: 230, gust: 0.25, currentKn: 0, hour: 12, sky: 'clear' },
+    weather: { windKn: 4, windFrom: 230, gust: 0.25, currentKn: 0, hour: 12, sky: 'clear' },
     bounds: { minX: -1000, maxX: 1000, minZ: -1000, maxZ: 1000 },
     coasts: [], moles: [], islands: [], shoals: [], wrecks: [], lighthouses: [], villages: [],
     start: { x: 0, z: 0 },
@@ -86,7 +86,7 @@ const DEFS = {
     difficulty: 1,
     depthMax: 20,
     relief: 38,
-    weather: { windKn: 12, windFrom: 250, gust: 0.25, currentKn: 0, hour: 11, sky: 'clear' },
+    weather: { windKn: 5, windFrom: 250, gust: 0.25, currentKn: 0, hour: 11, sky: 'clear' },
     bounds: { minX: -2600, maxX: 7600, minZ: -1200, maxZ: 900 },
     coasts: [{
       pts: [[-3000, -520], [-2000, -500], [-1000, -450], [0, -420], [1000, -380], [2000, -350], [3000, -400], [4000, -340], [4800, -280], [5200, -170], [5500, -250], [6000, -330], [6360, -330], [6560, -330], [7000, -420], [8000, -500], [9000, -520]],
@@ -112,7 +112,7 @@ const DEFS = {
     difficulty: 2,
     depthMax: 70,
     relief: 140,
-    weather: { windKn: 14, windFrom: 300, gust: 0.35, currentKn: 0, hour: 14, sky: 'clear' },
+    weather: { windKn: 5, windFrom: 300, gust: 0.35, currentKn: 0, hour: 14, sky: 'clear' },
     bounds: { minX: -2600, maxX: 7600, minZ: -1400, maxZ: 1000 },
     coasts: [{
       pts: [[-3000, -700], [-1500, -650], [0, -600], [1500, -520], [2500, -450], [3500, -480], [4500, -420], [5500, -380], [6000, -420], [6360, -420], [6560, -420], [7000, -520], [8000, -600], [9000, -640]],

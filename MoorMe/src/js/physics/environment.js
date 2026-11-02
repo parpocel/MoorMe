@@ -31,7 +31,8 @@ export class Environment {
     return this.w.windFrom + this.dirOffset / DEG;
   }
   get windSpeed() {
-    return this.w.windKn * KN * this.gustFactor;
+    // maxKn – górny limit razem z porywami (np. trening locji: najwyżej 5 kn)
+    return Math.min(this.w.windKn * this.gustFactor, this.w.maxKn ?? Infinity) * KN;
   }
   // Wektor prędkości wiatru (dokąd wieje) w świecie, m/s
   windVec() {

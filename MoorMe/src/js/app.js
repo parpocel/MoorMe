@@ -348,10 +348,11 @@ function showMarksBook() {
 
 // ---------- Rejs: ustawienia ----------
 const PASSAGE_KEY = 'moorme.passage.v1';
+const PASSAGE_MAX_WIND = 5; // trening locji: wiatr najwyżej 5 kn (także w porywach)
 function loadPassageCfg() {
   try {
     const s = JSON.parse(localStorage.getItem(PASSAGE_KEY));
-    if (s && PASSAGES[s.passageId] && BOATS[s.boatId]) return s;
+    if (s && PASSAGES[s.passageId] && BOATS[s.boatId]) { if (s.weather) s.weather.windKn = Math.min(PASSAGE_MAX_WIND, s.weather.windKn ?? 0); return s; }
   } catch (e) { /* brak zapisu */ }
   return null;
 }
@@ -400,7 +401,7 @@ function showPassageSetup() {
         h('div.hint', {}, (cfg.assist || 'bearing') === 'bearing' && cfg.passageId === 'offshore' ? 'Znasz tylko kurs (BRG) i odległość do kolejnego punktu kontrolnego, a prosta do niego prowadzi przez niebezpieczeństwa. Mielizn, trasy ani nazw znaków nie widać – pławy wyłaniają się przed dziobem, rozpoznajesz je po kształcie, kolorach i światłach i sam decydujesz, którędy je ominąć.' : (cfg.assist || 'bearing') === 'bearing' ? 'Znasz tylko kurs (BRG) i odległość do portu. Trasy, waypointów ani nazw znaków nie widać – boje rozpoznajesz po kształcie i charakterze światła i sam decydujesz, z której strony je minąć.' : 'Na chartploterze i w widoku 3D widać trasę z waypointami oraz nazwy znaków.'),
         h('div.hint', {}, 'W rejsie jacht płynie na silniku. Kurs trzymasz sterem, a prędkość regulujesz manetką; możesz użyć autopilota do utrzymania kursu. Dla ułatwienia przyspieszaj czas (2×–8×) na długich odcinkach.')),
       h('div.panel', {}, h('h2', {}, 'Pogoda'),
-        h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, 30, 1, w.windKn, (v) => `${v} kn`, (v) => { w.windKn = v; })),
+        h('div.field', {}, h('label', {}, 'Siła wiatru'), slider(0, PASSAGE_MAX_WIND, 1, Math.min(PASSAGE_MAX_WIND, w.windKn), (v) => `${v} kn`, (v) => { w.windKn = v; })),
         h('div.field', {}, h('label', {}, 'Kierunek wiatru (skąd wieje)'), slider(0, 355, 5, w.windFrom, (v) => `${v}°`, (v) => { w.windFrom = v; })),
         h('div.field', {}, h('label', {}, 'Porywistość'), slider(0, 1, 0.05, w.gust, (v) => `${Math.round(v * 100)}%`, (v) => { w.gust = v; })),
         h('div.field', {}, h('label', {}, 'Prąd'), slider(0, 2, 0.1, w.currentKn || 0, (v) => `${v.toFixed(1)} kn`, (v) => { w.currentKn = v; w.currentTo = 90; })),
@@ -475,7 +476,7 @@ function startPassage(seed) {
   const spec = BOATS[passageCfg.boatId];
   const equip = defaultEquipment(spec);
   equip.bowThruster = 'none'; equip.sternThruster = false;
-  const config = { mode: 'passage', seed: sd, assist: passageCfg.assist || 'bearing', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather } };
+  const config = { mode: 'passage', seed: sd, assist: passageCfg.assist || 'bearing', passageId: passageCfg.passageId, boatId: passageCfg.boatId, equip, weather: { currentTo: 90, currentKn: 0, ...passageCfg.weather, windKn: Math.min(PASSAGE_MAX_WIND, passageCfg.weather.windKn), maxKn: PASSAGE_MAX_WIND } };
   window.__sim = new PassageScreen(root, config, { restart: () => startPassage(sd), exit: () => showPassageSetup() });
 }
 
