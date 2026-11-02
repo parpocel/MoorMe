@@ -139,21 +139,26 @@ function cloudLayer(g, h, windTo) {
   return m;
 }
 
-// ---------- chmury kłębiaste low-poly ----------
+// ---------- chmury kłębiaste ----------
+// kłąb: gęstsza kula z gładkimi normalnymi skierowanymi od środka – miękki, obły wygląd zamiast fasetek
 function puffGeo(R, r, base) {
-  const g = new THREE.IcosahedronGeometry(r, 1).toNonIndexed();
+  const g = new THREE.IcosahedronGeometry(r, 3).toNonIndexed();
   const p = g.attributes.position;
+  // nierówna powierzchnia kłębu: wspólne wierzchołki (ten sam punkt kuli) przesuwają się o ten sam czynnik – bez szczelin
+  const fac = new Map();
   for (let i = 0; i < p.count; i++) {
-    const k = 1 + (R() - 0.5) * 0.16;
+    const key = `${Math.round(p.getX(i) * 100 / r)},${Math.round(p.getY(i) * 100 / r)},${Math.round(p.getZ(i) * 100 / r)}`;
+    if (!fac.has(key)) fac.set(key, 1 + (R() - 0.5) * 0.16);
+    const k = fac.get(key);
     p.setXYZ(i, p.getX(i) * k, p.getY(i) * k, p.getZ(i) * k);
   }
-  // wierzchołki tej samej pozycji muszą się przesunąć tak samo (bez dziur) – wyrównujemy po kluczu
-  const map = new Map();
-  for (let i = 0; i < p.count; i++) {
-    const key = `${Math.round(p.getX(i) * 10)},${Math.round(p.getY(i) * 10)},${Math.round(p.getZ(i) * 10)}`;
-    if (!map.has(key)) map.set(key, [p.getX(i), p.getY(i), p.getZ(i)]); else { const v = map.get(key); p.setXYZ(i, v[0], v[1], v[2]); }
-  }
+  setRadialNormals(g);
   return g;
+}
+function setRadialNormals(g) {
+  const p = g.attributes.position, nrm = new Float32Array(p.count * 3);
+  for (let i = 0; i < p.count; i++) { const x = p.getX(i), y = p.getY(i), z = p.getZ(i), l = Math.hypot(x, y, z) || 1; nrm[i * 3] = x / l; nrm[i * 3 + 1] = y / l; nrm[i * 3 + 2] = z / l; }
+  g.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
 }
 // pojedyncza chmura Cu: kopuła z kłębów, płaska podstawa na wysokości 0
 function cumulusGeo(R, w, hgt, flatK = 1) {
@@ -172,14 +177,13 @@ function cumulusGeo(R, w, hgt, flatK = 1) {
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) if (p.getY(i) < 0) p.setY(i, 0); // płaska podstawa
   for (let i = 0; i < p.count; i++) p.setY(i, p.getY(i) * flatK);
-  g.computeVertexNormals();
   return shadeByHeight(g, hgt * 0.5, 0.6, 1.0);
 }
 function mergeGeos(geos) {
   let n = 0; for (const g of geos) n += g.attributes.position.count;
-  const pos = new Float32Array(n * 3); let o = 0;
-  for (const g of geos) { pos.set(g.attributes.position.array, o); o += g.attributes.position.array.length; g.dispose(); }
-  const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const pos = new Float32Array(n * 3), nrm = new Float32Array(n * 3); let o = 0;
+  for (const g of geos) { pos.set(g.attributes.position.array, o); if (g.attributes.normal) nrm.set(g.attributes.normal.array, o); o += g.attributes.position.array.length; g.dispose(); }
+  const out = new THREE.BufferGeometry(); out.setAttribute('position', new THREE.BufferAttribute(pos, 3)); out.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
   return out;
 }
 // kolory wierzchołków: biel u góry, szarość przy płaskiej podstawie (hb – wysokość przejścia)
@@ -211,8 +215,13 @@ function cumulonimbusGeo(R, windTo) {
   }
   // kowadło: szeroki, płaski „talerz” rozciągnięty z wiatrem + wierzchołek przebijający kowadło
   const wx = Math.sin(windTo), wz = -Math.cos(windTo);
-  const anv = new THREE.IcosahedronGeometry(1, 2).toNonIndexed();
+  const anv = new THREE.IcosahedronGeometry(1, 3).toNonIndexed();
   anv.scale(14000, 650, 9500);
+  { // normalne elipsoidy (spłaszczony talerz kowadła)
+    const p = anv.attributes.position, nrm = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) { const x = p.getX(i) / 14000 ** 2, y = p.getY(i) / 650 ** 2, z = p.getZ(i) / 9500 ** 2, l = Math.hypot(x, y, z) || 1; nrm[i * 3] = x / l; nrm[i * 3 + 1] = y / l; nrm[i * 3 + 2] = z / l; }
+    anv.setAttribute('normal', new THREE.BufferAttribute(nrm, 3));
+  }
   anv.rotateY(-windTo);
   anv.translate(wx * 5500, top - 200, wz * 5500);
   geos.push(anv);
@@ -226,7 +235,6 @@ function cumulonimbusGeo(R, windTo) {
   const g = mergeGeos(geos);
   const p = g.attributes.position;
   for (let i = 0; i < p.count; i++) if (p.getY(i) < 700) p.setY(i, 700);
-  g.computeVertexNormals();
   return shadeByHeight(g, 6000, 0.4, 1.0);
 }
 
@@ -535,7 +543,7 @@ export class MeteoScene {
     }
     // kłębiaste: Cu (ładna pogoda) i towarzyszące Cb
     const nCu = g === 'Cu' ? 34 : g === 'Cb' ? 10 : 0;
-    const cuMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, emissive: 0x5d6673, emissiveIntensity: 0.3 });
+    const cuMat = new THREE.MeshLambertMaterial({ color: 0xffffff, vertexColors: true, emissive: 0x5d6673, emissiveIntensity: 0.3 });
     for (let i = 0; i < nCu; i++) {
       const w = 600 + R() * 1300;
       const geo = cumulusGeo(R, w, w * (0.55 + R() * 0.5));
@@ -547,7 +555,7 @@ export class MeteoScene {
     }
     if (g === 'Cb') {
       const geo = cumulonimbusGeo(R, windTo);
-      const mat = new THREE.MeshLambertMaterial({ color: 0xf2f4f7, vertexColors: true, flatShading: true, emissive: 0x3a414b, emissiveIntensity: 0.3 });
+      const mat = new THREE.MeshLambertMaterial({ color: 0xf2f4f7, vertexColors: true, emissive: 0x3a414b, emissiveIntensity: 0.3 });
       const m = new THREE.Mesh(geo, mat);
       // Cb po stronie nawietrznej, w kadrze domyślnej kamery
       const a = Math.atan2(this.sunDir.x, -this.sunDir.z) + Math.PI + (R() - 0.5) * 0.7, d = 24000 + R() * 5000; // naprzeciw Słońca – oświetlona
