@@ -241,7 +241,7 @@ export class Atmosphere {
     if (night > 0.5) {
       dir = new THREE.Vector3(-0.45, 0.75, 0.5).normalize();
       sun.color.set(0x9fb4e0);
-      sun.intensity = 0.35 * sky.sun * night + 0.05;
+      sun.intensity = 0.28 * sky.sun * night + 0.04;
     }
     sun.position.set(cam.tx + dir.x * 130, dir.y * 130, cam.tz + dir.z * 130);
     sun.target.position.set(cam.tx, 0, cam.tz);
@@ -259,7 +259,7 @@ export class Atmosphere {
 
     v.hemi.color.copy(lerpC(C(0xdff2ff), C(0x2c3a5c), night));
     v.hemi.groundColor.copy(lerpC(C(0x4a5a44), C(0x0c1016), night));
-    v.hemi.intensity = (0.8 * (1 - night) + 0.32 * night) * sky.hemi;
+    v.hemi.intensity = (0.8 * (1 - night) + 0.25 * night) * sky.hemi; // nocą przygaszone – jasny pokład nie świeci
     v.renderer.toneMappingExposure = 1.05 + night * 0.35;
 
     // woda przygaszona przy szarym niebie

@@ -203,13 +203,15 @@ function buildCabin(spec) {
     win.rotation.y = s * Math.atan2(wA - wF, sideLen);
     g.add(win);
   }
-  // okna dachowe (luki)
-  g.add(box(0.55, 0.05, 0.55, COL.window, x1 - 0.7, topY + 0.01, 0, { rough: 0.2, metal: 0.4 }));
-  g.add(box(0.45, 0.05, 0.45, COL.window, (x0 + x1) / 2, topY + 0.01, 0, { rough: 0.2, metal: 0.4 }));
+  // okna dachowe (luki) w aluminiowych ramach
+  for (const [sz, hx] of [[0.55, x1 - 0.7], [0.45, (x0 + x1) / 2]]) {
+    g.add(box(sz + 0.08, 0.04, sz + 0.08, 0xb9bfc6, hx, topY + 0.004, 0, { metal: 0.7, rough: 0.35 }));
+    g.add(box(sz, 0.05, sz, COL.window, hx, topY + 0.01, 0, { rough: 0.2, metal: 0.4 }));
+  }
   // relingi dachowe (poręcze)
   for (const s of [-1, 1]) g.add(box((x1 - x0) * 0.6, 0.05, 0.05, COL.teak, (x0 + x1) / 2, topY + 0.05, s * wF * 0.9));
   g.userData.topY = topY;
-  g.userData.x0 = x0; g.userData.x1 = x1;
+  g.userData.x0 = x0; g.userData.x1 = x1; g.userData.wA = wA; g.userData.wF = wF;
   return g;
 }
 
@@ -420,7 +422,7 @@ export function buildBoat(spec, opts = {}) {
   // platforma kąpielowa (opuszczana pawęż)
   heel.add(box(0.5, 0.08, spec.beam * 0.7, COL.teak, xs - 0.2, 0.35, 0));
 
-  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split, noPlate: opts.noPlate });
+  addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split, noPlate: opts.noPlate, canvas: opts.canvas });
 
   root.userData.heel = heel;
   root.userData.spec = spec;
@@ -613,6 +615,7 @@ function addBoatDetails(heel, root, spec, d) {
   }
   // drabinka kąpielowa
   for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
+  addDeckDetail(heel, spec, d);
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
   if (!d.noPlate) heel.add(createNamePlate(spec, nm, d.sub ?? 'Gdynia', d.split));
@@ -637,6 +640,113 @@ function addBoatDetails(heel, root, spec, d) {
   blob.renderOrder = 1;
   blob.userData.keep = true;
   root.add(blob);
+}
+
+// Pas siatki leżący na pokładzie wzdłuż linii pokładu: z(x) – granice wewnętrzna i zewnętrzna (antypoślizg)
+function deckPatch(spec, x0, x1, zIn, zOut, dy, color, n = 10) {
+  const pos = [];
+  const P = (x, z) => [x, sheerHeight(spec, x) + dy, z];
+  for (let k = 0; k < n; k++) {
+    const a = x0 + ((x1 - x0) * k) / n, b = x0 + ((x1 - x0) * (k + 1)) / n;
+    const p1 = P(a, zIn(a)), p2 = P(b, zIn(b)), p3 = P(b, zOut(b)), p4 = P(a, zOut(a));
+    pos.push(...p1, ...p3, ...p2, ...p1, ...p4, ...p3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat(color, { rough: 0.95, side: THREE.DoubleSide }));
+  m.receiveShadow = true;
+  return m;
+}
+
+// Szczegóły pokładu: antypoślizg, sprayhood, zejściówka, stopery i fały od masztu, kosz rufowy, instrumenty
+function addDeckDetail(heel, spec, d) {
+  const { xs, xb } = hullExtents(spec);
+  const L = spec.loa, cab = d.cabin.userData;
+  const x0 = cab.x0, x1 = cab.x1, topY = d.topY;
+  const NS = 0xb7b2a6; // szarawy antypoślizg z gładkim obrzeżem
+  const cabW = (x) => cab.wA + (cab.wF - cab.wA) * Math.max(0, Math.min(1, (x - x0) / (x1 - 0.4 - x0))) + 0.18;
+  for (const s of [-1, 1]) {
+    // pokład boczny wzdłuż nadbudówki
+    heel.add(deckPatch(spec, x0 + 0.15, x1 - 0.3, (x) => s * cabW(x), (x) => s * (halfBeamAt(spec, x) - 0.2), 0.012, NS));
+    // pokład boczny przy kokpicie
+    heel.add(deckPatch(spec, d.ck0 + 0.35, x0 - 0.1, () => s * (d.ckw / 2 + 0.08), (x) => s * (halfBeamAt(spec, x) - 0.2), 0.012, NS, 4));
+  }
+  // pokład dziobowy (przed nadbudówką, za windą kotwiczną)
+  heel.add(deckPatch(spec, x1 + 0.2, xb - 0.12 * L, (x) => -(halfBeamAt(spec, x) - 0.22), (x) => halfBeamAt(spec, x) - 0.22, 0.012, NS, 6));
+  // dach nadbudówki
+  heel.add(box(x1 - x0 - 1.2, 0.012, cab.wF * 1.5, NS, (x0 + x1) / 2 - 0.1, topY + 0.006, 0, { rough: 0.95 }));
+
+  // zejściówka: przesuwana klapa w prowadnicach i deski zamykające wejście
+  const cw = 0.62;
+  heel.add(box(0.95, 0.07, cw + 0.12, 0xe8e6e1, x0 + 0.5, topY + 0.04, 0));
+  for (const s of [-1, 1]) heel.add(box(1.2, 0.05, 0.05, 0x9aa3ab, x0 + 0.6, topY + 0.03, s * (cw / 2 + 0.09), { metal: 0.7, rough: 0.35 }));
+  const dh = topY - d.fbC - 0.15;
+  heel.add(box(0.03, dh, cw, 0x5a3b22, x0 - 0.04, d.fbC + 0.1 + dh / 2, 0, { rough: 0.6 }));
+  for (let k = 1; k < 4; k++) heel.add(box(0.035, 0.012, cw, 0x3e2815, x0 - 0.045, d.fbC + 0.1 + (k * dh) / 4, 0));
+
+  // sprayhood nad zejściówką: płócienna osłona z oknami, otwarta od strony kokpitu
+  {
+    const r = 0.62, wdt = Math.min(cab.wA * 1.55, 1.9), cx = x0 + 0.25;
+    const geo = new THREE.CylinderGeometry(r, r, wdt, 12, 1, false, Math.PI / 2, Math.PI * 0.78);
+    geo.rotateX(Math.PI / 2);
+    const hood = new THREE.Mesh(geo, mat(d.canvas ?? COL.canvas, { rough: 0.9, side: THREE.DoubleSide }));
+    hood.scale.set(1.15, 0.8, 1);
+    hood.position.set(cx, topY, 0);
+    hood.castShadow = true;
+    heel.add(hood);
+    // okna z przodu
+    const th = Math.PI * 0.68;
+    for (const zc of [-wdt * 0.25, wdt * 0.25]) {
+      const win = box(0.02, 0.24, wdt * 0.38, 0x1b2632, cx + Math.sin(th) * r * 1.15 + 0.012, topY - Math.cos(th) * r * 0.8, zc, { rough: 0.15, metal: 0.4 });
+      win.rotation.z = (th - Math.PI / 2) * 1.25;
+      heel.add(win);
+    }
+  }
+
+  // stopery (zaciskacze) przed kabestanami na dachu i fały prowadzone od podstawy masztu
+  const ropeCols = [0xf0ede4, 0xd8423a, 0x2f6fb5, 0xe8c547];
+  for (const s of [-1, 1]) {
+    const cx = x0 + 0.62;
+    for (let k = 0; k < 4; k++) {
+      const z = s * (0.36 + k * 0.075);
+      heel.add(box(0.14, 0.06, 0.06, 0x1d2126, cx, topY + 0.04, z));
+      heel.add(box(0.05, 0.02, 0.05, 0xd8423a, cx + 0.03, topY + 0.08, z));
+      heel.add(strut([d.mastX - 0.12, topY + 0.03, s * (0.06 + k * 0.03)], [cx + 0.07, topY + 0.035, z], 0.008, ropeCols[k], 4));
+      heel.add(strut([cx - 0.07, topY + 0.035, z], [x0 + 0.27, topY + 0.1, s * 0.55], 0.008, ropeCols[k], 4));
+    }
+    heel.add(box(0.1, 0.05, 0.16, 0x1d2126, d.mastX - 0.12, topY + 0.03, s * 0.1)); // bloczki (organizer) u stopy masztu
+  }
+
+  // kosz rufowy z rur po obu stronach rufy
+  for (const s of [-1, 1]) {
+    const xa = xs + 0.06, xc = xs + 0.04 * L + 0.02;
+    const ya = sheerHeight(spec, xa), yc = sheerHeight(spec, xc);
+    const za = s * (halfBeamAt(spec, xa) * 0.82), zc = s * (halfBeamAt(spec, xc) - 0.06);
+    const top = [xa, ya + 0.66, za];
+    heel.add(strut([xa, ya, za], top, 0.02, COL.metal, 6));
+    heel.add(strut(top, [xc, yc + 0.66, zc], 0.02, COL.metal, 6));
+    heel.add(strut(top, [xa, ya + 0.66, s * 0.35], 0.02, COL.metal, 6));
+    heel.add(strut([xa + 0.25, ya + 0.02, za * 0.97], [xa + 0.1, ya + 0.66, za * 0.99], 0.016, COL.metal, 6));
+  }
+
+  // instrumenty: wyświetlacze nad kołami sterowymi i ploter przy stoliku kokpitowym
+  const wheelR = 0.3 + L * 0.008;
+  for (const s of [-1, 1]) {
+    const disp = box(0.04, 0.16, 0.2, 0x0d1117, d.ck0 + 0.45, d.fbC + wheelR + 0.39, s * spec.beam * 0.27, { rough: 0.2, metal: 0.4, emissive: 0x0a1a2a });
+    disp.rotation.z = -0.35;
+    heel.add(disp);
+  }
+  const plot = box(0.04, 0.15, 0.2, 0x0d1117, d.ck1 - (d.ck1 - d.ck0) * 0.45 + 0.36, d.fbC + 0.92, 0, { rough: 0.2, metal: 0.4, emissive: 0x0a1a2a });
+  plot.rotation.z = -0.4;
+  heel.add(plot);
+
+  // płytki want na pokładzie i wózki na prowadnicach foka
+  for (const s of [-1, 1]) {
+    const cx = d.mastX - 0.6, gx = cx - 0.9;
+    heel.add(box(0.12, 0.05, 0.05, COL.metal, cx, sheerHeight(spec, cx) + 0.03, s * (halfBeamAt(spec, cx) - 0.12), { metal: 0.8, rough: 0.3 }));
+    heel.add(box(0.12, 0.07, 0.07, 0x1d2126, gx + 0.2, sheerHeight(spec, gx) + 0.06, s * (halfBeamAt(spec, gx) - 0.35)));
+  }
 }
 
 // Wyposażenie pokładowe wg konfiguracji: knagi, kluzy, półkluzy
