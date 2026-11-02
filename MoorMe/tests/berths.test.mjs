@@ -30,5 +30,12 @@ for (const method of ['yboomStern', 'pilesBow']) for (const clear of [0.2, 0.5, 
   if (!ok) fails++;
   console.log(`${ok ? 'OK  ' : 'FAIL'} C46 ${method} prześwit +${clear} m (stanowisko ${H.berth.slotW.toFixed(2)} m): dryf ${drift.toFixed(2)} m, uderzenia ${w.stats.hullHits}`);
 }
+// pusty port: żadnych sąsiadów, stanowisko nadal jest
+for (const port of Object.keys(PORTS)) for (const o of berthOptions(port)) {
+  const H = generateHarbor({ port, zone: o.zone, method: o.method, side: 'port', boatSpec: BOATS.C34, seed: 3, emptyHarbor: true });
+  const ok = H.neighbors.length === 0 && !!H.berth;
+  if (!ok) fails++;
+  console.log(`${ok ? 'OK  ' : 'FAIL'} pusty port ${port}/${o.zone} ${o.method}: sąsiadów ${H.neighbors.length}`);
+}
 console.log(fails ? `${fails} błędów` : 'Wszystko OK');
 process.exit(fails ? 1 : 0);

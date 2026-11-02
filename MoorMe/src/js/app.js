@@ -702,7 +702,7 @@ function stepHarbor() {
   const pv = h('div.preview3d', { style: { height: '300px', marginBottom: '12px' } });
   let prev = null, pvKey = '', pvTimer = null;
   const schedulePreview = (H) => {
-    const key = [config.port, config.zone, config.method, config.side, config.seed, JSON.stringify(config.slotClear || {})].join('|');
+    const key = [config.port, config.zone, config.method, config.side, config.seed, !!config.emptyHarbor, JSON.stringify(config.slotClear || {})].join('|');
     if (!prev || key === pvKey) return;
     clearTimeout(pvTimer);
     pvTimer = setTimeout(() => { if (!pv.isConnected || !prev) return; pvKey = key; prev.setHarbor(H, spec); }, 250);
@@ -756,6 +756,8 @@ function stepHarbor() {
     methodInfo,
     sideField,
     widthField,
+    h('div.field', {}, h('label', {}, 'Inne jachty w porcie'),
+      seg([{ value: false, label: 'Są' }, { value: true, label: 'Pusty port' }], !!config.emptyHarbor, (v) => { config.emptyHarbor = v; drawMap(); })),
     h('h3', {}, 'Zadanie'),
     seg([{ value: 'moor', label: 'Cumowanie (podejście do kei)' }, { value: 'unmoor', label: 'Odcumowanie (wyjście)' }, { value: 'free', label: 'Swobodne manewrowanie (bez zadania)' }], config.scenario, (v) => { config.scenario = v; }),
     h('div.small.muted', { style: { marginTop: '6px' } }, 'Przy odcumowaniu startujesz zacumowany – liny założone na biegowo, jedna osoba na kei.'),

@@ -133,7 +133,7 @@ export function slotClearFor(cfg) {
 // Opcje generatora portu z konfiguracji kreatora
 export function harborOpts(cfg, spec) {
   const clear = slotClearFor(cfg);
-  return { port: cfg.port, zone: cfg.zone, method: cfg.method, side: cfg.side, boatSpec: spec, scenario: cfg.scenario, seed: cfg.seed || 7, slotWidth: clear != null ? spec.beam + clear : undefined };
+  return { port: cfg.port, zone: cfg.zone, method: cfg.method, side: cfg.side, boatSpec: spec, scenario: cfg.scenario, seed: cfg.seed || 7, emptyHarbor: !!cfg.emptyHarbor, slotWidth: clear != null ? spec.beam + clear : undefined };
 }
 // Poprawienie starych/niepełnych konfiguracji (wybór portu i strefy dla metody)
 export function normalizeBerth(cfg) {
@@ -222,6 +222,7 @@ function genZone(H, Z, own, R, ctx) {
     for (let u = -half + 2; u <= half - 2; u += step) addBollard(u, -q.setback, q.bollard, qh);
     if (q.rings) for (let u = -half + 4; u <= half - 4; u += 9) addBollard(u, -0.18, 'ring', qh);
     const place = (spec, uc, pad = 0.33) => {
+      if (ctx.empty) return; // pusty port – bez sąsiadów
       const th = R() < 0.5 ? 0 : Math.PI;
       const n = addNeighbor(spec, uc, spec.beam / 2 + pad, th, { alongside: true });
       const qs = th === 0 ? -1 : 1; // burta od kei
@@ -303,7 +304,7 @@ function genZone(H, Z, own, R, ctx) {
       if (isMooring && q.rings) addBollard(s.u, -0.2, 'ring', qh);
       if (s.own) continue;
       const dist = Math.abs(s.u - (Z.ownU || 0));
-      if ((!own || dist > 8) && R() > ctx.occ) { s.empty = true; continue; }
+      if (ctx.empty || ((!own || dist > 8) && R() > ctx.occ)) { s.empty = true; continue; }
       const nSpec = s.spec;
       const nBowIn = R() < 0.2 ? !bowIn : bowIn;
       const nv = (nBowIn ? 0.52 * nSpec.loa : 0.48 * nSpec.loa) + (nBowIn ? 1.0 : 0.75);
@@ -405,7 +406,7 @@ export function generateHarbor(opt) {
   };
   for (const s of P.structures) H.structures.push(struct(s.kind, s.poly, s.h, !!s.walk, { style: s.style, edges: s.edges }));
   // obsadzenie miejsc w porcie: losowo 25–75% (nie więcej niż 3/4)
-  const ctx = { bid: 0, occ: 0.25 + 0.5 * R() };
+  const ctx = { bid: 0, occ: 0.25 + 0.5 * R(), empty: !!opt.emptyHarbor };
   for (const Z of P.zones) {
     const own = Z.id === cfg.zone ? { method: cfg.method, spec, side: opt.side, slotWidth: opt.slotWidth } : null;
     if (!own && !Z.decor && Z.methods) {

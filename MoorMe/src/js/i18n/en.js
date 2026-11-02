@@ -22,7 +22,7 @@ export const EN = {
   'Przeciągnij myszą, żeby obrócić model; kółko – przybliżenie. Najedź na kartę, żeby zobaczyć inny jacht.': 'Drag with the mouse to rotate the model; wheel to zoom. Hover over a card to see another yacht.',
   'Długość całkowita': 'Length overall', 'Szerokość': 'Beam', 'Zanurzenie': 'Draft', 'Wyporność': 'Displacement', 'Silnik': 'Engine',
   'Prędkość maks. na silniku': 'Max speed under engine', 'Pow. nawiewu (bok)': 'Windage (side)', 'Ster strumieniowy (opcja)': 'Thruster (option)',
-  'Płetwy sterowe': 'Rudders', 'podwójne': 'twin', 'do wyboru': 'selectable', 'Dwie': 'Two', 'Jedna': 'One',
+  'Inne jachty w porcie': 'Other yachts in the harbour', 'Są': 'Present', 'Pusty port': 'Empty harbour', 'Płetwy sterowe': 'Rudders', 'podwójne': 'twin', 'do wyboru': 'selectable', 'Dwie': 'Two', 'Jedna': 'One',
   'Dwie płetwy stoją z boku, poza strumieniem śruby – ster działa tylko, gdy jacht ma prędkość. Jedna płetwa w osi dostaje strumień śruby: krótkie „kopnięcie” silnika z wychylonym sterem obraca rufę nawet z miejsca.': 'Twin rudders sit off the centreline, outside the prop wash – they only steer when the yacht is moving. A single centreline rudder gets the prop wash: a short burst of engine with the helm over swings the stern even from a standstill.',
 
   // ---- Krok 2: wyposażenie ----
