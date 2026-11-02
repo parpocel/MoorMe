@@ -12,7 +12,6 @@ export const EN = {
   'Nowa symulacja': 'New simulation', 'Random': 'Random', 'Losowe zadanie w losowych warunkach': 'Random task in random conditions',
   'Szybki start': 'Quick start', 'ostatnie ustawienia': 'last settings', 'Najpierw ustaw i uruchom symulację': 'Set up and run a simulation first',
   'Pomoc – sterowanie i praca na cumach': 'Help – controls and handling lines',
-  'Modele oparte na jachtach Bavaria C34, C46 i C50 · dane orientacyjne': 'Models based on Bavaria C34, C46 and C50 yachts · indicative data',
   'Ustawienia': 'Settings', 'Ustawienia i język': 'Settings & language', 'Język': 'Language', 'Language': 'Language',
   'Wybierz język gry. Możesz go zmienić później w Ustawieniach.': 'Choose the game language. You can change it later in Settings.',
   'Język zmienia się po ponownym wczytaniu ekranu.': 'The language changes after the screen reloads.',

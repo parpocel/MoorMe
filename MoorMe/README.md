@@ -47,7 +47,7 @@ Na ekranie startowym są dwie drogi:
 
 Kreator prowadzi przez cztery kroki:
 
-1. **Jacht**: Bavaria C34 (10,8 m), C46 (14,6 m) albo C50 (15,6 m).
+1. **Jacht**: C34 (10,8 m), C46 (14,6 m) albo C50 (15,6 m).
 2. **Wyposażenie**:
    - edytor pokładu w widoku z góry: rozmieszczasz knagi, kluzy, półkluzy i odbijacze;
    - śruba prawo- albo lewoskrętna, napęd saildrive albo wał;

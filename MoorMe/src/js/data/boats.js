@@ -4,7 +4,7 @@
 export const BOATS = {
   C34: {
     id: 'C34',
-    name: 'Bavaria C34',
+    name: 'C34',
     loa: 10.84,
     lwl: 9.9,
     beam: 3.6,
@@ -30,7 +30,7 @@ export const BOATS = {
   },
   C46: {
     id: 'C46',
-    name: 'Bavaria C46',
+    name: 'C46',
     loa: 14.64,
     lwl: 13.5,
     beam: 4.5,
@@ -56,7 +56,7 @@ export const BOATS = {
   },
   C50: {
     id: 'C50',
-    name: 'Bavaria C50',
+    name: 'C50',
     loa: 15.55,
     lwl: 14.3,
     beam: 4.85,

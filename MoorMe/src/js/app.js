@@ -603,6 +603,7 @@ function showHelp() {
 }
 
 // ---------- Krok 1: jacht ----------
+const boatTitle = (b) => `${b.name} · ${b.loa.toFixed(2)} m`;
 function stepBoat() {
   const cards = h('div.cards', { style: { gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' } });
   for (const b of Object.values(BOATS)) {
@@ -612,13 +613,13 @@ function stepBoat() {
       if (config.boatId !== b.id) { config.boatId = b.id; config.equip = defaultEquipment(b); }
       showStep(0);
     } },
-    h('h3', {}, b.name), cv,
+    h('h3', {}, boatTitle(b)), cv,
     h('table.spec-table', {},
       [['Długość całkowita', `${b.loa.toFixed(2)} m`], ['Szerokość', `${b.beam.toFixed(2)} m`], ['Zanurzenie', `${b.draft.toFixed(2)} m`], ['Wyporność', `${(b.displacement / 1000).toFixed(1)} t`], ['Silnik', `${b.engineHp} KM`], ['Prędkość maks. na silniku', `~${b.maxSpeedKn} kn`], ['Pow. nawiewu (bok)', `${b.windageSide} m²`], ['Ster strumieniowy (opcja)', `${Math.round(b.bowThrusterN / 9.81)} kgf`], ['Płetwy sterowe', 'podwójne']].map(([k, v]) => h('tr', {}, h('td', {}, k), h('td', {}, v)))));
     cards.appendChild(card);
   }
   const pv = h('div.preview3d', { style: { height: '420px' } });
-  const pvTitle = h('h2', { style: { margin: '0 0 8px' } }, BOATS[config.boatId].name);
+  const pvTitle = h('h2', { style: { margin: '0 0 8px' } }, boatTitle(BOATS[config.boatId]));
   const body = h('div', {}, h('h2', { style: { marginBottom: '6px' } }, 'Wybierz jacht'), h('p.muted', { style: { marginTop: 0 } }, 'Większy jacht = większa bezwładność i nawiew, ale mocniejszy silnik i ster strumieniowy.'),
     h('div.pv-split', {}, cards, h('div.panel', { style: { position: 'sticky', top: '0' } }, pvTitle, pv, h('div.small.muted', { style: { marginTop: '8px' } }, 'Przeciągnij myszą, żeby obrócić model; kółko – przybliżenie. Najedź na kartę, żeby zobaczyć inny jacht.'))));
   screen(0, body, () => showStep(1));
@@ -626,8 +627,8 @@ function stepBoat() {
   prev.setBoat(BOATS[config.boatId]);
   for (const c of cards.children) {
     const id = Object.keys(BOATS)[[...cards.children].indexOf(c)];
-    c.addEventListener('mouseenter', () => { prev.setBoat(BOATS[id]); pvTitle.textContent = BOATS[id].name; });
-    c.addEventListener('mouseleave', () => { prev.setBoat(BOATS[config.boatId]); pvTitle.textContent = BOATS[config.boatId].name; });
+    c.addEventListener('mouseenter', () => { prev.setBoat(BOATS[id]); pvTitle.textContent = boatTitle(BOATS[id]); });
+    c.addEventListener('mouseleave', () => { prev.setBoat(BOATS[config.boatId]); pvTitle.textContent = boatTitle(BOATS[config.boatId]); });
   }
 }
 
