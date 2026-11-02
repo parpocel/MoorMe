@@ -3,66 +3,61 @@ import { DEG } from '../math.js';
 import { lateralColors } from '../data/passage.js';
 import { t } from '../i18n.js';
 
-const hex = (c) => '#' + c.toString(16).padStart(6, '0');
 const STATE_COLOR = { ok: '#2faa5c', wrong: '#e03a3a', violated: '#e03a3a', missed: '#e0a13a' };
 
-// Rysuje symbol znaku nawigacyjnego (środek w 0,0, promień r)
+// Symbol znaku jak na mapie morskiej (INT 1): okrąg pozycji, pochylona sylwetka pławy w kolorach znaku,
+// znak szczytowy i fioletowa flara światła. Pozycja znaku w (0, 0), r – skala symbolu.
 export function drawMarkSymbol(ctx, type, r) {
+  const lc = lateralColors(), hx = (c) => '#' + c.toString(16).padStart(6, '0');
+  const P = hx(lc.port), S = hx(lc.stbd), Y = '#f2c230', B = '#15181c', R = '#d62828', W = '#ffffff', BU = '#1d4e9a';
+  const k = r / 4.2; // jednostka rysunku
   ctx.save();
-  ctx.lineWidth = 1.2;
-  ctx.strokeStyle = '#1b1f24';
-  const stripes = (cols) => {
-    const h = (r * 2) / cols.length;
-    cols.forEach((c, i) => { ctx.fillStyle = c; ctx.fillRect(-r * 0.8, -r + i * h, r * 1.6, h); });
-    ctx.strokeRect(-r * 0.8, -r, r * 1.6, r * 2);
+  ctx.lineJoin = 'round';
+  // flara światła (fioletowa łza od pozycji, w prawo do góry)
+  ctx.save();
+  ctx.rotate(0.75);
+  ctx.fillStyle = 'rgba(200,40,170,0.75)';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(3.2 * k, -6 * k, 0, -11 * k); ctx.quadraticCurveTo(-3.2 * k, -6 * k, 0, 0); ctx.fill();
+  ctx.restore();
+  ctx.rotate(-0.33); // sylwetka pławy pochylona jak na mapie
+  ctx.strokeStyle = '#1b1f24'; ctx.lineWidth = Math.max(0.8, k * 0.9);
+  // wypełnienie konturu pasami poziomymi (od dołu) albo pionowymi
+  const fillBands = (path, cols, vertical, x0, x1, y0, y1) => {
+    ctx.save(); path(); ctx.clip();
+    cols.forEach((c, i) => {
+      ctx.fillStyle = c;
+      if (vertical) { const w = (x1 - x0) / cols.length; ctx.fillRect(x0 + i * w, y1, w + 0.3, y0 - y1); }
+      else { const h = (y0 - y1) / cols.length; ctx.fillRect(x0, y0 - (i + 1) * h - 0.3, x1 - x0, h + 0.6); }
+    });
+    ctx.restore(); path(); ctx.stroke();
   };
-  const Y = '#f2c230', B = '#15181c';
+  const pillar = (cols, vertical = false) => fillBands(() => { ctx.beginPath(); ctx.moveTo(-3 * k, -1.2 * k); ctx.lineTo(3 * k, -1.2 * k); ctx.lineTo(1.4 * k, -11 * k); ctx.lineTo(-1.4 * k, -11 * k); ctx.closePath(); }, cols, vertical, -3 * k, 3 * k, -1.2 * k, -11 * k);
+  const can = (cols) => fillBands(() => { ctx.beginPath(); ctx.moveTo(-3.6 * k, -1.2 * k); ctx.lineTo(3.6 * k, -1.2 * k); ctx.lineTo(3 * k, -8 * k); ctx.lineTo(-3 * k, -8 * k); ctx.closePath(); }, cols, false, -3.6 * k, 3.6 * k, -1.2 * k, -8 * k);
+  const conical = (cols) => fillBands(() => { ctx.beginPath(); ctx.moveTo(-3.8 * k, -1.2 * k); ctx.lineTo(3.8 * k, -1.2 * k); ctx.lineTo(0, -9.5 * k); ctx.closePath(); }, cols, false, -3.8 * k, 3.8 * k, -1.2 * k, -9.5 * k);
+  const top = -12 * k; // podstawa znaku szczytowego
+  const tri = (y, up, col = B) => { ctx.fillStyle = col; ctx.beginPath(); if (up) { ctx.moveTo(-1.8 * k, y); ctx.lineTo(1.8 * k, y); ctx.lineTo(0, y - 2.6 * k); } else { ctx.moveTo(-1.8 * k, y - 2.6 * k); ctx.lineTo(1.8 * k, y - 2.6 * k); ctx.lineTo(0, y); } ctx.closePath(); ctx.fill(); };
+  const ball = (y, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(0, y - 1.4 * k, 1.4 * k, 0, Math.PI * 2); ctx.fill(); };
+  const stem = (h = 1) => { ctx.beginPath(); ctx.moveTo(0, -11 * k); ctx.lineTo(0, -11 * k - h * k); ctx.stroke(); };
   switch (type) {
-    case 'lateralPort':
-      ctx.fillStyle = '#' + lateralColors().port.toString(16).padStart(6, '0'); ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6); ctx.strokeRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
-      break;
-    case 'lateralStbd':
-      ctx.fillStyle = '#' + lateralColors().stbd.toString(16).padStart(6, '0'); ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath(); ctx.fill(); ctx.stroke();
-      break;
-    case 'prefStbd': { // beczka koloru lewego z pasem koloru prawego
-      const c = lateralColors();
-      ctx.fillStyle = hex(c.port); ctx.fillRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
-      ctx.fillStyle = hex(c.stbd); ctx.fillRect(-r * 0.8, -r * 0.27, r * 1.6, r * 0.54);
-      ctx.strokeRect(-r * 0.8, -r * 0.8, r * 1.6, r * 1.6);
-      break;
-    }
-    case 'prefPort': { // stożek koloru prawego z pasem koloru lewego
-      const c = lateralColors();
-      ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.95, r * 0.8); ctx.lineTo(-r * 0.95, r * 0.8); ctx.closePath();
-      ctx.fillStyle = hex(c.stbd); ctx.fill();
-      ctx.save(); ctx.clip(); ctx.fillStyle = hex(c.port); ctx.fillRect(-r, -r * 0.1, r * 2, r * 0.45); ctx.restore();
-      ctx.stroke();
-      break;
-    }
-    case 'cardN': stripes([B, Y]); break;
-    case 'cardS': stripes([Y, B]); break;
-    case 'cardE': stripes([B, Y, B]); break;
-    case 'cardW': stripes([Y, B, Y]); break;
-    case 'safe':
-      ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#d62828'; ctx.fillRect(-r * 0.33, -r, r * 0.66, r * 2);
-      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke();
-      break;
-    case 'isolated':
-      ctx.fillStyle = B; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = '#d62828'; ctx.fillRect(-r, -r * 0.28, r * 2, r * 0.56);
-      break;
-    case 'wreck':
-      ctx.fillStyle = '#1d4e9a'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = Y; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-r * 0.6, 0); ctx.lineTo(r * 0.6, 0); ctx.moveTo(0, -r * 0.6); ctx.lineTo(0, r * 0.6); ctx.stroke();
-      break;
-    case 'special':
-      ctx.fillStyle = Y; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = B; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(-r * 0.55, -r * 0.55); ctx.lineTo(r * 0.55, r * 0.55); ctx.moveTo(r * 0.55, -r * 0.55); ctx.lineTo(-r * 0.55, r * 0.55); ctx.stroke();
-      break;
-    default:
-      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    case 'lateralPort': can([P]); break;
+    case 'lateralStbd': conical([S]); break;
+    case 'prefStbd': pillar([P, S, P]); stem(); ctx.fillStyle = P; ctx.fillRect(-1.5 * k, top - 2.6 * k, 3 * k, 2.6 * k); ctx.strokeRect(-1.5 * k, top - 2.6 * k, 3 * k, 2.6 * k); break;
+    case 'prefPort': pillar([S, P, S]); stem(); tri(top, true, S); break;
+    case 'cardN': pillar([Y, B]); stem(); tri(top, true); tri(top - 3 * k, true); break;
+    case 'cardS': pillar([B, Y]); stem(); tri(top, false); tri(top - 3 * k, false); break;
+    case 'cardE': pillar([B, Y, B]); stem(); tri(top, false); tri(top - 3 * k, true); break;
+    case 'cardW': pillar([Y, B, Y]); stem(); tri(top, true); tri(top - 3 * k, false); break;
+    case 'safe': pillar([R, W, R, W], true); stem(); ball(top, R); break;
+    case 'isolated': pillar([B, R, B]); stem(); ball(top, B); ball(top - 3 * k, B); break;
+    case 'special': pillar([Y]); stem(); ctx.strokeStyle = Y; ctx.lineWidth = Math.max(1.2, k * 1.1); ctx.beginPath(); ctx.moveTo(-1.6 * k, top); ctx.lineTo(1.6 * k, top - 3 * k); ctx.moveTo(1.6 * k, top); ctx.lineTo(-1.6 * k, top - 3 * k); ctx.stroke(); break;
+    case 'wreck': pillar([BU, Y, BU, Y], true); stem(); ctx.strokeStyle = Y; ctx.lineWidth = Math.max(1.2, k * 1.1); ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(0, top - 3.2 * k); ctx.moveTo(-1.6 * k, top - 1.6 * k); ctx.lineTo(1.6 * k, top - 1.6 * k); ctx.stroke(); break;
+    default: pillar([W]);
   }
+  ctx.restore();
+  // okrąg pozycji (bez pochylenia)
+  ctx.save();
+  ctx.strokeStyle = '#1b1f24'; ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = Math.max(0.8, k * 0.8);
+  ctx.beginPath(); ctx.arc(0, 0, Math.max(1.6, 1.2 * k), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   ctx.restore();
 }
 
@@ -161,7 +156,7 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.restore();
     if (opts.labels && !w.blind && s > 0.03 && !/^lateral/.test(m.type)) { // znaki boczne są czytelne z samego symbolu
       ctx.fillStyle = N ? '#a9c3d8' : '#243447';
-      ctx.fillText(t(m.label), x + rs + 4, y + 3);
+      ctx.fillText(t(m.label), x + rs * 1.2 + 6, y + 3);
     }
   }
   }
@@ -197,7 +192,8 @@ export function drawChart(ctx, W, Hh, opts) {
   ctx.restore();
 
   // skala i północ
-  const targets = [100, 200, 500, 1000, 2000, 5000];
+  // podziałka w milach morskich
+  const NMI = 1852, targets = [0.05, 0.1, 0.2, 0.5, 1, 2, 5].map((v) => v * NMI);
   let len = targets[0];
   for (const tg of targets) if (tg * s <= W * 0.28) len = tg;
   const sx0 = 12, sy0 = Hh - 12;
@@ -205,7 +201,7 @@ export function drawChart(ctx, W, Hh, opts) {
   ctx.strokeStyle = '#1b1f24'; ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(sx0, sy0 - 4); ctx.lineTo(sx0 + len * s, sy0 - 4); ctx.moveTo(sx0, sy0 - 9); ctx.lineTo(sx0, sy0 - 1); ctx.moveTo(sx0 + len * s, sy0 - 9); ctx.lineTo(sx0 + len * s, sy0 - 1); ctx.stroke();
   ctx.fillStyle = '#1b1f24'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left';
-  ctx.fillText(len >= 1000 ? `${len / 1000} km` : `${len} m`, sx0 + len * s + 6, sy0 - 3);
+  ctx.fillText(`${+(len / NMI).toFixed(2)} nm`, sx0 + len * s + 6, sy0 - 3);
   ctx.save();
   ctx.translate(W - 24, 26); ctx.rotate(-phi);
   ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();

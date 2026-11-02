@@ -2,8 +2,8 @@
 // znaki nawigacyjne (boczne, kardynalne, wody bezpiecznej, odosobnionego niebezpieczeństwa, wrak, szczególne),
 // mielizny i ląd. Niezależny od grafiki (testy w Node).
 import { World } from './world.js';
-import { buildPassage } from '../data/passage.js';
-import { clamp, wrapPi, DEG, KN, distToPoly, pointInConvex, thetaToCompass } from '../math.js';
+import { buildPassage, makeSituation, pickSituationKind, markRecord } from '../data/passage.js';
+import { clamp, wrapPi, DEG, KN, distToPoly, pointInConvex, thetaToCompass, rng } from '../math.js';
 
 function aabb(poly) {
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
@@ -40,7 +40,7 @@ export class PassageWorld extends World {
     this.navRoute = this.blind && H.keyRoute ? H.keyRoute : H.route;
     this.next = 1; // indeks waypointu, do którego płyniemy
     this.autopilot = { on: false, hdg: compass };
-    if (this.blind && !H.keyRoute) this.next = H.route.length - 1;
+    if (this.blind && !H.keyRoute && !H.dynamic) this.next = H.route.length - 1; // BRG tylko na port
     this.instruction = null; // bieżące polecenie (np. którym torem płynąć za rozwidleniem)
     this._notes = (H.notes || []).map((n) => ({ ...n, fired: false }));
     this.wrongFork = {};
@@ -52,18 +52,7 @@ export class PassageWorld extends World {
     this._contact = { kind: null, clear: 0 };
 
     // znaki jako małe przeszkody (zderzenie = kara) i dane do oceny
-    this.marks = H.marks.map((m) => {
-      let dRoute = Infinity, legDir = { x: 1, z: 0 };
-      for (let i = 0; i < H.route.length - 1; i++) {
-        const a = H.route[i], b = H.route[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz;
-        const t = clamp(((m.x - a.x) * dx + (m.z - a.z) * dz) / L2, 0, 1);
-        const d = Math.hypot(m.x - (a.x + dx * t), m.z - (a.z + dz * t));
-        if (d < dRoute) { dRoute = d; const l = Math.sqrt(L2); legDir = { x: dx / l, z: dz / l }; }
-      }
-      const lateral = m.rule === 'port' || m.rule === 'starboard';
-      const cardinal = SECTOR[m.rule] !== undefined;
-      return { ...m, dRoute, legDir, required: (lateral && !m.off) || (cardinal && dRoute < 160), seen: false, state: 'pending', minD: Infinity, atMin: null, inside: false, inZone: false };
-    });
+    this.marks = H.marks.map((m) => this.prepMark(m));
     for (const m of this.marks) {
       const poly = ngon(m.x, m.z, 1.4, 8);
       this.obstacles.push({ poly, box: aabb(poly), kind: 'mark', mark: m });
@@ -71,7 +60,90 @@ export class PassageWorld extends World {
     this._hazards = this.obstacles.filter((o) => o.kind === 'land' || o.kind === 'breakwater' || o.kind === 'shoal' || o.kind === 'mark');
     this._land = this.obstacles.filter((o) => o.kind === 'land' || o.kind === 'breakwater');
     this._shoals = this.obstacles.filter((o) => o.kind === 'shoal').map((o) => ({ ...o, depth: (H.shoals.find((q) => q.poly === o.poly) || { depth: 1 }).depth }));
+    // otwarte morze: sytuacje losowane w locie przed dziobem
+    if (H.dynamic) this.spawner = { r: rng(H.spawnSeed || 1), sits: [], n: 0, seq: this.marks.length, acc: 1 };
     this.updateNav(0.1);
+  }
+
+  // Dane znaku do oceny: odcinek trasy, wzdłuż którego się go mija (albo kierunek toru podany przy znaku)
+  prepMark(m) {
+    const H = this.H;
+    {
+      let dRoute = Infinity, legDir = { x: 1, z: 0 };
+      for (let i = 0; i < H.route.length - 1; i++) {
+        const a = H.route[i], b = H.route[i + 1], dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz;
+        const t = clamp(((m.x - a.x) * dx + (m.z - a.z) * dz) / L2, 0, 1);
+        const d = Math.hypot(m.x - (a.x + dx * t), m.z - (a.z + dz * t));
+        if (d < dRoute) { dRoute = d; const l = Math.sqrt(L2); legDir = { x: dx / l, z: dz / l }; }
+      }
+      if (m.legDir) legDir = m.legDir;
+      const lateral = m.rule === 'port' || m.rule === 'starboard';
+      const cardinal = SECTOR[m.rule] !== undefined;
+      // na otwartym morzu trasy nie ma – żaden znak nie jest obowiązkowy, liczy się poprawne mijanie
+      const required = !H.dynamic && ((lateral && !m.off) || (cardinal && dRoute < 160));
+      return { ...m, dRoute, legDir, required, seen: false, state: 'pending', minD: Infinity, atMin: null, inside: false, inZone: false };
+    }
+  }
+
+  // ---------- Otwarte morze: nowe sytuacje przed dziobem ----------
+  // Utrzymuje przed jachtem (±30° od kierunku płynięcia) co najmniej dwie sytuacje; nowe powstają tuż za zasięgiem widoczności,
+  // nie nachodzą na wcześniejsze i nie zasłaniają boi docelowej.
+  updateSpawner(dt) {
+    const sp = this.spawner;
+    if (!sp || this.result) return;
+    sp.acc += dt;
+    if (sp.acc < 0.5) return;
+    sp.acc = 0;
+    const b = this.boat;
+    const hb = b.speed > 0.6 ? bearingDeg(b.vx, b.vz) : thetaToCompass(b.th);
+    const ahead = sp.sits.filter((q) => {
+      const d = Math.hypot(q.cx - b.x, q.cz - b.z);
+      if (d - q.rad > 2100 || d + q.rad < 150) return false;
+      return Math.abs(((bearingDeg(q.cx - b.x, q.cz - b.z) - hb + 540) % 360) - 180) <= 38 || d < q.rad + 100;
+    }).length;
+    if (ahead >= 2) return;
+    const goal = this.route[this.route.length - 1];
+    if (Math.hypot(goal.x - b.x, goal.z - b.z) < 900) return; // przed metą już nic nowego
+    const wps = this.route.slice(Math.max(1, this.next));
+    const r = sp.r;
+    let kind = pickSituationKind(r);
+    for (let tries = 0; tries < 10; tries++) {
+      if (tries === 6) kind = pickSituationKind(r); // duże tory najpierw próbują dalej i pod innym kątem
+      const a = hb + (r() - 0.5) * 60, dist = 1350 + r() * 350 + (tries % 3) * 250;
+      const u = { x: Math.sin(a * DEG), z: -Math.cos(a * DEG) };
+      const E = { x: b.x + u.x * dist, z: b.z + u.z * dist };
+      // tor ustawiony mniej więcej w kierunku płynięcia (z niewielkim skosem)
+      const sit = makeSituation(kind, E, a + (r() - 0.5) * 30, r, sp.n + 1);
+      if (Math.hypot(sit.cx - b.x, sit.cz - b.z) < sit.rad + 250) continue;
+      if (wps.some((p) => Math.hypot(sit.cx - p.x, sit.cz - p.z) < sit.rad + 200)) continue; // waypointy zostają osiągalne
+      if (sp.sits.some((q) => Math.hypot(q.cx - sit.cx, q.cz - sit.cz) < q.rad + sit.rad + 120)) continue;
+      sp.n++;
+      this.addSituation(sit);
+      return;
+    }
+  }
+
+  addSituation(sit) {
+    const H = this.H, sp = this.spawner;
+    const marks = sit.marks.map((md) => markRecord(md, 'm' + sp.seq++));
+    for (const m of marks) {
+      H.marks.push(m);
+      const pm = this.prepMark(m);
+      this.marks.push(pm);
+      const poly = ngon(m.x, m.z, 1.4, 8), o = { poly, box: aabb(poly), kind: 'mark', mark: pm };
+      this.obstacles.push(o); this._hazards.push(o);
+    }
+    for (const s of sit.shoals) {
+      H.shoals.push(s);
+      H.structures.push({ kind: 'shoal', style: 'shoal', poly: s.poly, h: 0, walk: false, depth: s.depth, name: s.name });
+      const o = { poly: s.poly, box: aabb(s.poly), kind: 'shoal', h: 0 };
+      this.obstacles.push(o); this._hazards.push(o); this._shoals.push({ ...o, depth: s.depth });
+    }
+    H.wrecks.push(...sit.wrecks);
+    H.forks.push(...sit.forks);
+    this._notes.push(...sit.notes.map((n) => ({ ...n, fired: false })));
+    sp.sits.push(sit);
+    if (this.onSpawn) this.onSpawn({ marks, shoals: sit.shoals, wrecks: sit.wrecks });
   }
 
   markName(m) { return this.blind ? m.typeName : m.label; }
@@ -80,6 +152,7 @@ export class PassageWorld extends World {
 
   log(msg, type = 'info') {
     if (typeof msg === 'string' && msg.startsWith('Uderzenie kadłubem')) return; // własne komunikaty o kontakcie z lądem/mielizną/znakiem
+    if (type === 'bad') (this.mistakes || (this.mistakes = [])).push({ t: this.time, msg }); // do podsumowania rejsu
     super.log(msg, type);
   }
 
@@ -137,7 +210,8 @@ export class PassageWorld extends World {
     const b = this.boat, R = this.navRoute, ps = this.pstats;
     const px = b.x, pz = b.z;
     this.updateAware(px, pz);
-    if (this.blind && !this.H.keyRoute) {
+    this.updateSpawner(dt);
+    if (this.blind && !this.H.keyRoute && !this.H.dynamic) {
       const goal = R[R.length - 1], n = this.nav;
       const dtw = Math.hypot(goal.x - px, goal.z - pz);
       n.next = R.length - 1; n.dtw = dtw; n.remaining = dtw; n.xte = 0;
@@ -169,7 +243,7 @@ export class PassageWorld extends World {
       const vmg = Math.max(0.5, b.speed);
       n.eta = rest / vmg;
       // punkt za rozwidleniem (tryb z BRG) jest osiągnięty także przy końcu któregokolwiek z torów
-      const reached = dtw < 60 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
+      const reached = dtw < 50 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
       if (reached) {
         ps.wpReached++;
         if (k >= R.length - 1) { this.finishPassage(); return; }
@@ -181,7 +255,7 @@ export class PassageWorld extends World {
     }
     if (this.result) return;
     const n = this.nav;
-    if (!this.blind) {
+    if (!this.blind && !this.H.dynamic) { // na otwartym morzu omijanie przeszkód wymaga zejścia z linii trasy – bez kary za XTE
       ps.xteSum += Math.abs(n.xte) * dt;
       ps.xteTime += dt;
       if (Math.abs(n.xte) > 150) ps.offTime += dt;
@@ -311,7 +385,7 @@ export class PassageWorld extends World {
     const loss = items.reduce((s, i) => s + i.pts, 0);
     const score = Math.round(clamp(100 - loss, 0, 100));
     this.breakdown = items;
-    this.result = { ok: true, passage: true, score, time: t, items, stats: { ...ps, avgXte, length: L } };
+    this.result = { ok: true, passage: true, score, time: t, items, mistakes: [...(this.mistakes || [])], stats: { ...ps, avgXte, length: L } };
     this.log('Meta! Rejs ukończony', 'good');
     if (this.onFinish) this.onFinish(this.result);
   }

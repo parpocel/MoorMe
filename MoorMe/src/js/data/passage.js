@@ -67,7 +67,7 @@ const DEFS = {
     id: 'offshore',
     offshore: true,
     name: 'Otwarte morze – pławy, tory i rozwidlenie',
-    desc: 'Żadnego lądu na horyzoncie – drogę wskazują tylko znaki, które wyłaniają się kolejno przed dziobem: mielizny oznaczone znakami kardynalnymi, odosobnione niebezpieczeństwa, wraki i znaki specjalne. Po drodze tor wodny między płyciznami (czasem pod prąd kierunku oznakowania) i rozwidlenie toru – po znaku rozgałęzienia rozpoznajesz tor główny i boczny. Układ zmienia się przy każdym rejsie.',
+    desc: 'Żadnego lądu na horyzoncie – płyniesz od waypointu do waypointu do boi docelowej, a dokądkolwiek skierujesz dziób, przed jachtem wyłaniają się nowe znaki: mielizny ze znakami kardynalnymi, odosobnione niebezpieczeństwa, wraki, znaki specjalne, tory wodne między płyciznami (czasem pod prąd kierunku oznakowania) i rozwidlenia torów – po znaku rozgałęzienia rozpoznajesz tor główny i boczny.',
     style: 'baltic',
     difficulty: 2,
     depthMax: 28,
@@ -269,22 +269,29 @@ function applyMeander(d, r) {
 }
 
 // ---------- Otwarte morze ----------
-// Bez lądu: kolejne „sytuacje” nawigacyjne na lekko zakręcającej linii. Każda leży na prostej między punktami kontrolnymi
-// (keyRoute – tryb tylko z BRG: płynąc prosto, wpada się na niebezpieczeństwo), a trasa z pełną pomocą (route) omija je
-// właściwą stroną. Sytuacje: mielizna ze znakiem kardynalnym, odosobnione niebezpieczeństwo, wrak, znak specjalny,
-// tor wodny między płyciznami (z kierunkiem albo pod prąd kierunku oznakowania) i rozwidlenie toru ze znakiem rozgałęzienia.
+// Bez lądu i bez z góry ustalonej trasy: znana jest tylko boja docelowa, a kolejne „sytuacje” nawigacyjne (mielizna ze znakiem
+// kardynalnym, odosobnione niebezpieczeństwo, wrak, znak specjalny, tor wodny między płyciznami – z kierunkiem albo pod prąd
+// kierunku oznakowania – i rozwidlenie toru ze znakiem rozgałęzienia) pojawiają się przed dziobem, dokądkolwiek płynie jacht.
 const CARD = [['cardN', 0], ['cardE', 90], ['cardS', 180], ['cardW', 270]];
+const bearingOf = (x, z) => ((Math.atan2(x, -z) * 180) / Math.PI + 360) % 360;
 const brgOf = (x, z) => ((Math.atan2(x, -z) * 180) / Math.PI + 360) % 360;
 const HAZ = {
-  isolated: { off: 130, half: 80, len: 270, names: ['Skała'] },
-  wreck: { off: 180, half: 90, len: 300, names: ['Wrak'] },
-  special: { off: 110, half: 75, len: 250, names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
+  isolated: { names: ['Skała'] },
+  wreck: { names: ['Wrak'] },
+  special: { names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
 };
+// rodzaje sytuacji i ich częstość (na otwartym morzu losowane w locie przed dziobem)
+export const SITUATION_KINDS = [['cardinal', 3], ['isolated', 1.2], ['wreck', 1], ['special', 1], ['channel', 1.6], ['fork', 1.3]];
+export function pickSituationKind(r) {
+  const tot = SITUATION_KINDS.reduce((s, k) => s + k[1], 0);
+  let x = r() * tot;
+  for (const [k, w] of SITUATION_KINDS) { if ((x -= w) < 0) return k; }
+  return 'cardinal';
+}
 
-function offshoreTry(r) {
-  const h0 = Math.round(r() * 360);
-  let hdg = h0, E = { x: 0, z: 0 };
-  const route = [{ x: 0, z: 0, name: 'Start' }], keyR = [{ x: 0, z: 0, name: 'Start' }];
+// Jedna sytuacja nawigacyjna na otwartym morzu: E – punkt wejścia (od strony jachtu), hdg – kierunek (kompas), id – numer.
+// Zwraca znaki, mielizny, wraki, polecenia i okrąg, w którym się mieści (cx, cz, rad).
+export function makeSituation(kind, E, hdg, r, id = 0) {
   const shoals = [], marks = [], wrecks = [], notes = [], forks = [];
   const fr = (h) => { const u = compassVec(h); return { u, v: { x: -u.z, z: u.x } }; }; // v – na prawo od kierunku
   const at = (O, F, a, l) => ({ x: O.x + F.u.x * a + F.v.x * l, z: O.z + F.u.z * a + F.v.z * l });
@@ -302,53 +309,22 @@ function offshoreTry(r) {
     for (let a = a0; a <= a1; a += 100) {
       for (const s of sides) {
         const left = s < 0;
-        marks.push({ type: left === withB ? 'lateralPort' : 'lateralStbd', ...R(at(O, F, a, s * 52)), rule: left ? 'port' : 'starboard', ...extra });
+        marks.push({ type: left === withB ? 'lateralPort' : 'lateralStbd', ...R(at(O, F, a, s * 52)), rule: left ? 'port' : 'starboard', legDir: { x: F.u.x, z: F.u.z }, ...extra });
       }
     }
   };
-  const end = (p, o = {}) => { E = p; route.push({ ...R(p), ...o }); keyR.push({ ...R(p), ...o }); };
-
-  const hazard = (kind) => {
-    const F = fr(hdg), gap = 40 + r() * 70, C = at(E, F, gap + 150, 0), s = r() < 0.5 ? 1 : -1;
-    let D, half = 85, len = 290;
-    if (kind === 'cardinal') {
-      // mielizna na linii kursu; znak kardynalny po stronie bezpiecznej wody (kierunek świata najbliższy stronie omijania)
-      const rx = 45 + r() * 30, rz = 35 + r() * 20, Rm = Math.max(rx, rz);
-      shoals.push({ name: 'Mielizna', poly: ell(C.x, C.z, rx, rz, r() * Math.PI, 12), depth: 0.8 + r() * 0.6 });
-      const [type, deg] = CARD[Math.round(brgOf(F.v.x * s, F.v.z * s) / 90) % 4], cd = compassVec(deg);
-      marks.push({ type, x: Math.round(C.x + cd.x * (Rm + 30)), z: Math.round(C.z + cd.z * (Rm + 30)), gate: 150 });
-      D = { x: C.x + cd.x * (Rm + 110), z: C.z + cd.z * (Rm + 110) };
-    } else {
-      const H = HAZ[kind];
-      D = at(C, F, 0, s * H.off); half = H.half; len = H.len;
-      const name = H.names[Math.floor(r() * H.names.length)];
-      if (kind === 'isolated') shoals.push({ name, poly: ell(C.x, C.z, 14, 11, r() * 3, 10), depth: 0.5 });
-      if (kind === 'wreck') wrecks.push({ name, ...R(at(C, F, 25 * (r() - 0.5), 25 * (r() - 0.5))), rot: r() * 3 });
-      marks.push({ type: kind, ...R(C), name });
-    }
-    // odcinek omijania równoległy do kursu; nie zaczyna się za plecami (bliżej niż 30 m od początku sytuacji)
-    const aD = (D.x - E.x) * F.u.x + (D.z - E.z) * F.u.z, lD = (D.x - E.x) * F.v.x + (D.z - E.z) * F.v.z;
-    route.push(R(at(E, F, Math.max(30, aD - half), lD)), R(at(E, F, aD + half, lD)));
-    end(at(C, F, len, 0));
-  };
-
-  const channel = () => {
-    const F = fr(hdg), gap = 50 + r() * 70, withB = r() < 0.7;
-    const Lc = 400 + r() * 120, a0 = gap + 110, a1 = a0 + Lc;
-    marks.push({ type: 'safe', ...R(at(E, F, gap, -24)), name: 'Wejście na tor' });
+  const F = fr(hdg);
+  if (kind === 'channel') {
+    const withB = r() < 0.7, Lc = 400 + r() * 120, a0 = 110, a1 = a0 + Lc;
+    marks.push({ type: 'safe', ...R(at(E, F, 0, -24)), name: 'Wejście na tor' });
     banks(E, F, a0, a1, [-1, 1]);
     gates(E, F, a0 + 30, a1 - 20, withB);
-    const ex = at(E, F, a1 + 160, 0);
-    notes.push({ ...R(at(E, F, gap, 0)), r: 480, end: R(ex), text: withB ? 'Tor wodny przed dziobem – płyniesz z kierunkiem oznakowania (od morza)' : 'Tor wodny przed dziobem – płyniesz pod prąd kierunku oznakowania (w stronę morza)' });
-    end(ex);
-  };
-
-  const fork = () => {
-    const F = fr(hdg), gap = 50 + r() * 70, T = 260 + r() * 80, a0 = gap + 110, aS = a0 + T;
-    const S = at(E, F, aS, 0), id = 'f' + forks.length;
-    marks.push({ type: 'safe', ...R(at(E, F, gap, -24)), name: 'Wejście na tor' });
+    notes.push({ ...R(E), r: 480, end: R(at(E, F, a1 + 160, 0)), text: withB ? 'Tor wodny przed dziobem – płyniesz z kierunkiem oznakowania (od morza)' : 'Tor wodny przed dziobem – płyniesz pod prąd kierunku oznakowania (w stronę morza)' });
+  } else if (kind === 'fork') {
+    const T = 260 + r() * 80, a0 = 110, aS = a0 + T, S = at(E, F, aS, 0), fid = 'f' + id;
+    marks.push({ type: 'safe', ...R(at(E, F, 0, -24)), name: 'Wejście na tor' });
     banks(E, F, a0, aS, [-1, 1]);
-    gates(E, F, a0 + 30, aS - 50, true, { fork: id });
+    gates(E, F, a0 + 30, aS - 50, true, { fork: fid });
     // tor boczny odchodzi o 40° w prawo (sb = 1) albo w lewo (-1); tor główny może lekko skręcać w drugą stronę
     const sb = r() < 0.5 ? 1 : -1, m1 = r() * 12, hm = hdg - sb * m1, hb = hm + sb * 40;
     const Fm = fr(hm), Fb = fr(hb), ub = compassVec(hm + sb * 20), Lc = 430 + r() * 80;
@@ -358,77 +334,63 @@ function offshoreTry(r) {
     // język płycizny między torami: od przecięcia wewnętrznych krawędzi (70 m od osi) do końca torów
     const tip = { x: S.x + ub.x * 212, z: S.z + ub.z * 212 };
     shoals.push({ name: 'Płycizna między torami', poly: [[tip.x, tip.z], ...[at(S, Fm, Lc, sb * 70), at(S, Fb, Lc, -sb * 70)].map((p) => [p.x, p.z])], depth: 1.3 });
-    // znak rozgałęzienia na przecięciu linii znaków wewnętrznych (52 m od osi)
+    // znak rozgałęzienia na przecięciu linii znaków wewnętrznych (52 m od osi); mija się go według wybranego toru
     const prefType = sb < 0 ? 'prefStbd' : 'prefPort';
     const prefRule = (prefType === 'prefStbd') === (take === 'main') ? 'port' : 'starboard';
-    marks.push({ type: prefType, x: Math.round(S.x + ub.x * 152), z: Math.round(S.z + ub.z * 152), rule: prefRule, fork: id, gate: 100 });
+    const Ft = take === 'main' ? Fm : Fb;
+    marks.push({ type: prefType, x: Math.round(S.x + ub.x * 152), z: Math.round(S.z + ub.z * 152), rule: prefRule, fork: fid, gate: 100, legDir: { x: Ft.u.x, z: Ft.u.z } });
     const ends = {};
     for (const [Fc, which] of [[Fm, 'main'], [Fb, 'branch']]) {
-      const inner = which === 'main' ? sb : -sb, ex = { fork: id, channel: which, ...(which !== take ? { off: true } : {}) };
+      const inner = which === 'main' ? sb : -sb, ex = { fork: fid, channel: which, ...(which !== take ? { off: true } : {}) };
       gates(S, Fc, 60, 60, true, ex, [-inner]);
       gates(S, Fc, 200, Lc - 20, true, ex);
       ends[which] = R(at(S, Fc, Lc + 150, 0));
     }
-    const label = take === 'main' ? 'tor główny' : 'tor boczny';
-    notes.push({ ...R(at(E, F, gap, 0)), r: 480, end: ends[take], text: `Tor wodny z rozwidleniem przed dziobem – za rozwidleniem płyń torem ${take === 'main' ? 'GŁÓWNYM' : 'BOCZNYM'}` });
-    forks.push({ id, take, prefType, x: Math.round(S.x), z: Math.round(S.z) });
-    route.push({ ...R(S), label: 'rozwidlenie' });
-    route.push({ ...ends[take], label });
-    // w trybie z samym BRG punkt za rozwidleniem leży między torami – który tor wybrać, mówi tylko znak rozgałęzienia
-    keyR.push({ ...R(S), name: 'Rozwidlenie toru' });
-    const X = { x: S.x + ub.x * (Lc + 150) * Math.cos(20 * Math.PI / 180), z: S.z + ub.z * (Lc + 150) * Math.cos(20 * Math.PI / 180) };
-    keyR.push({ ...R(X), name: 'Za rozwidleniem', ends: [ends.main, ends.branch] });
-    E = ends[take];
-    hdg = take === 'main' ? hm : hb;
-  };
-
-  const extra = ['isolated', 'wreck', 'special', 'cardinal'];
-  const plan = ['cardinal', 'cardinal', 'channel', 'fork', extra.splice(Math.floor(r() * 4), 1)[0], extra.splice(Math.floor(r() * 3), 1)[0]];
-  for (let i = plan.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [plan[i], plan[j]] = [plan[j], plan[i]]; }
-  if (plan[0] === 'channel' || plan[0] === 'fork') { const j = plan.findIndex((p) => p !== 'channel' && p !== 'fork'); [plan[0], plan[j]] = [plan[j], plan[0]]; }
-  plan.forEach((kind, i) => {
-    if (i > 0) hdg = h0 + Math.max(-45, Math.min(45, hdg - h0 + (r() - 0.5) * 70));
-    if (kind === 'channel') channel();
-    else if (kind === 'fork') fork();
-    else hazard(kind);
-  });
-  const F = fr(hdg), fin = at(E, F, 180 + r() * 60, 0);
-  marks.push({ type: 'safe', ...R(at(fin, F, 0, -22)), name: 'Meta' });
-  end(fin, { name: 'Meta – boja' });
-  return { h0, route, keyR, shoals, marks, wrecks, notes, forks };
-}
-
-// Czy wylosowany układ jest żeglowny: trasa z zapasem omija mielizny i strefy, a znaki stoją w wodzie
-function offshoreOk(L) {
-  const R = L.route;
-  const dRoute = (x, z) => routeDist(R, x, z);
-  for (let i = 0; i < R.length - 1; i++) {
-    const a = R[i], b = R[i + 1], n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 10);
-    for (let k = 0; k <= n; k++) {
-      const x = a.x + ((b.x - a.x) * k) / n, z = a.z + ((b.z - a.z) * k) / n;
-      if (L.shoals.some((s) => distToPoly(s.poly, x, z).dist < 40)) return false;
+    notes.push({ ...R(E), r: 480, end: ends[take], text: `Tor wodny z rozwidleniem przed dziobem – za rozwidleniem płyń torem ${take === 'main' ? 'GŁÓWNYM' : 'BOCZNYM'}` });
+    forks.push({ id: fid, take, prefType, x: Math.round(S.x), z: Math.round(S.z) });
+  } else {
+    const C = at(E, F, 150, 0);
+    if (kind === 'cardinal') {
+      // mielizna; znak kardynalny po stronie bezpiecznej wody (kierunek świata najbliższy jednej z burt)
+      const rx = 45 + r() * 30, rz = 35 + r() * 20, Rm = Math.max(rx, rz), s = r() < 0.5 ? 1 : -1;
+      shoals.push({ name: 'Mielizna', poly: ell(C.x, C.z, rx, rz, r() * Math.PI, 12), depth: 0.8 + r() * 0.6 });
+      const [type, deg] = CARD[Math.round(brgOf(F.v.x * s, F.v.z * s) / 90) % 4], cd = compassVec(deg);
+      marks.push({ type, x: Math.round(C.x + cd.x * (Rm + 30)), z: Math.round(C.z + cd.z * (Rm + 30)), gate: 150 });
+    } else {
+      const name = HAZ[kind].names[Math.floor(r() * HAZ[kind].names.length)];
+      if (kind === 'isolated') shoals.push({ name, poly: ell(C.x, C.z, 14, 11, r() * 3, 10), depth: 0.5 });
+      if (kind === 'wreck') wrecks.push({ name, ...R(at(C, F, 25 * (r() - 0.5), 25 * (r() - 0.5))), rot: r() * 3 });
+      marks.push({ type: kind, ...R(C), name });
     }
   }
-  for (const m of L.marks) {
-    const T = MARK_TYPES[m.type];
-    if (T.rule === 'avoid' && dRoute(m.x, m.z) < T.radius + 30) return false;
-    if (dRoute(m.x, m.z) < 18 || (m.type !== 'isolated' && L.shoals.some((s) => distToPoly(s.poly, m.x, m.z).dist < 8))) return false;
-  }
-  return true;
+  // okrąg obejmujący sytuację (do rozmieszczania kolejnych bez nakładania)
+  const pts = [...marks, ...shoals.flatMap((q) => q.poly.map(([x, z]) => ({ x, z }))), ...wrecks];
+  const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const rad = Math.max(...pts.map((p) => Math.hypot(p.x - cx, p.z - cz))) + (kind === 'wreck' ? 120 : kind === 'special' ? 55 : kind === 'isolated' ? 75 : 20);
+  return { id, kind, shoals, marks, wrecks, notes, forks, cx, cz, rad };
 }
 
+// Otwarte morze: trasa z kilku waypointów (ok. 3 nm) do boi docelowej; sytuacje pojawiają się w locie przed dziobem (PassageWorld)
 function applyOffshore(d, r) {
-  let L = null;
-  for (let k = 0; k < 60; k++) { L = offshoreTry(r); if (offshoreOk(L)) break; }
-  d.shoals = L.shoals; d.marks = L.marks; d.wrecks = L.wrecks; d.notes = L.notes; d.forks = L.forks;
-  L.route.forEach((p, i) => { if (!p.name) p.name = `WP${i}${p.label ? ' – ' + p.label : ''}`; });
-  L.keyR.forEach((p, i) => { if (!p.name) p.name = `Punkt ${i}`; });
-  d.route = L.route;
-  d.keyRoute = L.keyR;
-  d.start = { x: 0, z: 0 }; // kurs startowy: na pierwszy waypoint (w trybie z BRG – na pierwszy punkt kontrolny, zob. PassageWorld)
-  const pts = [...L.route, ...L.keyR, ...L.shoals.flatMap((s) => s.poly.map(([x, z]) => ({ x, z })))];
-  const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
-  d.bounds = { minX: Math.min(...xs) - 600, maxX: Math.max(...xs) + 600, minZ: Math.min(...zs) - 600, maxZ: Math.max(...zs) + 600 };
+  const h0 = Math.round(r() * 360);
+  let p = { x: 0, z: 0 }, hdg = h0;
+  d.route = [{ x: 0, z: 0, name: 'Start' }];
+  const n = 4;
+  for (let i = 1; i <= n; i++) {
+    hdg = h0 + Math.max(-40, Math.min(40, hdg - h0 + (r() - 0.5) * 70));
+    const u = compassVec(hdg), L = 1250 + r() * 400;
+    p = { x: Math.round(p.x + u.x * L), z: Math.round(p.z + u.z * L) };
+    d.route.push({ ...p, name: i === n ? 'Meta – boja' : `WP${i}` });
+  }
+  const goal = d.route[n], pr = d.route[n - 1], gl = Math.hypot(goal.x - pr.x, goal.z - pr.z);
+  d.dynamic = true;
+  d.start = { x: 0, z: 0, compass: Math.round(bearingOf(d.route[1].x, d.route[1].z)) };
+  d.marks = [{ type: 'safe', x: goal.x - Math.round(((goal.z - pr.z) / gl) * 22), z: goal.z + Math.round(((goal.x - pr.x) / gl) * 22), name: 'Meta' }];
+  const xs = d.route.map((q) => q.x), zs = d.route.map((q) => q.z);
+  d.keyRoute = null;
+  d.spawnSeed = Math.floor(r() * 1e9);
+  d.bounds = { minX: Math.min(...xs) - 2500, maxX: Math.max(...xs) + 2500, minZ: Math.min(...zs) - 2500, maxZ: Math.max(...zs) + 2500 };
 }
 
 // Skraca akwen wzdłuż osi x (trasa ok. 15 min żeglugi) – zachowuje kształt w osi z
@@ -486,6 +448,12 @@ export function routeLength(route) {
   return L;
 }
 
+// Pełny opis znaku (typ, zasada mijania, światło, strefa, nazwa)
+export function markRecord(m, id) {
+  const T = MARK_TYPES[m.type];
+  return { id, ...m, rule: m.rule || T.rule, flash: T.flash, radius: T.radius || 0, gate: m.gate ?? T.gate, label: m.name || T.name, typeName: T.name };
+}
+
 // Buduje „port” w rozumieniu świata: struktury kolizyjne, znaki, trasa. Zwraca obiekt zgodny z interfejsem World/View3D.
 export function buildPassage(id, seed = 1) {
   const d = structuredClone(DEFS[id] || DEFS.baltic);
@@ -523,10 +491,7 @@ export function buildPassage(id, seed = 1) {
       }
     }
   }
-  const marks = [...handMarks, ...gen].map((m, i) => {
-    const T = MARK_TYPES[m.type];
-    return { id: 'm' + i, ...m, rule: m.rule || T.rule, flash: T.flash, radius: T.radius || 0, gate: m.gate ?? T.gate, label: m.name || T.name, typeName: T.name };
-  });
+  const marks = [...handMarks, ...gen].map((m, i) => markRecord(m, 'm' + i));
   const route = d.route.map((p, i) => ({ ...p, i }));
   const keyRoute = d.keyRoute ? d.keyRoute.map((p, i) => ({ ...p, i })) : null;
   const first = route[0], second = route[1];
@@ -536,7 +501,7 @@ export function buildPassage(id, seed = 1) {
     bounds: d.bounds,
     structures, coasts: d.coasts, moles: d.moles, islands: d.islands, shoals: d.shoals, wrecks: d.wrecks, lighthouses: d.lighthouses, villages: d.villages,
     marks, route, routeLength: routeLength(route), start: { ...d.start, compass: d.start.compass ?? brg },
-    offshore: !!d.offshore, keyRoute, notes: d.notes || [], forks: d.forks || [],
+    offshore: !!d.offshore, dynamic: !!d.dynamic, spawnSeed: d.spawnSeed, keyRoute, notes: d.notes || [], forks: d.forks || [],
     // pola wymagane przez World / widok portu (puste w rejsie)
     neighbors: [], bollards: [], murings: [], deco: [], starts: [],
     berth: { x: first.x, z: first.z, th: 0, tolAlong: 1, tolAcross: 1, tolTh: 1, frame: null },

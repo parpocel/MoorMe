@@ -241,7 +241,7 @@ export class Atmosphere {
     if (night > 0.5) {
       dir = new THREE.Vector3(-0.45, 0.75, 0.5).normalize();
       sun.color.set(0x9fb4e0);
-      sun.intensity = 0.28 * sky.sun * night + 0.04;
+      sun.intensity = 0.17 * sky.sun * night + 0.03; // księżyc – słabe światło
     }
     sun.position.set(cam.tx + dir.x * 130, dir.y * 130, cam.tz + dir.z * 130);
     sun.target.position.set(cam.tx, 0, cam.tz);

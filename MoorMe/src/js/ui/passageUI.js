@@ -10,7 +10,7 @@ import { t } from '../i18n.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi } from '../math.js';
 
 const NM = 1852;
-const fmtDist = (m) => (m >= 0.1 * NM ? `${(m / NM).toFixed(2)} nm` : `${Math.round(m)} m`);
+const fmtDist = (m) => `${(m / NM).toFixed(2)} nm`; // odległości zawsze w milach morskich
 const fmtTime = (sec) => {
   if (!isFinite(sec) || sec > 99 * 3600) return '--:--';
   const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
@@ -61,6 +61,7 @@ export class PassageScreen extends SimScreen {
       throw err;
     }
     this.view.cam.dist = 120;
+    this.world.onSpawn = (sit) => this.view.sea.addSituation(sit);
     this.view.setView('fpv'); // domyślnie widok kapitana – znaki widać tak jak z pokładu
     this._vi = 4;
 
@@ -82,8 +83,6 @@ export class PassageScreen extends SimScreen {
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
-    this.chartBtn = h('button.btn.sm', { onclick: () => this.toggleChart(), title: 'Chartploter: pokaż / ukryj (C)' }, '🗺 Mapa');
-    top.appendChild(this.chartBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));
     top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Menu'));
@@ -114,7 +113,12 @@ export class PassageScreen extends SimScreen {
       h('button.btn.xs', { onclick: () => this.zoomChart(0.7), title: 'Przybliż' }, '＋'),
       h('button.btn.xs', { onclick: () => this.zoomChart(1.4), title: 'Oddal' }, '－'),
       this.chartBtnOrient, this.chartBtnLabels,
-      this.world.blind ? null : h('button.btn.xs', { onclick: () => { this.chart.range = Math.max(900, this.world.H.routeLength * 1.15); this.chart.full = true; } }, 'Cała trasa')));
+      this.world.blind ? null : h('button.btn.xs', { onclick: () => { this.chart.range = Math.max(900, this.world.H.routeLength * 1.15); this.chart.full = true; } }, 'Cała trasa'),
+      h('span', { style: { flex: '1' } }),
+      h('button.btn.xs', { onclick: () => this.setChart(false), title: 'Ukryj chartploter (C)' }, '✕ Ukryj')));
+    // gdy chartploter jest schowany, w jego miejscu zostaje mały przycisk
+    this.chartShowBtn = h('button.btn.sm.hud', { id: 'hud-chart-show', onclick: () => this.setChart(true), title: 'Pokaż chartploter (C)' }, '🗺 Mapa');
+    sim.appendChild(this.chartShowBtn);
     sim.appendChild(chart);
     this.chartEl = chart;
     let on = true;
@@ -158,7 +162,7 @@ export class PassageScreen extends SimScreen {
   setChart(on) {
     this.chartOn = on;
     this.chartEl.style.display = on ? '' : 'none';
-    this.chartBtn.classList.toggle('on', on);
+    this.chartShowBtn.style.display = on ? 'none' : '';
     try { localStorage.setItem('moorme.chart.on', on ? '1' : '0'); } catch (e) { /* brak zapisu */ }
   }
   toggleChart() { this.setChart(!this.chartOn); }
@@ -252,20 +256,21 @@ export class PassageScreen extends SimScreen {
     const nextMarks = w.marks
       .filter((m) => m.state === 'pending' && Math.hypot(m.x - b.x, m.z - b.z) < 700 && (m.required || m.rule === 'avoid'))
       .sort((p, q) => Math.hypot(p.x - b.x, p.z - b.z) - Math.hypot(q.x - b.x, q.z - b.z)).slice(0, 3);
-    const blind = w.blind, toPort = blind && !w.H.keyRoute;
+    const dyn = !!w.H.dynamic, blind = w.blind && !dyn, toPort = blind && !w.H.keyRoute; // na otwartym morzu zawsze bieżący waypoint
+    const noXte = blind || dyn;
     let gh = w.instruction ? `<div class="small" style="margin:-2px 0 6px;padding:5px 7px;border-radius:6px;background:rgba(255,209,102,0.16);color:#ffd166;font-weight:600">${w.instruction.text}</div>` : '';
     gh += `<div style="font-weight:700;margin-bottom:2px">${toPort ? 'Do portu' : blind ? `Punkt ${n.next}/${w.navRoute.length - 1}${/^Punkt/.test(wp.name) ? '' : ` <span class="muted">– ${wp.name}</span>`}` : `Do ${wp.name || 'WP' + n.next} <span class="muted">(${n.next}/${w.navRoute.length - 1})</span>`}</div>
       <div style="display:flex;justify-content:space-between;align-items:baseline"><div><div class="small muted">${toPort ? 'Kurs na port (BRG)' : blind ? 'Kurs na punkt (BRG)' : 'Kurs na waypoint (BRG)'}</div><div class="big-num" style="color:#ff7ae0">${pad3(n.brg)}°</div></div>
       <div style="text-align:right"><div class="small muted">Odległość</div><div class="big-num">${fmtDist(n.dtw)}</div></div></div>
       <div class="small" style="margin:4px 0 0;color:${Math.abs(err) < 5 ? '#7ff0b5' : '#ffd166'}">${Math.abs(err) < 3 ? 'Kurs zgodny z BRG' : `Skręć ${err > 0 ? 'w prawo' : 'w lewo'} o ${Math.abs(err).toFixed(0)}°`}</div>
-      ${blind ? '' : `<div class="xte"><i style="left:${xteBar}%"></i></div>`}
+      ${noXte ? '' : `<div class="xte"><i style="left:${xteBar}%"></i></div>`}
       <div class="kv">
-        ${blind ? '' : `<span class="muted">XTE (odchylenie od toru)</span><b style="color:${Math.abs(n.xte) > 100 ? '#ff7a7a' : 'inherit'}">${Math.abs(n.xte).toFixed(0)} m ${xteSide}</b>
+        ${noXte ? (dyn ? `<span class="muted">Do mety</span><b>${fmtDist(n.remaining)}</b>` : '') : `<span class="muted">XTE (odchylenie od toru)</span><b style="color:${Math.abs(n.xte) > 100 ? '#ff7a7a' : 'inherit'}">${fmtDist(Math.abs(n.xte))} ${xteSide}</b>
         <span class="muted">Do mety</span><b>${fmtDist(n.remaining)}</b>`}
         <span class="muted">ETA</span><b>${fmtTime(n.eta)}</b>
         <span class="muted">Głębokość</span><b style="color:${shallow ? '#ff5a5a' : 'inherit'}">${depth.toFixed(1)} m${shallow ? ' ⚠' : ''}</b>
       </div>`;
-    if (!blind && nextMarks.length) {
+    if (!w.blind && nextMarks.length) {
       gh += '<div style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.12);padding-top:5px">';
       for (const m of nextMarks) {
         gh += `<div class="small" style="margin:3px 0"><b>${m.label}</b> <span class="muted">${fmtDist(Math.hypot(m.x - b.x, m.z - b.z))}</span><br><span class="muted">${RULE_TEXT[m.rule]}</span></div>`;
@@ -375,20 +380,22 @@ export class PassageScreen extends SimScreen {
     const marksOk = this.world.marks.filter((m) => m.required);
     const okN = marksOk.filter((m) => m.state === 'ok').length;
     const tr = (k, v) => h('tr', {}, h('td', {}, k), h('td', {}, v));
-    const m = h('div.modal.glass', {},
+    const m = h('div.modal.glass', { style: { maxHeight: '88vh', overflow: 'auto' } },
       h('h2', {}, '⚓ Rejs ukończony!'),
       h('div.score', { style: { color: col } }, `${r.score}`),
       h('div', { style: { textAlign: 'center' }, class: 'muted' }, 'punktów na 100'),
       h('table.spec-table', { style: { marginTop: '14px' } },
         tr('Czas rejsu', fmtT(r.time)),
         tr('Przebyta droga', `${(s.dist / NM).toFixed(2)} nm (trasa: ${(s.length / NM).toFixed(2)} nm)`),
-        tr('Średnie odchylenie od toru', `${s.avgXte.toFixed(0)} m`),
+        tr('Średnie odchylenie od toru', fmtDist(s.avgXte)),
         tr('Znaki minięte poprawnie', `${okN} / ${marksOk.length}`),
         tr('Znaki z niewłaściwej strony', `${s.wrongSide}`),
         tr('Wejścia w strefy zagrożeń', `${s.avoid}`),
         tr('Mielizna / brzeg', `${s.groundings}`),
         tr('Zderzenia ze znakami', `${s.markHits}`),
         ...(this.world.H.forks.length ? [tr('Wybór toru na rozwidleniu', s.wrongChannel ? 'niewłaściwy' : 'właściwy')] : [])),
+      r.mistakes && r.mistakes.length ? h('div', { style: { marginTop: '10px' } }, h('h4', { style: { margin: '0 0 4px' } }, 'Popełnione błędy'),
+        h('table.spec-table', {}, ...r.mistakes.map((e) => tr(fmtT(e.t), e.msg)))) : null,
       r.items.length ? h('div', { style: { marginTop: '10px' } }, h('h4', { style: { margin: '0 0 4px' } }, 'Punkty karne'),
         h('table.spec-table', {}, ...r.items.map((i) => tr(i.label, `−${i.pts}`)))) : h('div.hint', {}, 'Bez punktów karnych – żegluga wzorowa!'),
       h('div', { style: { display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '16px' } },

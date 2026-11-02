@@ -286,6 +286,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 #hud-chart { left: 12px; bottom: 12px; width: 440px; padding: 8px; }
 #hud-chart canvas { width: 100%; height: auto; aspect-ratio: 420 / 300; border-radius: 8px; display: block; background: #dcedf4; }
 #hud-chart .chart-bar { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+#hud-chart-show { left: 12px; bottom: 12px; pointer-events: auto; }
 .passage #hud-log { top: 66px; bottom: auto; }
 #hud-goal.nav { width: 270px; top: 190px; max-height: calc(100vh - 560px); overflow: auto; }
 .xte { position: relative; height: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; margin: 6px 0 8px; }

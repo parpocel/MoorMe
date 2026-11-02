@@ -227,46 +227,19 @@ export function buildMarkMesh(type) {
   let lightY = 4.2, lightColor = 0xffffff;
   const floatBase = (color, r = 0.8) => g.add(cyl(r, r * 1.05, 0.7, color, 12, -0.25));
   switch (type) {
-    case 'lateralPort': { // beczka: czerwona (IALA A) / zielona (IALA B)
-      const c = lateralColors().port;
-      floatBase(c, 0.9);
-      g.add(cyl(0.7, 0.7, 1.6, c, 12, 0.45));
-      g.add(cyl(0.06, 0.06, 1.3, BLACK, 5, 2.0));
-      g.add(cyl(0.28, 0.28, 0.55, c, 10, 3.2));
-      lightY = 4.0; lightColor = c === RED ? 0xff1008 : 0x00e81c;
-      break;
-    }
-    case 'lateralStbd': { // stożek: zielony (IALA A) / czerwony (IALA B)
-      const c = lateralColors().stbd;
-      floatBase(c, 0.9);
-      g.add(cone(0.95, 2.2, c, 0.45));
-      g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
-      g.add(cone(0.3, 0.6, c, 3.4));
-      lightY = 4.3; lightColor = c === RED ? 0xff1008 : 0x00e81c;
-      break;
-    }
-    case 'prefStbd': { // rozgałęzienie, tor główny w prawo: beczka koloru lewego z szerokim pasem koloru prawego
-      const c = lateralColors().port, band = lateralColors().stbd;
-      floatBase(c, 0.9);
-      g.add(cyl(0.7, 0.7, 0.55, c, 12, 0.45));
-      g.add(cyl(0.72, 0.72, 0.5, band, 12, 1.0));
-      g.add(cyl(0.7, 0.7, 0.55, c, 12, 1.5));
-      g.add(cyl(0.06, 0.06, 1.3, BLACK, 5, 2.0));
-      g.add(cyl(0.28, 0.28, 0.55, c, 10, 3.2));
-      lightY = 4.0; lightColor = c === RED ? 0xff1008 : 0x00e81c;
-      break;
-    }
-    case 'prefPort': { // rozgałęzienie, tor główny w lewo: stożek koloru prawego z szerokim pasem koloru lewego
-      const c = lateralColors().stbd, band = lateralColors().port;
-      floatBase(c, 0.9);
-      for (const [rb, rt, y, col] of [[0.95, 0.62, 0.45, c], [0.62, 0.3, 1.18, band], [0.3, 0.02, 1.91, c]]) {
-        const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, 0.73, 10), M(col));
-        m.position.y = y + 0.365; m.castShadow = true;
-        g.add(m);
-      }
-      g.add(cyl(0.06, 0.06, 1.0, BLACK, 5, 2.6));
-      g.add(cone(0.3, 0.6, c, 3.4));
-      lightY = 4.3; lightColor = c === RED ? 0xff1008 : 0x00e81c;
+    // znaki boczne i rozgałęzienia: standardowa pława filarowa (jak kardynalne); rodzaj rozpoznaje się po kolorze
+    // i znaku szczytowym – walec (znak lewy) albo stożek wierzchołkiem do góry (znak prawy)
+    case 'lateralPort': case 'lateralStbd': case 'prefStbd': case 'prefPort': {
+      const lc = lateralColors(), port = type === 'lateralPort' || type === 'prefStbd';
+      const c = port ? lc.port : lc.stbd, band = port ? lc.stbd : lc.port;
+      const bands = type.startsWith('pref') ? [c, band, c] : [c];
+      floatBase(c, 0.85);
+      const bh = 2.4 / bands.length;
+      bands.forEach((col, i) => g.add(cyl(0.38, 0.38, bh, col, 10, 0.45 + i * bh)));
+      g.add(cyl(0.05, 0.05, 0.4, BLACK, 5, 2.85));
+      if (port) g.add(cyl(0.3, 0.3, 0.55, c, 10, 3.2));
+      else g.add(cone(0.36, 0.62, c, 3.2));
+      lightY = 4.25; lightColor = c === RED ? 0xff1008 : 0x00e81c;
       break;
     }
     case 'cardN': case 'cardS': case 'cardE': case 'cardW': {
@@ -420,7 +393,7 @@ export function buildSea(H, scene) {
   }
   // mielizny: jaśniejsza plama tuż nad lustrem wody (nocą przygaszona)
   const shoalMats = [];
-  for (const s of (H.blind ? [] : H.shoals)) {
+  const addShoal = (s) => {
     const shape = new THREE.Shape();
     s.poly.forEach(([x, z], i) => (i ? shape.lineTo(x, -z) : shape.moveTo(x, -z)));
     const g = new THREE.ShapeGeometry(shape);
@@ -430,7 +403,8 @@ export function buildSea(H, scene) {
     m.position.y = 0.45;
     m.renderOrder = 3;
     group.add(m);
-  }
+  };
+  for (const s of (H.blind ? [] : H.shoals)) addShoal(s);
   // wraki
   for (const w of H.wrecks) group.add(wreckMesh(w));
   // domy w wsiach
@@ -503,14 +477,15 @@ export function buildSea(H, scene) {
 
   // znaki
   const marks = [];
-  for (const m of H.marks) {
+  const addMark = (m) => {
     const mesh = buildMarkMesh(m.type);
     mesh.position.set(m.x, 0, m.z);
     mesh.userData.mark = m;
     mesh.userData.phase = r() * 6;
     dyn.add(mesh);
     marks.push({ def: m, mesh, pattern: PATTERNS[MARK_TYPES[m.type] ? MARK_TYPES[m.type].flash : m.flash] || PATTERNS.VQ });
-  }
+  };
+  for (const m of H.marks) addMark(m);
   // światła główek portu (lewa czerwona, prawa zielona przy wejściu od południa)
   const heads = [];
   H.moles.forEach((poly, i) => {
@@ -555,6 +530,12 @@ export function buildSea(H, scene) {
   const tmp = new THREE.Vector3();
   const api = {
     group, dyn, bollardMeshes: [], lamps: [], lighthouses, marks, routeGroup,
+    // otwarte morze: nowa sytuacja wylosowana przed dziobem
+    addSituation({ marks: ms, shoals, wrecks }) {
+      for (const m of ms) addMark(m);
+      if (!H.blind) for (const q of shoals) addShoal(q);
+      for (const w of wrecks) group.add(wreckMesh(w));
+    },
     setNext(i) {
       const p = R[Math.min(i, R.length - 1)];
       beam.position.set(p.x, 35, p.z);
@@ -576,7 +557,7 @@ export function buildSea(H, scene) {
         const vis = lightsOn > 0.3 ? clamp((340 - dn) / 220, 0, 1) : H.offshore ? clamp((1800 - dn) / 350, 0, 1) : 1;
         if (mesh.userData.vis !== vis) {
           mesh.userData.vis = vis;
-          const glowK = lightsOn * 0.28 * (0.4 + 0.6 * vis);
+          const glowK = lightsOn * 0.1 * (0.4 + 0.6 * vis); // nocą bryła tylko lekko się zarysowuje, z bliska nie świeci
           mesh.traverse((o) => {
             if (!o.isMesh || !o.material) return;
             o.visible = vis > 0.02;

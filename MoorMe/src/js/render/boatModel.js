@@ -176,30 +176,30 @@ function buildCabin(spec) {
   const x0 = xs + 0.3 * L, x1 = xb - 0.3 * L;
   const fbA = sheerHeight(spec, x0), fbF = sheerHeight(spec, x1);
   const wA = halfBeamAt(spec, x0) * 0.66, wF = halfBeamAt(spec, x1) * 0.5;
-  const h = 0.5 + L * 0.012;
+  // niska nadbudówka z zaokrąglonym przodem i obłymi krawędziami (jak w serii C)
+  const h = 0.36 + L * 0.009, bev = 0.16, bevT = 0.12;
   const shape = new THREE.Shape();
   shape.moveTo(x0, -wA);
-  shape.lineTo(x1 - 0.4, -wF);
-  shape.lineTo(x1, -wF * 0.6);
-  shape.lineTo(x1, wF * 0.6);
-  shape.lineTo(x1 - 0.4, wF);
+  shape.lineTo(x1 - 0.7, -wF);
+  shape.quadraticCurveTo(x1, -wF * 0.92, x1, 0);
+  shape.quadraticCurveTo(x1, wF * 0.92, x1 - 0.7, wF);
   shape.lineTo(x0, wA);
   shape.lineTo(x0, -wA);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: true, bevelThickness: 0.08, bevelSize: 0.08, bevelSegments: 1 });
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: h, curveSegments: 8, bevelEnabled: true, bevelThickness: bevT, bevelSize: bev, bevelSegments: 3 });
   geo.rotateX(-Math.PI / 2);
   const m = new THREE.Mesh(geo, mat(0xe8e6e1));
   m.position.y = Math.min(fbA, fbF) - 0.05;
   m.castShadow = true;
   g.add(m);
-  const topY = m.position.y + h + 0.08;
+  const topY = m.position.y + h + bevT;
   // okna boczne
   // burta nadbudówki biegnie od (x0, wA) do (x1 - 0.4, wF); okno leży na niej równo (obrót zgodny ze zbieżnością, przesunięcie o fazkę 0.08)
-  const sideLen = x1 - 0.4 - x0;
+  const sideLen = x1 - 0.7 - x0;
   const wl = sideLen * 0.6;
   const xc = x0 + sideLen * 0.5;
-  const wc = (wA + wF) / 2 + 0.08 + 0.012;
+  const wc = (wA + wF) / 2 + bev + 0.012;
   for (const s of [-1, 1]) {
-    const win = box(wl, 0.16, 0.03, COL.window, xc, topY - 0.22, s * wc, { rough: 0.2, metal: 0.4 });
+    const win = box(wl, 0.14, 0.03, COL.window, xc, topY - bevT - 0.13, s * wc, { rough: 0.2, metal: 0.4 });
     win.rotation.y = s * Math.atan2(wA - wF, sideLen);
     g.add(win);
   }
@@ -659,13 +659,13 @@ function deckPatch(spec, x0, x1, zIn, zOut, dy, color, n = 10) {
   return m;
 }
 
-// Szczegóły pokładu: antypoślizg, sprayhood, zejściówka, stopery i fały od masztu, kosz rufowy, instrumenty
+// Szczegóły pokładu: antypoślizg, zejściówka, stopery i fały od masztu, kosz rufowy, instrumenty
 function addDeckDetail(heel, spec, d) {
   const { xs, xb } = hullExtents(spec);
   const L = spec.loa, cab = d.cabin.userData;
   const x0 = cab.x0, x1 = cab.x1, topY = d.topY;
   const NS = 0xb7b2a6; // szarawy antypoślizg z gładkim obrzeżem
-  const cabW = (x) => cab.wA + (cab.wF - cab.wA) * Math.max(0, Math.min(1, (x - x0) / (x1 - 0.4 - x0))) + 0.18;
+  const cabW = (x) => cab.wA + (cab.wF - cab.wA) * Math.max(0, Math.min(1, (x - x0) / (x1 - 0.7 - x0))) + 0.24;
   for (const s of [-1, 1]) {
     // pokład boczny wzdłuż nadbudówki
     heel.add(deckPatch(spec, x0 + 0.15, x1 - 0.3, (x) => s * cabW(x), (x) => s * (halfBeamAt(spec, x) - 0.2), 0.012, NS));
@@ -684,25 +684,6 @@ function addDeckDetail(heel, spec, d) {
   const dh = topY - d.fbC - 0.15;
   heel.add(box(0.03, dh, cw, 0x5a3b22, x0 - 0.04, d.fbC + 0.1 + dh / 2, 0, { rough: 0.6 }));
   for (let k = 1; k < 4; k++) heel.add(box(0.035, 0.012, cw, 0x3e2815, x0 - 0.045, d.fbC + 0.1 + (k * dh) / 4, 0));
-
-  // sprayhood nad zejściówką: płócienna osłona z oknami, otwarta od strony kokpitu
-  {
-    const r = 0.62, wdt = Math.min(cab.wA * 1.55, 1.9), cx = x0 + 0.25;
-    const geo = new THREE.CylinderGeometry(r, r, wdt, 12, 1, false, Math.PI / 2, Math.PI * 0.78);
-    geo.rotateX(Math.PI / 2);
-    const hood = new THREE.Mesh(geo, mat(d.canvas ?? COL.canvas, { rough: 0.9, side: THREE.DoubleSide }));
-    hood.scale.set(1.15, 0.8, 1);
-    hood.position.set(cx, topY, 0);
-    hood.castShadow = true;
-    heel.add(hood);
-    // okna z przodu
-    const th = Math.PI * 0.68;
-    for (const zc of [-wdt * 0.25, wdt * 0.25]) {
-      const win = box(0.02, 0.24, wdt * 0.38, 0x1b2632, cx + Math.sin(th) * r * 1.15 + 0.012, topY - Math.cos(th) * r * 0.8, zc, { rough: 0.15, metal: 0.4 });
-      win.rotation.z = (th - Math.PI / 2) * 1.25;
-      heel.add(win);
-    }
-  }
 
   // stopery (zaciskacze) przed kabestanami na dachu i fały prowadzone od podstawy masztu
   const ropeCols = [0xf0ede4, 0xd8423a, 0x2f6fb5, 0xe8c547];
