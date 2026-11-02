@@ -267,7 +267,7 @@ export class PassageWorld extends World {
       const vmg = Math.max(0.5, b.speed);
       n.eta = rest / vmg;
       // punkt za rozwidleniem (tryb z BRG) jest osiągnięty także przy końcu któregokolwiek z torów
-      const reached = dtw < 30 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
+      const reached = dtw < 200 || (along > len && dtw < 260) || (wp.ends && wp.ends.some((e) => Math.hypot(e.x - px, e.z - pz) < 170));
       if (reached) {
         ps.wpReached++;
         if (k >= R.length - 1) { this.finishPassage(); return; }

@@ -39,7 +39,7 @@ export const PASSAGE_KEYS = [
 ];
 
 export const PASSAGE_TEXT = [
-  ['Cel rejsu', 'Przepłyń trasę po kolejnych waypointach (magenta na mapie i w 3D) aż do mety. Waypoint zalicza się po zbliżeniu na ok. 60 m. Kurs na najbliższy waypoint (BRG) i odchylenie od toru (XTE) widzisz w panelu po lewej oraz na tarczy kompasu.'],
+  ['Cel rejsu', 'Przepłyń trasę po kolejnych waypointach (magenta na mapie i w 3D) aż do mety. Waypoint zalicza się po zbliżeniu na 200 m. Kurs na najbliższy waypoint (BRG) i odchylenie od toru (XTE) widzisz w panelu po lewej oraz na tarczy kompasu.'],
   ['Trzymanie kursu', 'Skręcaj tak, aby kurs jachtu zgadzał się z BRG, a XTE było bliskie zera. Wiatr znosi jacht (dryf), więc kurs nad dnem (COG) może różnić się od kursu kompasowego. Autopilot trzyma tylko zadany kurs – o trasie decydujesz Ty.'],
   ['Znaki boczne (IALA A)', 'Płyniesz w kierunku wejścia do portu: czerwona beczka (znak lewy) ma zostać po lewej burcie, zielony stożek (znak prawy) – po prawej. Na mapie czerwony kwadrat i zielony trójkąt.'],
   ['Znaki boczne (IALA B)', 'W regionie B (obie Ameryki, Japonia, Korea, Filipiny) kolory są odwrócone: zielona beczka po lewej burcie, czerwony stożek po prawej („red right returning”). Kształty się nie zmieniają. Region wybierzesz w Ustawieniach.'],
