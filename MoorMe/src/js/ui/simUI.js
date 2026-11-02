@@ -340,9 +340,10 @@ export class SimScreen {
     const ls = this.world.lines.filter((l) => l.cleatId === c.id);
     if (!ls.length) { this.rigFromCleat(c); return; }
     const r = ev && ev.currentTarget ? ev.currentTarget.getBoundingClientRect() : null;
-    const line = ls.includes(this.selectedLine) ? this.selectedLine : ls[0];
-    this.selectedLine = line;
-    this.openRadial(line, r ? r.left + r.width / 2 : 200, r ? r.top + r.height / 2 : 400, { cleat: c, others: ls.filter((l) => l !== line) });
+    const px = r ? r.left + r.width / 2 : 200, py = r ? r.top + r.height / 2 : 400;
+    if (ls.length > 1) { this.openRadial(null, px, py, { cleat: c, choose: ls }); return; } // najpierw wybór cumy, potem opcje
+    this.selectedLine = ls[0];
+    this.openRadial(ls[0], px, py, { cleat: c });
     this.renderLines(true);
   }
 
@@ -613,12 +614,17 @@ export class SimScreen {
     this.tooltip.style.display = 'none';
     const w = this.world;
     const opts = [];
-    const act = (label, icon, fn, cls = '') => opts.push({ label, icon, fn, cls });
-    const tend = (mode) => (hold) => { w.setTending(line, mode); this._radialHold = hold ? { line, mode } : null; };
+    const act = (label, icon, fn, cls = '', defer = false) => opts.push({ label, icon, fn, cls, defer });
+    if (extra.choose) {
+      // wybór cumy na knadze – po kliknięciu otwiera się menu pracy na tej cumie
+      for (const l of extra.choose) act(l.name, `${w.lines.indexOf(l) + 1}`, () => { this.selectedLine = l; this.renderLines(true); this.openRadial(l, px, py, { cleat: extra.cleat }); }, l.state === 'attached' ? 'on' : '', true);
+      act('Nowa lina', '＋', () => this.rigFromCleat(extra.cleat), '', true);
+      return this.buildRadial(opts, px, py, h('div.rc', {}, h('b', {}, t(extra.cleat.label)), h('span', {}, t('wybierz cumę'))));
+    }
     if (line.state === 'attached') {
-      act('Wybieraj', '⬆', tend('haul'), line.tending === 'haul' ? 'on' : '');
+      opts.push({ label: 'Wybieraj', icon: '⬆', hold: 'haul', line });
       act('Wybierz', '⤒', () => w.setTending(line, 'take'), line.tending === 'take' ? 'on' : '');
-      act('Luzuj', '⬇', tend('ease'), line.tending === 'ease' ? 'on' : '');
+      opts.push({ label: 'Luzuj', icon: '⬇', hold: 'ease', line });
       act('Luz', '〰', () => w.setTending(line, line.tending === 'free' ? 'hold' : 'free'), line.tending === 'free' ? 'on' : '');
       act('Knaguj', '■', () => w.setTending(line, 'hold'), line.tending === 'hold' ? 'on' : '');
       if (!line.isMooring) act(line.mode === 'slip' ? 'Na stałe' : 'Na biegowo', '⇄', () => w.setMode(line, line.mode === 'slip' ? 'fixed' : 'slip'));
@@ -635,9 +641,12 @@ export class SimScreen {
     }
     if (['attached', 'ready', 'onQuay', 'queued'].includes(line.state)) act(line.winch ? 'Kabestan ✓' : 'Kabestan', '⚙', () => { line.winch = !line.winch; }, line.winch ? 'on' : '');
     if (line.state === 'ready' && !line.isMooring) act(line.mode === 'slip' ? 'Na stałe' : 'Na biegowo', '⇄', () => w.toggleMode(line));
-    for (const o of extra.others || []) act(`${w.lines.indexOf(o) + 1}. ${o.name.split(' ').slice(0, 2).join(' ')}`, '↻', () => { const c = extra.cleat; setTimeout(() => { this.selectedLine = o; const r = this.cleatDots.get(c.id).getBoundingClientRect(); this.openRadial(o, r.left + r.width / 2, r.top + r.height / 2, { cleat: c, others: w.lines.filter((l) => l.cleatId === c.id && l !== o) }); }, 0); });
     const cl = extra.cleat || w.deckItem(line.cleatId);
-    if (cl) act('Nowa lina', '＋', () => this.rigFromCleat(cl));
+    if (cl) act('Nowa lina', '＋', () => this.rigFromCleat(cl), '', true);
+    this.buildRadial(opts, px, py, h('div.rc', {}, h('b', {}, line.name), h('span', {}, line.state === 'attached' ? `${(line.tension / 1000).toFixed(1)} kN` : (LINE_STATE_LABEL[line.state] || ''))));
+  }
+
+  buildRadial(opts, px, py, center) {
     const R = Math.max(78, opts.length * 11), M = R + 42;
     // menu nie może wyjść poza ekran (rzut leży w rogu)
     px = clamp(px, M, window.innerWidth - M); py = clamp(py, M, window.innerHeight - M);
@@ -646,7 +655,17 @@ export class SimScreen {
       const a = -Math.PI / 2 + (i / opts.length) * Math.PI * 2;
       const b = h('button.rb', { class: o.cls, style: { left: `${Math.cos(a) * R}px`, top: `${Math.sin(a) * R}px` } }, h('span.ic', {}, o.icon), h('span', {}, o.label));
       // krótkie kliknięcie – tryb ciągły; przytrzymanie wybierania/luzowania – działa tylko podczas trzymania
-      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); b._t = performance.now(); o.fn(true); });
+      if (o.hold) {
+        // wybieraj / luzuj: działa tylko, dopóki trzymasz przycisk myszy; menu zostaje otwarte
+        const stop = (e) => { if (e) e.stopPropagation(); if (!b._on) return; b._on = false; b.classList.remove('on'); if (o.line.tending === o.hold) this.world.setTending(o.line, 'hold'); this.renderLines(true); };
+        b.addEventListener('pointerdown', (e) => { e.stopPropagation(); b.setPointerCapture(e.pointerId); b._on = true; b.classList.add('on'); this.world.setTending(o.line, o.hold); });
+        b.addEventListener('pointerup', stop);
+        b.addEventListener('pointercancel', stop);
+        b.addEventListener('lostpointercapture', stop);
+        menu.appendChild(b);
+        return;
+      }
+      b.addEventListener('pointerdown', (e) => { e.stopPropagation(); b._t = performance.now(); if (!o.defer) o.fn(true); });
       b.addEventListener('pointerup', (e) => {
         e.stopPropagation();
         const held = performance.now() - (b._t || 0) > 350;
@@ -656,10 +675,11 @@ export class SimScreen {
         }
         this.closeRadial();
         this.renderLines(true);
+        if (o.defer) o.fn(); // np. otwarcie kolejnego menu – dopiero po zamknięciu bieżącego
       });
       menu.appendChild(b);
     });
-    menu.appendChild(h('div.rc', {}, h('b', {}, line.name), h('span', {}, line.state === 'attached' ? `${(line.tension / 1000).toFixed(1)} kN` : (LINE_STATE_LABEL[line.state] || ''))));
+    menu.appendChild(center);
     this.sim.appendChild(menu);
     this.radial = menu;
     this._radialOutside = (e) => { if (!menu.contains(e.target)) this.closeRadial(); };

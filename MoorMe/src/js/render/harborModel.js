@@ -856,7 +856,7 @@ export function buildHarbor(H, scene) {
       // pływaki wzdłuż pnia
       for (let t = fv + 1.2; t < f.len; t += 3) {
         const p = P(t, 0);
-        const fl = box(0.9, 0.45, 0.5, 0xf4f4f4, p[0], 0.02, p[1]);
+        const fl = box(0.9, 0.45, 0.5, 0x1d2126, p[0], 0.02, p[1]); // czarne pływaki (polietylen)
         fl.rotation.y = -Math.atan2(f.nz, f.nx);
         group.add(fl);
       }

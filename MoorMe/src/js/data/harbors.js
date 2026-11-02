@@ -243,9 +243,9 @@ function genZone(H, Z, own, R, ctx) {
       let ur = u0 + free / 2, ul = u0 - free / 2;
       for (let i = 0; i < 8; i++) {
         const sR = pickSpec(), sL = pickSpec();
-        // dwa najbliższe jachty po każdej stronie stoją zawsze, dalsze według obsadzenia portu
-        if (ur + sR.loa < half - 1 && (i < 2 || R() < ctx.occ)) place(sR, ur + sR.loa / 2);
-        if (ul - sL.loa > -half + 1 && (i < 2 || R() < ctx.occ)) place(sL, ul - sL.loa / 2);
+        // najbliższy jacht po każdej stronie stoi zawsze, dalsze według obsadzenia portu
+        if (ur + sR.loa < half - 1 && (i < 1 || R() < ctx.occ)) place(sR, ur + sR.loa / 2);
+        if (ul - sL.loa > -half + 1 && (i < 1 || R() < ctx.occ)) place(sL, ul - sL.loa / 2);
         ur += sR.loa + 1.2 + R() * 1.5;
         ul -= sL.loa + 1.2 + R() * 1.5;
       }
@@ -304,7 +304,8 @@ function genZone(H, Z, own, R, ctx) {
       if (isMooring && q.rings) addBollard(s.u, -0.2, 'ring', qh);
       if (s.own) continue;
       const dist = Math.abs(s.u - (Z.ownU || 0));
-      if (ctx.empty || ((!own || dist > 8) && R() > ctx.occ)) { s.empty = true; continue; }
+      // sąsiednie stanowiska zajęte zwykle (żeby było między czym wchodzić), dalsze według obsadzenia
+      if (ctx.empty || (dist > 8 || !own ? R() > ctx.occ : R() > 0.7)) { s.empty = true; continue; }
       const nSpec = s.spec;
       const nBowIn = R() < 0.2 ? !bowIn : bowIn;
       const nv = (nBowIn ? 0.52 * nSpec.loa : 0.48 * nSpec.loa) + (nBowIn ? 1.0 : 0.75);
@@ -405,8 +406,8 @@ export function generateHarbor(opt) {
     berth: null, starts: [], bounds: P.bounds, seed: opt.seed || 7
   };
   for (const s of P.structures) H.structures.push(struct(s.kind, s.poly, s.h, !!s.walk, { style: s.style, edges: s.edges }));
-  // obsadzenie miejsc w porcie: losowo 25–75% (nie więcej niż 3/4)
-  const ctx = { bid: 0, occ: 0.25 + 0.5 * R(), empty: !!opt.emptyHarbor };
+  // obsadzenie miejsc w porcie: losowo 15–45% (marina raczej luźna)
+  const ctx = { bid: 0, occ: 0.15 + 0.3 * R(), empty: !!opt.emptyHarbor };
   for (const Z of P.zones) {
     const own = Z.id === cfg.zone ? { method: cfg.method, spec, side: opt.side, slotWidth: opt.slotWidth } : null;
     if (!own && !Z.decor && Z.methods) {
