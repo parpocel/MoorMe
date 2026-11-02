@@ -276,9 +276,9 @@ function applyMeander(d, r) {
 const CARD = [['cardN', 0], ['cardE', 90], ['cardS', 180], ['cardW', 270]];
 const brgOf = (x, z) => ((Math.atan2(x, -z) * 180) / Math.PI + 360) % 360;
 const HAZ = {
-  isolated: { off: 150, half: 110, len: 370, names: ['Skała'] },
-  wreck: { off: 205, half: 120, len: 400, names: ['Wrak'] },
-  special: { off: 125, half: 100, len: 340, names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
+  isolated: { off: 130, half: 80, len: 270, names: ['Skała'] },
+  wreck: { off: 180, half: 90, len: 300, names: ['Wrak'] },
+  special: { off: 110, half: 75, len: 250, names: ['Kabel podwodny', 'Strefa zakazana', 'Rurociąg'] }
 };
 
 function offshoreTry(r) {
@@ -297,9 +297,9 @@ function offshoreTry(r) {
       for (const s of sides) shoals.push({ name: 'Płycizna przy torze', poly: rect(O, F, a, b, s * (68 + r() * 12), s * 380), depth: 1.1 + r() * 0.5 });
     }
   };
-  // pary znaków bocznych co 140 m; withB – płyniemy z kierunkiem oznakowania. sides: -1 – lewa strona toru, 1 – prawa
+  // pary znaków bocznych co 100 m; withB – płyniemy z kierunkiem oznakowania. sides: -1 – lewa strona toru, 1 – prawa
   const gates = (O, F, a0, a1, withB, extra = {}, sides = [-1, 1]) => {
-    for (let a = a0; a <= a1; a += 140) {
+    for (let a = a0; a <= a1; a += 100) {
       for (const s of sides) {
         const left = s < 0;
         marks.push({ type: left === withB ? 'lateralPort' : 'lateralStbd', ...R(at(O, F, a, s * 52)), rule: left ? 'port' : 'starboard', ...extra });
@@ -309,15 +309,15 @@ function offshoreTry(r) {
   const end = (p, o = {}) => { E = p; route.push({ ...R(p), ...o }); keyR.push({ ...R(p), ...o }); };
 
   const hazard = (kind) => {
-    const F = fr(hdg), gap = 130 + r() * 110, C = at(E, F, gap + 150, 0), s = r() < 0.5 ? 1 : -1;
-    let D, half = 120, len = 380;
+    const F = fr(hdg), gap = 40 + r() * 70, C = at(E, F, gap + 150, 0), s = r() < 0.5 ? 1 : -1;
+    let D, half = 85, len = 290;
     if (kind === 'cardinal') {
       // mielizna na linii kursu; znak kardynalny po stronie bezpiecznej wody (kierunek świata najbliższy stronie omijania)
       const rx = 45 + r() * 30, rz = 35 + r() * 20, Rm = Math.max(rx, rz);
       shoals.push({ name: 'Mielizna', poly: ell(C.x, C.z, rx, rz, r() * Math.PI, 12), depth: 0.8 + r() * 0.6 });
       const [type, deg] = CARD[Math.round(brgOf(F.v.x * s, F.v.z * s) / 90) % 4], cd = compassVec(deg);
       marks.push({ type, x: Math.round(C.x + cd.x * (Rm + 30)), z: Math.round(C.z + cd.z * (Rm + 30)), gate: 150 });
-      D = { x: C.x + cd.x * (Rm + 125), z: C.z + cd.z * (Rm + 125) };
+      D = { x: C.x + cd.x * (Rm + 110), z: C.z + cd.z * (Rm + 110) };
     } else {
       const H = HAZ[kind];
       D = at(C, F, 0, s * H.off); half = H.half; len = H.len;
@@ -326,12 +326,14 @@ function offshoreTry(r) {
       if (kind === 'wreck') wrecks.push({ name, ...R(at(C, F, 25 * (r() - 0.5), 25 * (r() - 0.5))), rot: r() * 3 });
       marks.push({ type: kind, ...R(C), name });
     }
-    route.push(R(at(D, F, -half, 0)), R(at(D, F, half, 0)));
+    // odcinek omijania równoległy do kursu; nie zaczyna się za plecami (bliżej niż 30 m od początku sytuacji)
+    const aD = (D.x - E.x) * F.u.x + (D.z - E.z) * F.u.z, lD = (D.x - E.x) * F.v.x + (D.z - E.z) * F.v.z;
+    route.push(R(at(E, F, Math.max(30, aD - half), lD)), R(at(E, F, aD + half, lD)));
     end(at(C, F, len, 0));
   };
 
   const channel = () => {
-    const F = fr(hdg), gap = 140 + r() * 100, withB = r() < 0.7;
+    const F = fr(hdg), gap = 50 + r() * 70, withB = r() < 0.7;
     const Lc = 400 + r() * 120, a0 = gap + 110, a1 = a0 + Lc;
     marks.push({ type: 'safe', ...R(at(E, F, gap, -24)), name: 'Wejście na tor' });
     banks(E, F, a0, a1, [-1, 1]);
@@ -342,7 +344,7 @@ function offshoreTry(r) {
   };
 
   const fork = () => {
-    const F = fr(hdg), gap = 140 + r() * 100, T = 260 + r() * 80, a0 = gap + 110, aS = a0 + T;
+    const F = fr(hdg), gap = 50 + r() * 70, T = 260 + r() * 80, a0 = gap + 110, aS = a0 + T;
     const S = at(E, F, aS, 0), id = 'f' + forks.length;
     marks.push({ type: 'safe', ...R(at(E, F, gap, -24)), name: 'Wejście na tor' });
     banks(E, F, a0, aS, [-1, 1]);
@@ -390,7 +392,7 @@ function offshoreTry(r) {
     else if (kind === 'fork') fork();
     else hazard(kind);
   });
-  const F = fr(hdg), fin = at(E, F, 260 + r() * 80, 0);
+  const F = fr(hdg), fin = at(E, F, 180 + r() * 60, 0);
   marks.push({ type: 'safe', ...R(at(fin, F, 0, -22)), name: 'Meta' });
   end(fin, { name: 'Meta – boja' });
   return { h0, route, keyR, shoals, marks, wrecks, notes, forks };
