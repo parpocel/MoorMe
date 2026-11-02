@@ -3,7 +3,7 @@ import { h, seg } from './ui/dom.js';
 import { BOATS, defaultEquipment } from './data/boats.js';
 import { QUAYS, METHODS, PORTS, generateHarbor, harborOpts, slotKind, slotClearFor, berthOptions, normalizeBerth } from './data/harbors.js';
 import { createDeckEditor, relabel } from './ui/deckEditor.js';
-import { drawBoatTop, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
+import { drawBoatTop, drawBoatCard, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
 import { SimScreen } from './ui/simUI.js';
 import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
@@ -606,13 +606,8 @@ function showHelp() {
 function stepBoat() {
   const cards = h('div.cards', { style: { gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' } });
   for (const b of Object.values(BOATS)) {
-    const cv = h('canvas', { width: 520, height: 170 });
-    const ctx = cv.getContext('2d');
-    ctx.fillStyle = '#0e2a42'; ctx.fillRect(0, 0, 520, 170);
-    const scale = 480 / 16;
-    drawBoatTop(ctx, b, 260, 85, scale, 0, {});
-    ctx.fillStyle = '#9fb8cc'; ctx.font = '12px Segoe UI';
-    ctx.fillText(`${b.loa.toFixed(2)} m`, 12, 160);
+    const cv = h('canvas.boat-card', { width: 1040, height: 400 });
+    drawBoatCard(cv.getContext('2d'), b, 1040, 400, 880 / 16);
     const card = h('div.card', { class: config.boatId === b.id ? 'selected' : '', onclick: () => {
       if (config.boatId !== b.id) { config.boatId = b.id; config.equip = defaultEquipment(b); }
       showStep(0);

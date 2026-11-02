@@ -62,6 +62,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .card.selected { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 179, 232, 0.25), 0 10px 30px rgba(0, 0, 0, 0.35); }
 .card h3 { font-size: 19px; margin-bottom: 6px; }
 .card canvas { width: 100%; border-radius: 8px; background: #0e2a42; margin: 8px 0; }
+.screen .card canvas.boat-card { background: #dcebeb; border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 10px; }
 .spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .spec-table td { padding: 3px 0; border-bottom: 1px dashed rgba(255, 255, 255, 0.07); }
 .spec-table td:last-child { text-align: right; font-weight: 600; }

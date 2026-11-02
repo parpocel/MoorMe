@@ -58,6 +58,99 @@ export function drawBoatTop(ctx, spec, cx, cy, scale, rot = 0, opts = {}) {
   ctx.restore();
 }
 
+// Karta wyboru jachtu: rzut z góry w stylu planu technicznego (siatka, cień, detale pokładu, wymiary)
+export function drawBoatCard(ctx, spec, W, H, scale) {
+  const { xs, xb } = hullExtents(spec);
+  const L = spec.loa, B = spec.beam;
+  // tło – gradient i delikatna siatka metrowa
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#e4f0ef'); bg.addColorStop(1, '#cfe2e4');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const cx = W / 2 - (xs + xb) / 2 * scale, cy = H * 0.46;
+  ctx.strokeStyle = 'rgba(47,68,104,0.07)'; ctx.lineWidth = 1;
+  for (let x = cx % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+  for (let y = cy % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
+  glow.addColorStop(0, 'rgba(255,255,255,0.55)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  ctx.translate(cx, cy); ctx.scale(scale, -scale); // dziób w prawo
+  const px = 1 / scale;
+  const out = hullOutline(spec, 40);
+  const path = () => { ctx.beginPath(); out.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
+  // cień
+  ctx.save(); ctx.shadowColor = 'rgba(47,68,104,0.28)'; ctx.shadowBlur = 22; ctx.shadowOffsetY = 8;
+  path(); ctx.fillStyle = '#e9eef2'; ctx.fill(); ctx.restore();
+  // kadłub z cieniowaniem w poprzek
+  const hg = ctx.createLinearGradient(0, -B / 2, 0, B / 2);
+  hg.addColorStop(0, '#e3e2e6'); hg.addColorStop(0.5, '#ffffff'); hg.addColorStop(1, '#e3e2e6');
+  path(); ctx.fillStyle = hg; ctx.fill();
+  ctx.save(); path(); ctx.clip();
+  // relingi / listwa odbojowa
+  ctx.strokeStyle = '#a8b0bf'; ctx.lineWidth = 2.2 * px; path(); ctx.stroke();
+  // teak w kokpicie
+  const ck0 = xs + 0.02 * L, ck1 = xs + 0.3 * L;
+  const ckw = halfBeamAt(spec, (ck0 + ck1) / 2) * 1.32;
+  ctx.fillStyle = '#c99566'; roundRect(ctx, ck0, -ckw / 2, ck1 - ck0, ckw, 0.25); ctx.fill();
+  ctx.strokeStyle = 'rgba(70,45,20,0.35)'; ctx.lineWidth = 0.7 * px;
+  for (let y = -ckw / 2 + 0.12; y < ckw / 2; y += 0.12) { ctx.beginPath(); ctx.moveTo(ck0 + 0.1, y); ctx.lineTo(ck1 - 0.1, y); ctx.stroke(); }
+  // ławki kokpitu
+  ctx.fillStyle = '#ece6df';
+  for (const s of [-1, 1]) roundRect(ctx, ck0 + 0.9, s > 0 ? ckw / 2 - 0.42 : -ckw / 2, ck1 - ck0 - 1.1, 0.42, 0.1), ctx.fill();
+  // koła sterowe
+  ctx.strokeStyle = '#2f4468'; ctx.lineWidth = 2.4 * px;
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.ellipse(ck0 + 0.6, s * B * 0.22, 0.09, 0.42, 0, 0, Math.PI * 2); ctx.stroke(); }
+  // nadbudówka z oknami
+  const x0 = xs + 0.3 * L, x1 = xb - 0.3 * L;
+  const wA = halfBeamAt(spec, x0) * 0.66, wF = halfBeamAt(spec, x1) * 0.5;
+  const cabin = () => { ctx.beginPath(); ctx.moveTo(x0, -wA); ctx.lineTo(x1 - 0.6, -wF); ctx.quadraticCurveTo(x1 + 0.1, -wF * 0.7, x1 + 0.1, 0); ctx.quadraticCurveTo(x1 + 0.1, wF * 0.7, x1 - 0.6, wF); ctx.lineTo(x0, wA); ctx.closePath(); };
+  ctx.save(); ctx.shadowColor = 'rgba(47,68,104,0.22)'; ctx.shadowBlur = 6; cabin();
+  const cg = ctx.createLinearGradient(0, -wA, 0, wA); cg.addColorStop(0, '#efeae6'); cg.addColorStop(0.5, '#ffffff'); cg.addColorStop(1, '#efeae6');
+  ctx.fillStyle = cg; ctx.fill(); ctx.restore();
+  ctx.strokeStyle = '#8f9ab0'; ctx.lineWidth = 1.2 * px; cabin(); ctx.stroke();
+  ctx.fillStyle = '#2f4468';
+  for (const s of [-1, 1]) roundRect(ctx, x0 + 0.5, s * wA * 0.86 - 0.06, (x1 - x0) * 0.62, 0.12, 0.06), ctx.fill();
+  ctx.fillStyle = 'rgba(47,68,104,0.7)'; roundRect(ctx, x0 + (x1 - x0) * 0.55, -0.28, 0.55, 0.56, 0.08); ctx.fill(); // luk
+  // niekrop na dziobie
+  ctx.fillStyle = 'rgba(210,200,190,0.45)';
+  ctx.beginPath(); ctx.moveTo(x1 + 0.5, -halfBeamAt(spec, x1 + 0.5) * 0.7); ctx.lineTo(xb - 0.6, -0.15); ctx.lineTo(xb - 0.6, 0.15); ctx.lineTo(x1 + 0.5, halfBeamAt(spec, x1 + 0.5) * 0.7); ctx.closePath(); ctx.fill();
+  ctx.restore(); // clip
+  ctx.strokeStyle = '#2f4468'; ctx.lineWidth = 1.6 * px; path(); ctx.stroke();
+  // bom, maszt, wanty
+  const mx = 0.1 * L;
+  ctx.strokeStyle = '#3a4a6d'; ctx.lineWidth = 3 * px; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(xs + 0.27 * L, 0); ctx.stroke();
+  ctx.strokeStyle = 'rgba(47,68,104,0.55)'; ctx.lineWidth = 0.9 * px;
+  for (const s of [-1, 1]) { ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(mx - 0.3, s * halfBeamAt(spec, mx - 0.3) * 0.95); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(mx, 0); ctx.lineTo(xb - 0.05, 0); ctx.stroke(); // sztag
+  ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.ellipse(mx, 0, 0.17, 0.11, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+
+  // linie wymiarowe
+  ctx.save();
+  ctx.strokeStyle = 'rgba(210,105,95,0.9)'; ctx.fillStyle = '#2f4468'; ctx.lineWidth = 1;
+  ctx.font = '800 38px Nunito, Segoe UI, system-ui, sans-serif'; ctx.textBaseline = 'middle';
+  const sx = cx + xs * scale, bx = cx + xb * scale, yL = cy + B / 2 * scale + 34;
+  const tick = (x, y, v) => { ctx.beginPath(); if (v) { ctx.moveTo(x - 6, y); ctx.lineTo(x + 6, y); } else { ctx.moveTo(x, y - 6); ctx.lineTo(x, y + 6); } ctx.stroke(); };
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(sx, yL - 14); ctx.lineTo(sx, cy); ctx.moveTo(bx, yL - 14); ctx.lineTo(bx, cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(sx, yL); ctx.lineTo(bx, yL); ctx.stroke(); tick(sx, yL); tick(bx, yL);
+  const tL = `${L.toFixed(2)} m`, tw = ctx.measureText(tL).width + 16, mxp = (sx + bx) / 2;
+  ctx.fillStyle = '#d4e5e6'; ctx.fillRect(mxp - tw / 2, yL - 22, tw, 44);
+  ctx.fillStyle = '#2f4468'; ctx.textAlign = 'center'; ctx.fillText(tL, mxp, yL + 1);
+  const xB = cx + (xs + 0.42 * L) * scale, yT = cy - B / 2 * scale, yB = cy + B / 2 * scale, xd = sx - 30;
+  ctx.setLineDash([4, 4]); ctx.beginPath(); ctx.moveTo(xd, yT); ctx.lineTo(xB, yT); ctx.moveTo(xd, yB); ctx.lineTo(xB, yB); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(xd, yT); ctx.lineTo(xd, yB); ctx.stroke(); tick(xd, yT, true); tick(xd, yB, true);
+  ctx.save(); ctx.translate(xd - 26, cy); ctx.rotate(-Math.PI / 2); ctx.fillText(`${B.toFixed(2)} m`, 0, 0); ctx.restore();
+  ctx.restore();
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
 export function drawDeckItem(ctx, it, sel) {
   ctx.save();
   ctx.translate(it.x, it.y);
