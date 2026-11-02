@@ -212,7 +212,7 @@ export class Atmosphere {
     // kolory nieba
     const dayTop = C(0x4f9fdc), dayBot = C(0xc4e2f5);
     const duskTop = C(0x4a5f9a), duskBot = C(0xf2a066);
-    const nightTop = C(0x040916), nightBot = C(0x14203a);
+    const nightTop = C(0x02050d), nightBot = C(0x0b1426);
     let top = lerpC(dayTop, duskTop, dusk), bot = lerpC(dayBot, duskBot, dusk);
     top = lerpC(top, nightTop, night); bot = lerpC(bot, nightBot, night);
     const grey = lerpC(C(0x9aa4ad), C(0x1c232b), night);
@@ -409,7 +409,7 @@ export class Atmosphere {
     const span = this.view.passage ? 4400 : 1900;
     // kolor: biel w dzień, brzoskwinia o zachodzie, szarość przy złej pogodzie, granat nocą (sprite’y nie są oświetlane – kolor liczymy sami)
     const base = lerpC(lerpC(C(0xffffff), C(0xffc2a0), dusk), C(0x9aa2ab), sky.grey);
-    const col = lerpC(base, C(0x2a3346), night);
+    const col = lerpC(base, C(0x1c2333), night);
     const op = (this.sky === 'clear' ? 0.72 : 0.85) * (1 - night * 0.55);
     for (const m of this.cloudMats) { m.color.copy(col); m.opacity = op; }
     const big = this.sky === 'clear' ? 0.8 : 1.25;

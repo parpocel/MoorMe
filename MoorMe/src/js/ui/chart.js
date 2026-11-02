@@ -124,7 +124,7 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.strokeStyle = '#a21'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
   }
 
-  // trasa, strefy, znaki i waypointy – tylko w trybie z pełną pomocą
+  // trasa, strefy i waypointy – tylko w trybie z pełną pomocą
   const R = w.route;
   if (!w.blind) {
   ctx.setLineDash([6, 8]);
@@ -146,23 +146,28 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.beginPath(); ctx.arc(X(m.x, m.z), Y(m.x, m.z), m.radius * s, 0, Math.PI * 2); ctx.stroke();
     ctx.setLineDash([]);
   }
-  // znaki
+  }
+  // znaki – zawsze na mapie (jak na prawdziwej mapie nawigacyjnej); nazwy i oceny tylko z pełną pomocą
+  {
   const rs = Math.max(5, Math.min(9, 150 * s + 4));
   ctx.font = '10px Segoe UI'; ctx.textAlign = 'left';
   for (const m of w.marks) {
     const x = X(m.x, m.z), y = Y(m.x, m.z);
-    if (x < -20 || y < -20 || x > W + 20 || y > Hh + 20 || !seenMark(m)) continue;
+    if (x < -20 || y < -20 || x > W + 20 || y > Hh + 20) continue;
     ctx.save();
     ctx.translate(x, y);
     drawMarkSymbol(ctx, m.type, rs);
-    if (STATE_COLOR[m.state]) { ctx.strokeStyle = STATE_COLOR[m.state]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, rs + 4, 0, Math.PI * 2); ctx.stroke(); }
+    if (!w.blind && STATE_COLOR[m.state]) { ctx.strokeStyle = STATE_COLOR[m.state]; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, rs + 4, 0, Math.PI * 2); ctx.stroke(); }
     ctx.restore();
-    if (opts.labels && s > 0.03 && !/^lateral/.test(m.type)) { // znaki boczne są czytelne z samego symbolu
+    if (opts.labels && !w.blind && s > 0.03 && !/^lateral/.test(m.type)) { // znaki boczne są czytelne z samego symbolu
       ctx.fillStyle = N ? '#a9c3d8' : '#243447';
       ctx.fillText(t(m.label), x + rs + 4, y + 3);
     }
   }
+  }
+  if (!w.blind) {
   // waypointy
+  const nx = w.next;
   R.forEach((p, i) => {
     if (i === 0) return;
     const x = X(p.x, p.z), y = Y(p.x, p.z);

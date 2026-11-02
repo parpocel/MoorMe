@@ -82,6 +82,8 @@ export class PassageScreen extends SimScreen {
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
+    this.chartBtn = h('button.btn.sm', { onclick: () => this.toggleChart(), title: 'Chartploter: pokaż / ukryj (C)' }, '🗺 Mapa');
+    top.appendChild(this.chartBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));
     top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Menu'));
@@ -114,6 +116,10 @@ export class PassageScreen extends SimScreen {
       this.chartBtnOrient, this.chartBtnLabels,
       this.world.blind ? null : h('button.btn.xs', { onclick: () => { this.chart.range = Math.max(900, this.world.H.routeLength * 1.15); this.chart.full = true; } }, 'Cała trasa')));
     sim.appendChild(chart);
+    this.chartEl = chart;
+    let on = true;
+    try { on = localStorage.getItem('moorme.chart.on') !== '0'; } catch (e) { /* brak zapisu */ }
+    this.setChart(on);
     this.updateChartButtons();
 
     this.pausedEl = h('div.paused-banner', { style: { display: 'none' } }, 'PAUZA');
@@ -148,6 +154,15 @@ export class PassageScreen extends SimScreen {
     if (w.autopilot.on) this.pushLog({ msg: `Autopilot włączony: kurs ${pad3(w.autopilot.hdg)}°`, type: 'info' });
   }
 
+  // chartploter można wyłączyć (nawigacja tylko na oko i z kompasu); wybór zapamiętany
+  setChart(on) {
+    this.chartOn = on;
+    this.chartEl.style.display = on ? '' : 'none';
+    this.chartBtn.classList.toggle('on', on);
+    try { localStorage.setItem('moorme.chart.on', on ? '1' : '0'); } catch (e) { /* brak zapisu */ }
+  }
+  toggleChart() { this.setChart(!this.chartOn); }
+
   zoomChart(k) {
     this.chart.full = false;
     this.chart.range = clamp(this.chart.range * k, 300, 14000);
@@ -175,6 +190,7 @@ export class PassageScreen extends SimScreen {
       case 'KeyJ': this.toggleAutopilot(); break;
       case 'Comma': w.adjustAutopilot(e.shiftKey ? -10 : -1); break;
       case 'Period': w.adjustAutopilot(e.shiftKey ? 10 : 1); break;
+      case 'KeyC': this.toggleChart(); break;
       case 'KeyN': this.chart.headUp = !this.chart.headUp; this.updateChartButtons(); break;
       case 'Equal': case 'NumpadAdd': this.zoomChart(0.8); break;
       case 'Minus': case 'NumpadSubtract': this.zoomChart(1.25); break;
@@ -276,7 +292,7 @@ export class PassageScreen extends SimScreen {
     this.apHdg.style.opacity = ap.on ? 1 : 0.45;
 
     this.updateControls();
-    this.drawPlotter();
+    if (this.chartOn) this.drawPlotter();
     this.updateMarkTags();
     if (!w.blind) this.view.sea.setNext(n.next);
   }

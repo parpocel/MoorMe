@@ -16,7 +16,7 @@ const bearingDeg = (dx, dz) => ((Math.atan2(dx, -dz) * 180) / Math.PI + 360) % 3
 // Kąt (w stopniach, kompas) od znaku do jachtu mieści się w sektorze kardynalnym?
 const SECTOR = { N: 0, E: 90, S: 180, W: 270 };
 const SECTOR_HALF = 65; // z zakrętami toru znak mija się pod kątem, więc sektory są szersze niż 90°
-export const SEEN_RANGE = 1300; // z tej odległości znak w dzień wyłania się nad horyzontem fali (otwarte morze)
+export const SEEN_RANGE = 1800; // z tej odległości znak w dzień wyłania się nad horyzontem fali (otwarte morze)
 export function inCardinalSector(rule, brgFromMark) {
   const d = Math.abs(((brgFromMark - SECTOR[rule] + 540) % 360) - 180);
   return d <= SECTOR_HALF;

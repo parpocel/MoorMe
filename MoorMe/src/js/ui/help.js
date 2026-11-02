@@ -33,7 +33,7 @@ export function buildHelpContent() {
 export const PASSAGE_KEYS = [
   ['W / S, ↑ / ↓', 'Manetka naprzód / wstecz (środek = luz)'], ['X', 'Luz (neutral)'], ['A / D, ← / →', 'Ster w lewo / w prawo (wyłącza autopilota)'], ['R', 'Ster na zero'],
   ['J', 'Autopilot: włącz / wyłącz utrzymanie kursu'], [', / .', 'Zadany kurs autopilota −1° / +1° (z Shift: ±10°)'],
-  ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal chartploter (także kółko myszy nad mapą)'],
+  ['C', 'Chartploter: pokaż / ukryj'], ['N', 'Mapa: północ u góry / kurs u góry'], ['+ / −', 'Przybliż / oddal chartploter (także kółko myszy nad mapą)'],
   ['O', 'Pogoda i pora dnia'], ['P / Spacja', 'Pauza'], ['F', 'Kamera śledzi jacht'], ['V', 'Zmień widok (izo, blisko, z góry, za rufą, kapitan)'],
   ['Mysz', 'LPM – przesuwanie, PPM – obrót kamery, kółko – zoom'], ['Touchpad', 'Dwa palce – obrót kamery, szczypanie – zoom, przeciągnięcie – przesuwanie (z Shift/Alt – obrót)'], ['F11', 'Pełny ekran']
 ];
@@ -48,7 +48,7 @@ export const PASSAGE_TEXT = [
   ['Odosobnione niebezpieczeństwo', 'Czarna pława z czerwonym pasem i dwiema czarnymi kulami stoi na skale lub mieliźnie. Omijaj ją szerokim łukiem (strefa ok. 75 m).'],
   ['Wrak i znaki szczególne', 'Niebiesko-żółta pława z krzyżem oznacza nowy wrak – trzymaj się z dala (ok. 120 m). Żółty znak z X wyznacza strefę specjalną (kabel, regaty) – nie wpływaj w nią.'],
   ['Rozwidlenie toru', 'Tam, gdzie tor się rozwidla, stoi znak rozgałęzienia: czerwony z zielonym pasem (beczka, Fl(2+1) R) – tor główny prowadzi w prawo, zielony z czerwonym pasem (stożek, Fl(2+1) G) – tor główny w lewo (w regionie B kolory odwrócone). Płynąc torem głównym mijasz go jak zwykły znak boczny jego koloru, torem bocznym – odwrotnie.'],
-  ['Otwarte morze', 'Bez lądu na horyzoncie pławy wyłaniają się z odległości ok. 1,3 km i dopiero wtedy pojawiają się na mapie. W trybie z samym BRG prosta do kolejnego punktu kontrolnego prowadzi przez niebezpieczeństwa – omijasz je według znaków. Polecenia (np. którym torem płynąć za rozwidleniem) pojawiają się nad panelem nawigacyjnym.'],
+  ['Otwarte morze', 'Bez lądu na horyzoncie pławy wyłaniają się z odległości ok. 1,8 km. W trybie z samym BRG prosta do kolejnego punktu kontrolnego prowadzi przez niebezpieczeństwa – omijasz je według znaków. Polecenia (np. którym torem płynąć za rozwidleniem) pojawiają się nad panelem nawigacyjnym.'],
   ['Mielizny i brzeg', 'Jasne plamy na wodzie i na mapie to mielizny. Wejście na mieliznę lub na ląd oraz zderzenie ze znakiem to poważne błędy. Głębokość pod stępką widzisz w panelu nawigacyjnym – czerwony ostrzega przed płyciznami.'],
   ['Ocena', 'Za odchylenie od trasy, znaki minięte z niewłaściwej strony, pominięte znaki, wejście w strefy zagrożeń, mieliznę i zderzenia odejmowane są punkty. Rejs można przyspieszyć przyciskami 2×, 4×, 8×.']
 ];

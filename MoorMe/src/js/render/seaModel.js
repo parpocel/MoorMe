@@ -575,10 +575,10 @@ export function buildSea(H, scene) {
         mesh.rotation.x = Math.sin(t * 0.9 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         mesh.rotation.z = Math.cos(t * 0.7 + mesh.userData.phase) * 0.06 * (1 + windKn / 12);
         const sp = mesh.userData.light;
-        // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~260 m, pełny kształt dopiero z bliska (~80 m);
-        // na otwartym morzu także w dzień znak wyłania się zza fal dopiero z ok. 1,3 km – kolejne pławy pojawiają się przed dziobem
+        // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~340 m, pełny kształt dopiero z bliska (~120 m);
+        // na otwartym morzu także w dzień znak wyłania się zza fal dopiero z ok. 1,8 km – kolejne pławy pojawiają się przed dziobem
         const dn = cam.distanceTo(mesh.position);
-        const vis = lightsOn > 0.3 ? clamp((260 - dn) / 180, 0, 1) : H.offshore ? clamp((1300 - dn) / 260, 0, 1) : 1;
+        const vis = lightsOn > 0.3 ? clamp((340 - dn) / 220, 0, 1) : H.offshore ? clamp((1800 - dn) / 350, 0, 1) : 1;
         if (mesh.userData.vis !== vis) {
           mesh.userData.vis = vis;
           const glowK = lightsOn * 0.28 * (0.4 + 0.6 * vis);
