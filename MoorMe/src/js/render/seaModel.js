@@ -478,13 +478,28 @@ export function buildSea(H, scene) {
 
   // znaki
   const marks = [];
+  const pairPhase = new Map();
   const addMark = (m) => {
     const mesh = buildMarkMesh(m.type);
     mesh.position.set(m.x, 0, m.z);
     mesh.userData.mark = m;
     mesh.userData.phase = r() * 6;
+    // para znaków bocznych (lewy/prawy) w jednym przekroju toru błyska synchronicznie
+    if (m.pair) {
+      if (pairPhase.has(m.pair)) mesh.userData.phase = pairPhase.get(m.pair);
+      else pairPhase.set(m.pair, mesh.userData.phase);
+    } else if (m.type === 'lateralPort' || m.type === 'lateralStbd') {
+      // znaki z ręcznie opisanych tras: para = najbliższy wolny znak przeciwnej burty
+      let best = null, bd = 140;
+      for (const q of marks) {
+        if (q.def.pair || q.paired || q.def.type === m.type || (q.def.type !== 'lateralPort' && q.def.type !== 'lateralStbd')) continue;
+        const d = Math.hypot(q.def.x - m.x, q.def.z - m.z);
+        if (d < bd) { bd = d; best = q; }
+      }
+      if (best) { mesh.userData.phase = best.mesh.userData.phase; best.paired = true; mesh.userData.paired = true; }
+    }
     dyn.add(mesh);
-    marks.push({ def: m, mesh, pattern: PATTERNS[MARK_TYPES[m.type] ? MARK_TYPES[m.type].flash : m.flash] || PATTERNS.VQ });
+    marks.push({ def: m, mesh, paired: !!mesh.userData.paired, pattern: PATTERNS[MARK_TYPES[m.type] ? MARK_TYPES[m.type].flash : m.flash] || PATTERNS.VQ });
   };
   for (const m of H.marks) addMark(m);
   // światła główek portu (lewa czerwona, prawa zielona przy wejściu od południa)

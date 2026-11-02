@@ -307,9 +307,10 @@ export function makeSituation(kind, E, hdg, r, id = 0) {
   // pary znaków bocznych co 100 m; withB – płyniemy z kierunkiem oznakowania. sides: -1 – lewa strona toru, 1 – prawa
   const gates = (O, F, a0, a1, withB, extra = {}, sides = [-1, 1]) => {
     for (let a = a0; a <= a1; a += 100) {
+      const pair = `${id}-${Math.round(a0)}-${Math.round(a)}`; // para lewy/prawy w jednym przekroju toru – światła synchroniczne
       for (const s of sides) {
         const left = s < 0;
-        marks.push({ type: left === withB ? 'lateralPort' : 'lateralStbd', ...R(at(O, F, a, s * 52)), rule: left ? 'port' : 'starboard', legDir: { x: F.u.x, z: F.u.z }, ...extra });
+        marks.push({ type: left === withB ? 'lateralPort' : 'lateralStbd', ...R(at(O, F, a, s * 52)), rule: left ? 'port' : 'starboard', legDir: { x: F.u.x, z: F.u.z }, pair, ...extra });
       }
     }
   };
@@ -492,7 +493,7 @@ export function buildPassage(id, seed = 1) {
         const side = k % 2 === 0 ? 1 : -1; // 1: po lewej (czerwony), -1: po prawej (zielony)
         const x = A.x + ux * sdist + nx * half * side, z = A.z + uz * sdist + nz * half * side;
         if (nearStruct(x, z) || tooClose(x, z) || routeDist(R0, x, z) < half - 15) continue;
-        gen.push({ type: side > 0 ? 'lateralPort' : 'lateralStbd', x: Math.round(x), z: Math.round(z) });
+        gen.push({ type: side > 0 ? 'lateralPort' : 'lateralStbd', x: Math.round(x), z: Math.round(z), pair: `g${i}-${k >> 1}` });
       }
     }
   }
