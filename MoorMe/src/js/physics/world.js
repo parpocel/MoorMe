@@ -977,6 +977,7 @@ export class World {
     this.stepCrew(dt);
     if (this.autoCrew !== false) this.stepAutoCrew(dt);
     // ocena
+    this.updateRoles(dt);
     this.evaluate(dt);
   }
 
@@ -1167,6 +1168,29 @@ export class World {
             this.log(`${line.name}: zdjęta z polera, podana na jacht`);
           }
         } else c.task = null;
+      }
+    }
+  }
+
+  // Rola liny wynika z jej przebiegu: gdy po manewrze cuma pracuje jak szpring (albo brest), zmienia nazwę.
+  // Zmiana dopiero po 1,5 s w nowej roli – bez migania przy kątach granicznych.
+  updateRoles(dt) {
+    for (const l of this.lines) {
+      if (l.state !== 'attached' || l.isMooring || !l.target || !ROLE_NAMES[l.role]) continue;
+      const cleat = this.deckItem(l.cleatId);
+      if (!cleat) continue;
+      const suffix = cleat.y < 0 ? ' L' : ' P';
+      if (l.name !== ROLE_NAMES[l.role] + suffix) continue; // nazwy własne (dalby, Y-bomy) zostają
+      const role = this.inferRole(cleat, l.target);
+      if (role === l.role || role === 'side') { l._roleT = 0; continue; }
+      if (l._roleCand !== role) { l._roleCand = role; l._roleT = 0; }
+      l._roleT = (l._roleT || 0) + dt;
+      if (l._roleT > 1.5) {
+        const old = l.name;
+        l.role = role;
+        l.name = ROLE_NAMES[role] + suffix;
+        l._roleT = 0;
+        this.log(`${old} pracuje teraz jako ${ROLE_NAMES[role].toLowerCase()} – nowa nazwa: ${l.name}`);
       }
     }
   }

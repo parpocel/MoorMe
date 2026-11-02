@@ -2,7 +2,7 @@
 import { BOATS, defaultEquipment } from '../src/js/data/boats.js';
 import { generateHarbor } from '../src/js/data/harbors.js';
 import { World } from '../src/js/physics/world.js';
-import { rng, localToWorld } from '../src/js/math.js';
+import { rng, localToWorld, worldToLocal } from '../src/js/math.js';
 let fails = 0;
 const check = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fails++; };
 const run = (w, s) => { for (let i = 0; i < s * 240; i++) w.step(1 / 240); };
@@ -84,6 +84,25 @@ check(far.state === 'attached' && far.target === farTgt, `po podejściu do kei z
     }
   }
   check(r.pts.length > 2 && !crosses, `lina z prawej burty na keję po lewej opasuje dziób (punktów na burcie: ${r.pts.length - 1}, długość na jachcie ${r.onBoard.toFixed(1)} m)`);
+}
+
+// cuma dziobowa, która po przesunięciu jachtu do przodu pracuje jak szpring, zmienia nazwę
+{
+  const w2 = new World({ spec, equip, harbor: H, weather: { windKn: 0, windFrom: 0, gust: 0 }, scenario: 'moor', start: { x: 30, z: 40, compass: 270 }, random: rng(6) });
+  w2.lines = [];
+  w2.boat.reset(b.x, b.z, b.th);
+  const bc = w2.findCleat('bow', -1);
+  const bol = (() => { const p = localToWorld(b.x, b.z, b.th, bc.x + 1.5, bc.y - 1.2); return w2.nearestBollard(p.x, p.z, (q) => q.onQuay && q.zone === b.zone); })();
+  const line = w2.rigLine(bc.id, undefined, bol, 'fixed');
+  run(w2, 6);
+  const before = line.name;
+  // po manewrze poler wypada za knagą dziobową (jacht przesunął się do przodu)
+  const aft = localToWorld(b.x, b.z, b.th, bc.x - 8, bc.y - 1.5);
+  line.target = w2.nearestBollard(aft.x, aft.z, (q) => q.onQuay && q.zone === b.zone);
+  w2.updateRoles(1.0);
+  const mid = line.name;
+  w2.updateRoles(1.0);
+  check(/^Cuma dziobowa/.test(before) && mid === before && line.name === 'Szpring dziobowy L' && line.role === 'springFwd', `cuma pracująca jak szpring zmienia nazwę po chwili (${before} → ${line.name})`);
 }
 
 console.log(fails ? `${fails} błędów` : 'Wszystko OK');

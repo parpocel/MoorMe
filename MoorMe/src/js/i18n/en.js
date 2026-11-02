@@ -571,6 +571,7 @@ export const RULES = [
   R(/^(\d+) m (w prawo|w lewo) od toru$/, '{1} m {2} of the track'),
   R(/^([\d.]+) nm (w prawo|w lewo) od toru$/, '{1} nm {2} of the track'),
   [/^(\d+) \((\d+)\)$/, null],
+  [/^(.+) pracuje teraz jako (.+) – nowa nazwa: (.+)$/, (m, tr) => `${tr(m[1])} now works as a ${tr(m[2].charAt(0).toUpperCase() + m[2].slice(1)).toLowerCase()} – renamed to ${tr(m[3])}`],
   R(/^Punkt (\d+)$/, 'Point {1}'), R(/^Punkt (\d+)\/(\d+)$/, 'Point {1}/{2}'), R(/^zły tor (\d+)$/, 'wrong channel {1}'),
   R(/^znaki (\d+)$/, 'marks {1}'), R(/^strefy (\d+)$/, 'zones {1}'), R(/^mielizna (\d+)$/, 'grounding {1}'), R(/^zderzenia (\d+)$/, 'collisions {1}'),
   R(/^Rejs: (.+)$/, 'Passage: {1}'),

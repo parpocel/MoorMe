@@ -255,7 +255,7 @@ export class SimScreen {
 
   // ---------- Liny ----------
   lineSignature() {
-    return this.world.lines.map((l) => `${l.id}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}:${l.plannedTarget ? l.plannedTarget.id : ''}:${l.mooringQueued}:${l.releaseQueued}`).join('|') + `|${this.world.crew.ashore}`;
+    return this.world.lines.map((l) => `${l.id}:${l.name}:${l.state}:${l.mode}:${l.winch}:${l.tending}:${l.length}:${l === this.selectedLine}:${l.jumped}:${l.plannedTarget ? l.plannedTarget.id : ''}:${l.mooringQueued}:${l.releaseQueued}`).join('|') + `|${this.world.crew.ashore}`;
   }
 
   renderLines(force) {
