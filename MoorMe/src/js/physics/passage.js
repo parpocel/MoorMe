@@ -101,7 +101,7 @@ export class PassageWorld extends World {
       if (d - q.rad > 2100 || d + q.rad < 150) return false;
       return Math.abs(((bearingDeg(q.cx - b.x, q.cz - b.z) - hb + 540) % 360) - 180) <= 38 || d < q.rad + 100;
     }).length;
-    if (ahead >= 4) return; // przed dziobem zawsze kilka sytuacji naraz
+    if (ahead >= 5) return; // przed dziobem zawsze kilka sytuacji naraz
     const goal = this.route[this.route.length - 1];
     if (Math.hypot(goal.x - b.x, goal.z - b.z) < 900) return; // przed metą już nic nowego
     const wps = this.route.slice(Math.max(1, this.next));
@@ -113,14 +113,14 @@ export class PassageWorld extends World {
       if (tries === 6) kind = pick(); // duże tory najpierw próbują dalej i pod innym kątem
       // pierwsze sytuacje blisko (widać je od razu po starcie), kolejne tuż za zasięgiem wzroku – wyłaniają się przed dziobem
       // kierunek skupiony wokół dziobu (rozkład dzwonowy w ±30°) – najwięcej znaków na bezpośrednim kursie
-      const a = hb + (r() + r() + r() - 1.5) * 20 * (tries < 4 ? 0.7 : 1), dist = (sp.n < 4 ? 450 + sp.n * 300 : 1050) + r() * 450 + (tries % 3) * 150;
+      const a = hb + (r() + r() + r() - 1.5) * 20 * (tries < 4 ? 0.7 : 1), dist = (sp.n < 4 ? 400 + sp.n * 250 : 900) + r() * 400 + (tries % 3) * 150;
       const u = { x: Math.sin(a * DEG), z: -Math.cos(a * DEG) };
       const E = { x: b.x + u.x * dist, z: b.z + u.z * dist };
       // tor ustawiony mniej więcej w kierunku płynięcia (z niewielkim skosem)
       const sit = makeSituation(kind, E, a + (r() - 0.5) * 30, r, sp.n + 1);
       if (Math.hypot(sit.cx - b.x, sit.cz - b.z) < sit.rad + 200) continue;
       if (wps.some((p) => Math.hypot(sit.cx - p.x, sit.cz - p.z) < sit.rad + 200)) continue; // waypointy zostają osiągalne
-      if (sp.sits.some((q) => Math.hypot(q.cx - sit.cx, q.cz - sit.cz) < q.rad + sit.rad + 50)) continue;
+      if (sp.sits.some((q) => Math.hypot(q.cx - sit.cx, q.cz - sit.cz) < q.rad + sit.rad + 30)) continue;
       sp.n++;
       this.addSituation(sit);
       return;
