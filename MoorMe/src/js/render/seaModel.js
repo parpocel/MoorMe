@@ -554,6 +554,9 @@ export function buildSea(H, scene) {
         // nocą bryła znaku stopniowo się zarysowuje: niewidoczna od ~340 m, pełny kształt dopiero z bliska (~120 m);
         // na otwartym morzu także w dzień znak wyłania się zza fal dopiero z ok. 1,8 km – kolejne pławy pojawiają się przed dziobem
         const dn = cam.distanceTo(mesh.position);
+        // dalekie pławy lekko powiększone (do ok. 2×), żeby na ekranie nie znikały jako pojedyncze piksele
+        const big = clamp(1 + (dn - 150) / 650, 1, 2.1);
+        mesh.scale.setScalar(1.7 * big);
         const vis = lightsOn > 0.3 ? clamp((340 - dn) / 220, 0, 1) : H.offshore ? clamp((1800 - dn) / 350, 0, 1) : 1;
         if (mesh.userData.vis !== vis) {
           mesh.userData.vis = vis;
@@ -579,6 +582,7 @@ export function buildSea(H, scene) {
         if (sp.userData.flare) sp.userData.flare.material.color.setHex(col);
         sp.getWorldPosition(tmp);
         dotLight(sp, cam.distanceTo(tmp), on, lightsOn);
+        sp.scale.multiplyScalar(1 / big); // światło nocą bez powiększenia
       }
       for (const hd of heads) {
         const on = lightsOn > 0.05 ? hd.pattern(t) : 0;

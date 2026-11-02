@@ -542,8 +542,8 @@ function addBoatDetails(heel, root, spec, d) {
     // prowadnice szotów foka na pokładzie bocznym
     const gx = d.mastX - 0.6;
     heel.add(box(1.4, 0.03, 0.05, COL.dark, gx - 0.9, sheerHeight(spec, gx) + 0.02, side * (halfBeamAt(spec, gx) - 0.35), { metal: 0.6 }));
-    // kabestany (winche): przy kokpicie i na dachu nadbudówki
-    for (const [wx, wy, wz] of [[d.ck0 + 0.9, d.fbC + 0.45, side * (d.ckw / 2 - 0.12)], [d.cabin.userData.x0 + 0.25, d.topY + 0.02, side * 0.55]]) {
+    // kabestany (winche) na dachu nadbudówki
+    for (const [wx, wy, wz] of [[d.cabin.userData.x0 + 0.25, d.topY + 0.02, side * 0.55]]) {
       const wch = cyl(0.09 + L * 0.002, 0.11 + L * 0.002, 0.16, 0x9aa3ab, 10, { metal: 0.8, rough: 0.3 });
       wch.position.set(wx, wy + 0.08, wz);
       heel.add(wch);
@@ -558,16 +558,6 @@ function addBoatDetails(heel, root, spec, d) {
   heel.add(box(0.1, 0.08, 0.06, 0x20d060, pbx, pby, halfBeamAt(spec, pbx) - 0.08, { emissive: 0x0a4020 }));
   // winda kotwiczna
   heel.add(box(0.3, 0.14, 0.24, COL.dark, xb - 0.08 * L, sheerHeight(spec, xb - 0.08 * L) + 0.07, 0, { metal: 0.5 }));
-  // tratwa ratunkowa: biały kanister z pomarańczowym pasem, w uchwycie na relingu rufowym (burta lewa)
-  {
-    const rx = xs + 0.42, ry = sheerHeight(spec, rx) + 0.62 + 0.2, rz = -(halfBeamAt(spec, rx) - 0.34);
-    const can = cyl(0.17, 0.17, 0.78, 0xf2f2f2, 12);
-    can.rotation.z = Math.PI / 2; can.position.set(rx, ry, rz);
-    const band = cyl(0.18, 0.18, 0.07, 0xff6a13, 12);
-    band.rotation.z = Math.PI / 2; band.position.set(rx, ry, rz);
-    heel.add(can, band);
-    for (const dx of [-0.25, 0.25]) heel.add(box(0.05, 0.1, 0.12, COL.dark, rx + dx, ry - 0.2, rz));
-  }
   // koło ratunkowe i pława ratunkowa (danbuoy) na relingu rufowym (burta prawa)
   {
     const cx = xs + 0.3, cy = sheerHeight(spec, cx) + 0.5, cz = halfBeamAt(spec, cx) - 0.1;
@@ -659,7 +649,7 @@ function deckPatch(spec, x0, x1, zIn, zOut, dy, color, n = 10) {
   return m;
 }
 
-// Szczegóły pokładu: antypoślizg, zejściówka, stopery i fały od masztu, kosz rufowy, instrumenty
+// Szczegóły pokładu: antypoślizg, zejściówka, stopery i fały od masztu, kosz rufowy
 function addDeckDetail(heel, spec, d) {
   const { xs, xb } = hullExtents(spec);
   const L = spec.loa, cab = d.cabin.userData;
@@ -710,17 +700,6 @@ function addDeckDetail(heel, spec, d) {
     heel.add(strut(top, [xa, ya + 0.66, s * 0.35], 0.02, COL.metal, 6));
     heel.add(strut([xa + 0.25, ya + 0.02, za * 0.97], [xa + 0.1, ya + 0.66, za * 0.99], 0.016, COL.metal, 6));
   }
-
-  // instrumenty: wyświetlacze nad kołami sterowymi i ploter przy stoliku kokpitowym
-  const wheelR = 0.3 + L * 0.008;
-  for (const s of [-1, 1]) {
-    const disp = box(0.04, 0.16, 0.2, 0x0d1117, d.ck0 + 0.45, d.fbC + wheelR + 0.39, s * spec.beam * 0.27, { rough: 0.2, metal: 0.4, emissive: 0x0a1a2a });
-    disp.rotation.z = -0.35;
-    heel.add(disp);
-  }
-  const plot = box(0.04, 0.15, 0.2, 0x0d1117, d.ck1 - (d.ck1 - d.ck0) * 0.45 + 0.36, d.fbC + 0.92, 0, { rough: 0.2, metal: 0.4, emissive: 0x0a1a2a });
-  plot.rotation.z = -0.4;
-  heel.add(plot);
 
   // płytki want na pokładzie i wózki na prowadnicach foka
   for (const s of [-1, 1]) {

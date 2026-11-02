@@ -129,7 +129,7 @@ for (const [id, seed] of Object.keys(PASSAGES).filter((i) => i !== 'offshore').f
     const wpBlocked = S.some((q) => w.route.slice(1).some((p) => Math.hypot(q.cx - p.x, q.cz - p.z) < q.rad + 100));
     const maxOff = Math.max(...spawned.map((q) => q.off));
     check(S.length >= 8 && ov === 0 && !wpBlocked, `offshore#${seed}: ${S.length} sytuacji w 30 min (${[...new Set(S.map((q) => q.kind))].join(',')}), bez nakładania, waypointy wolne`);
-    check(maxOff < 40 && spawned.every((q) => q.d > 900), `offshore#${seed}: nowe sytuacje przed dziobem (maks. ${maxOff.toFixed(0)}° od kierunku, najbliżej ${Math.min(...spawned.map((q) => q.d)).toFixed(0)} m)`);
+    check(maxOff < 40 && spawned.every((q) => q.d > 400), `offshore#${seed}: nowe sytuacje przed dziobem (maks. ${maxOff.toFixed(0)}° od kierunku, najbliżej ${Math.min(...spawned.map((q) => q.d)).toFixed(0)} m)`);
     check(w.nav.next >= 1 && w.navRoute === w.route, `offshore#${seed}: BRG na bieżący waypoint (${w.nav.next}/${w.route.length - 1})`);
   }
   // znak rozgałęzienia: sposób mijania zgodny z wybranym torem, znaki drugiego toru oznaczone

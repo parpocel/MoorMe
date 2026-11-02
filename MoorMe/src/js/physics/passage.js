@@ -109,12 +109,13 @@ export class PassageWorld extends World {
     let kind = pickSituationKind(r);
     for (let tries = 0; tries < 10; tries++) {
       if (tries === 6) kind = pickSituationKind(r); // duże tory najpierw próbują dalej i pod innym kątem
-      const a = hb + (r() - 0.5) * 60, dist = 1350 + r() * 350 + (tries % 3) * 250;
+      // pierwsze sytuacje blisko (widać je od razu po starcie), kolejne tuż za zasięgiem wzroku – wyłaniają się przed dziobem
+      const a = hb + (r() - 0.5) * 60, dist = (sp.n < 2 ? 550 + sp.n * 450 : 1250) + r() * 300 + (tries % 3) * 200;
       const u = { x: Math.sin(a * DEG), z: -Math.cos(a * DEG) };
       const E = { x: b.x + u.x * dist, z: b.z + u.z * dist };
       // tor ustawiony mniej więcej w kierunku płynięcia (z niewielkim skosem)
       const sit = makeSituation(kind, E, a + (r() - 0.5) * 30, r, sp.n + 1);
-      if (Math.hypot(sit.cx - b.x, sit.cz - b.z) < sit.rad + 250) continue;
+      if (Math.hypot(sit.cx - b.x, sit.cz - b.z) < sit.rad + 200) continue;
       if (wps.some((p) => Math.hypot(sit.cx - p.x, sit.cz - p.z) < sit.rad + 200)) continue; // waypointy zostają osiągalne
       if (sp.sits.some((q) => Math.hypot(q.cx - sit.cx, q.cz - sit.cz) < q.rad + sit.rad + 120)) continue;
       sp.n++;

@@ -147,7 +147,7 @@ export class PassageScreen extends SimScreen {
     this.apHdg = h('div.big-num', { style: { textAlign: 'center', margin: '8px 0 4px' } }, '---°');
     const row = h('div', { style: { display: 'flex', gap: '4px', justifyContent: 'center' } },
       ...[[-10, '−10'], [-1, '−1'], [1, '+1'], [10, '+10']].map(([d, l]) => h('button.btn.xs', { onclick: () => { this.world.adjustAutopilot(d); }, title: 'Zmiana zadanego kursu' }, l)));
-    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: this.world.blind && !this.world.H.keyRoute ? 'Ustaw zadany kurs na kurs do portu' : 'Ustaw zadany kurs na kurs do waypointu' }, this.world.blind ? (this.world.H.keyRoute ? '→ kurs na punkt' : '→ kurs na port') : '→ kurs na WP'),
+    panel.append(this.apBtn, this.apHdg, row, h('button.btn.xs', { style: { width: '100%', marginTop: '6px' }, onclick: () => { this.world.setAutopilot(this.world.autopilot.on, this.world.nav.brg); }, title: this.world.blind && !this.world.H.keyRoute && !this.world.H.dynamic ? 'Ustaw zadany kurs na kurs do portu' : 'Ustaw zadany kurs na kurs do waypointu' }, this.world.blind && !this.world.H.dynamic ? (this.world.H.keyRoute ? '→ kurs na punkt' : '→ kurs na port') : '→ kurs na WP'),
       h('div.small.muted', { style: { marginTop: '6px', maxWidth: '170px' } }, 'Autopilot tylko trzyma kurs – o trasie decydujesz Ty.'));
     return panel;
   }
