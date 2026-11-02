@@ -115,7 +115,7 @@ function footer(step, onNext, nextLabel = 'Dalej →') {
 
 function screen(step, body, onNext, nextLabel) {
   app.innerHTML = '';
-  const s = h('div.screen', {}, sceneryEl(), header(step), h('div.screen-body', {}, body), footer(step, onNext, nextLabel));
+  const s = h('div.screen', {}, sceneryEl(), header(step), h('div.screen-body', {}, h('div.setup-wrap', {}, body)), footer(step, onNext, nextLabel));
   app.appendChild(s);
 }
 
@@ -392,7 +392,7 @@ function showPassageSetup() {
   const fmtH = (hh) => `${String(Math.floor(hh)).padStart(2, '0')}:${String(Math.round((hh % 1) * 60)).padStart(2, '0')}${hh < 5 || hh > 21 ? ' (noc)' : hh < 7.5 ? ' (świt)' : hh > 18.5 ? ' (zmierzch)' : ''}`;
   const assistSeg = seg([{ value: 'bearing', label: '🧭 Tylko BRG na port' }, { value: 'full', label: '🗺 Trasa i waypointy' }], cfg.assist || 'bearing', (v) => { cfg.assist = v; showPassageSetup(); });
   const boatSeg = seg(Object.values(BOATS).map((b) => ({ value: b.id, label: `${b.name} (${b.loa.toFixed(1)} m)` })), cfg.boatId, (v) => { cfg.boatId = v; });
-  const body = h('div', {},
+  const body = h('div.setup-wrap', {},
     h('h2', { style: { marginBottom: '10px' } }, 'Wybierz akwen i trasę'),
     cards,
     h('div.two-col', { style: { marginTop: '18px' } },

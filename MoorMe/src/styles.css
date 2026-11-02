@@ -67,6 +67,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; }
 .spec-table td:last-child { text-align: right; font-weight: 600; }
 
 .two-col { display: grid; grid-template-columns: minmax(420px, 1.35fr) minmax(320px, 1fr); gap: 22px; align-items: start; }
+/* ekrany ustawień: na szerokich monitorach treść wyśrodkowana, bez rozciągania na całą szerokość */
+.screen-body > .setup-wrap { max-width: 1320px; margin: 0 auto; }
+.screen-body > .two-col { max-width: 1320px; margin-left: auto; margin-right: auto; }
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
 .panel h2 { font-size: 17px; margin-bottom: 10px; }
 .panel h3 { font-size: 14px; margin: 14px 0 8px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.8px; }
