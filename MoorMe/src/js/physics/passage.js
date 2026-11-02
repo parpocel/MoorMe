@@ -110,7 +110,8 @@ export class PassageWorld extends World {
     for (let tries = 0; tries < 14; tries++) {
       if (tries === 6) kind = pickSituationKind(r); // duże tory najpierw próbują dalej i pod innym kątem
       // pierwsze sytuacje blisko (widać je od razu po starcie), kolejne tuż za zasięgiem wzroku – wyłaniają się przed dziobem
-      const a = hb + (r() - 0.5) * 60, dist = (sp.n < 4 ? 450 + sp.n * 300 : 1050) + r() * 450 + (tries % 3) * 150;
+      // kierunek skupiony wokół dziobu (rozkład dzwonowy w ±30°) – najwięcej znaków na bezpośrednim kursie
+      const a = hb + (r() + r() + r() - 1.5) * 20 * (tries < 4 ? 0.7 : 1), dist = (sp.n < 4 ? 450 + sp.n * 300 : 1050) + r() * 450 + (tries % 3) * 150;
       const u = { x: Math.sin(a * DEG), z: -Math.cos(a * DEG) };
       const E = { x: b.x + u.x * dist, z: b.z + u.z * dist };
       // tor ustawiony mniej więcej w kierunku płynięcia (z niewielkim skosem)
