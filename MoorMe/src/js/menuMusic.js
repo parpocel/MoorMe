@@ -3,7 +3,7 @@
 import { getSettings } from './settings.js';
 
 const hz = (semi) => 130.81 * Math.pow(2, semi / 12); // półtony względem C3
-const BEAT = 1.15; // s na ćwierćnutę – wolno, spokojnie
+const BEAT = 0.8; // s na ćwierćnutę – zwykłe tempo (ok. 75 uderzeń na minutę)
 // nuty (półtony od C3) i długości w ćwierćnutach; D-dur
 const N = { A3: 9, B3: 11, D4: 14, E4: 16, Fs4: 18, G4: 19, A4: 21, B4: 23, Cs5: 25, D5: 26 };
 // akordy (półtony od C3): D, G, A, Bm
