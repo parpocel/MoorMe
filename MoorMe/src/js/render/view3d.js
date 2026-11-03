@@ -439,6 +439,35 @@ export class View3D {
     this.camera.updateProjectionMatrix();
   }
 
+  updatePlannedTargets(t) {
+    const w = this.world, want = new Set();
+    for (const l of w.lines) {
+      const b = l.state === 'queued' ? l.queuedTarget : l.state === 'pending' ? l.pendingTarget : l.state === 'ready' ? l.plannedTarget : null;
+      if (b && b.x !== undefined) want.add(b);
+    }
+    this._planned = this._planned || new Map();
+    for (const b of want) {
+      if (this._planned.has(b)) continue;
+      const g = new THREE.Group();
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.07, 6, 24), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.5, depthWrite: false }));
+      ring.rotation.x = Math.PI / 2; ring.position.y = 0.06;
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.32, 2.6, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }));
+      beam.position.y = 1.35;
+      g.add(ring, beam);
+      g.position.set(b.x, b.h || 0, b.z);
+      this.scene.add(g);
+      this._planned.set(b, { g, ring, beam });
+    }
+    for (const [b, e] of this._planned) {
+      if (!want.has(b)) { this.scene.remove(e.g); e.ring.geometry.dispose(); e.beam.geometry.dispose(); this._planned.delete(b); continue; }
+      const k = 0.5 + 0.5 * Math.sin(t * 3);
+      e.ring.material.opacity = 0.3 + 0.35 * k;
+      e.ring.scale.setScalar(0.92 + 0.12 * k);
+      e.beam.material.opacity = 0.06 + 0.08 * k;
+      e.g.visible = !(b._ring && b._ring.visible); // podczas wybierania polera działa zwykłe podświetlenie
+    }
+  }
+
   highlightBollards(options) {
     for (const b of this.world.H.bollards) b._ring.visible = false;
     if (!options) return;
@@ -645,6 +674,9 @@ export class View3D {
     // windex – wskazuje kierunek wiatru pozornego
     if (this.boat.userData.windex && b.dbg.appAngle !== undefined) this.boat.userData.windex.rotation.y = -b.dbg.appAngle + Math.PI;
     if (this.boat.userData.flag && b.dbg.appAngle !== undefined) this.boat.userData.flag.rotation.y = -b.dbg.appAngle + Math.PI / 2 + Math.sin(t * 6) * 0.15;
+
+    // poler / knaga, na które zaplanowano założenie cumy – delikatnie pulsuje, żeby było wiadomo, gdzie podpłynąć
+    if (!w.isPassage) this.updatePlannedTargets(t);
 
     // odbijacze
     const rf = w.equip.fenderRadius;

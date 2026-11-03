@@ -291,7 +291,7 @@ export class HarbourLife {
     this.people = [];
     if (!ways.length) return;
     const total = ways.reduce((s, w) => s + Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]), 0);
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 7; i++) { // kilku spacerowiczów – keje nie są zatłoczone
       // ścieżka losowana proporcjonalnie do długości
       let x = this.r() * total, way = ways[0];
       for (const w of ways) { const l = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]); if (x <= l) { way = w; break; } x -= l; }
