@@ -352,7 +352,7 @@ export class SaloonView {
     container.appendChild(r.domElement);
     this.renderer = r;
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0x2b2620); this.scene = scene;
-    this.camera = new THREE.PerspectiveCamera(52, 1, 0.02, 30);
+    this.camera = new THREE.PerspectiveCamera(52, 1, 0.12, 30); // bliskie cięcie odsunięte – nic nie „przykleja się” do obiektywu
     // światło: przytłumione rozproszone, ciepłe lampki, listwy LED pod szafkami i lampka nad stołem nawigacyjnym; dzienne słabo przez luki
     scene.add(new THREE.HemisphereLight(0xffe2c0, 0x3a2a1e, 0.5));
     const sun = new THREE.DirectionalLight(0xdfeeff, 0.55); sun.position.set(1.2, 4, 0.6); sun.target.position.set(0.3, 0.7, 0); sun.castShadow = true;
@@ -502,6 +502,7 @@ export class SaloonView {
 
   // nic nie zasłania widoku: to, co leży między kamerą a celem (i jego okolicą), staje się prawie przezroczyste
   fadeOccluders(cam, target, dt) {
+    this.camera.updateMatrixWorld();
     const hit = new Set(), ray = this._fadeRay || (this._fadeRay = new THREE.Raycaster());
     const right = new THREE.Vector3().subVectors(target, cam).cross(new THREE.Vector3(0, 1, 0)).normalize();
     const pts = [[0, 0], [0.22, 0], [-0.22, 0], [0, 0.15], [0, -0.12]].map(([a, b]) => target.clone().addScaledVector(right, a).add(new THREE.Vector3(0, b, 0)));
@@ -512,19 +513,25 @@ export class SaloonView {
       ray.set(cam.clone().addScaledVector(d, -0.3), d); ray.far = Math.max(0, len + 0.3 - 0.06);
       for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
     }
-    // to, co jest tuż przed obiektywem (do ok. 45 cm, w środkowej części kadru), też znika – nie zasłania wnętrza przy obracaniu
-    const fwd = target.clone().sub(cam).normalize(), up = new THREE.Vector3().crossVectors(right, fwd).normalize();
-    for (const [a, b] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.25], [0, -0.25], [0.3, 0.2], [-0.3, 0.2], [0.3, -0.2], [-0.3, -0.2]]) {
-      const d = fwd.clone().addScaledVector(right, a).addScaledVector(up, b).normalize();
-      ray.set(cam, d); ray.far = 0.45;
-      for (const x of ray.intersectObjects(this.occluders, false)) hit.add(x.object);
+    // to, co jest tuż przed obiektywem, znika w całym kadrze (siatka promieni z kamery, ok. 1,1 m);
+    // pomijamy duże powierzchnie (poszycie, grodzie, sufit) – one nie wchodzą w kadr jak mebel
+    if (!this._occInfo) {
+      const b0 = new THREE.Box3(), sz = new THREE.Vector3();
+      this._occInfo = new Map(this.occluders.map((o) => { b0.setFromObject(o); b0.getSize(sz); return [o, { box: b0.clone(), big: Math.max(sz.x, sz.y, sz.z) > 2.6 }]; }));
+      this._smallOcc = this.occluders.filter((o) => !this._occInfo.get(o).big);
     }
+    const ndc = new THREE.Vector2();
+    for (let gx = -1; gx <= 1.001; gx += 0.4) for (let gy = -1; gy <= 1.001; gy += 0.5) {
+      ndc.set(gx * 0.95, gy * 0.95);
+      ray.setFromCamera(ndc, this.camera); ray.near = 0; ray.far = 1.1;
+      for (const x of ray.intersectObjects(this._smallOcc, false)) hit.add(x.object);
+    }
+    // meble i wyposażenie bardzo blisko kamery (też z boku i z tyłu kadru)
+    for (const o of this._smallOcc) if (this._occInfo.get(o).box.distanceToPoint(cam) < 0.6) hit.add(o);
     // szafki wiszące na wysokości oczu: znikają, gdy kamera jest blisko nich (nawet jeśli nie leżą dokładnie na linii do celu)
-    const bb = this._fadeBox || (this._fadeBox = new THREE.Box3());
     for (const o of this.occluders) {
       if (!o.userData.nearFade) continue;
-      bb.setFromObject(o);
-      if (bb.distanceToPoint(cam) < 1.0) hit.add(o);
+      if (this._occInfo.get(o).box.distanceToPoint(cam) < 1.0) hit.add(o);
     }
     const k = Math.min(1, (dt || 0.016) * 8);
     for (const o of this.occluders) {
