@@ -356,8 +356,12 @@ export function buildBoat(spec, opts = {}) {
   const fbC = sheerHeight(spec, ck0);
   heel.add(box(ck1 - ck0, 0.05, ckw, COL.teak, (ck0 + ck1) / 2, fbC + 0.01, 0));
   for (const s of [-1, 1]) heel.add(box((ck1 - ck0) * 0.7, 0.35, 0.45, 0xe8e6e1, ck1 - (ck1 - ck0) * 0.38, fbC + 0.2, s * (ckw / 2 - 0.2)));
-  // granatowe poduszki na ławkach kokpitu
-  for (const s of [-1, 1]) heel.add(box((ck1 - ck0) * 0.66, 0.05, 0.4, 0x2d4a6b, ck1 - (ck1 - ck0) * 0.38, fbC + 0.4, s * (ckw / 2 - 0.2)));
+  // tekowe listwy (greting) na ławkach kokpitu: listwy wzdłuż ławki z ciemnymi szczelinami
+  for (const s of [-1, 1]) {
+    const bx = ck1 - (ck1 - ck0) * 0.38, bl = (ck1 - ck0) * 0.66, bz = s * (ckw / 2 - 0.2);
+    heel.add(box(bl, 0.02, 0.42, 0x3b2a1b, bx, fbC + 0.385, bz)); // podkład – ciemne szczeliny
+    for (let k = 0; k < 6; k++) heel.add(box(bl, 0.03, 0.055, COL.teak, bx, fbC + 0.405, bz - 0.175 + k * 0.07));
+  }
   root.userData.seatSpot = [ck1 - (ck1 - ck0) * 0.38, fbC + 0.43, ckw / 2 - 0.2];
   heel.add(box(0.9, 0.06, 0.55, COL.teak, ck1 - (ck1 - ck0) * 0.45, fbC + 0.75, 0));
   heel.add(box(0.12, 0.7, 0.12, COL.metal, ck1 - (ck1 - ck0) * 0.45, fbC + 0.4, 0));
