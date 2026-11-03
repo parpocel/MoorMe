@@ -189,7 +189,7 @@ export function smoothNormals(geo, creaseDeg = 50) {
 }
 
 // Opuszczana platforma kąpielowa w pawęży (jak w serii Cruiser): środkowa część pawęży odchylona do poziomu,
-// tekowy pokład, amortyzatory gazowe, składana drabinka; w otworze widać podłogę kokpitu
+// (platforma zamknięta – bez drabinki)
 function buildTransomPlatform(spec) {
   // platforma zamknięta: złożona stanowi środkową część pawęży – widać tylko szczelinę wokół niej i zawiasy na dole
   const g = new THREE.Group();
@@ -727,8 +727,6 @@ function addBoatDetails(heel, root, spec, d) {
     heel.add(box(0.6, 0.04, 0.6, 0xe8e6e1, hx, hy + 0.03, 0));
     heel.add(box(0.5, 0.045, 0.5, 0x16202b, hx, hy + 0.034, 0, glass));
   }
-  // drabinka kąpielowa
-  for (let k = 0; k < 4; k++) heel.add(box(0.05, 0.03, 0.4, COL.metal, xs - 0.47, 0.3 - k * 0.22, spec.beam * 0.1, { metal: 0.8 }));
   addDeckDetail(heel, spec, d);
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
@@ -911,7 +909,7 @@ export function buildBallFender(r) {
 }
 
 // Postać członka załogi
-// Postać członka załogi (ok. 1,75 m): buty, nogi, biodra, kurtka z kołnierzem, kamizelka pneumatyczna, ręce, głowa z czapką.
+// Postać członka załogi (ok. 1,75 m), prosto: nogi, biodra, kurtka, kołnierz kamizelki, ręce, głowa z czapką.
 // Przód postaci = lokalna oś +z. userData: legs/arms (przeguby do animacji chodu i pracy przy linie).
 const PMATS = new Map();
 const pm = (c, r = 0.75) => { const k = c + ':' + r; if (!PMATS.has(k)) PMATS.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r })); return PMATS.get(k); };
@@ -928,38 +926,29 @@ export function buildPerson(jacket = 0xe63946) {
   const legs = [];
   for (const sx of [-1, 1]) {
     const hip = new THREE.Group(); hip.position.set(sx * 0.095, 0.86, 0); g.add(hip);
-    mesh(new THREE.CapsuleGeometry(0.075, 0.68, 4, 10), pants, 0, -0.42, 0, hip);
-    const shoe = mesh(new THREE.CapsuleGeometry(0.055, 0.12, 4, 8), dark, 0, -0.81, 0.05, hip); shoe.rotation.x = Math.PI / 2; shoe.scale.set(1.15, 1, 0.75);
+    mesh(new THREE.CapsuleGeometry(0.08, 0.7, 3, 8), pants, 0, -0.43, 0, hip);
     legs.push(hip);
   }
   // biodra i tułów (kurtka), kołnierz i suwak
   const hips = mesh(new THREE.CylinderGeometry(0.17, 0.16, 0.16, 16), pants, 0, 0.9, 0); hips.scale.z = 0.72;
   const torso = mesh(new THREE.CapsuleGeometry(0.17, 0.36, 6, 16), jk, 0, 1.2, 0); torso.scale.set(1.1, 1, 0.72);
-  mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.04, 16), dark, 0, 0.98, 0).scale.z = 0.72; // pasek
-  mesh(new THREE.BoxGeometry(0.02, 0.4, 0.01), dark, 0, 1.2, 0.125); // suwak
-  const collar = mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.07, 14), jk, 0, 1.47, 0); collar.scale.z = 0.85;
-  // kamizelka pneumatyczna (komory na ramionach i z przodu)
+  void dark;
+  // kamizelka pneumatyczna (kołnierz na ramionach)
   const vest = pm(0xc0392b, 0.55);
-  for (const sx of [-1, 1]) { const ch = mesh(new THREE.CapsuleGeometry(0.045, 0.3, 4, 8), vest, sx * 0.09, 1.3, 0.09); ch.rotation.z = sx * 0.18; }
   const yoke = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16, Math.PI), vest, 0, 1.43, 0); yoke.rotation.x = -Math.PI / 2;
   // ręce na przegubach barkowych (do machania przy chodzie i pracy przy linie)
   const arms = [];
   for (const sx of [-1, 1]) {
     const sh = new THREE.Group(); sh.position.set(sx * 0.23, 1.38, 0); g.add(sh);
-    const up = mesh(new THREE.CapsuleGeometry(0.055, 0.26, 4, 8), jk, 0, -0.16, 0, sh); up.rotation.z = sx * 0.06;
-    const fore = mesh(new THREE.CapsuleGeometry(0.048, 0.24, 4, 8), jk, sx * 0.01, -0.44, 0.02, sh);
-    mesh(new THREE.SphereGeometry(0.048, 10, 8), skin, sx * 0.012, -0.62, 0.03, sh); // dłoń
-    void fore;
+    const up = mesh(new THREE.CapsuleGeometry(0.055, 0.5, 3, 8), jk, 0, -0.3, 0.01, sh); up.rotation.z = sx * 0.05;
+    mesh(new THREE.SphereGeometry(0.05, 8, 6), skin, sx * 0.012, -0.61, 0.02, sh); // dłoń
     arms.push(sh);
   }
   // szyja, głowa, uszy, nos, czapka z daszkiem
-  mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.08, 10), skin, 0, 1.52, 0);
-  const head = mesh(new THREE.SphereGeometry(0.11, 18, 14), skin, 0, 1.64, 0.005); head.scale.set(0.92, 1.05, 1);
-  for (const sx of [-1, 1]) mesh(new THREE.SphereGeometry(0.025, 8, 6), skin, sx * 0.1, 1.64, 0);
-  mesh(new THREE.SphereGeometry(0.02, 8, 6), skin, 0, 1.63, 0.11);
+  const head = mesh(new THREE.SphereGeometry(0.115, 14, 10), skin, 0, 1.62, 0); head.scale.set(0.92, 1.05, 1);
   const capM = pm(CAPS[k % CAPS.length], 0.7);
-  const cap = mesh(new THREE.SphereGeometry(0.115, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.68, 0); cap.scale.set(0.96, 0.75, 1.02);
-  const brim = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 16, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.685, 0.07); brim.scale.z = 0.9;
+  const cap = mesh(new THREE.SphereGeometry(0.12, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.66, 0); cap.scale.set(0.96, 0.75, 1.02);
+  const brim = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 12, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.665, 0.07); brim.scale.z = 0.9;
   g.userData.legs = legs;
   g.userData.arms = arms;
   return g;
