@@ -234,7 +234,9 @@ export class World {
   // nazwa liny: z knagi na śródokręciu – „Holender”, w pozostałych miejscach wg roli (dziobowa, szpring…)
   lineName(role, cleat) {
     const L = this.spec.loa, mid = cleat && Math.abs(cleat.x) <= 0.2 * L;
-    return `${mid && role !== 'mooring' ? 'Holender' : ROLE_NAMES[role]} ${cleat && cleat.y < 0 ? 'L' : 'P'}`;
+    // holender: ze śródokręcia do przodu – dziobowy, do tyłu – rufowy (prostopadle do burty – bez dopisku)
+    const hol = role === 'springAft' ? 'Holender dziobowy' : role === 'springFwd' ? 'Holender rufowy' : 'Holender';
+    return `${mid && role !== 'mooring' ? hol : ROLE_NAMES[role]} ${cleat && cleat.y < 0 ? 'L' : 'P'}`;
   }
 
   inferRole(cleat, bollard) {

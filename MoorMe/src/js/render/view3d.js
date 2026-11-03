@@ -439,6 +439,53 @@ export class View3D {
     this.camera.updateProjectionMatrix();
   }
 
+  updateDeckCrew(dt, t) {
+    const w = this.world, spec = w.spec;
+    if (!this._crewHome) {
+      this._crewHome = new Map([[this.deckhand, this.deckhandTarget.clone()], [this.mate1, this.mate1.position.clone()], [this.mate2, this.mate2.position.clone()]]);
+      this._crewRot = new Map([[this.deckhand, this.deckhand.rotation.y], [this.mate1, this.mate1.rotation.y], [this.mate2, this.mate2.rotation.y]]);
+    }
+    // zadania: najpierw liny zakładane z pokładu, potem obsługiwane (wybieraj / luzuj / wybierz), na końcu wybrana
+    const jobs = [], seen = new Set();
+    const push = (l) => { if (l && !seen.has(l.cleatId)) { seen.add(l.cleatId); jobs.push(l); } };
+    for (const l of w.lines) if (l.state === 'pending' && l.pendingVia === 'deck') push(l);
+    for (const l of w.lines) if (l.state === 'attached' && ['haul', 'ease', 'take'].includes(l.tending)) push(l);
+    for (const l of w.lines) if (l.selected) push(l);
+    const workers = [w.crew.ashore ? null : this.deckhand, this.mate2, this.mate1].filter(Boolean);
+    // przydział: każdemu najbliższe wolne zadanie
+    const free = new Set(jobs), assign = new Map();
+    for (const p of workers) {
+      let best = null, bd = Infinity;
+      for (const l of free) { const c = w.deckItem(l.cleatId); if (!c) continue; const d = Math.hypot(c.x - p.position.x, c.y - p.position.z); if (d < bd) { bd = d; best = l; } }
+      if (best) { free.delete(best); assign.set(p, best); }
+    }
+    const tmp = this._tmpV || (this._tmpV = new THREE.Vector3());
+    for (const p of [this.deckhand, this.mate1, this.mate2]) {
+      const job = assign.get(p);
+      let tgt, face;
+      if (job) {
+        const cl = w.deckItem(job.cleatId);
+        tgt = tmp.set(cl.x - Math.sign(cl.x || 1) * 0.45, sheerHeight(spec, cl.x) + 0.02, cl.y * 0.62);
+        face = -Math.atan2(cl.y - tgt.z, cl.x - tgt.x) + Math.PI / 2; // twarzą do knagi
+      } else { tgt = tmp.copy(this._crewHome.get(p)); face = this._crewRot.get(p); }
+      // przejście bocznym pokładem: przy dłuższej drodze wzdłuż jachtu idzie przy burcie, nie po dachu nadbudówki
+      const pos = p.position, dx = tgt.x - pos.x;
+      const side = Math.sign(tgt.z || pos.z || 1);
+      const wayZ = Math.abs(dx) > 0.8 ? side * Math.max(0.3, halfBeamAt(spec, pos.x) - 0.38) : tgt.z;
+      const sp = 1.1 * dt; // ok. 1 m/s
+      const mx = clamp(dx, -sp, sp), mz = clamp(wayZ - pos.z, -sp, sp);
+      pos.x += mx; pos.z += mz;
+      const moving = Math.abs(mx) + Math.abs(mz) > 0.002;
+      const baseY = Math.abs(dx) < 0.05 && Math.abs(tgt.z - pos.z) < 0.05 ? tgt.y : sheerHeight(spec, pos.x) + 0.02;
+      pos.y += (baseY + (moving ? Math.abs(Math.sin(t * 9)) * 0.035 : 0) - pos.y) * clamp(dt * 8, 0, 1);
+      const want = moving ? -Math.atan2(mz, mx) + Math.PI / 2 : face;
+      let dr = want - p.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
+      p.rotation.y += dr * clamp(dt * 6, 0, 1);
+      // przy wybieraniu / luzowaniu – lekkie pochylenie i ruch rąk (całej sylwetki)
+      p.rotation.x = job && job.state === 'attached' && job.tending !== 'hold' ? 0.12 + Math.sin(t * 5) * 0.06 : 0;
+    }
+  }
+
   updatePlannedTargets(t) {
     const w = this.world, want = new Set();
     for (const l of w.lines) {
@@ -700,14 +747,10 @@ export class View3D {
       mesh.scale.set(1 - comp * 0.5, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
     }
 
-    // załoga
-    const busyLine = w.lines.find((l) => l.selected) || w.lines.find((l) => l.state === 'pending' && l.pendingVia === 'deck');
-    if (busyLine) {
-      const cl = w.deckItem(busyLine.cleatId);
-      if (cl) this.deckhandTarget.set(cl.x - Math.sign(cl.x) * 0.5, sheerHeight(spec, cl.x) + 0.02, cl.y * 0.55);
-    }
+    // załoga: każda lina w pracy (zakładanie z pokładu, wybieranie, luzowanie) dostaje własnego członka załogi
     this.deckhand.visible = !(w.crew.ashore) && this.cam.mode !== 'fpv';
-    this.deckhand.position.lerp(this.deckhandTarget, clamp(dt * 1.5, 0, 1));
+    if (!w.isPassage) this.updateDeckCrew(dt, t);
+    else this.deckhand.position.lerp(this.deckhandTarget, clamp(dt * 1.5, 0, 1));
     this.shoreCrew.visible = w.crew.ashore;
     if (w.crew.ashore) {
       const gy = this.groundHeightAt(w.crew.x, w.crew.z);
