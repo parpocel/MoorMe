@@ -408,28 +408,66 @@ function addEdgeDetails(group, s, r, lamps) {
     const E = edgeFrame(s, e);
     const mid = E.at(E.len / 2, 0);
     if (style === 'stone' || style === 'concrete') {
-      // kamienna/betonowa krawędź (gzyms) i odbojnice na ścianie
-      group.add(place(box(E.len, 0.12, 0.7, style === 'stone' ? 0xd9ceb8 : 0xc9c5bb, 0, 0, 0), E.at(E.len / 2, -0.33), top + 0.05, E.rotY));
-      for (let t = 2; t < E.len; t += style === 'stone' ? 6 : 4) group.add(place(box(0.28, top + 0.7, 0.2, 0x1b1b1b, 0, 0, 0), E.at(t, 0.1), (top - 0.7) / 2, E.rotY));
+      const stone = style === 'stone';
+      // gzyms krawędzi lekko wysunięty nad wodę, na betonie żółty pas ostrzegawczy
+      group.add(place(box(E.len, 0.14, 0.75, stone ? 0xd9ceb8 : 0xc9c5bb, 0, 0, 0), E.at(E.len / 2, -0.3), top + 0.05, E.rotY));
+      if (!stone) group.add(place(box(E.len, 0.012, 0.12, 0xe8c547, 0, 0, 0), E.at(E.len / 2, -0.12), top + 0.125, E.rotY));
+      // spoiny ściany (poziome co ok. 0,5 m, w kamieniu przesunięte spoiny pionowe)
+      for (let y = top - 0.5; y > -0.2; y -= stone ? 0.45 : 0.9) group.add(place(box(E.len, 0.025, 0.03, stone ? 0x8c8270 : 0x8f8b82, 0, 0, 0), E.at(E.len / 2, 0.06), y, E.rotY));
+      if (stone) {
+        let row = 0;
+        for (let y = top - 0.5; y > -0.2; y -= 0.45, row++) for (let t = (row % 2) * 0.6 + 0.3; t < E.len; t += 1.2) group.add(place(box(0.025, 0.42, 0.03, 0x8c8270, 0, 0, 0), E.at(t, 0.06), y - 0.22, E.rotY));
+      }
+      // pas glonów i wilgoci przy linii wody
+      group.add(place(box(E.len, 0.45, 0.04, 0x33463a, 0, 0, 0), E.at(E.len / 2, 0.055), 0.05, E.rotY));
+      // odbojnice (pionowe gumy) i pozioma belka odbojowa
+      for (let t = 2; t < E.len; t += stone ? 6 : 4) group.add(place(box(0.28, top + 0.7, 0.2, 0x1b1b1b, 0, 0, 0), E.at(t, 0.1), (top - 0.7) / 2, E.rotY));
+      group.add(place(box(E.len, 0.18, 0.16, 0x23262a, 0, 0, 0), E.at(E.len / 2, 0.14), top - 0.35, E.rotY));
+      // odpływy w ścianie
+      for (let t = 7; t < E.len - 2; t += 15) group.add(place(box(0.22, 0.16, 0.05, 0x1a1c1e, 0, 0, 0), E.at(t, 0.07), top - 0.75, E.rotY));
       // drabinki wyjściowe
       for (let t = 12; t < E.len - 4; t += 26) {
         for (const sd of [-1, 1]) group.add(place(box(0.05, top + 1.3, 0.05, 0xe8c547, 0, 0, 0), E.at(t + sd * 0.25, 0.14), (top - 1.3) / 2, E.rotY));
         for (let y = -1.1; y < top; y += 0.3) group.add(place(box(0.5, 0.04, 0.04, 0xe8c547, 0, 0, 0), E.at(t, 0.14), y, E.rotY));
       }
     } else if (style === 'wood' || s.kind === 'pier') {
-      // drewniane pale pod pomostem i belka krawędziowa
+      // drewniane pale pod pomostem (z kapslami), podłużnice, zastrzały i belka krawędziowa
       for (let t = 1; t < E.len; t += 3) {
-        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, top + 3.2, 6), mat(0x5a4632));
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, top + 3.2, 8), mat(0x5a4632));
         group.add(place(p, E.at(t, 0.05), (top - 3.2) / 2 + 0.05));
+        group.add(place(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.05, 8), mat(0x3e4247)), E.at(t, 0.05), top + 0.06));
+        if (t + 3 < E.len) {
+          const br = box(Math.hypot(3, 0.9), 0.07, 0.07, 0x4c3a28, 0, 0, 0);
+          br.rotation.z = Math.atan2(0.9, 3) * (Math.floor(t / 3) % 2 ? 1 : -1);
+          group.add(place(br, E.at(t + 1.5, 0.12), top - 0.85, E.rotY));
+        }
       }
+      group.add(place(box(E.len, 0.18, 0.12, 0x4c3a28, 0, 0, 0), E.at(E.len / 2, 0.12), top - 0.42, E.rotY)); // podłużnica
       group.add(place(box(E.len, 0.22, 0.16, 0x6e5238, 0, 0, 0), E.at(E.len / 2, 0.05), top - 0.08, E.rotY));
     } else if (s.kind === 'pontoon') {
-      group.add(place(box(E.len, 0.22, 0.14, 0xe9ecef, 0, 0, 0), E.at(E.len / 2, 0.05), top - 0.06, E.rotY));
+      // gumowy profil krawędzi, ciemne pływaki pod spodem i łączenia modułów
+      group.add(place(box(E.len, 0.2, 0.12, 0x3a3f45, 0, 0, 0), E.at(E.len / 2, 0.05), top - 0.07, E.rotY));
+      group.add(place(box(E.len, 0.3, 0.1, 0x2b2f33, 0, 0, 0), E.at(E.len / 2, 0.02), top - 0.4, E.rotY));
+      for (let t = 2.4; t < E.len - 0.5; t += 2.4) group.add(place(box(0.03, 0.01, 1.2, 0x8f8c86, 0, 0, 0), E.at(t, -0.6), top + 0.005, E.rotY));
     }
     if (!s.walk) continue;
     // słupki serwisowe i koła ratunkowe
     for (let t = 6; t < E.len - 2; t += 12) group.add(place(pedestal(0, 0, 0), E.at(t, -1.0), top, E.rotY));
     for (let t = 18; t < E.len - 2; t += 36) group.add(place(lifebuoy(0, 0, 0), E.at(t, -1.4), top, E.rotY + Math.PI));
+    // kosze na śmieci i zwijacze węży (rzadko)
+    for (let t = 27; t < E.len - 3; t += 40) {
+      const bin = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.2, 0.75, 10), mat(0x2f5d3a));
+      body.position.y = 0.375; bin.add(body);
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.05, 10), mat(0x1e3d26)); lid.position.y = 0.77; bin.add(lid);
+      group.add(place(bin, E.at(t, -1.6), top, E.rotY));
+    }
+    for (let t = 14; t < E.len - 3; t += 44) {
+      const reel = new THREE.Group();
+      reel.add(box(0.06, 0.6, 0.06, 0x9aa3ab, 0, 0.3, 0));
+      const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.16, 12), mat(0x3a7d44)); drum.rotation.x = Math.PI / 2; drum.position.y = 0.45; reel.add(drum);
+      group.add(place(reel, E.at(t, -1.2), top, E.rotY));
+    }
     // latarnie na pomostach
     if (s.kind === 'pontoon' || s.kind === 'pier') {
       for (let t = 10; t < E.len; t += 24) {
