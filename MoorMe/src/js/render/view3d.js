@@ -745,8 +745,18 @@ export class View3D {
       const g = fenderGeom(spec, f, rf);
       const k = 1 - comp * 0.5;
       const hy = f.ball ? Math.max(g.r + 0.05, 0.45 + spec.freeboard * 0.1) : f.stern ? 0.55 : 0.5 + spec.freeboard * 0.15;
-      mesh.position.set(g.x - g.n.x * g.r * (1 - k), hy, g.y - g.n.y * g.r * (1 - k));
-      mesh.rotation.set(0, f.stern ? 0 : -Math.atan2(g.n.y, g.n.x), 0);
+      // kołysanie na lince jak wahadło (zawieszenie u góry); dociśnięty do kei – nieruchomy
+      if (mesh.userData.ph === undefined) { let hh = 0; for (const ch of String(f.id)) hh = (hh * 31 + ch.charCodeAt(0)) % 997; mesh.userData.ph = hh / 997 * 6.28; }
+      const free = clamp(1 - comp * 4, 0, 1), ph = mesh.userData.ph;
+      const swA = free * (0.07 + Math.min(0.06, (w.env.windVec ? Math.hypot(w.env.windVec().x, w.env.windVec().z) : 4) * 0.006)) * Math.sin(t * 1.5 + ph) + free * 0.025 * Math.sin(t * 2.7 + ph * 1.7);
+      const swB = free * 0.035 * Math.sin(t * 1.15 + ph * 0.6) + 0.04 * free; // lekko od burty
+      const hh2 = f.ball ? g.r + 0.25 : rf * 2.2; // odległość od środka do punktu zawieszenia
+      const ry = f.stern ? 0 : -Math.atan2(g.n.y, g.n.x);
+      const tx = f.stern ? 0 : -g.n.y, tz = f.stern ? 1 : g.n.x; // styczna do burty w układzie jachtu
+      const nxw = f.stern ? -1 : g.n.x, nzw = f.stern ? 0 : g.n.y;
+      mesh.position.set(g.x - g.n.x * g.r * (1 - k) - tx * hh2 * Math.sin(swA) + nxw * hh2 * Math.sin(swB), hy, g.y - g.n.y * g.r * (1 - k) - tz * hh2 * Math.sin(swA) + nzw * hh2 * Math.sin(swB));
+      mesh.rotation.order = 'YXZ';
+      mesh.rotation.set(swA, ry, swB);
       mesh.scale.set(1 - comp * 0.5, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
     }
 
