@@ -566,7 +566,7 @@ export class View3D {
       const slip = !!fx && line.mode === 'slip';
       const eyeLen = fx && !slip && rr ? Math.min(0.45, ul * 0.3) : 0; // oko na stałe: splot ok. 0,4 m przed polerem
       const e = eyeLen ? { x: b.x - ux * (rr + eyeLen), y: b.y, z: b.z - uz * (rr + eyeLen) } : slip && rr ? { x: b.x, y: b.y, z: b.z } : b;
-      const N = 18;
+      const N = 40; // gęsto – luźna lina układa się na pomoście bez „wgryzania” między punktami
       const strandA = [], strandB = [];
       const smooth = (x0, x1, x) => { const q = Math.min(1, Math.max(0, (x - x0) / (x1 - x0))); return q * q * (3 - 2 * q); };
       for (let i = 1; i <= N; i++) {
@@ -576,7 +576,7 @@ export class View3D {
         let y = a.y + (e.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
         // nad kei lina leży na powierzchni, nad wodą luźna lina tonie (zwis poniżej lustra wody)
         const gy = underwater ? 0 : this.groundY(x, z);
-        if (gy > 0) y = Math.max(y, gy + 0.08);
+        if (gy > 0) y = Math.max(y, gy + 0.045); // leży na powierzchni (promień liny ok. 4 cm)
         if (slip && rr) {
           // dwie nitki: przy burcie razem, przy polerze rozchodzą się na szerokość szyjki
           const o = OFF * Math.min(1, t * 4) + (rr - OFF) * smooth(0.82, 1, t);
@@ -606,7 +606,7 @@ export class View3D {
       if (!this.ropePts) this.ropePts = new Map();
       this.ropePts.set(line.id, pts);
       const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-      const geo = new THREE.TubeGeometry(curve, pts.length * 2, line.isMooring ? 0.035 : 0.04, 8, false);
+      const geo = new THREE.TubeGeometry(curve, Math.min(160, pts.length * 2), line.isMooring ? 0.035 : 0.04, 8, false);
       let mesh = this.ropeMeshes.get(line.id);
       if (!mesh) {
         mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: false }));

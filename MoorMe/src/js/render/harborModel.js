@@ -409,9 +409,9 @@ function lifebuoy(x, z, y) {
 function pedestal(x, z, y) {
   // słupek serwisowy (prąd i woda): zaokrąglony korpus, granatowa czapka z oświetleniem, gniazda i kran
   const g = new THREE.Group();
-  const body = rbox(0.3, 0.92, 0.3, 0.08, 0xf2f2f2, { rough: 0.4 }); g.add(body);
-  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.12, 24), smat(0x1d4e89, { rough: 0.35 })); cap.position.y = 1.0; g.add(cap);
-  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 24), smat(0xfff5d6, { emissive: 0x3a3218, rough: 0.2 })); lens.position.y = 0.935; g.add(lens);
+  const body = rbox(0.3, 0.92, 0.3, 0.025, 0xf2f2f2, { rough: 0.4 }); g.add(body); // kwadratowy korpus z lekko złamanymi krawędziami
+  const cap = rbox(0.36, 0.1, 0.36, 0.025, 0x1d4e89, { rough: 0.35 }); cap.position.y = 0.95; g.add(cap);
+  const lens = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.03, 0.28), smat(0xfff5d6, { emissive: 0x3a3218, rough: 0.2 })); lens.position.y = 0.935; g.add(lens);
   for (const sx of [-0.07, 0.07]) {
     const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 16), smat(0x2f6fb5, { rough: 0.4 })); sock.rotation.x = Math.PI / 2; sock.position.set(sx, 0.62, 0.16); g.add(sock);
   }
@@ -1122,7 +1122,7 @@ export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = Math.round((this.follow ? 80 : 110) * (opts.detail || 1)); // na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 113 : 156) * (opts.detail || 1)); // ok. 2× więcej wierzchołków // na otwartym morzu większe trójkąty (styl low-poly)
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;
@@ -1136,7 +1136,7 @@ export class Water {
     this.tex = waterTexture();
     this.tex.repeat.set(size / 22, size / 22);
     // styl low-poly: płaskie cieniowanie trójkątów, bez tekstur – fasety fal widać dzięki oświetleniu
-    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x5d7688, shininess: 70, transparent: true, opacity: 0.97, vertexColors: true });
+    const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x415566, shininess: 95, transparent: true, opacity: 0.97, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
     const fadeEdge = this.follow;
@@ -1190,7 +1190,7 @@ export class Water {
       this.farTex.needsUpdate = true;
       this.farTex.repeat.set(24000 / 22, 24000 / 22);
       this.farTex.anisotropy = 16;
-      farMat = new THREE.MeshPhongMaterial({ color: 0x0d2f52, flatShading: true, specular: 0x5d7688, shininess: 70 });
+      farMat = new THREE.MeshPhongMaterial({ color: 0x0d2f52, flatShading: true, specular: 0x415566, shininess: 95 });
       farMat.onBeforeCompile = this.patchWater(false);
     } else farMat = new THREE.MeshLambertMaterial({ color: 0x2a7b98 });
     const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 3000, this.follow ? 24000 : 3000), farMat);
