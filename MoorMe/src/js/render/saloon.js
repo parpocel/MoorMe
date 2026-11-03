@@ -124,8 +124,27 @@ function furniture(parent, B) {
   box(0.02, 1.78, 0.6, std(0x3a2a20), 1.75, 0.93, 0, parent); // ciemne wnętrze kabiny dziobowej
   const dr = box(0.03, 1.74, 0.58, woodD, 1.62, 0.93, 0.0, parent); dr.position.set(1.4, 0.93, 0.52); dr.rotation.y = -1.25;
   // grodź rufowa, drzwi do kabin rufowych
-  const ab = box(0.03, 2.0, 3.1, std(0xffffff, { map: woodTex(), rough: 0.5 }), -2.2, 1.0, 0, parent);
-  ab.receiveShadow = true;
+  // grodź z otworem zejściówki nad drabinką (wyjście do kokpitu)
+  const OW = 0.34, OB = 1.36; // półszerokość i dół otworu
+  const abs = new THREE.Shape();
+  abs.moveTo(-1.55, 0); abs.lineTo(1.55, 0); abs.lineTo(1.55, 2.0); abs.lineTo(OW, 2.0); abs.lineTo(OW, OB); abs.lineTo(-OW, OB); abs.lineTo(-OW, 2.0); abs.lineTo(-1.55, 2.0); abs.closePath();
+  const abg = new THREE.ExtrudeGeometry(abs, { depth: 0.03, bevelEnabled: false });
+  abg.rotateY(Math.PI / 2);
+  const ab = new THREE.Mesh(abg, std(0xffffff, { map: woodTex(), rough: 0.5 }));
+  ab.position.set(-2.2, 0, 0); ab.castShadow = ab.receiveShadow = true; parent.add(ab);
+  // rama otworu i deska sztormowa (wsunięta do połowy w prowadnice)
+  for (const sz of [-1, 1]) box(0.06, 2.0 - OB, 0.05, woodD, -2.2, (OB + 2.0) / 2, sz * (OW + 0.025), parent);
+  box(0.06, 0.05, OW * 2 + 0.1, woodD, -2.2, OB - 0.02, 0, parent);
+  box(0.025, 0.16, OW * 2, std(0x3a2a20, { rough: 0.4 }), -2.24, OB + 0.08, 0, parent); // deska sztormowa
+  // widok na kokpit przez zejściówkę: niebo, tekowa podłoga, siedziska i koła sterowe
+  const sky2 = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.6), std(0xcfe8f7, { emissive: 0xbfe2f6, ei: 1.0 }));
+  sky2.rotation.y = Math.PI / 2; sky2.position.set(-3.6, 2.1, 0); sky2.userData.noFade = true; parent.add(sky2);
+  const teak = box(1.3, 0.04, 1.0, std(0xffffff, { map: soleTex(), rough: 0.6 }), -2.9, 1.3, 0, parent); teak.userData.noFade = true;
+  for (const sz of [-1, 1]) { const seat = box(1.2, 0.4, 0.42, std(0xe8e6e1, { rough: 0.7 }), -2.9, 1.5, sz * 0.72, parent); seat.userData.noFade = true; }
+  for (const sz of [-1, 1]) {
+    const wh = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.014, 8, 28), std(0x2a2d33, { metal: 0.6, rough: 0.35 }));
+    wh.rotation.y = Math.PI / 2; wh.position.set(-3.7, 1.82, sz * 0.5); wh.userData.noFade = true; parent.add(wh);
+  }
   for (const s of [-1, 1]) box(0.02, 1.7, 0.55, woodD, -2.18, 0.9, s * 0.85, parent);
   // zejściówka: schodki
   // zejściówka: drabinka wznosi się ku rufie do otwartego luku w dachu; stopnie między dwiema policzkami
@@ -280,6 +299,32 @@ function lifejacket(col = 0xd8352a) {
   return g;
 }
 
+// kamizelka pneumatyczna z szelkami i podwójną lifeliną (trzy haki z zabezpieczeniem)
+function harnessJacket() {
+  const g = lifejacket(0x2c5d9e);
+  const web = std(0xe0582a, { rough: 0.8 }), steel = std(ALU, { metal: 0.9, rough: 0.2 });
+  // szelki: taśmy na ramionach i pas piersiowy z dużym kółkiem D
+  for (const x of [-0.11, 0.11]) box(0.03, 0.42, 0.006, std(0x14161a, { rough: 0.9 }), x, -0.2, 0.05, g);
+  box(0.4, 0.035, 0.008, std(0x14161a, { rough: 0.9 }), 0, -0.36, 0.052, g);
+  const d = new THREE.Mesh(new THREE.TorusGeometry(0.026, 0.005, 6, 16), steel); d.position.set(0, -0.385, 0.06); g.add(d);
+  // lifelina: krótka (1 m) i długa (2 m) odnoga z karabińczykami, zwisające z kółka D
+  const hook = (pt, rot) => {
+    const h2 = new THREE.Group();
+    const arc = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.0055, 6, 16, Math.PI * 1.6), steel); arc.rotation.z = 0.3; h2.add(arc);
+    box(0.006, 0.05, 0.006, steel, 0.025, 0.0, 0, h2); // zapadka
+    h2.position.copy(pt); h2.rotation.z = rot; g.add(h2);
+  };
+  const leg = (pts) => {
+    const c = new THREE.CatmullRomCurve3(pts.map((p) => new THREE.Vector3(...p)));
+    g.add(new THREE.Mesh(new THREE.TubeGeometry(c, 28, 0.007, 6), web));
+    hook(c.getPoint(1), 0.4);
+  };
+  leg([[0, -0.41, 0.06], [0.04, -0.58, 0.07], [0.07, -0.78, 0.06], [0.06, -0.95, 0.05]]);
+  leg([[0, -0.41, 0.06], [-0.05, -0.6, 0.08], [-0.12, -0.85, 0.07], [-0.1, -1.1, 0.05], [-0.04, -1.25, 0.05]]);
+  hook(new THREE.Vector3(0, -0.43, 0.065), 0); // szybkozłączka przy kamizelce
+  return g;
+}
+
 function extinguisher() {
   const g = new THREE.Group();
   cyl(0.06, 0.06, 0.34, std(0xd42a20, { rough: 0.35, metal: 0.2 }), 0, 0.17, 0, g, 20);
@@ -381,8 +426,9 @@ export class SaloonView {
       this.groups.raft = add(liferaft(), 'raft', -1.25, 0, 0.05, 0.15);
       this.groups.jacket = add(lifejacket(0xd8352a), 'jacket', 0.35, 0.535, -1.0, 0.3);
       this.groups.jacket.rotation.x = -Math.PI / 2;
-      const j2 = lifejacket(0xe7c21c); j2.position.set(-1.62, 1.55, 0.52); j2.rotation.y = -Math.PI / 2; j2.rotation.x = -0.04;
-      j2.traverse((o) => { if (o.isMesh) { o.userData.pick = 'jacket'; o.material = o.material.clone(); o.castShadow = true; } }); j2.userData.pick = 'jacket'; scene.add(j2); this.pickables.push(j2);
+      // przy zejściówce: kamizelka z szelkami i lifeliną – zakładana i przypinana przed wyjściem do kokpitu
+      this.groups.harness = add(harnessJacket(), 'harness', -1.62, 1.62, 0.52, -Math.PI / 2);
+      this.groups.harness.rotation.x = -0.04;
       cyl(0.006, 0.006, 0.05, std(0xb9bec6, { metal: 0.9, rough: 0.2 }), -1.63, 1.62, 0.52, scene, 8).rotation.z = Math.PI / 2; // haczyk
       this.groups.extinguisher = add(extinguisher(), 'extinguisher', -1.62, 0.0, -0.5);
       this.groups.flares = add(flares(), 'flares', 0.95, 0.52, 1.0, -0.3);

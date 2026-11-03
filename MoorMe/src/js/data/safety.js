@@ -62,6 +62,16 @@ export function deviceInfo(id) {
         [L('Kontrola', 'Checks'), L('Przed rejsem: butla dokręcona i nieprzebita, wskaźnik automatu zielony, daty ważności, pas krokowy i klamra dopasowane. Raz w roku przegląd (napełnij ustnikiem i sprawdź szczelność przez noc).', 'Before sailing: cylinder screwed in and not pierced, firing head indicator green, expiry dates, crotch strap and buckle adjusted. An annual check (inflate orally and leave it overnight to test for leaks).')]
       ]
     },
+    harness: {
+      name: L('Kamizelka z szelkami i lifeliną', 'Lifejacket with harness and tether'),
+      short: L('Kamizelka pneumatyczna 150 N ze zintegrowanymi szelkami (ISO 12401) i podwójną lifeliną z hakami – przypinasz się nią do linki asekuracyjnej, żeby w ogóle nie wypaść za burtę.', '150 N inflatable lifejacket with an integrated harness (ISO 12401) and a double tether with hooks – you clip on to a jackstay so that you do not go overboard at all.'),
+      sections: [
+        [L('Po co się przypinać', 'Why clip on'), L('Kamizelka utrzyma Cię na wodzie, ale nie wyciągnie z niej – odzyskanie człowieka z wody, zwłaszcza nocą i przy fali, bywa bardzo trudne. Lifelina sprawia, że w ogóle nie wypadniesz za burtę. Zasada: „jedna ręka dla siebie, jedna dla jachtu”.', 'A lifejacket keeps you afloat but will not get you back on board – recovering a person from the water, especially at night and in waves, can be very hard. A tether keeps you from going overboard in the first place. Rule: “one hand for yourself, one for the boat”.')],
+        [L('Lifelina', 'Tether'), L('Taśma z dwiema odnogami: krótką (ok. 1 m) do pracy w kokpicie i przy maszcie oraz długą (ok. 2 m) do przechodzenia po pokładzie. Haki z zabezpieczeniem przed samoczynnym otwarciem, przy kamizelce szybkozłączka, którą da się otworzyć pod obciążeniem (np. gdy jacht wywróci się lub ciągnie Cię w wodzie). Często wskaźnik przeciążenia – po szarpnięciu lifelinę wymienia się.', 'Webbing with two legs: a short one (about 1 m) for the cockpit and the mast, and a long one (about 2 m) for moving along the deck. Self-locking hooks; at the jacket end a quick-release shackle that opens under load (e.g. if the yacht capsizes or drags you through the water). Often an overload indicator – replace the tether after a hard fall.')],
+        [L('Gdzie się przypinać', 'Where to clip on'), L('Przypinasz się jeszcze w zejściówce, zanim wyjdziesz do kokpitu, i odpinasz dopiero na dole. Na pokładzie – do linki asekuracyjnej (jackstay) biegnącej od rufy do dziobu i do mocnych okuć w kokpicie, nigdy do relingu ani want. Przechodząc, przepinaj się tak, by zawsze jeden hak był zapięty. Lina powinna być na tyle krótka, by nie dało się wypaść za burtę.', 'Clip on in the companionway before you step into the cockpit and unclip only below. On deck, clip to the jackstay running from stern to bow and to strong cockpit points, never to the guardrails or shrouds. When moving, swap hooks so that one is always attached. Keep the tether short enough that you cannot fall over the side.')],
+        [L('Kontrola', 'Checks'), L('Jak przy każdej kamizelce pneumatycznej (butla, automat, daty), a do tego: taśmy szelek i lifeliny bez przetarć i odbarwień od słońca, szwy całe, haki domykają się same, kółko D i szybkozłączka działają.', 'As for any inflatable lifejacket (cylinder, firing head, dates), plus: harness and tether webbing without chafe or sun fading, stitching intact, hooks close by themselves, the D-ring and quick release work.')]
+      ]
+    },
     extinguisher: {
       name: L('Gaśnica proszkowa', 'Dry-powder fire extinguisher'),
       short: L('Gaśnica 2 kg ABC przy zejściówce – na pożary materiałów stałych (A), cieczy jak paliwo (B) i gazów (C); nadaje się też do urządzeń elektrycznych do napięcia podanego na etykiecie.', '2 kg ABC extinguisher by the companionway – for fires of solids (A), liquids such as fuel (B) and gases (C); also suitable for electrical equipment up to the voltage on the label.'),
@@ -93,7 +103,7 @@ export function deviceInfo(id) {
   };
   return D[id];
 }
-export const DEVICE_IDS = ['epirb', 'sart', 'vhf', 'raft', 'jacket', 'extinguisher', 'flares', 'firstaid', 'cardMayday', 'cardPan', 'cardSecurite'];
+export const DEVICE_IDS = ['epirb', 'sart', 'vhf', 'raft', 'jacket', 'harness', 'extinguisher', 'flares', 'firstaid', 'cardMayday', 'cardPan', 'cardSecurite'];
 
 // ---------- Kanały VHF (Załącznik 18 Regulaminu Radiokomunikacyjnego ITU + praktyka) ----------
 export function channels() {
