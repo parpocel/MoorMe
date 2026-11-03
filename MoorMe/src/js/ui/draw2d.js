@@ -81,11 +81,10 @@ export function drawHullPlan(ctx, spec, cx, cy, scale) {
   // teak w kokpicie
   const ck0 = xs + 0.02 * L, ck1 = xs + 0.3 * L;
   const ckw = halfBeamAt(spec, (ck0 + ck1) / 2) * 1.32;
-  ctx.fillStyle = '#c99566'; roundRect(ctx, ck0, -ckw / 2, ck1 - ck0, ckw, 0.25); ctx.fill();
-  ctx.strokeStyle = 'rgba(70,45,20,0.35)'; ctx.lineWidth = 0.7 * px;
-  for (let y = -ckw / 2 + 0.12; y < ckw / 2; y += 0.12) { ctx.beginPath(); ctx.moveTo(ck0 + 0.1, y); ctx.lineTo(ck1 - 0.1, y); ctx.stroke(); }
-  // ławki kokpitu
-  ctx.fillStyle = '#ece6df';
+  ctx.fillStyle = '#ecebe7'; roundRect(ctx, ck0, -ckw / 2, ck1 - ck0, ckw, 0.25); ctx.fill(); // biała podłoga kokpitu
+  ctx.strokeStyle = 'rgba(47,68,104,0.18)'; ctx.lineWidth = 1 * px; roundRect(ctx, ck0, -ckw / 2, ck1 - ck0, ckw, 0.25); ctx.stroke();
+  // ławki kokpitu (tekowe gretingi)
+  ctx.fillStyle = '#c99566';
   for (const s of [-1, 1]) roundRect(ctx, ck0 + 0.9, s > 0 ? ckw / 2 - 0.42 : -ckw / 2, ck1 - ck0 - 1.1, 0.42, 0.1), ctx.fill();
   // koła sterowe
   ctx.strokeStyle = '#2f4468'; ctx.lineWidth = 2.4 * px;

@@ -191,42 +191,20 @@ export function smoothNormals(geo, creaseDeg = 50) {
 // Opuszczana platforma kąpielowa w pawęży (jak w serii Cruiser): środkowa część pawęży odchylona do poziomu,
 // tekowy pokład, amortyzatory gazowe, składana drabinka; w otworze widać podłogę kokpitu
 function buildTransomPlatform(spec) {
+  // platforma zamknięta: złożona stanowi środkową część pawęży – widać tylko szczelinę wokół niej i zawiasy na dole
   const g = new THREE.Group();
   const st = hullStations(spec)[0];
   const xs = st[0].x, fb = st[0].y;
-  const hw = Math.min(st[3].w, st[0].w) * 0.78; // połowa szerokości otworu
-  const hingeY = 0.3, depth = Math.min(0.75, spec.loa * 0.055);
-  const teak = new THREE.MeshStandardMaterial({ color: COL.teak, roughness: 0.75 });
-  const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.4 });
+  const hw = Math.min(st[3].w, st[0].w) * 0.78;
+  const y0 = 0.3, y1 = fb - 0.04;
+  const seam = new THREE.MeshStandardMaterial({ color: 0x8e9196, roughness: 0.6 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xd5d9de, metalness: 0.85, roughness: 0.25 });
-  // płyta platformy (spód biały, wierzch tekowy w listwach)
-  const plate = new THREE.Mesh(new THREE.BoxGeometry(depth, 0.08, hw * 2), white);
-  plate.position.set(xs - depth / 2, hingeY, 0); g.add(plate);
-  for (let k = 0; k < 9; k++) {
-    const sl = new THREE.Mesh(new THREE.BoxGeometry(depth - 0.06, 0.012, (hw * 2 - 0.08) / 9 - 0.012), teak);
-    sl.position.set(xs - depth / 2, hingeY + 0.046, -hw + 0.04 + ((k + 0.5) * (hw * 2 - 0.08)) / 9); g.add(sl);
-  }
-  // otwór w pawęży: podłoga kokpitu i stopień widoczne nad platformą
-  const recess = new THREE.Mesh(new THREE.BoxGeometry(0.02, fb - hingeY - 0.05, hw * 2), new THREE.MeshStandardMaterial({ color: 0x6e5236, roughness: 0.8 }));
-  recess.position.set(xs - 0.012, (fb + hingeY) / 2 + 0.02, 0); g.add(recess);
-  const step = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, hw * 2 - 0.04), teak); step.position.set(xs + 0.12, (fb + hingeY) / 2, 0); g.add(step);
+  const add = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); };
+  add(0.012, 0.012, hw * 2, seam, xs - 0.004, y0, 0);
   for (const sz of [-1, 1]) {
-    // amortyzatory gazowe od krawędzi platformy do pawęży
-    const a = new THREE.Vector3(xs - depth * 0.7, hingeY + 0.04, sz * (hw - 0.05)), b2 = new THREE.Vector3(xs - 0.02, fb - 0.25, sz * (hw - 0.05));
-    const len = a.distanceTo(b2);
-    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len, 8), steel);
-    rod.position.copy(a).add(b2).multiplyScalar(0.5); rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b2.clone().sub(a).normalize()); g.add(rod);
-    // zaokrąglone narożniki otworu (obłe krawędzie pawęży)
-    const corner = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, fb - hingeY, 12), white);
-    corner.position.set(xs - 0.005, (fb + hingeY) / 2, sz * (hw + 0.02)); g.add(corner);
+    add(0.012, y1 - y0, 0.012, seam, xs - 0.004, (y0 + y1) / 2, sz * hw);
+    add(0.03, 0.06, 0.16, steel, xs - 0.012, y0 + 0.02, sz * (hw - 0.25)); // zawiasy
   }
-  // składana drabinka kąpielowa na środku krawędzi platformy
-  for (const sz of [-1, 1]) {
-    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8), steel);
-    rail.position.set(xs - depth + 0.03, hingeY - 0.25, sz * 0.17); g.add(rail);
-  }
-  for (let k = 0; k < 3; k++) { const rung = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.36), steel); rung.position.set(xs - depth + 0.03, hingeY - 0.08 - k * 0.17, 0); g.add(rung); }
-  g.traverse((o2) => { if (o2.isMesh) { o2.castShadow = true; o2.receiveShadow = true; } });
   return g;
 }
 
@@ -318,11 +296,18 @@ export function createFlag(spec, code) {
   const fm = new THREE.Mesh(fg, flagMaterial(code));
   fm.userData.keep = true; // nie scalać – ma własny materiał z teksturą
   fm.userData.base = fg.attributes.position.array.slice();
-  flag.add(fm);
+  // bandera obraca się wokół osi pochylonego flagsztoku – krawędź liku przylega do drzewca
+  const swivel = new THREE.Group();
+  swivel.add(fm);
+  swivel.rotation.y = Math.PI / 2;
+  flag.add(swivel);
   const fbC = sheerHeight(spec, xs + 0.03 * spec.loa);
-  flag.position.set(xs - 0.2, fbC + 1.28, spec.beam * 0.3); // top flagsztoku
-  flag.rotation.y = Math.PI / 2;
+  const top = new THREE.Vector3(xs - 0.2, fbC + 1.3, spec.beam * 0.3), foot = new THREE.Vector3(xs + 0.1, fbC + 0.2, spec.beam * 0.3);
+  const axis = top.clone().sub(foot).normalize();
+  flag.position.copy(top).addScaledVector(axis, -0.02);
+  flag.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis);
   flag.userData.cloth = fm;
+  flag.userData.swivel = swivel;
   return flag;
 }
 
@@ -418,7 +403,7 @@ export function buildBoat(spec, opts = {}) {
   const ck0 = xs + 0.03 * L, ck1 = cabin.userData.x0 - 0.05;
   const ckw = halfBeamAt(spec, (ck0 + ck1) / 2) * 1.35;
   const fbC = sheerHeight(spec, ck0);
-  heel.add(box(ck1 - ck0, 0.05, ckw, COL.teak, (ck0 + ck1) / 2, fbC + 0.01, 0));
+  heel.add(box(ck1 - ck0, 0.05, ckw, 0xe9e7e2, (ck0 + ck1) / 2, fbC + 0.01, 0)); // biała, antypoślizgowa podłoga kokpitu
   for (const s of [-1, 1]) heel.add(box((ck1 - ck0) * 0.7, 0.35, 0.45, 0xe8e6e1, ck1 - (ck1 - ck0) * 0.38, fbC + 0.2, s * (ckw / 2 - 0.2)));
   // tekowe listwy (greting) na ławkach kokpitu: listwy wzdłuż ławki z ciemnymi szczelinami
   for (const s of [-1, 1]) {
@@ -426,15 +411,39 @@ export function buildBoat(spec, opts = {}) {
     heel.add(box(bl, 0.02, 0.42, 0x3b2a1b, bx, fbC + 0.385, bz)); // podkład – ciemne szczeliny
     for (let k = 0; k < 6; k++) heel.add(box(bl, 0.03, 0.055, COL.teak, bx, fbC + 0.405, bz - 0.175 + k * 0.07));
   }
-  // oparcia za ławkami (wysokie zrębnice kokpitu jak w serii Cruiser) z tekową listwą na górze
-  for (const s of [-1, 1]) {
-    const bx = ck1 - (ck1 - ck0) * 0.38, bl = (ck1 - ck0) * 0.7, bz = s * (ckw / 2 + 0.06);
-    const back = box(bl, 0.4, 0.07, 0xe8e6e1, bx, fbC + 0.6, bz);
-    back.rotation.x = s * 0.12; // lekko odchylone na zewnątrz
-    heel.add(back);
-    const cap = box(bl, 0.035, 0.1, COL.teak, bx, fbC + 0.81, bz + s * 0.025);
-    cap.rotation.x = s * 0.12;
-    heel.add(cap);
+  // oparcia za ławkami = zrębnice kokpitu wyprofilowane w laminacie pokładu: wewnątrz pochylone oparcie,
+  // obła krawędź, na zewnątrz łagodny spadek do pokładu bocznego; z przodu wchodzą w nadbudówkę
+  {
+    const zIn = ckw / 2 + 0.02, zOut = Math.max(zIn + 0.32, halfBeamAt(spec, (ck0 + ck1) / 2) - 0.32);
+    const y0 = -0.02, yS = 0.4, yT = 0.82; // wysokości względem pokładu kokpitu
+    const sh = new THREE.Shape();
+    sh.moveTo(zIn, y0); sh.lineTo(zIn, yS); sh.lineTo(zIn + 0.05, yT - 0.06);
+    sh.quadraticCurveTo(zIn + 0.06, yT, zIn + 0.13, yT);
+    sh.quadraticCurveTo(zIn + 0.2, yT, zIn + 0.24, yT - 0.12);
+    sh.quadraticCurveTo((zIn + zOut) / 2 + 0.08, 0.22, zOut, 0.03);
+    sh.lineTo(zOut, y0); sh.closePath();
+    const len = (ck1 - ck0) * 0.82;
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: len, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.02, bevelSegments: 5, curveSegments: 10 });
+    geo.rotateY(Math.PI / 2); // wzdłuż jachtu
+    const sm = smoothNormals(geo, 40);
+    const cm = new THREE.MeshStandardMaterial({ color: COL.deck, roughness: 0.5, side: THREE.DoubleSide });
+    for (const s of [-1, 1]) {
+      const g2 = sm.clone();
+      if (s > 0) {
+        g2.scale(1, 1, -1);
+        // odbicie lustrzane odwraca kolejność wierzchołków – przywracamy ją, żeby ściany były przednie (jasne)
+        for (const name of ['position', 'normal', 'uv']) {
+          const at = g2.attributes[name]; if (!at) continue;
+          const a = at.array, k = at.itemSize;
+          for (let i = 0; i < a.length; i += 3 * k) for (let j = 0; j < k; j++) { const t = a[i + k + j]; a[i + k + j] = a[i + 2 * k + j]; a[i + 2 * k + j] = t; }
+          at.needsUpdate = true;
+        }
+      }
+      const m = new THREE.Mesh(g2, cm);
+      m.position.set(ck1 + 0.12 - len, fbC, 0);
+      m.castShadow = true; m.receiveShadow = true;
+      heel.add(m);
+    }
   }
   root.userData.seatSpot = [ck1 - (ck1 - ck0) * 0.38, fbC + 0.43, ckw / 2 - 0.2];
   heel.add(box(0.9, 0.06, 0.55, COL.teak, ck1 - (ck1 - ck0) * 0.45, fbC + 0.75, 0));

@@ -92,12 +92,12 @@ export function buildBollard(kind) {
     const m = CLEAT_MAT;
     const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.025, 20), m); base.scale.set(2.1, 1, 0.75); base.position.y = 0.012; g.add(base);
     for (const sx of [-1, 1]) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.042, 0.075, 12), m); leg.scale.z = 0.8; leg.position.set(sx * 0.075, 0.06, 0); g.add(leg);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.046, 0.15, 12), m); leg.scale.z = 0.8; leg.position.set(sx * 0.08, 0.095, 0); g.add(leg);
       for (const sz of [-1, 1]) { const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.01, 8), BOLT_MAT); bolt.position.set(sx * 0.17, 0.028, sz * 0.035); g.add(bolt); }
     }
     const horn = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.34, 6, 12), m);
-    horn.rotation.z = Math.PI / 2; horn.scale.set(0.85, 1, 1); horn.position.y = 0.105; g.add(horn);
-    const hump = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 8), m); hump.scale.set(2.2, 0.8, 0.9); hump.position.y = 0.11; g.add(hump);
+    horn.rotation.z = Math.PI / 2; horn.scale.set(0.85, 1, 1); horn.position.y = 0.18; g.add(horn);
+    const hump = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 8), m); hump.scale.set(2.2, 0.8, 0.9); hump.position.y = 0.185; g.add(hump);
   } else if (kind === 'ring') {
     const t = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 5, 10), mat(0xbfc5cc, { metal: 0.8, rough: 0.3 }));
     t.rotation.x = Math.PI / 2;
@@ -446,8 +446,8 @@ function addEdgeDetails(group, s, r, lamps) {
     if (style === 'stone' || style === 'concrete') {
       const stone = style === 'stone';
       // gzyms krawędzi lekko wysunięty nad wodę, na betonie żółty pas ostrzegawczy
-      group.add(place(box(E.len, 0.14, 0.75, stone ? 0xd9ceb8 : 0xc9c5bb, 0, 0, 0), E.at(E.len / 2, -0.3), top + 0.05, E.rotY));
-      if (!stone) group.add(place(box(E.len, 0.012, 0.12, 0xe8c547, 0, 0, 0), E.at(E.len / 2, -0.12), top + 0.125, E.rotY));
+      group.add(place(box(E.len, 0.14, 0.75, stone ? 0xd9ceb8 : 0xc9c5bb, 0, 0, 0), E.at(E.len / 2, -0.3), top - 0.03, E.rotY)); // gzyms prawie równo z kejką – liny na nim leżą
+      if (!stone) group.add(place(box(E.len, 0.012, 0.12, 0xe8c547, 0, 0, 0), E.at(E.len / 2, -0.12), top + 0.045, E.rotY));
       // spoiny ściany (poziome co ok. 0,5 m, w kamieniu przesunięte spoiny pionowe)
       for (let y = top - 0.5; y > -0.2; y -= stone ? 0.45 : 0.9) group.add(place(box(E.len, 0.025, 0.03, stone ? 0x8c8270 : 0x8f8b82, 0, 0, 0), E.at(E.len / 2, 0.06), y, E.rotY));
       if (stone) {
@@ -1110,19 +1110,20 @@ function rippleTexture() {
 
 // Woda – animowana siatka z sumą kilku fal (gładkie normalne, delikatny połysk)
 const WAVES = [
-  // (siatka ma ~3,5 m oczka – fale krótsze niż ~10 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
+  // (siatka ma ~2,3 m oczka – fale krótsze niż ~6 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
   { d: 0, k: 0.42, w: 1.3, a: 1.0 },
   { d: 0.5, k: 0.55, w: 1.5, a: 0.5 },
   { d: -0.7, k: 0.3, w: 1.05, a: 0.6 },
   { d: 1.4, k: 0.22, w: 0.85, a: 0.6 },
-  { d: -0.25, k: 0.62, w: 1.6, a: 0.3 }
+  { d: -0.25, k: 0.62, w: 1.6, a: 0.3 },
+  { d: 0.9, k: 0.95, w: 2.0, a: 0.16 } // krótsza fala – widoczna dzięki gęstszej siatce
 ];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = Math.round((this.follow ? 113 : 156) * (opts.detail || 1)); // ok. 2× więcej wierzchołków // na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 165 : 228) * (opts.detail || 1)); // gęsta siatka (oczko ok. 2,3 m) // na otwartym morzu większe trójkąty (styl low-poly)
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;

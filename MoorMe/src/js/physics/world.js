@@ -16,7 +16,7 @@ function aabb(poly) {
 }
 
 // wysokość punktu zaczepienia liny nad podstawą polera (szyjka polera, róg knagi, pierścień, obejma dalby)
-export const TARGET_DY = { bollard: 0.3, cleat: 0.11, ring: 0.07, pile: 0 }; // lina na szyjce polera / pod rogiem knagi
+export const TARGET_DY = { bollard: 0.3, cleat: 0.15, ring: 0.07, pile: 0 }; // lina na szyjce polera / pod rogiem knagi
 
 export class World {
   /**

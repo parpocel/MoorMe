@@ -575,11 +575,13 @@ export class View3D {
         const x = a.x + (e.x - a.x) * t, z = a.z + (e.z - a.z) * t;
         let y = a.y + (e.y - a.y) * t - Math.sin(Math.PI * t) * sag * Math.min(1, t * 4);
         // nad kei lina leży na powierzchni, nad wodą luźna lina tonie (zwis poniżej lustra wody)
-        const gy = underwater ? 0 : this.groundY(x, z);
-        if (gy > 0) y = Math.max(y, gy + 0.045); // leży na powierzchni (promień liny ok. 4 cm)
+        // najwyższy punkt pod liną (z marginesem – także tuż przy krawędzi kei / pomostu)
+        let gy = 0;
+        if (!underwater) for (const [ox, oz] of [[0, 0], [0.15, 0], [-0.15, 0], [0, 0.15], [0, -0.15]]) gy = Math.max(gy, this.groundY(x + ox, z + oz));
+        if (gy > 0) y = Math.max(y, gy + 0.09); // leży na powierzchni (promień liny ok. 4 cm + detale krawędzi)
         if (slip && rr) {
           // dwie nitki: przy burcie razem, przy polerze rozchodzą się na szerokość szyjki
-          const o = OFF * Math.min(1, t * 4) + (rr - OFF) * smooth(0.82, 1, t);
+          const o = 0.02 + (rr - 0.02) * t; // jedno długie, wąskie „V”: od kluzy razem, ku polerowi równomiernie się rozchodzą
           strandA.push(new THREE.Vector3(x + nx * o, y, z + nz * o));
           strandB.push(new THREE.Vector3(x - nx * o, y, z - nz * o));
         } else pts.push(new THREE.Vector3(x, y, z));
@@ -672,7 +674,7 @@ export class View3D {
     // windex – wskazuje kierunek wiatru pozornego
     if (this.boat.userData.windex && b.dbg.appAngle !== undefined) this.boat.userData.windex.rotation.y = -b.dbg.appAngle + Math.PI;
     if (this.boat.userData.flag && b.dbg.appAngle !== undefined) {
-      this.boat.userData.flag.rotation.y = -b.dbg.appAngle + Math.PI / 2 + Math.sin(t * 2.2) * 0.06;
+      (this.boat.userData.flag.userData.swivel || this.boat.userData.flag).rotation.y = -b.dbg.appAngle + Math.PI / 2 + Math.sin(t * 2.2) * 0.06;
       waveFlag(this.boat.userData.flag, t, Math.hypot(w.env.windVec().x, w.env.windVec().z) / 0.5144);
     }
 
@@ -724,7 +726,7 @@ export class View3D {
         if (!n._flag) continue;
         const c = Math.cos(n.th), s = Math.sin(n.th);
         const mx = wv.x * c + wv.z * s, mz = -wv.x * s + wv.z * c;
-        n._flag.rotation.y = Math.atan2(-mx, -mz) + Math.sin(t * 2 + n._flagPhase) * Math.min(0.12, 0.03 + wsp * 0.006);
+        (n._flag.userData.swivel || n._flag).rotation.y = Math.atan2(-mx, -mz) + Math.sin(t * 2 + n._flagPhase) * Math.min(0.12, 0.03 + wsp * 0.006);
         waveFlag(n._flag, t, wsp / 0.5144, n._flagPhase);
       }
     }
