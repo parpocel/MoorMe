@@ -806,7 +806,7 @@ export class SimScreen {
         h('button.btn', { onclick: () => back.remove() }, 'Anuluj'),
         h('button.btn.primary', {
           onclick: () => {
-            const opts = { role: st.role, name: `${ROLE_NAMES[st.role]} (${w.deckItem(st.cleatId).label.split(' ').pop()})`, cleatId: st.cleatId, length: st.length, mode: st.mode, winch: st.winch };
+            const opts = { role: st.role, name: w.lineName(st.role, w.deckItem(st.cleatId)), cleatId: st.cleatId, length: st.length, mode: st.mode, winch: st.winch };
             if (st.fairleadId === 'none') opts.fairleadId = null;
             else if (st.fairleadId !== 'auto') opts.fairleadId = st.fairleadId;
             const line = w.addLine(opts);

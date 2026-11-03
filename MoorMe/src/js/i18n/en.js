@@ -174,7 +174,7 @@ export const EN = {
   'Wybieranie na pokład…': 'Hauling aboard…', 'Linka pilotowa przy kei': 'Pilot line at the quay', 'Tonie (uwaga na śrubę!)': 'Sinking (mind the propeller!)',
   'ZERWANA': 'BROKEN', 'Czeka na załogę…': 'Waiting for crew…',
   'Zaknagowana': 'Made fast', 'Wybieranie': 'Hauling', 'Wybieranie do napięcia': 'Taking up', 'Luzowanie': 'Easing', 'Luz': 'Slack',
-  'Cuma dziobowa': 'Bow line', 'Cuma rufowa': 'Stern line', 'Szpring dziobowy': 'Forward spring', 'Szpring rufowy': 'Aft spring', 'Brest dziobowy': 'Forward breast line', 'Brest rufowy': 'Aft breast line',
+  'Holender': 'Midship line', 'Cuma dziobowa': 'Bow line', 'Cuma rufowa': 'Stern line', 'Szpring dziobowy': 'Forward spring', 'Szpring rufowy': 'Aft spring', 'Brest dziobowy': 'Forward breast line', 'Brest rufowy': 'Aft breast line',
   'Cuma boczna': 'Side line', 'Cuma boczna (Y-bom)': 'Side line (Y-boom)', 'Muring': 'Lazy line', 'Cuma rufowa – dalba A': 'Stern line – pile A', 'Cuma rufowa – dalba B': 'Stern line – pile B',
   'Cuma dziobowa – dalba A': 'Bow line – pile A', 'Cuma dziobowa – dalba B': 'Bow line – pile B',
   'na biegowo': 'slip', 'na stałe': 'fixed', 'muring': 'lazy line', 'kabestan': 'winch', 'wyskoczyła z półkluzy!': 'jumped out of the chock!', 'poler nie wskazany': 'no bollard chosen',

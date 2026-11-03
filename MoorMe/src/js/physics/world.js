@@ -231,6 +231,12 @@ export class World {
     return line;
   }
   // Rola liny z geometrii: skąd (knaga) i dokąd (poler) prowadzi
+  // nazwa liny: z knagi na śródokręciu – „Holender”, w pozostałych miejscach wg roli (dziobowa, szpring…)
+  lineName(role, cleat) {
+    const L = this.spec.loa, mid = cleat && Math.abs(cleat.x) <= 0.2 * L;
+    return `${mid && role !== 'mooring' ? 'Holender' : ROLE_NAMES[role]} ${cleat && cleat.y < 0 ? 'L' : 'P'}`;
+  }
+
   inferRole(cleat, bollard) {
     const b = this.boat, L = this.spec.loa;
     const loc = worldToLocal(b.x, b.z, b.th, bollard.x, bollard.z);
@@ -260,7 +266,7 @@ export class World {
     const fl = tmp.fairleadId ? this.deckItem(tmp.fairleadId) : null;
     const line = this.addLine({
       role,
-      name: `${ROLE_NAMES[role]} ${cleat.y < 0 ? 'L' : 'P'}`,
+      name: this.lineName(role, cleat),
       cleatId,
       fairleadId: tmp.fairleadId,
       length,
@@ -359,7 +365,7 @@ export class World {
       const cleat = this.findCleat(p.where, side || 1);
       const line = this.addLine({
         role: p.role,
-        name: p.name || ROLE_NAMES[p.role] + (p.role !== 'mooring' ? (side < 0 ? ' L' : ' P') : ''),
+        name: p.name || (p.role === 'mooring' ? ROLE_NAMES[p.role] : this.lineName(p.role, cleat)),
         cleatId: cleat.id,
         length: p.len,
         mode: this.cfg.scenario === 'unmoor' && p.role !== 'mooring' ? 'slip' : 'fixed',
@@ -1168,8 +1174,7 @@ export class World {
       if (l.state !== 'attached' || l.isMooring || !l.target || !ROLE_NAMES[l.role]) continue;
       const cleat = this.deckItem(l.cleatId);
       if (!cleat) continue;
-      const suffix = cleat.y < 0 ? ' L' : ' P';
-      if (l.name !== ROLE_NAMES[l.role] + suffix) continue; // nazwy własne (dalby, Y-bomy) zostają
+      if (l.name !== this.lineName(l.role, cleat)) continue; // nazwy własne (dalby, Y-bomy) zostają
       const role = this.inferRole(cleat, l.target);
       if (role === l.role || role === 'side') { l._roleT = 0; continue; }
       if (l._roleCand !== role) { l._roleCand = role; l._roleT = 0; }
@@ -1177,9 +1182,9 @@ export class World {
       if (l._roleT > 1.5) {
         const old = l.name;
         l.role = role;
-        l.name = ROLE_NAMES[role] + suffix;
+        l.name = this.lineName(role, cleat);
         l._roleT = 0;
-        this.log(`${old} pracuje teraz jako ${ROLE_NAMES[role].toLowerCase()} – nowa nazwa: ${l.name}`);
+        if (l.name !== old) this.log(`${old} pracuje teraz jako ${ROLE_NAMES[role].toLowerCase()} – nowa nazwa: ${l.name}`); // holender zostaje holendrem
       }
     }
   }
