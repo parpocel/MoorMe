@@ -77,17 +77,27 @@ function setUVWorld(geo, scale = 0.25) {
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
 }
 
+const BOLLARD_MAT = new THREE.MeshStandardMaterial({ color: 0x2d2f33, metalness: 0.45, roughness: 0.5 });
+const CLEAT_MAT = new THREE.MeshStandardMaterial({ color: 0xc3c9d0, metalness: 0.85, roughness: 0.32 });
+const BOLT_MAT = new THREE.MeshStandardMaterial({ color: 0x8a9098, metalness: 0.9, roughness: 0.4 });
 export function buildBollard(kind) {
   const g = new THREE.Group();
   if (kind === 'bollard') {
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.42, 8), mat(0x2d2f33, { rough: 0.5, metal: 0.4 }));
-    b.position.y = 0.21;
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.1, 8), mat(0x2d2f33, { rough: 0.5, metal: 0.4 }));
-    cap.position.y = 0.45;
-    g.add(b, cap);
+    // żeliwny poler: profil toczony (lathe) – stopa, szyjka i wywinięta głowica
+    const prof = [[0, 0], [0.24, 0], [0.24, 0.04], [0.19, 0.07], [0.16, 0.14], [0.155, 0.32], [0.18, 0.38], [0.26, 0.42], [0.27, 0.46], [0.24, 0.5], [0, 0.51]].map(([r, yy]) => new THREE.Vector2(r, yy));
+    const b = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), BOLLARD_MAT);
+    g.add(b);
   } else if (kind === 'cleat') {
-    g.add(box(0.36, 0.06, 0.08, 0xbfc5cc, 0, 0.1, 0, { metal: 0.8, rough: 0.3 }));
-    g.add(box(0.1, 0.1, 0.07, 0xbfc5cc, 0, 0.05, 0, { metal: 0.8, rough: 0.3 }));
+    // aluminiowa knaga pomostowa (odlew): owalna podstawa ze śrubami, dwie nóżki i róg z zaokrąglonymi końcami
+    const m = CLEAT_MAT;
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.11, 0.025, 20), m); base.scale.set(2.1, 1, 0.75); base.position.y = 0.012; g.add(base);
+    for (const sx of [-1, 1]) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.042, 0.075, 12), m); leg.scale.z = 0.8; leg.position.set(sx * 0.075, 0.06, 0); g.add(leg);
+      for (const sz of [-1, 1]) { const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.01, 8), BOLT_MAT); bolt.position.set(sx * 0.17, 0.028, sz * 0.035); g.add(bolt); }
+    }
+    const horn = new THREE.Mesh(new THREE.CapsuleGeometry(0.026, 0.34, 6, 12), m);
+    horn.rotation.z = Math.PI / 2; horn.scale.set(0.85, 1, 1); horn.position.y = 0.105; g.add(horn);
+    const hump = new THREE.Mesh(new THREE.SphereGeometry(0.034, 12, 8), m); hump.scale.set(2.2, 0.8, 0.9); hump.position.y = 0.11; g.add(hump);
   } else if (kind === 'ring') {
     const t = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.022, 5, 10), mat(0xbfc5cc, { metal: 0.8, rough: 0.3 }));
     t.rotation.x = Math.PI / 2;
@@ -299,13 +309,33 @@ function lighthouse(color) {
   return g;
 }
 
+// gładko cieniowane materiały dla drobnej architektury nabrzeża (bez kanciastych faset)
+const SMATS = new Map();
+function smat(color, o = {}) {
+  const k = color + JSON.stringify(o);
+  if (!SMATS.has(k)) SMATS.set(k, new THREE.MeshStandardMaterial({ color, roughness: o.rough ?? 0.55, metalness: o.metal ?? 0, emissive: o.emissive ?? 0x000000 }));
+  return SMATS.get(k);
+}
+function rbox(w, h, d, r, color, o) { // prostopadłościan z zaokrąglonymi pionowymi krawędziami
+  const sh = new THREE.Shape(), x = w / 2 - r, z = d / 2 - r;
+  sh.moveTo(-x, -d / 2); sh.lineTo(x, -d / 2); sh.quadraticCurveTo(w / 2, -d / 2, w / 2, -z); sh.lineTo(w / 2, z); sh.quadraticCurveTo(w / 2, d / 2, x, d / 2);
+  sh.lineTo(-x, d / 2); sh.quadraticCurveTo(-w / 2, d / 2, -w / 2, z); sh.lineTo(-w / 2, -z); sh.quadraticCurveTo(-w / 2, -d / 2, -x, -d / 2);
+  const g = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: true, bevelThickness: Math.min(0.03, h * 0.1), bevelSize: Math.min(0.02, r * 0.5), bevelSegments: 3, curveSegments: 6 });
+  g.rotateX(-Math.PI / 2); g.translate(0, 0, 0);
+  const m = new THREE.Mesh(g, smat(color, o)); m.castShadow = true; return m;
+}
+
 function lamp(x, z, y) {
+  // latarnia: stopa, smukły słup, ramię i klosz z zadaszeniem
   const g = new THREE.Group();
-  const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 4, 5), mat(0x2d3436));
-  p.position.y = 2;
-  const h = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.25, 0.35), mat(0xfff5d6, { emissive: 0x332a10 }));
-  h.position.y = 4.1;
-  g.add(p, h);
+  const dark = smat(0x2d3436, { metal: 0.6, rough: 0.4 });
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 0.25, 20), dark); foot.position.y = 0.12;
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.075, 3.9, 16), dark); p.position.y = 2.1;
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.02, 8, 16), dark); ring.rotation.x = Math.PI / 2; ring.position.y = 3.3;
+  const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.1, 0.32, 20), smat(0xfff5d6, { emissive: 0x332a10, rough: 0.2 })); glass.position.y = 4.15;
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.16, 20), dark); roof.position.y = 4.39;
+  const fin = new THREE.Mesh(new THREE.SphereGeometry(0.035, 10, 8), dark); fin.position.y = 4.49;
+  g.add(foot, p, ring, glass, roof, fin);
   g.position.set(x, y, z);
   g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
@@ -361,28 +391,34 @@ function planter(r, x, z, y) {
 }
 
 function lifebuoy(x, z, y) {
+  // koło ratunkowe na stojaku: okrągły słupek, uchwyt, koło z białymi pasami i linką
   const g = new THREE.Group();
-  g.add(box(0.1, 1.4, 0.1, 0xc0392b, 0, 0.7, 0));
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.07, 6, 16), mat(0xf26b21));
-  ring.position.set(0, 1.05, 0.09);
-  g.add(ring);
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 1.4, 16), smat(0xc0392b, { rough: 0.45 })); post.position.y = 0.7; g.add(post);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.07, 14, 36), smat(0xf26b21, { rough: 0.6 }));
+  ring.position.set(0, 1.05, 0.11); g.add(ring);
   for (let k = 0; k < 4; k++) {
-    const a = (k * Math.PI) / 2 + Math.PI / 4;
-    const seg = box(0.13, 0.16, 0.16, 0xffffff, Math.cos(a) * 0.3, 1.05 + Math.sin(a) * 0.3, 0.09);
-    seg.rotation.z = a;
-    g.add(seg);
+    const seg = new THREE.Mesh(new THREE.TorusGeometry(0.3, 0.072, 14, 8, 0.32), smat(0xffffff, { rough: 0.6 }));
+    seg.rotation.z = (k * Math.PI) / 2 + Math.PI / 4 - 0.16; seg.position.set(0, 1.05, 0.11); g.add(seg);
   }
+  const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.14, 8), smat(0x9aa3ab, { metal: 0.8, rough: 0.3 })); hook.rotation.x = Math.PI / 2; hook.position.set(0, 1.33, 0.06); g.add(hook);
   g.position.set(x, y, z);
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }
 
 function pedestal(x, z, y) {
+  // słupek serwisowy (prąd i woda): zaokrąglony korpus, granatowa czapka z oświetleniem, gniazda i kran
   const g = new THREE.Group();
-  g.add(box(0.32, 0.95, 0.32, 0xf2f2f2, 0, 0.47, 0));
-  g.add(box(0.36, 0.12, 0.36, 0x1d4e89, 0, 1.0, 0));
-  g.add(box(0.1, 0.06, 0.02, 0x3ddc84, 0, 0.8, 0.17, { emissive: 0x1a6b3a }));
-  g.add(box(0.2, 0.14, 0.02, 0x2d3436, 0, 0.55, 0.17));
+  const body = rbox(0.3, 0.92, 0.3, 0.08, 0xf2f2f2, { rough: 0.4 }); g.add(body);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.2, 0.12, 24), smat(0x1d4e89, { rough: 0.35 })); cap.position.y = 1.0; g.add(cap);
+  const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.03, 24), smat(0xfff5d6, { emissive: 0x3a3218, rough: 0.2 })); lens.position.y = 0.935; g.add(lens);
+  for (const sx of [-0.07, 0.07]) {
+    const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.04, 16), smat(0x2f6fb5, { rough: 0.4 })); sock.rotation.x = Math.PI / 2; sock.position.set(sx, 0.62, 0.16); g.add(sock);
+  }
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), smat(0x3ddc84, { emissive: 0x1a6b3a })); led.position.set(0, 0.78, 0.155); g.add(led);
+  const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.09, 10), smat(0xb9bfc6, { metal: 0.8, rough: 0.3 })); tap.rotation.x = Math.PI / 2; tap.position.set(0, 0.45, 0.18); g.add(tap);
   g.position.set(x, y, z);
+  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   return g;
 }
 
@@ -923,6 +959,8 @@ export function buildHarbor(H, scene) {
   for (const b of H.bollards) {
     const m = buildBollard(b.kind);
     m.position.set(b.x, b.h, b.z);
+    // knaga ustawiona wzdłuż krawędzi pomostu (prostopadle do kierunku na wodę)
+    if (b.kind === 'cleat' && b.approach) m.rotation.y = -Math.atan2(b.approach.z - b.z, b.approach.x - b.x) + Math.PI / 2;
     m.userData.bollard = b;
     group.add(m);
     const hit = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));

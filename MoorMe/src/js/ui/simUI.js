@@ -278,7 +278,7 @@ export class SimScreen {
     w.lines.forEach((line, idx) => {
       const tval = h('span.lr-val');
       const tbar = h('div.lr-bar', {}, h('div'));
-      const row = h('div.line-row', { class: line === this.selectedLine ? 'sel' : '', onclick: (e) => { this.selectedLine = line; this.renderLines(true); const r = row.getBoundingClientRect(); this.openRadial(line, r.right + 10, r.top + r.height / 2); } },
+      const row = h('div.line-row', { class: line === this.selectedLine ? 'sel' : '', onclick: (e) => { const r = row.getBoundingClientRect(); this.selectedLine = line; this.renderLines(true); this.openRadial(line, r.right + 10, r.top + r.height / 2); } }, // pozycja odczytana przed przebudową listy
         h('b', {}, `${idx + 1}`), h('span.lr-name', {}, line.name), h('span.lr-st', { class: line.state }, LINE_STATE_LABEL[line.state] || line.state), tval, line.state === 'attached' ? tbar : null);
       this.lineBars.set(line.id, { tval, tbar: tbar.firstChild });
       this.linesList.appendChild(row);
@@ -623,7 +623,8 @@ export class SimScreen {
     this.tooltip.style.display = 'none';
     const w = this.world;
     const opts = [];
-    const act = (label, icon, fn, cls = '', defer = false) => opts.push({ label, icon, fn, cls, defer });
+    const act = (label, icon, fn, cls = '', defer = false, stay = false) => opts.push({ label, icon, fn, cls, defer, stay });
+    this._radialArgs = [line, px, py, extra];
     if (extra.choose) {
       // wybór cumy na knadze – po kliknięciu otwiera się menu pracy na tej cumie
       for (const l of extra.choose) act(l.name, `${w.lines.indexOf(l) + 1}`, () => { this.selectedLine = l; this.renderLines(true); this.openRadial(l, px, py, { cleat: extra.cleat }); }, l.state === 'attached' ? 'on' : '', true);
@@ -648,7 +649,7 @@ export class SimScreen {
       act('Załóż', '⚓', () => this.attachOrPick(line));
       act('Usuń', '🗑', () => w.removeLine(line), 'danger');
     }
-    if (['attached', 'ready', 'onQuay', 'queued'].includes(line.state)) act(line.winch ? 'Kabestan ✓' : 'Kabestan', '⚙', () => { line.winch = !line.winch; }, line.winch ? 'on' : '');
+    if (['attached', 'ready', 'onQuay', 'queued'].includes(line.state)) act(line.winch ? 'Kabestan ✓' : 'Kabestan', '⚙', () => { line.winch = !line.winch; }, line.winch ? 'on' : '', false, true);
     if (line.state === 'ready' && !line.isMooring) act(line.mode === 'slip' ? 'Na stałe' : 'Na biegowo', '⇄', () => w.toggleMode(line));
     const cl = extra.cleat || w.deckItem(line.cleatId);
     if (cl) act('Nowa lina', '＋', () => this.rigFromCleat(cl), '', true);
@@ -685,6 +686,7 @@ export class SimScreen {
         this.closeRadial();
         this.renderLines(true);
         if (o.defer) o.fn(); // np. otwarcie kolejnego menu – dopiero po zamknięciu bieżącego
+        if (o.stay && this._radialArgs) this.openRadial(...this._radialArgs); // przełączniki (kabestan) – menu zostaje otwarte
       });
       menu.appendChild(b);
     });

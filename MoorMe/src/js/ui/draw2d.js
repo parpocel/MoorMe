@@ -207,7 +207,7 @@ export function drawFenderPretty(ctx, spec, f, rf, sel, px) {
   ctx.shadowColor = 'rgba(20,30,60,0.35)'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 2;
   if (p.ball) {
     const g = ctx.createRadialGradient(-p.r * 0.35, -p.r * 0.35, p.r * 0.1, 0, 0, p.r);
-    g.addColorStop(0, '#ffb08a'); g.addColorStop(0.55, '#e2673e'); g.addColorStop(1, '#9c3d1e');
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#eceeef'); g.addColorStop(1, '#a9b2bb');
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
     ctx.shadowColor = 'transparent';
     ctx.strokeStyle = '#1d3557'; ctx.lineWidth = 1.2 * px; ctx.beginPath(); ctx.arc(0, -p.r * 0.85, p.r * 0.14, 0, Math.PI * 2); ctx.stroke();
@@ -257,7 +257,7 @@ export function drawFender(ctx, spec, f, rf, sel) {
   ctx.lineWidth = 0.04;
   ctx.beginPath();
   if (p.ball) {
-    ctx.fillStyle = sel ? '#ffd166' : '#e2673e';
+    ctx.fillStyle = sel ? '#ffd166' : '#f4f4f1';
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
   } else {
     ctx.fillStyle = sel ? '#ffd166' : '#f5f5f5';

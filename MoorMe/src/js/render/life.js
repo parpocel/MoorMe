@@ -133,7 +133,7 @@ export class HarbourLife {
     this.buildGulls();
     this.buildPeople();
     this.buildCats();
-    this.buildMotorboat();
+    // bez motorówki krążącej po porcie
   }
 
   // ---------- Mewy ----------
@@ -492,7 +492,7 @@ export class HarbourLife {
     for (const g of this.gulls) this.updateGull(g, dt);
     this.updatePeople(dt);
     this.updateCats(dt);
-    this.updateMotorboat(dt);
+    if (this.moto) this.updateMotorboat(dt);
     // okazjonalny krzyk mewy w locie
     if (this.onCry && this.r() < dt * 0.06) this.onCry(this.gulls[Math.floor(this.r() * this.gulls.length)].pos);
   }

@@ -188,6 +188,48 @@ export function smoothNormals(geo, creaseDeg = 50) {
   return g;
 }
 
+// Opuszczana platforma kąpielowa w pawęży (jak w serii Cruiser): środkowa część pawęży odchylona do poziomu,
+// tekowy pokład, amortyzatory gazowe, składana drabinka; w otworze widać podłogę kokpitu
+function buildTransomPlatform(spec) {
+  const g = new THREE.Group();
+  const st = hullStations(spec)[0];
+  const xs = st[0].x, fb = st[0].y;
+  const hw = Math.min(st[3].w, st[0].w) * 0.78; // połowa szerokości otworu
+  const hingeY = 0.3, depth = Math.min(0.75, spec.loa * 0.055);
+  const teak = new THREE.MeshStandardMaterial({ color: COL.teak, roughness: 0.75 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.4 });
+  const steel = new THREE.MeshStandardMaterial({ color: 0xd5d9de, metalness: 0.85, roughness: 0.25 });
+  // płyta platformy (spód biały, wierzch tekowy w listwach)
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(depth, 0.08, hw * 2), white);
+  plate.position.set(xs - depth / 2, hingeY, 0); g.add(plate);
+  for (let k = 0; k < 9; k++) {
+    const sl = new THREE.Mesh(new THREE.BoxGeometry(depth - 0.06, 0.012, (hw * 2 - 0.08) / 9 - 0.012), teak);
+    sl.position.set(xs - depth / 2, hingeY + 0.046, -hw + 0.04 + ((k + 0.5) * (hw * 2 - 0.08)) / 9); g.add(sl);
+  }
+  // otwór w pawęży: podłoga kokpitu i stopień widoczne nad platformą
+  const recess = new THREE.Mesh(new THREE.BoxGeometry(0.02, fb - hingeY - 0.05, hw * 2), new THREE.MeshStandardMaterial({ color: 0x6e5236, roughness: 0.8 }));
+  recess.position.set(xs - 0.012, (fb + hingeY) / 2 + 0.02, 0); g.add(recess);
+  const step = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.04, hw * 2 - 0.04), teak); step.position.set(xs + 0.12, (fb + hingeY) / 2, 0); g.add(step);
+  for (const sz of [-1, 1]) {
+    // amortyzatory gazowe od krawędzi platformy do pawęży
+    const a = new THREE.Vector3(xs - depth * 0.7, hingeY + 0.04, sz * (hw - 0.05)), b2 = new THREE.Vector3(xs - 0.02, fb - 0.25, sz * (hw - 0.05));
+    const len = a.distanceTo(b2);
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, len, 8), steel);
+    rod.position.copy(a).add(b2).multiplyScalar(0.5); rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b2.clone().sub(a).normalize()); g.add(rod);
+    // zaokrąglone narożniki otworu (obłe krawędzie pawęży)
+    const corner = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, fb - hingeY, 12), white);
+    corner.position.set(xs - 0.005, (fb + hingeY) / 2, sz * (hw + 0.02)); g.add(corner);
+  }
+  // składana drabinka kąpielowa na środku krawędzi platformy
+  for (const sz of [-1, 1]) {
+    const rail = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8), steel);
+    rail.position.set(xs - depth + 0.03, hingeY - 0.25, sz * 0.17); g.add(rail);
+  }
+  for (let k = 0; k < 3; k++) { const rung = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.02, 0.36), steel); rung.position.set(xs - depth + 0.03, hingeY - 0.08 - k * 0.17, 0); g.add(rung); }
+  g.traverse((o2) => { if (o2.isMesh) { o2.castShadow = true; o2.receiveShadow = true; } });
+  return g;
+}
+
 // Prostopadłościan ułatwiający (x wzdłuż, y góra, z w poprzek)
 function box(w, h, d, color, x, y, z, opts) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color, opts));
@@ -269,15 +311,36 @@ export const LINE_MATS = {
 export function createFlag(spec, code) {
   const { xs } = hullExtents(spec);
   const flag = new THREE.Group();
-  const fg = new THREE.PlaneGeometry(0.6, 0.4);
+  // miękka bandera: gęstsza siatka, wierzchołki falują (waveFlag); górna krawędź przy topie flagsztoku
+  const fg = new THREE.PlaneGeometry(0.6, 0.4, 14, 6);
   fg.rotateY(Math.PI / 2);
-  fg.translate(0, 0, -0.3);
+  fg.translate(0, -0.2, -0.3);
   const fm = new THREE.Mesh(fg, flagMaterial(code));
   fm.userData.keep = true; // nie scalać – ma własny materiał z teksturą
+  fm.userData.base = fg.attributes.position.array.slice();
   flag.add(fm);
-  flag.position.set(xs - 0.2, sheerHeight(spec, xs + 0.03 * spec.loa) + 1.2, spec.beam * 0.3);
+  const fbC = sheerHeight(spec, xs + 0.03 * spec.loa);
+  flag.position.set(xs - 0.2, fbC + 1.28, spec.beam * 0.3); // top flagsztoku
   flag.rotation.y = Math.PI / 2;
+  flag.userData.cloth = fm;
   return flag;
+}
+
+// falowanie bandery: fala biegnie od drzewca do wolnego końca, amplituda rośnie ku końcowi; przy słabym wietrze bandera opada
+export function waveFlag(flag, t, windKn = 8, phase = 0) {
+  const m = flag && flag.userData.cloth;
+  if (!m) return;
+  const pos = m.geometry.attributes.position, a = pos.array, base = m.userData.base;
+  const wk = Math.min(1, windKn / 14), amp = 0.03 + 0.06 * wk, droop = 0.28 * (1 - wk) * (1 - wk);
+  const w = 4 + 8 * wk;
+  for (let i = 0; i < a.length; i += 3) {
+    const z0 = base[i + 2], y0 = base[i + 1], u = Math.min(1, -z0 / 0.6);
+    a[i] = base[i] + Math.sin(u * 7 - t * w + phase) * amp * u + Math.sin(u * 13 - t * w * 1.7 + y0 * 6) * amp * 0.25 * u;
+    a[i + 1] = y0 - droop * u * u;
+    a[i + 2] = z0 * (1 - 0.12 * droop) + Math.abs(Math.sin(u * 7 - t * w)) * amp * 0.2 * u;
+  }
+  pos.needsUpdate = true;
+  m.geometry.computeVertexNormals();
 }
 
 // Tabliczka z nazwą na pawęży
@@ -300,6 +363,7 @@ export function buildBoat(spec, opts = {}) {
   const heel = new THREE.Group(); // do przechyłu
   root.add(heel);
   heel.add(buildHull(spec, hullColor, stripe));
+  heel.add(buildTransomPlatform(spec));
 
   // kil + bulb
   const keelH = spec.draft - spec.canoeDraft;
@@ -361,6 +425,16 @@ export function buildBoat(spec, opts = {}) {
     const bx = ck1 - (ck1 - ck0) * 0.38, bl = (ck1 - ck0) * 0.66, bz = s * (ckw / 2 - 0.2);
     heel.add(box(bl, 0.02, 0.42, 0x3b2a1b, bx, fbC + 0.385, bz)); // podkład – ciemne szczeliny
     for (let k = 0; k < 6; k++) heel.add(box(bl, 0.03, 0.055, COL.teak, bx, fbC + 0.405, bz - 0.175 + k * 0.07));
+  }
+  // oparcia za ławkami (wysokie zrębnice kokpitu jak w serii Cruiser) z tekową listwą na górze
+  for (const s of [-1, 1]) {
+    const bx = ck1 - (ck1 - ck0) * 0.38, bl = (ck1 - ck0) * 0.7, bz = s * (ckw / 2 + 0.06);
+    const back = box(bl, 0.4, 0.07, 0xe8e6e1, bx, fbC + 0.6, bz);
+    back.rotation.x = s * 0.12; // lekko odchylone na zewnątrz
+    heel.add(back);
+    const cap = box(bl, 0.035, 0.1, COL.teak, bx, fbC + 0.81, bz + s * 0.025);
+    cap.rotation.x = s * 0.12;
+    heel.add(cap);
   }
   root.userData.seatSpot = [ck1 - (ck1 - ck0) * 0.38, fbC + 0.43, ckw / 2 - 0.2];
   heel.add(box(0.9, 0.06, 0.55, COL.teak, ck1 - (ck1 - ck0) * 0.45, fbC + 0.75, 0));
@@ -466,8 +540,6 @@ export function buildBoat(spec, opts = {}) {
   const flag = createFlag(spec, opts.flag || 'DE');
   if (!opts.noFlag) heel.add(flag);
   root.userData.flag = flag;
-  // platforma kąpielowa (opuszczana pawęż)
-  heel.add(box(0.5, 0.08, spec.beam * 0.7, COL.teak, xs - 0.2, 0.35, 0));
 
   addBoatDetails(heel, root, spec, { cabin, fbC, ck0, ck1, ckw, mastX, topY, mtop, name: opts.name, sub: opts.sub, split: opts.split, noPlate: opts.noPlate, canvas: opts.canvas });
 
@@ -605,16 +677,12 @@ function addBoatDetails(heel, root, spec, d) {
   heel.add(box(0.1, 0.08, 0.06, 0x20d060, pbx, pby, halfBeamAt(spec, pbx) - 0.08, { emissive: 0x0a4020 }));
   // winda kotwiczna
   heel.add(box(0.3, 0.14, 0.24, COL.dark, xb - 0.08 * L, sheerHeight(spec, xb - 0.08 * L) + 0.07, 0, { metal: 0.5 }));
-  // koło ratunkowe i pława ratunkowa (danbuoy) na relingu rufowym (burta prawa)
+  // koło ratunkowe na relingu rufowym (burta prawa)
   {
     const cx = xs + 0.3, cy = sheerHeight(spec, cx) + 0.5, cz = halfBeamAt(spec, cx) - 0.1;
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.055, 6, 14), mat(0xf26b21));
     ring.position.set(cx, cy, cz); ring.castShadow = true;
     heel.add(ring);
-    const px = xs + 0.55, pz = halfBeamAt(spec, px) - 0.1, py = sheerHeight(spec, px) + 0.62;
-    heel.add(strut([px, py, pz], [px, py + 1.3, pz], 0.014, 0x222222, 4));
-    const fl = cyl(0.07, 0.07, 0.4, 0xf26b21, 8); fl.position.set(px, py + 0.55, pz); heel.add(fl);
-    heel.add(box(0.02, 0.2, 0.26, 0xe63946, px, py + 1.2, pz));
   }
   // antena GPS na relingu rufowym
   heel.add(cyl(0.04, 0.05, 0.1, 0xf2f2f2, 8).translateX(xs + 0.3).translateY(sheerHeight(spec, xs + 0.3) + 0.67).translateZ(spec.beam * 0.16));
@@ -816,15 +884,19 @@ export function buildFender(r) {
 
 // Kula odbijacza
 export function buildBallFender(r) {
+  // kula odbijacza (typ „A”): biały, lekko błyszczący PCV, wtopiona główka z dużym uchem na linkę i szew na obwodzie
   const g = new THREE.Group();
-  const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat(0xe2673e, { rough: 0.55 }));
+  const pvc = new THREE.MeshStandardMaterial({ color: 0xf4f4f1, roughness: 0.38, metalness: 0 });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 24), pvc);
   ball.castShadow = true;
   g.add(ball);
-  const eye = new THREE.Mesh(new THREE.TorusGeometry(r * 0.16, r * 0.05, 6, 12), mat(0x1d3557));
-  eye.position.y = r * 1.02;
-  g.add(eye);
-  const rope = cyl(0.008, 0.008, 0.5, 0xeeeeee, 4);
-  rope.position.y = r + 0.25;
+  const seam = new THREE.Mesh(new THREE.TorusGeometry(r * 1.002, r * 0.012, 6, 48), new THREE.MeshStandardMaterial({ color: 0xe2e2de, roughness: 0.5 }));
+  seam.rotation.y = Math.PI / 2; g.add(seam);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.18, r * 0.32, r * 0.3, 20), pvc); neck.position.y = r * 0.98; g.add(neck);
+  const eye = new THREE.Mesh(new THREE.TorusGeometry(r * 0.15, r * 0.07, 12, 20), pvc); eye.position.y = r * 1.24; g.add(eye);
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshStandardMaterial({ color: 0x1d3557, roughness: 0.8 })); knot.position.y = r * 1.24; g.add(knot);
+  const rope = cyl(0.008, 0.008, 0.5, 0x1d3557, 4);
+  rope.position.y = r * 1.24 + 0.25;
   g.add(rope);
   return g;
 }

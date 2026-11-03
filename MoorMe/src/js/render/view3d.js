@@ -1,7 +1,7 @@
 // Widok 3D symulacji (kamera w rzucie izometrycznym jak w grach RTS)
 import * as THREE from 'three';
 import { Seasick } from './seasick.js';
-import { buildBoat, buildDeckGear, buildFender, buildBallFender, buildPerson, sheerHeight, mat } from './boatModel.js';
+import { buildBoat, buildDeckGear, buildFender, buildBallFender, waveFlag, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
@@ -106,13 +106,13 @@ export class View3D {
       const out = hullOutline(spec, 16);
       const shape = new THREE.Shape();
       const sc = (x, y, k) => [x * (1 + 0.1 * k) + (x > 0 ? 0.6 : -0.6) * k, y * (1 + 0.35 * k)];
-      out.forEach(([x, y], i) => { const [a, b] = sc(x, -y, 1); i ? shape.lineTo(a, b) : shape.moveTo(a, b); });
+      out.forEach(([x, y], i) => { const [a, b] = sc(x, -y, 0.42); i ? shape.lineTo(a, b) : shape.moveTo(a, b); });
       const hole = new THREE.Path();
-      [...out].reverse().forEach(([x, y], i) => { const [a, b] = sc(x, -y, 0.7); i ? hole.lineTo(a, b) : hole.moveTo(a, b); });
+      [...out].reverse().forEach(([x, y], i) => { const [a, b] = sc(x, -y, 0.3); i ? hole.lineTo(a, b) : hole.moveTo(a, b); });
       shape.holes.push(hole);
       const rg = new THREE.ShapeGeometry(shape);
       rg.rotateX(-Math.PI / 2);
-      this.selRing = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0x5ee0ff, transparent: true, opacity: 0.8, depthWrite: false, depthTest: false }));
+      this.selRing = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ color: 0xbfeaff, transparent: true, opacity: 0.25, depthWrite: false, depthTest: false }));
       this.selRing.renderOrder = 8; // zawsze widoczny – fale go nie zasłaniają
       this.selRing.position.y = 0.07;
       this.boat.add(this.selRing);
@@ -209,7 +209,7 @@ export class View3D {
     const pts = out.map(([x, y]) => new THREE.Vector3(x, 0.05, y));
     pts.push(pts[0].clone());
     const g = new THREE.BufferGeometry().setFromPoints(pts);
-    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.9, depthTest: false }));
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.5, depthTest: false }));
     line.renderOrder = 8;
     const grp = new THREE.Group();
     grp.add(line);
@@ -559,19 +559,16 @@ export class View3D {
       } else pts.push(new THREE.Vector3(a.x, a.y, a.z));
       // koniec liny na polerze: oczko okręcone wokół szyjki (poler, dalba), przy knadze – krótka pętla, przy pierścieniu – wpięcie
       const tg = line.target;
-      const fx = !underwater && !line.isMooring && (line.state === 'attached' || line.state === 'waitingCrew') && tg && tg.kind ? { kind: tg.kind, r: { bollard: 0.27, pile: 0.29, cleat: 0.15, ring: 0 }[tg.kind] ?? 0.27 } : null;
-      let e = b;
-      if (fx) {
-        const dx = b.x - a.x, dz = b.z - a.z, dl = Math.hypot(dx, dz) || 1;
-        const rr = fx.r || 0.1;
-        e = { x: b.x - (dx / dl) * rr, y: b.y, z: b.z - (dz / dl) * rr };
-      }
-      const N = 18;
-      // na biegowo: dwie równoległe nitki – do polera i z powrotem na jacht (rozchodzą się od burty)
+      const fx = !underwater && !line.isMooring && (line.state === 'attached' || line.state === 'waitingCrew') && tg && tg.kind ? { kind: tg.kind, r: { bollard: 0.19, pile: 0.29, cleat: 0.15, ring: 0 }[tg.kind] ?? 0.19 } : null;
+      // przebieg przy polerze: nitki dochodzą stycznie do boków szyjki i opasują ją od tyłu (bez sztucznego pierścienia)
+      const ux0 = b.x - a.x, uz0 = b.z - a.z, ul = Math.hypot(ux0, uz0) || 1, ux = ux0 / ul, uz = uz0 / ul;
+      const nx = -uz, nz = ux, OFF = 0.065, rr = fx ? fx.r : 0;
       const slip = !!fx && line.mode === 'slip';
-      const sdx = e.x - a.x, sdz = e.z - a.z, sdl = Math.hypot(sdx, sdz) || 1;
-      const nx = -sdz / sdl, nz = sdx / sdl, OFF = 0.065;
+      const eyeLen = fx && !slip && rr ? Math.min(0.45, ul * 0.3) : 0; // oko na stałe: splot ok. 0,4 m przed polerem
+      const e = eyeLen ? { x: b.x - ux * (rr + eyeLen), y: b.y, z: b.z - uz * (rr + eyeLen) } : slip && rr ? { x: b.x, y: b.y, z: b.z } : b;
+      const N = 18;
       const strandA = [], strandB = [];
+      const smooth = (x0, x1, x) => { const q = Math.min(1, Math.max(0, (x - x0) / (x1 - x0))); return q * q * (3 - 2 * q); };
       for (let i = 1; i <= N; i++) {
         const t = i / N;
         // zwis rośnie od burty – lina nie zapada się w kadłub tuż przy punkcie zejścia
@@ -580,30 +577,31 @@ export class View3D {
         // nad kei lina leży na powierzchni, nad wodą luźna lina tonie (zwis poniżej lustra wody)
         const gy = underwater ? 0 : this.groundY(x, z);
         if (gy > 0) y = Math.max(y, gy + 0.08);
-        if (slip) {
-          const o = OFF * Math.min(1, t * 4);
+        if (slip && rr) {
+          // dwie nitki: przy burcie razem, przy polerze rozchodzą się na szerokość szyjki
+          const o = OFF * Math.min(1, t * 4) + (rr - OFF) * smooth(0.82, 1, t);
           strandA.push(new THREE.Vector3(x + nx * o, y, z + nz * o));
           strandB.push(new THREE.Vector3(x - nx * o, y, z - nz * o));
         } else pts.push(new THREE.Vector3(x, y, z));
       }
-      if (slip) {
+      // łuk wokół tylnej strony szyjki: od boku +n przez stronę odległą od jachtu do boku −n
+      const wrap = (y0, from, to, M) => {
+        const out = [];
+        const a0 = Math.atan2(nz, nx), back = Math.atan2(uz, ux);
+        let d0 = back - a0; d0 = Math.atan2(Math.sin(d0), Math.cos(d0)); // ok. ±90°
+        for (let k = from; k <= to; k++) { const ph = a0 + (k / M) * 2 * d0; out.push(new THREE.Vector3(b.x + Math.cos(ph) * rr, y0, b.z + Math.sin(ph) * rr)); }
+        return out;
+      };
+      if (slip && rr) {
         pts.push(...strandA);
-        if (fx.r) {
-          // pętla wokół polera: od jednej nitki, dookoła szyjki, do drugiej
-          const ph0 = Math.atan2(e.z - b.z, e.x - b.x), dlt = Math.asin(Math.min(0.9, OFF / fx.r)), dir = line.id % 2 ? 1 : -1, M = 12;
-          const span = Math.PI * 2 - 2 * dlt;
-          for (let k = 0; k <= M; k++) {
-            const ph = ph0 - dir * dlt + dir * (k / M) * span;
-            pts.push(new THREE.Vector3(b.x + Math.cos(ph) * fx.r, b.y + 0.01, b.z + Math.sin(ph) * fx.r));
-          }
-        }
+        pts.push(...wrap(b.y + 0.01, 1, 9, 10));
         pts.push(...strandB.reverse());
-      } else if (fx && fx.r) {
-        const ph0 = Math.atan2(e.z - b.z, e.x - b.x), dir = line.id % 2 ? 1 : -1, M = 9;
-        for (let k = 1; k <= M; k++) {
-          const ph = ph0 + dir * (k / M) * Math.PI * 1.75;
-          pts.push(new THREE.Vector3(b.x + Math.cos(ph) * fx.r, b.y + (k / M) * 0.03, b.z + Math.sin(ph) * fx.r));
-        }
+      } else if (eyeLen) {
+        // oko (kropla): od splotu do jednego boku szyjki, wokół tyłu, z powrotem do splotu
+        const S = pts[pts.length - 1];
+        const side = (sg) => new THREE.Vector3(b.x + nx * rr * sg - ux * rr * 0.15, b.y + 0.005, b.z + nz * rr * sg - uz * rr * 0.15);
+        const mid = (sg) => new THREE.Vector3((S.x + b.x) / 2 + nx * rr * 0.75 * sg, (S.y + b.y) / 2, (S.z + b.z) / 2 + nz * rr * 0.75 * sg);
+        pts.push(mid(1), side(1), ...wrap(b.y + 0.01, 1, 9, 10), side(-1), mid(-1), S.clone().add(new THREE.Vector3(ux * 0.02, 0, uz * 0.02)));
       }
       if (!this.ropePts) this.ropePts = new Map();
       this.ropePts.set(line.id, pts);
@@ -662,7 +660,7 @@ export class View3D {
     const t = performance.now() / 1000;
     heel.rotation.x = b.heelAngle() + Math.sin(t * 1.3) * 0.006 * (1 + windKn / 10);
     heel.rotation.z = Math.sin(t * 0.9 + 1) * 0.004 * (1 + windKn / 10);
-    this.selRing.material.opacity = 0.45 + 0.35 * Math.sin(t * 2.5);
+    this.selRing.material.opacity = 0.16 + 0.07 * Math.sin(t * 2.5); // delikatny obrys
     // obrys dna kadłuba tylko w pobliżu keji (do 0,2 nm = 370 m)
     const bq = this.world.H.berth;
     this.selRing.visible = !this.world.isPassage && (!bq || Math.hypot(b.x - bq.x, b.z - bq.z) < 370);
@@ -673,7 +671,10 @@ export class View3D {
     if (prop) prop.rotation.x += b.gear * b.rpm * dt * 40;
     // windex – wskazuje kierunek wiatru pozornego
     if (this.boat.userData.windex && b.dbg.appAngle !== undefined) this.boat.userData.windex.rotation.y = -b.dbg.appAngle + Math.PI;
-    if (this.boat.userData.flag && b.dbg.appAngle !== undefined) this.boat.userData.flag.rotation.y = -b.dbg.appAngle + Math.PI / 2 + Math.sin(t * 6) * 0.15;
+    if (this.boat.userData.flag && b.dbg.appAngle !== undefined) {
+      this.boat.userData.flag.rotation.y = -b.dbg.appAngle + Math.PI / 2 + Math.sin(t * 2.2) * 0.06;
+      waveFlag(this.boat.userData.flag, t, Math.hypot(w.env.windVec().x, w.env.windVec().z) / 0.5144);
+    }
 
     // poler / knaga, na które zaplanowano założenie cumy – delikatnie pulsuje, żeby było wiadomo, gdzie podpłynąć
     if (!w.isPassage) this.updatePlannedTargets(t);
@@ -723,7 +724,8 @@ export class View3D {
         if (!n._flag) continue;
         const c = Math.cos(n.th), s = Math.sin(n.th);
         const mx = wv.x * c + wv.z * s, mz = -wv.x * s + wv.z * c;
-        n._flag.rotation.y = Math.atan2(-mx, -mz) + Math.sin(t * 5 + n._flagPhase) * Math.min(0.35, 0.05 + wsp * 0.02);
+        n._flag.rotation.y = Math.atan2(-mx, -mz) + Math.sin(t * 2 + n._flagPhase) * Math.min(0.12, 0.03 + wsp * 0.006);
+        waveFlag(n._flag, t, wsp / 0.5144, n._flagPhase);
       }
     }
     this.life.update(dt);
@@ -734,7 +736,7 @@ export class View3D {
       const col = ok ? (w.linesOk ? 0x3ddc84 : 0xffd166) : 0x7fd1ff;
       this.berthMarker.userData.line.material.color.setHex(col);
       this.berthMarker.userData.fill.material.color.setHex(col);
-      this.berthMarker.userData.fill.material.opacity = 0.12 + 0.06 * Math.sin(t * 3);
+      this.berthMarker.userData.fill.material.opacity = 0.06 + 0.03 * Math.sin(t * 3);
     }
 
     // cząsteczki: strumień zaśrubowy, stery strumieniowe
