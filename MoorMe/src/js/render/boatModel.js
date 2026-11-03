@@ -42,7 +42,7 @@ function sheerHeight(spec, x) {
 
 // Kadłub: stacje poprzeczne, pasy z kolorami (burta, pas okien, linia wodna, antyfouling)
 // Stacje poprzeczne kadłuba: punkty pasów (x, y, w – półszerokość) – wspólne dla kadłuba i elementów leżących na burcie
-const HULL_N = 23; // gęstsza siatka kadłuba (+25% wierzchołków)
+const HULL_N = 48; // gęsta siatka kadłuba – obłe, gładko cieniowane burty
 const HULL_BANDS = [
   // [wysokość względna do wolnej burty lub bezwzględna, szerokość względna]
   { h: (fb) => fb, w: 1.0 },
@@ -51,7 +51,9 @@ const HULL_BANDS = [
   { h: (fb) => fb * 0.34, w: 0.97 },
   { h: () => 0.02, w: 0.9 },
   { h: () => -0.1, w: 0.86 },
+  { h: (fb, d) => -d * 0.4, w: 0.76 }, // zaokrąglenie obła
   { h: (fb, d) => -d * 0.72, w: 0.55 },
+  { h: (fb, d) => -d * 0.9, w: 0.3 },
   { h: (fb, d) => -d, w: 0.0 }
 ];
 function hullStations(spec) {
@@ -97,53 +99,93 @@ function hullSurfaceW(stations, x, y, spec) {
 
 function buildHull(spec, hullColor, stripeColor) {
   const bands = HULL_BANDS;
-  const N = HULL_N;
-  const bandColors = [hullColor, stripeColor, hullColor, hullColor, COL.boot, COL.antifoul, COL.antifoul];
+  const N = HULL_N, J = bands.length;
+  // kolory pasów: burta, pas okien, burta, burta, linia wodna, antyfouling…
+  const bandColors = [hullColor, stripeColor, hullColor, hullColor, COL.boot, COL.antifoul, COL.antifoul, COL.antifoul, COL.antifoul];
   const stations = hullStations(spec);
-  const pos = [], col = [];
+  // gładkie normalne burty: z różnic sąsiednich punktów siatki (wzdłuż i w dół burty)
+  const P = (i, j) => stations[Math.max(0, Math.min(N, i))][Math.max(0, Math.min(J - 1, j))];
+  const nrm = [];
+  for (let i = 0; i <= N; i++) {
+    nrm.push([]);
+    for (let j = 0; j < J; j++) {
+      const a = P(i + 1, j), b = P(i - 1, j), c = P(i, j + 1), d = P(i, j - 1);
+      const tx = [a.x - b.x, a.y - b.y, a.w - b.w], ty = [c.x - d.x, c.y - d.y, c.w - d.w];
+      // dla prawej burty (z = +w): n = ty × tx
+      let n = [ty[1] * tx[2] - ty[2] * tx[1], ty[2] * tx[0] - ty[0] * tx[2], ty[0] * tx[1] - ty[1] * tx[0]];
+      if (n[2] < 0 && P(i, j).w > 0.05) n = n.map((v) => -v);
+      const l = Math.hypot(...n) || 1;
+      nrm[i].push(n.map((v) => v / l));
+    }
+  }
+  const pos = [], col = [], nor = [];
   const c = new THREE.Color();
-  const pushTri = (a, b, cc, color) => {
-    pos.push(a[0], a[1], a[2], b[0], b[1], b[2], cc[0], cc[1], cc[2]);
-    c.set(color);
-    for (let k = 0; k < 3; k++) col.push(c.r, c.g, c.b);
-  };
+  const push = (v, n, color) => { pos.push(v[0], v[1], v[2]); nor.push(n[0], n[1], n[2]); c.set(color); col.push(c.r, c.g, c.b); };
+  const face = (a, b, cc) => { const u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [cc[0] - a[0], cc[1] - a[1], cc[2] - a[2]]; const n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]; const l = Math.hypot(...n) || 1; return n.map((x) => x / l); };
+  const tri = (a, b, cc, color, na, nb, nc) => { if (!na) na = nb = nc = face(a, b, cc); push(a, na, color); push(b, nb, color); push(cc, nc, color); };
   for (let i = 0; i < N; i++) {
     const A = stations[i], Bs = stations[i + 1];
-    for (let j = 0; j < bands.length - 1; j++) {
+    for (let j = 0; j < J - 1; j++) {
       const color = bandColors[j];
       for (const side of [1, -1]) {
-        const p1 = [A[j].x, A[j].y, side * A[j].w];
-        const p2 = [Bs[j].x, Bs[j].y, side * Bs[j].w];
-        const p3 = [Bs[j + 1].x, Bs[j + 1].y, side * Bs[j + 1].w];
-        const p4 = [A[j + 1].x, A[j + 1].y, side * A[j + 1].w];
-        if (side === -1) { pushTri(p1, p2, p3, color); pushTri(p1, p3, p4, color); }
-        else { pushTri(p1, p3, p2, color); pushTri(p1, p4, p3, color); }
+        const v = (pt) => [pt.x, pt.y, side * pt.w];
+        const n = (ii, jj) => { const q = nrm[ii][jj]; return [q[0], q[1], side * q[2]]; };
+        const p1 = v(A[j]), p2 = v(Bs[j]), p3 = v(Bs[j + 1]), p4 = v(A[j + 1]);
+        const n1 = n(i, j), n2 = n(i + 1, j), n3 = n(i + 1, j + 1), n4 = n(i, j + 1);
+        if (side === -1) { tri(p1, p2, p3, color, n1, n2, n3); tri(p1, p3, p4, color, n1, n3, n4); }
+        else { tri(p1, p3, p2, color, n1, n3, n2); tri(p1, p4, p3, color, n1, n4, n3); }
       }
     }
   }
-  // pawęż (rufa) – ściana zamykająca
+  // pawęż (rufa) – płaska ściana zamykająca
   const T = stations[0];
-  for (let j = 0; j < bands.length - 1; j++) {
+  for (let j = 0; j < J - 1; j++) {
     const color = j === 1 ? stripeColor : j >= 4 ? COL.antifoul : hullColor;
     const a = [T[j].x, T[j].y, T[j].w], b = [T[j].x, T[j].y, -T[j].w];
     const cc = [T[j + 1].x, T[j + 1].y, -T[j + 1].w], d = [T[j + 1].x, T[j + 1].y, T[j + 1].w];
-    pushTri(a, b, cc, color); pushTri(a, cc, d, color);
+    tri(a, b, cc, color); tri(a, cc, d, color);
   }
   // pokład
   for (let i = 0; i < N; i++) {
     const a = stations[i][0], b = stations[i + 1][0];
     const p1 = [a.x, a.y, a.w], p2 = [b.x, b.y, b.w], p3 = [b.x, b.y, -b.w], p4 = [a.x, a.y, -a.w];
-    pushTri(p1, p3, p2, COL.deck); pushTri(p1, p4, p3, COL.deck);
+    tri(p1, p3, p2, COL.deck); tri(p1, p4, p3, COL.deck);
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-  g.computeVertexNormals();
-  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.55, metalness: 0.05, side: THREE.DoubleSide });
+  const m = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: false, roughness: 0.42, metalness: 0.05, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(g, m);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   return mesh;
+}
+
+// Gładkie normalne z zachowaniem ostrych krawędzi (kąt > crease): uśrednia normalne ścian sąsiadujących wierzchołków
+export function smoothNormals(geo, creaseDeg = 50) {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const p = g.attributes.position.array, n = p.length / 3;
+  const fn = new Float32Array(p.length);
+  for (let i = 0; i < n; i += 3) {
+    const ax = p[i * 3], ay = p[i * 3 + 1], az = p[i * 3 + 2];
+    const ux = p[i * 3 + 3] - ax, uy = p[i * 3 + 4] - ay, uz = p[i * 3 + 5] - az;
+    const vx = p[i * 3 + 6] - ax, vy = p[i * 3 + 7] - ay, vz = p[i * 3 + 8] - az;
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+    for (let k = 0; k < 3; k++) { fn[(i + k) * 3] = nx; fn[(i + k) * 3 + 1] = ny; fn[(i + k) * 3 + 2] = nz; }
+  }
+  const key = (i) => `${Math.round(p[i * 3] * 1e4)},${Math.round(p[i * 3 + 1] * 1e4)},${Math.round(p[i * 3 + 2] * 1e4)}`;
+  const groups = new Map();
+  for (let i = 0; i < n; i++) { const k = key(i); (groups.get(k) || groups.set(k, []).get(k)).push(i); }
+  const cos = Math.cos(creaseDeg * Math.PI / 180), out = new Float32Array(p.length);
+  for (const idx of groups.values()) for (const i of idx) {
+    let sx = 0, sy = 0, sz = 0;
+    for (const j of idx) { const d = fn[i * 3] * fn[j * 3] + fn[i * 3 + 1] * fn[j * 3 + 1] + fn[i * 3 + 2] * fn[j * 3 + 2]; if (d >= cos) { sx += fn[j * 3]; sy += fn[j * 3 + 1]; sz += fn[j * 3 + 2]; } }
+    const l = Math.hypot(sx, sy, sz) || 1; out[i * 3] = sx / l; out[i * 3 + 1] = sy / l; out[i * 3 + 2] = sz / l;
+  }
+  g.setAttribute('normal', new THREE.BufferAttribute(out, 3));
+  return g;
 }
 
 // Prostopadłościan ułatwiający (x wzdłuż, y góra, z w poprzek)
@@ -185,9 +227,9 @@ function buildCabin(spec) {
   shape.quadraticCurveTo(x1, wF * 0.92, x1 - 0.7, wF);
   shape.lineTo(x0, wA);
   shape.lineTo(x0, -wA);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: h, curveSegments: 8, bevelEnabled: true, bevelThickness: bevT, bevelSize: bev, bevelSegments: 3 });
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: h, curveSegments: 16, bevelEnabled: true, bevelThickness: bevT, bevelSize: bev, bevelSegments: 6 });
   geo.rotateX(-Math.PI / 2);
-  const m = new THREE.Mesh(geo, mat(0xe8e6e1));
+  const m = new THREE.Mesh(smoothNormals(geo, 55), new THREE.MeshStandardMaterial({ color: 0xe8e6e1, roughness: 0.6 })); // gładko cieniowana, obła
   m.position.y = Math.min(fbA, fbF) - 0.05;
   m.castShadow = true;
   g.add(m);

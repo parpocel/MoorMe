@@ -59,23 +59,12 @@ export function drawBoatTop(ctx, spec, cx, cy, scale, rot = 0, opts = {}) {
 }
 
 // Karta wyboru jachtu: rzut z góry w stylu planu technicznego (siatka, cień, detale pokładu, wymiary)
-export function drawBoatCard(ctx, spec, W, H, scale) {
+// Ładny rzut kadłuba z góry (karta wyboru jachtu, edytor pokładu): cień, cieniowanie, tek w kokpicie, nadbudówka, maszt
+export function drawHullPlan(ctx, spec, cx, cy, scale) {
   const { xs, xb } = hullExtents(spec);
   const L = spec.loa, B = spec.beam;
-  // tło – gradient i delikatna siatka metrowa
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#e4f0ef'); bg.addColorStop(1, '#cfe2e4');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-  const cx = W / 2 - (xs + xb) / 2 * scale, cy = H * 0.46;
-  ctx.strokeStyle = 'rgba(47,68,104,0.07)'; ctx.lineWidth = 1;
-  for (let x = cx % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
-  for (let y = cy % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
-  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
-  glow.addColorStop(0, 'rgba(255,255,255,0.55)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
-  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-
   ctx.save();
-  ctx.translate(cx, cy); ctx.scale(scale, -scale); // dziób w prawo
+  ctx.translate(cx, cy); ctx.scale(scale, scale); // dziób w prawo, lewa burta (y < 0) u góry
   const px = 1 / scale;
   const out = hullOutline(spec, 40);
   const path = () => { ctx.beginPath(); out.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y))); ctx.closePath(); };
@@ -127,6 +116,25 @@ export function drawBoatCard(ctx, spec, W, H, scale) {
   ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.ellipse(mx, 0, 0.17, 0.11, 0, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
+}
+
+export function drawBoatCard(ctx, spec, W, H, scale) {
+  const { xs, xb } = hullExtents(spec);
+  const L = spec.loa, B = spec.beam;
+  // tło – gradient i delikatna siatka metrowa
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#e4f0ef'); bg.addColorStop(1, '#cfe2e4');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const cx = W / 2 - (xs + xb) / 2 * scale, cy = H * 0.46;
+  ctx.strokeStyle = 'rgba(47,68,104,0.07)'; ctx.lineWidth = 1;
+  for (let x = cx % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+  for (let y = cy % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+  const glow = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
+  glow.addColorStop(0, 'rgba(255,255,255,0.55)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  drawHullPlan(ctx, spec, cx, cy, scale);
+
   // linie wymiarowe
   ctx.save();
   ctx.strokeStyle = 'rgba(210,105,95,0.9)'; ctx.fillStyle = '#2f4468'; ctx.lineWidth = 1;
@@ -149,6 +157,74 @@ export function drawBoatCard(ctx, spec, W, H, scale) {
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+
+// ---------- Edytor pokładu: elementy w ładniejszej grafice (współrzędne w metrach, ctx już przeskalowany) ----------
+const SEL = '#d2695f';
+export function drawDeckItemPretty(ctx, it, sel, px) {
+  ctx.save();
+  ctx.translate(it.x, it.y);
+  if (sel) { ctx.fillStyle = 'rgba(210,105,95,0.22)'; ctx.beginPath(); ctx.arc(0, 0, 0.36, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = SEL; ctx.lineWidth = 2 * px; ctx.stroke(); }
+  ctx.shadowColor = 'rgba(20,30,60,0.35)'; ctx.shadowBlur = 4; ctx.shadowOffsetY = 1.5;
+  if (it.kind === 'cleat') {
+    // knaga rogowa: podstawa + pręt z rogami, aluminium
+    const g = ctx.createLinearGradient(0, -0.09, 0, 0.09);
+    g.addColorStop(0, '#f2f4f7'); g.addColorStop(0.5, '#a9b2bd'); g.addColorStop(1, '#6f7a87');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.ellipse(0, 0, 0.11, 0.07, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(-0.24, -0.035); ctx.quadraticCurveTo(-0.28, 0, -0.24, 0.035); ctx.lineTo(0.24, 0.035); ctx.quadraticCurveTo(0.28, 0, 0.24, -0.035); ctx.closePath();
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#4d5866'; ctx.lineWidth = 1.1 * px; ctx.stroke();
+  } else if (it.kind === 'fairlead') {
+    // kluza zamknięta: chromowany pierścień z otworem
+    const g = ctx.createRadialGradient(-0.04, -0.04, 0.02, 0, 0, 0.17);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.6, '#b7c2ce'); g.addColorStop(1, '#6b7886');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, 0.16, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#2f4468'; ctx.beginPath(); ctx.ellipse(0, 0, 0.085, 0.06, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#4d5866'; ctx.lineWidth = 1 * px; ctx.beginPath(); ctx.arc(0, 0, 0.16, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    // półkluza: otwarta „podkowa” – otwarcie do środka pokładu
+    const dir = it.y > 0 ? -1 : 1;
+    ctx.rotate(dir > 0 ? 0 : Math.PI);
+    const g = ctx.createLinearGradient(0, -0.16, 0, 0.16);
+    g.addColorStop(0, '#f2f4f7'); g.addColorStop(1, '#7a8693');
+    ctx.strokeStyle = g; ctx.lineWidth = 0.075; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.arc(0, 0, 0.12, Math.PI * 1.05, Math.PI * 1.95, false); ctx.stroke();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#4d5866'; ctx.lineWidth = 1 * px; ctx.beginPath(); ctx.arc(0, 0, 0.16, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+export function drawFenderPretty(ctx, spec, f, rf, sel, px) {
+  const p = fenderLocal(spec, f, rf);
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  if (sel) { ctx.fillStyle = 'rgba(210,105,95,0.22)'; ctx.beginPath(); ctx.arc(0, 0, (p.ball ? p.r : rf * 2.2) + 0.12, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = SEL; ctx.lineWidth = 2 * px; ctx.stroke(); }
+  ctx.shadowColor = 'rgba(20,30,60,0.35)'; ctx.shadowBlur = 5; ctx.shadowOffsetY = 2;
+  if (p.ball) {
+    const g = ctx.createRadialGradient(-p.r * 0.35, -p.r * 0.35, p.r * 0.1, 0, 0, p.r);
+    g.addColorStop(0, '#ffb08a'); g.addColorStop(0.55, '#e2673e'); g.addColorStop(1, '#9c3d1e');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, p.r, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.strokeStyle = '#1d3557'; ctx.lineWidth = 1.2 * px; ctx.beginPath(); ctx.arc(0, -p.r * 0.85, p.r * 0.14, 0, Math.PI * 2); ctx.stroke();
+  } else {
+    const ang = p.stern ? Math.PI / 2 : Math.atan2(p.n.y, p.n.x) + Math.PI / 2;
+    ctx.rotate(ang);
+    const Lh = rf * 2.1, R = rf;
+    const g = ctx.createLinearGradient(0, -R, 0, R);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.55, '#e8ecf0'); g.addColorStop(1, '#a9b4bf');
+    ctx.fillStyle = g; roundRect(ctx, -Lh, -R, Lh * 2, R * 2, R * 0.9); ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.fillStyle = '#1d3557';
+    roundRect(ctx, -Lh, -R * 0.7, R * 0.45, R * 1.4, R * 0.3); ctx.fill();
+    roundRect(ctx, Lh - R * 0.45, -R * 0.7, R * 0.45, R * 1.4, R * 0.3); ctx.fill();
+    ctx.strokeStyle = 'rgba(29,53,87,0.6)'; ctx.lineWidth = 1 * px; roundRect(ctx, -Lh, -R, Lh * 2, R * 2, R * 0.9); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 export function drawDeckItem(ctx, it, sel) {

@@ -1,6 +1,6 @@
 // Edytor rozmieszczenia knag, kluz, półkluz i odbijaczy (widok z góry)
 import { h } from './dom.js';
-import { drawBoatTop, fenderLocal } from './draw2d.js';
+import { fenderLocal, drawHullPlan, drawDeckItemPretty, drawFenderPretty } from './draw2d.js';
 import { hullExtents, halfBeamAt, ITEM_KIND_LABEL, fenderRadiusOf, sternFenderY } from '../data/boats.js';
 import { t } from '../i18n.js';
 
@@ -130,8 +130,15 @@ export function createDeckEditor(spec, equip, onChange) {
     render();
     if (onChange) onChange();
   });
+  let hover = null;
   canvas.addEventListener('pointermove', (e) => {
-    if (!drag) return;
+    if (!drag) {
+      const r = canvas.getBoundingClientRect();
+      const hit = hitTest(toLocal((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height)));
+      const hv = hit && hit.type === 'deck' ? hit.it : null;
+      if (hv !== hover) { hover = hv; render(); }
+      return;
+    }
     const r = canvas.getBoundingClientRect();
     const p = toLocal((e.clientX - r.left) * (W / r.width), (e.clientY - r.top) * (H / r.height));
     if (drag.type === 'deck') {
@@ -145,33 +152,56 @@ export function createDeckEditor(spec, equip, onChange) {
   canvas.addEventListener('pointerup', () => {
     if (drag) { relabel(spec, equip.deck); drag = null; render(); if (onChange) onChange(); }
   });
+  canvas.addEventListener('pointerleave', () => { if (hover) { hover = null; render(); } });
 
   function render() {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, W, H);
-    // siatka
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    for (let x = 0; x < W; x += 30) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 30) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-    ctx.fillStyle = '#ff8080'; ctx.font = 'bold 15px Segoe UI';
-    ctx.fillText(t('LEWA BURTA (bakburta)'), cx + xs * scale, 22);
-    ctx.fillStyle = '#80ffb0';
-    ctx.fillText(t('PRAWA BURTA (sterburta)'), cx + xs * scale, H - 12);
-    ctx.fillStyle = '#9fb8cc';
-    ctx.fillText(t('DZIÓB →'), cx + xb * scale - 20, cy - (spec.beam / 2) * scale - 14);
-    ctx.fillText(t('RUFA'), cx + xs * scale - 50, cy + 5);
-    drawBoatTop(ctx, spec, cx, cy, scale, 0, { deck: equip.deck, fenders: equip.fenders, fenderRadius: equip.fenderRadius, selected: selected && selected.id, bowThruster: equip.bowThruster, sternThruster: equip.sternThruster });
-    // podpisy
-    ctx.font = '13px Segoe UI';
-    ctx.fillStyle = '#d7e6f2';
+    // tło: jasna woda z siatką metrową (jak karty wyboru jachtu)
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#e6f1f0'); bg.addColorStop(1, '#cfe2e4');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = 'rgba(47,68,104,0.07)'; ctx.lineWidth = 1;
+    for (let x = cx % scale; x < W; x += scale) { ctx.beginPath(); ctx.moveTo(x + 0.5, 0); ctx.lineTo(x + 0.5, H); ctx.stroke(); }
+    for (let y = cy % scale; y < H; y += scale) { ctx.beginPath(); ctx.moveTo(0, y + 0.5); ctx.lineTo(W, y + 0.5); ctx.stroke(); }
+    // opisy burt
+    const pill = (txt, x, y, col, align = 'left') => {
+      ctx.font = '800 14px Nunito, Segoe UI, sans-serif';
+      const w = ctx.measureText(txt).width + 18, x0 = align === 'center' ? x - w / 2 : align === 'right' ? x - w : x;
+      ctx.fillStyle = 'rgba(255,255,255,0.75)'; ctx.beginPath(); ctx.roundRect(x0, y - 13, w, 24, 12); ctx.fill();
+      ctx.fillStyle = col; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(txt, x0 + 9, y - 1);
+    };
+    pill(t('LEWA BURTA (bakburta)'), W / 2, 22, '#c0392b', 'center');
+    pill(t('PRAWA BURTA (sterburta)'), W / 2, H - 18, '#1f8a4c', 'center');
+    pill(t('DZIÓB →'), W - 14, 22, '#2f4468', 'right');
+    pill(t('RUFA'), 14, 22, '#2f4468');
+    // kadłub i wyposażenie
+    drawHullPlan(ctx, spec, cx, cy, scale);
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(scale, scale);
+    const px = 1 / scale;
+    // stery strumieniowe (tunele)
+    const tunnel = (x) => { const hb = halfBeamAt(spec, x) * 0.8; ctx.fillStyle = 'rgba(242,183,74,0.85)'; ctx.beginPath(); ctx.roundRect(x - 0.16, -hb, 0.32, hb * 2, 0.12); ctx.fill(); };
+    if (equip.bowThruster && equip.bowThruster !== 'none') tunnel(xb - 0.1 * spec.loa);
+    if (equip.sternThruster) tunnel(xs + 0.08 * spec.loa);
+    const sel = selected && selected.id;
+    for (const f of equip.fenders) drawFenderPretty(ctx, spec, f, equip.fenderRadius, f.id === sel, px);
+    for (const it of equip.deck) drawDeckItemPretty(ctx, it, it.id === sel, px);
+    ctx.restore();
+    // podpisy elementów
+    ctx.font = '700 12px Nunito, Segoe UI, sans-serif'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+    // podpis tylko przy elemencie zaznaczonym i wskazanym myszą (pełna lista jest obok)
     for (const it of equip.deck) {
-      const px = cx + it.x * scale, py = cy + it.y * scale;
-      ctx.fillText(t(it.label).split(' ')[0].slice(0, 5), px - 12, py + (it.y < 0 ? -12 : 20));
+      if (it.id !== sel && it !== hover) continue;
+      const x = cx + it.x * scale, y = cy + it.y * scale + (it.y < 0 ? 26 : -26);
+      const txt = t(it.label);
+      const w = ctx.measureText(txt).width + 12;
+      ctx.fillStyle = it.id === sel ? '#d2695f' : 'rgba(47,68,104,0.82)'; ctx.beginPath(); ctx.roundRect(x - w / 2, y - 9, w, 18, 9); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.fillText(txt, x, y + 0.5);
     }
     // skala
-    ctx.strokeStyle = '#9fb8cc'; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(20, H - 30); ctx.lineTo(20 + scale, H - 30); ctx.stroke();
-    ctx.fillStyle = '#9fb8cc'; ctx.fillText('1 m', 20, H - 36);
+    ctx.strokeStyle = '#2f4468'; ctx.lineWidth = 2; ctx.lineCap = 'butt';
+    ctx.beginPath(); ctx.moveTo(20, H - 44); ctx.lineTo(20 + scale, H - 44); ctx.moveTo(20, H - 49); ctx.lineTo(20, H - 39); ctx.moveTo(20 + scale, H - 49); ctx.lineTo(20 + scale, H - 39); ctx.stroke();
+    ctx.fillStyle = '#2f4468'; ctx.font = '700 12px Nunito, Segoe UI, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('1 m', 20 + scale + 6, H - 44);
     // lista
     list.innerHTML = '';
     const items = [...equip.deck].sort((a, b) => b.x - a.x);

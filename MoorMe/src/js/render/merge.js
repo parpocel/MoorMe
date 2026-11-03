@@ -27,12 +27,16 @@ export function mergeByMaterial(root, { castShadow = true, receiveShadow = true 
     const pos = new Float32Array(n * 3);
     const col = needColor ? new Float32Array(n * 3) : null;
     const uv = needUv ? new Float32Array(n * 2) : null;
+    // zachowujemy gotowe (gładkie) normalne, jeśli mają je wszystkie części – applyMatrix4 już je obróciło
+    const keepN = parts.every((p) => p.attributes.normal);
+    const nor = keepN ? new Float32Array(n * 3) : null;
     let off = 0;
     for (const p of parts) {
       const c = p.attributes.position.count;
       pos.set(p.attributes.position.array.subarray(0, c * 3), off * 3);
       if (col && p.attributes.color) col.set(p.attributes.color.array.subarray(0, c * 3), off * 3);
       if (uv && p.attributes.uv) uv.set(p.attributes.uv.array.subarray(0, c * 2), off * 2);
+      if (nor) nor.set(p.attributes.normal.array.subarray(0, c * 3), off * 3);
       off += c;
       p.dispose();
     }
@@ -40,7 +44,8 @@ export function mergeByMaterial(root, { castShadow = true, receiveShadow = true 
     g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
     if (col) g.setAttribute('color', new THREE.BufferAttribute(col, 3));
     if (uv) g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-    g.computeVertexNormals();
+    if (nor) g.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+    else g.computeVertexNormals();
     g.computeBoundingSphere();
     const mesh = new THREE.Mesh(g, material);
     mesh.castShadow = castShadow;

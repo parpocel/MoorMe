@@ -796,7 +796,9 @@ export class View3D {
       this.camera.lookAt(look);
       if (this.camera.fov !== cam.fov || this.camera.near !== 0.08) { this.camera.fov = cam.fov; this.camera.near = 0.08; this.camera.updateProjectionMatrix(); }
     } else {
-      if (this.camera.fov !== 32 || this.camera.near !== 0.5) { this.camera.fov = 32; this.camera.near = 0.5; this.camera.updateProjectionMatrix(); }
+      // płaszczyzna bliskiego cięcia odsunięta od obiektywu: maszty i olinowanie, które znajdą się tuż przed kamerą, nie zasłaniają widoku
+      const near = Math.round(clamp(cam.dist * 0.3, 0.5, 7) * 10) / 10;
+      if (this.camera.fov !== 32 || this.camera.near !== near) { this.camera.fov = 32; this.camera.near = near; this.camera.updateProjectionMatrix(); }
       const cx = cam.tx + Math.cos(cam.el) * Math.sin(cam.az) * cam.dist;
       const cz = cam.tz + Math.cos(cam.el) * Math.cos(cam.az) * cam.dist;
       const cy = Math.sin(cam.el) * cam.dist + (cam.ty || 0);
