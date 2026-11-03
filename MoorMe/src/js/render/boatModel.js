@@ -714,20 +714,41 @@ function addDeckDetail(heel, spec, d) {
   // dach nadbudówki
   heel.add(box(x1 - x0 - 1.2, 0.012, cab.wF * 1.5, NS, (x0 + x1) / 2 - 0.1, topY + 0.006, 0, { rough: 0.95 }));
 
-  // zejściówka: przesuwana klapa w prowadnicach i deski zamykające wejście
-  const cw = 0.62;
-  heel.add(box(0.95, 0.07, cw + 0.12, 0xe8e6e1, x0 + 0.5, topY + 0.04, 0));
-  for (const s of [-1, 1]) heel.add(box(1.2, 0.05, 0.05, 0x9aa3ab, x0 + 0.6, topY + 0.03, s * (cw / 2 + 0.09), { metal: 0.7, rough: 0.35 }));
-  const dh = topY - d.fbC - 0.15;
-  heel.add(box(0.03, dh, cw, 0x5a3b22, x0 - 0.04, d.fbC + 0.1 + dh / 2, 0, { rough: 0.6 }));
-  for (let k = 1; k < 4; k++) heel.add(box(0.035, 0.012, cw, 0x3e2815, x0 - 0.045, d.fbC + 0.1 + (k * dh) / 4, 0));
+  // zejściówka: otwór w dachu z przesuwaną klapą z przyciemnianego akrylu (wsuniętą częściowo pod garaż),
+  // prowadnice, uchwyt i tekowe poręcze; w tylnej ścianie trapezowe wejście z deskami sztormowymi
+  const cw = 0.6, faceX = x0 - 0.17, dark = 0x101317;
+  const smoke = { rough: 0.12, metal: 0.35, opacity: 0.88 }, alu = { metal: 0.7, rough: 0.35 };
+  const yb = d.fbC + 0.14, yt = topY - 0.03, Hh = yt - yb;
+  heel.add(box(0.02, Hh, cw, dark, faceX + 0.012, yb + Hh / 2, 0)); // wnętrze widoczne przez wejście
+  for (let k = 0; k < 2; k++) { // dwie deski sztormowe na dole, górna część wejścia otwarta
+    const w = cw - 0.1 + (k + 0.5) * (0.1 / 3);
+    heel.add(box(0.025, Hh / 3 - 0.012, w, 0x2a3440, faceX - 0.012, yb + (Hh / 3) * (k + 0.5), 0, smoke));
+  }
+  for (const sz of [-1, 1]) heel.add(box(0.05, Hh + 0.05, 0.045, 0x9aa3ab, faceX - 0.018, yb + Hh / 2, sz * (cw / 2 + 0.02), alu)); // prowadnice desek
+  heel.add(box(0.14, 0.04, cw + 0.14, COL.teak, faceX - 0.05, yb - 0.02, 0)); // próg
+  heel.add(box(0.62, 0.02, cw, dark, x0 + 0.14, topY + 0.006, 0)); // otwarty fragment dachu
+  for (const sz of [-1, 1]) {
+    heel.add(box(1.7, 0.035, 0.04, 0x9aa3ab, x0 + 0.68, topY + 0.03, sz * (cw / 2 + 0.03), alu)); // prowadnice klapy
+    heel.add(box(1.05, 0.05, 0.045, COL.teak, x0 + 0.95, topY + 0.1, sz * (cw / 2 + 0.11))); // poręcz
+    for (const px of [x0 + 0.5, x0 + 1.4]) heel.add(box(0.05, 0.08, 0.04, COL.teak, px, topY + 0.05, sz * (cw / 2 + 0.11)));
+  }
+  const hx0 = x0 + 0.45, hl = 0.92; // klapa odsunięta do przodu
+  heel.add(box(hl, 0.03, cw + 0.06, 0x26303b, hx0 + hl / 2, topY + 0.065, 0, smoke));
+  heel.add(box(0.05, 0.05, cw * 0.5, 0x9aa3ab, hx0 + 0.04, topY + 0.095, 0, alu)); // uchwyt
+  // garaż (osłona) – klapa chowa się pod nim
+  const gs = new THREE.Shape(); const gw = cw / 2 + 0.12;
+  gs.moveTo(-gw, 0); gs.lineTo(gw, 0); gs.lineTo(gw, 0.06); gs.quadraticCurveTo(gw, 0.11, gw - 0.08, 0.11); gs.lineTo(-gw + 0.08, 0.11); gs.quadraticCurveTo(-gw, 0.11, -gw, 0.06); gs.closePath();
+  const gg = new THREE.ExtrudeGeometry(gs, { depth: 0.6, bevelEnabled: true, bevelThickness: 0.04, bevelSize: 0.02, bevelSegments: 3, curveSegments: 6 });
+  gg.rotateY(Math.PI / 2);
+  const garage = new THREE.Mesh(gg, mat(0xe8e6e1));
+  garage.position.set(x0 + 0.95, topY + 0.01, 0); garage.castShadow = true; heel.add(garage);
 
   // stopery (zaciskacze) przed kabestanami na dachu i fały prowadzone od podstawy masztu
   const ropeCols = [0xf0ede4, 0xd8423a, 0x2f6fb5, 0xe8c547];
   for (const s of [-1, 1]) {
     const cx = x0 + 0.62;
     for (let k = 0; k < 4; k++) {
-      const z = s * (0.36 + k * 0.075);
+      const z = s * (0.5 + k * 0.075);
       heel.add(box(0.14, 0.06, 0.06, 0x1d2126, cx, topY + 0.04, z));
       heel.add(box(0.05, 0.02, 0.05, 0xd8423a, cx + 0.03, topY + 0.08, z));
       heel.add(strut([d.mastX - 0.12, topY + 0.03, s * (0.06 + k * 0.03)], [cx + 0.07, topY + 0.035, z], 0.008, ropeCols[k], 4));
