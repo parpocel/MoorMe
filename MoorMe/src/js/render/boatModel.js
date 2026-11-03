@@ -911,17 +911,68 @@ export function buildBallFender(r) {
 }
 
 // Postać członka załogi
+// Postać członka załogi (ok. 1,75 m): buty, nogi, biodra, kurtka z kołnierzem, kamizelka pneumatyczna, ręce, głowa z czapką.
+// Przód postaci = lokalna oś +z. userData: legs/arms (przeguby do animacji chodu i pracy przy linie).
+const PMATS = new Map();
+const pm = (c, r = 0.75) => { const k = c + ':' + r; if (!PMATS.has(k)) PMATS.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r })); return PMATS.get(k); };
+const PANTS = [0x2b2d42, 0x3d4a5c, 0x6b5b45, 0x22303f];
+const CAPS = [0x1d3557, 0xf2f2f2, 0xc0392b, 0x2a2a2a];
+const SKIN = [0xf1c9a5, 0xe0b48f, 0xc99a74, 0xf5d3b5];
+let personSeq = 0;
 export function buildPerson(jacket = 0xe63946) {
   const g = new THREE.Group();
-  const legs = box(0.28, 0.8, 0.22, 0x2b2d42, 0, 0.4, 0);
-  const body = box(0.4, 0.62, 0.28, jacket, 0, 1.12, 0);
-  const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.14, 0), mat(0xf1c9a5));
-  head.position.y = 1.58;
-  const cap = box(0.24, 0.07, 0.24, 0x1d3557, 0, 1.7, 0);
-  g.add(legs, body, head, cap);
-  g.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  const k = personSeq++;
+  const skin = pm(SKIN[k % SKIN.length], 0.6), pants = pm(PANTS[k % PANTS.length], 0.85), jk = pm(jacket, 0.6), dark = pm(0x1b1d22, 0.7);
+  const mesh = (geo, m, x, y, z, parent = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
+  // nogi na przegubach biodrowych (do animacji chodu)
+  const legs = [];
+  for (const sx of [-1, 1]) {
+    const hip = new THREE.Group(); hip.position.set(sx * 0.095, 0.86, 0); g.add(hip);
+    mesh(new THREE.CapsuleGeometry(0.075, 0.68, 4, 10), pants, 0, -0.42, 0, hip);
+    const shoe = mesh(new THREE.CapsuleGeometry(0.055, 0.12, 4, 8), dark, 0, -0.81, 0.05, hip); shoe.rotation.x = Math.PI / 2; shoe.scale.set(1.15, 1, 0.75);
+    legs.push(hip);
+  }
+  // biodra i tułów (kurtka), kołnierz i suwak
+  const hips = mesh(new THREE.CylinderGeometry(0.17, 0.16, 0.16, 16), pants, 0, 0.9, 0); hips.scale.z = 0.72;
+  const torso = mesh(new THREE.CapsuleGeometry(0.17, 0.36, 6, 16), jk, 0, 1.2, 0); torso.scale.set(1.1, 1, 0.72);
+  mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.04, 16), dark, 0, 0.98, 0).scale.z = 0.72; // pasek
+  mesh(new THREE.BoxGeometry(0.02, 0.4, 0.01), dark, 0, 1.2, 0.125); // suwak
+  const collar = mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.07, 14), jk, 0, 1.47, 0); collar.scale.z = 0.85;
+  // kamizelka pneumatyczna (komory na ramionach i z przodu)
+  const vest = pm(0xc0392b, 0.55);
+  for (const sx of [-1, 1]) { const ch = mesh(new THREE.CapsuleGeometry(0.045, 0.3, 4, 8), vest, sx * 0.09, 1.3, 0.09); ch.rotation.z = sx * 0.18; }
+  const yoke = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16, Math.PI), vest, 0, 1.43, 0); yoke.rotation.x = -Math.PI / 2;
+  // ręce na przegubach barkowych (do machania przy chodzie i pracy przy linie)
+  const arms = [];
+  for (const sx of [-1, 1]) {
+    const sh = new THREE.Group(); sh.position.set(sx * 0.23, 1.38, 0); g.add(sh);
+    const up = mesh(new THREE.CapsuleGeometry(0.055, 0.26, 4, 8), jk, 0, -0.16, 0, sh); up.rotation.z = sx * 0.06;
+    const fore = mesh(new THREE.CapsuleGeometry(0.048, 0.24, 4, 8), jk, sx * 0.01, -0.44, 0.02, sh);
+    mesh(new THREE.SphereGeometry(0.048, 10, 8), skin, sx * 0.012, -0.62, 0.03, sh); // dłoń
+    void fore;
+    arms.push(sh);
+  }
+  // szyja, głowa, uszy, nos, czapka z daszkiem
+  mesh(new THREE.CylinderGeometry(0.045, 0.05, 0.08, 10), skin, 0, 1.52, 0);
+  const head = mesh(new THREE.SphereGeometry(0.11, 18, 14), skin, 0, 1.64, 0.005); head.scale.set(0.92, 1.05, 1);
+  for (const sx of [-1, 1]) mesh(new THREE.SphereGeometry(0.025, 8, 6), skin, sx * 0.1, 1.64, 0);
+  mesh(new THREE.SphereGeometry(0.02, 8, 6), skin, 0, 1.63, 0.11);
+  const capM = pm(CAPS[k % CAPS.length], 0.7);
+  const cap = mesh(new THREE.SphereGeometry(0.115, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.68, 0); cap.scale.set(0.96, 0.75, 1.02);
+  const brim = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 16, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.685, 0.07); brim.scale.z = 0.9;
   g.userData.legs = legs;
+  g.userData.arms = arms;
   return g;
+}
+
+// animacja postaci: chód (nogi i ręce na przemian) albo praca przy linie (ręce wyciągnięte do liny)
+export function animatePerson(p, t, walking, working = false) {
+  const L = p.userData.legs, A = p.userData.arms;
+  if (!Array.isArray(L) || !A) return;
+  const sw = walking ? Math.sin(t * 8) * 0.45 : 0;
+  L[0].rotation.x = sw; L[1].rotation.x = -sw;
+  if (working) { const r = -1.1 + Math.sin(t * 5) * 0.3; A[0].rotation.x = r; A[1].rotation.x = r - 0.15 * Math.sin(t * 5); }
+  else { A[0].rotation.x = -sw * 0.7; A[1].rotation.x = sw * 0.7; }
 }
 
 export { sheerHeight };

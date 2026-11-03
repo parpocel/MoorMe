@@ -1,7 +1,7 @@
 // Widok 3D symulacji (kamera w rzucie izometrycznym jak w grach RTS)
 import * as THREE from 'three';
 import { Seasick } from './seasick.js';
-import { buildBoat, buildDeckGear, buildFender, buildBallFender, waveFlag, buildPerson, sheerHeight, mat } from './boatModel.js';
+import { buildBoat, buildDeckGear, buildFender, buildBallFender, waveFlag, animatePerson, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
@@ -132,9 +132,10 @@ export class View3D {
     this.boat.userData.heel.add(this.helmsman, this.deckhand);
     const { xs, xb } = hullExtents(spec);
     this.helmsman.position.set(xs + 0.05 * spec.loa, sheerHeight(spec, xs) - 0.15, spec.beam * 0.27);
-    this.helmsman.rotation.y = -Math.PI / 2;
+    this.helmsman.rotation.y = Math.PI / 2; // twarzą do dziobu (przód postaci = lokalne +z)
     this.deckhandTarget = new THREE.Vector3(xb - 0.12 * spec.loa, sheerHeight(spec, xb - 0.12 * spec.loa), 0);
     this.deckhand.position.copy(this.deckhandTarget);
+    this.deckhand.rotation.y = Math.PI / 2;
     this.shoreCrew = buildPerson(0xf4a261);
     this.shoreCrew.visible = false;
     scene.add(this.shoreCrew);
@@ -144,7 +145,7 @@ export class View3D {
     this.mate1 = buildPerson(0x457b9d);
     this.mate2 = buildPerson(0x2a9d8f);
     this.mate1.position.set(xs + 0.13 * L, sheerHeight(spec, xs) + 0.05, -spec.beam * 0.2); // ławka w kokpicie
-    this.mate1.rotation.y = -Math.PI / 2 + 0.5;
+    this.mate1.rotation.y = Math.PI / 2 - 0.5;
     this.mate2.position.set(0.16 * L, sheerHeight(spec, 0.16 * L) - 0.05, halfBeamAt(spec, 0.16 * L) * 0.8); // burta przy nadbudówce
     this.mate2.rotation.y = 0.3;
     this.boat.userData.heel.add(this.mate1, this.mate2);
@@ -153,9 +154,9 @@ export class View3D {
       const sy = sheerHeight(spec, xs) + 0.05;
       this.deckhandTarget.set(xs + 0.12 * L, sy, spec.beam * 0.2);
       this.deckhand.position.copy(this.deckhandTarget);
-      this.deckhand.rotation.y = -Math.PI / 2 - 0.5;
+      this.deckhand.rotation.y = Math.PI / 2 + 0.5;
       this.mate2.position.set(xs + 0.2 * L, sy, -spec.beam * 0.22);
-      this.mate2.rotation.y = -Math.PI / 2 + 0.3;
+      this.mate2.rotation.y = Math.PI / 2 - 0.3;
     }
     // małe etykiety z imionami nad głowami
     this.tags = document.createElement('div');
@@ -481,8 +482,10 @@ export class View3D {
       const want = moving ? -Math.atan2(mz, mx) + Math.PI / 2 : face;
       let dr = want - p.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
       p.rotation.y += dr * clamp(dt * 6, 0, 1);
-      // przy wybieraniu / luzowaniu – lekkie pochylenie i ruch rąk (całej sylwetki)
-      p.rotation.x = job && job.state === 'attached' && job.tending !== 'hold' ? 0.12 + Math.sin(t * 5) * 0.06 : 0;
+      // przy wybieraniu / luzowaniu – lekkie pochylenie i praca rąk przy linie; w drodze – chód
+      const working = !moving && !!job && (job.state === 'pending' || (job.state === 'attached' && job.tending !== 'hold'));
+      p.rotation.x = working ? 0.1 : 0;
+      animatePerson(p, t + (p === this.mate1 ? 0.7 : p === this.mate2 ? 1.9 : 0), moving, working);
     }
   }
 
@@ -755,6 +758,7 @@ export class View3D {
     if (w.crew.ashore) {
       const gy = this.groundHeightAt(w.crew.x, w.crew.z);
       this.shoreCrew.position.set(w.crew.x, gy + (w.crew.walking ? Math.abs(Math.sin(t * 8)) * 0.05 : 0), w.crew.z);
+      animatePerson(this.shoreCrew, t, !!w.crew.walking, !w.crew.walking && w.lines.some((l) => l.state === 'pending' && l.pendingVia === 'crew'));
       if (w.crew.heading !== undefined) this.shoreCrew.rotation.y = -w.crew.heading + Math.PI / 2;
     }
 

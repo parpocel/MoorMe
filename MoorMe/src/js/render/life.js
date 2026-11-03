@@ -1,6 +1,6 @@
 // Życie w porcie: mewy (latają, siadają na salingach i polerach), spacerowicze, motorówka w oddali
 import * as THREE from 'three';
-import { mat, buildPerson, sheerHeight } from './boatModel.js';
+import { mat, buildPerson, animatePerson, sheerHeight } from './boatModel.js';
 import { hullExtents } from '../data/boats.js';
 import { rng, clamp, distToPoly } from '../math.js';
 
@@ -315,6 +315,7 @@ export class HarbourLife {
         p.wait -= dt;
         const q = pos();
         p.mesh.position.set(q.x, w.y, q.z);
+        animatePerson(p.mesh, 0, false);
         continue;
       }
       const d = p.tt - p.t;
@@ -327,7 +328,8 @@ export class HarbourLife {
       p.t += s;
       p.phase += dt * p.speed * 5;
       const q = pos();
-      p.mesh.position.set(q.x, w.y + Math.abs(Math.sin(p.phase)) * 0.04, q.z);
+      p.mesh.position.set(q.x, w.y + Math.abs(Math.sin(p.phase)) * 0.025, q.z);
+      animatePerson(p.mesh, p.phase / 1.6, true);
       p.mesh.rotation.y = Math.atan2(ux * Math.sign(s), uz * Math.sign(s));
     }
   }
