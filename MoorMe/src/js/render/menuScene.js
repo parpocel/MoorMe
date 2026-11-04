@@ -192,7 +192,7 @@ export class MenuScene {
     add(island(0, 26, 16, 13), 150, -175, 2.1);
     add(island(0, 90, 60, 21), -560, -640, 0.7);
     add(lighthouse(), -10, -230, 0);
-    this.buoys = [add(buoy(0xd6403a, 'can'), -40, -40), add(buoy(0x2f9a63, 'cone'), -70, -95), add(buoy(0xe7b93a, 'cone'), 30, -70)];
+    this.buoys = []; // bez pław w scenerii menu
     // pasmo gór na horyzoncie
     const R = rng(31);
     for (let i = 0; i < 16; i++) {
