@@ -38,13 +38,20 @@ export const fmtLon = (lon) => { const [d, m] = dm(lon); return `${String(d).pad
 const latMin = (lat) => dm(lat)[1], lonMin = (lon) => dm(lon)[1];
 
 const sn = (x, dec) => num(x, dec).replace('-', '−');
-// Deklinacja z mapy: wartość z roku bazowego i roczna zmiana
-function declination(r, year) {
-  const base = rf(r, -6, 7, 2), y0 = ri(r, 2012, 2022), ch = rf(r, -0.2, 0.2, 20);
+// Deklinacja z róży mapy: wartość z roku wydania i roczna zmiana; zadanie dotyczy roku 1–15 lat po wydaniu
+function declination(r) {
+  const y0 = ri(r, 2008, 2024), year = y0 + ri(r, 1, 15);
+  const base = ri(r, -360, 420) / 60, ch = (ri(r, 1, 12) * (r() < 0.5 ? -1 : 1)) / 60;
   const d = Math.round((base + (year - y0) * ch) * 2) / 2;
   const fmtDM = (v) => { const a = Math.abs(v), dd = Math.floor(a + 1e-9), mm = Math.round((a - dd) * 60); return `${dd}°${String(mm).padStart(2, '0')}'${v >= 0 ? 'E' : 'W'}`; };
-  return { d, text: `${fmtDM(base)} ${L('w roku', 'in')} ${y0}, ${L('zmiana roczna', 'annual change')} ${fmtDM(ch)}`, steps: `d = ${sn(base, 1)}° + (${year} − ${y0}) · (${sn(ch, 2)}°) = ${sn(base + (year - y0) * ch, 2)}° ≈ ${signed(d, 1)} ${L('(zaokrąglamy do 0,5°)', '(rounded to 0.5°)')}` };
+  return {
+    d, year, y0, base, ch, rose: { base, y0, ch },
+    text: `${fmtDM(base)} ${L('w roku', 'in')} ${y0}, ${L('zmiana roczna', 'annual change')} ${fmtDM(ch)}`,
+    steps: `d = ${sn(base, 2)}° + (${year} − ${y0}) · (${sn(ch, 3)}°) = ${sn(base + (year - y0) * ch, 2)}° ≈ ${signed(d, 1)} ${L('(zaokrąglamy do 0,5°)', '(rounded to 0.5°)')}`
+  };
 }
+// róża deklinacji do mapki zadania (deklinacja z roku wydania mapy i zmiana roczna)
+const roseOf = (r) => { const v = declination(r); return { variation: v.base, rose: v.rose }; };
 
 // Tabela dewiacji (δ w funkcji KK), co 45°
 function devTable(r) {
@@ -62,7 +69,6 @@ function devTable(r) {
 const vec = (c, v) => [Math.cos(c * D2R) * v, Math.sin(c * D2R) * v];
 const course = ([n, e]) => norm(Math.atan2(e, n) / D2R);
 
-const YEAR = 2026;
 const BASE = { lat: 54 + 25 / 60, lon: 18 + 35 / 60 };
 
 const ans = (key, label, value, kind, tol) => ({ key, label, value, kind, tol });
@@ -76,29 +82,29 @@ function vectorPlot(r, legs, labels, total) {
   const end = pts[pts.length - 1];
   const vectors = legs.map((l, i) => ({ from: pts[i], to: pts[i + 1], label: labels[i] }));
   vectors.push({ from: O, to: end, label: total, main: true });
-  return { mode: 'vector', pts: [{ label: 'O', ...O }], sol: { vectors, point: end }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) };
+  return { mode: 'vector', pts: [{ label: 'O', ...O }], sol: { vectors, point: end }, ...roseOf(r), seed: Math.floor(r() * 1e9) };
 }
 
 const BASE_GEN = {
   compass(r) {
-    const KK = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r, YEAR);
+    const KK = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r);
     const KM = norm(KK + dev), KR = norm(KM + dec.d);
     return {
       cat: 'compass',
-      text: L(`Jacht płynie kursem kompasowym KK = ${deg3(KK)}. Dewiacja dla tego kursu wynosi δ = ${signed(dev)}. Deklinacja z mapy: ${dec.text}. Oblicz kurs magnetyczny i rzeczywisty w roku ${YEAR}.`, `The yacht is steering a compass course KK = ${deg3(KK)}. Deviation on this heading is δ = ${signed(dev)}. Variation from the chart: ${dec.text}. Find the magnetic and true course in ${YEAR}.`),
+      text: L(`Jacht płynie kursem kompasowym KK = ${deg3(KK)}. Dewiacja dla tego kursu wynosi δ = ${signed(dev)}. Deklinacja z mapy: ${dec.text}. Oblicz kurs magnetyczny i rzeczywisty w roku ${dec.year}.`, `The yacht is steering a compass course KK = ${deg3(KK)}. Deviation on this heading is δ = ${signed(dev)}. Variation from the chart: ${dec.text}. Find the magnetic and true course in ${dec.year}.`),
       answers: [ans('KM', 'KM', KM, 'deg', 1), ans('KR', 'KR', KR, 'deg', 1)],
       steps: [`KM = KK + δ = ${deg3(KK)} ${plus(dev)} = ${deg3(KM)}`, dec.steps, `KR = KM + d = ${deg3(KM)} ${plus(dec.d, 1)} = ${deg3(KR)}`, L(`(poprawka całkowita p = δ + d = ${plus(dev + dec.d, 1)})`, `(total correction p = δ + d = ${plus(dev + dec.d, 1)})`)]
     };
   },
   table(r) {
-    const tab = devTable(r), dec = declination(r, YEAR), KR = ri(r, 0, 359);
+    const tab = devTable(r), dec = declination(r), KR = ri(r, 0, 359);
     const KM = norm(KR - dec.d);
     let KK = norm(KM - tab.at(KM));
     KK = norm(KM - tab.at(KK));
     const dev = Math.round(tab.at(KK) * 10) / 10;
     return {
       cat: 'table',
-      text: L(`Jest rok ${YEAR}. Trzeba płynąć kursem rzeczywistym KR = ${deg3(KR)}. Deklinacja z mapy: ${dec.text} – przelicz ją na rok ${YEAR}. Dewiację odczytaj z tabeli (interpoluj liniowo). Jaki kurs magnetyczny i kompasowy podać sternikowi?`, `The year is ${YEAR}. You need to steer a true course KR = ${deg3(KR)}. Variation from the chart: ${dec.text} – update it to ${YEAR}. Read the deviation from the table (interpolate linearly). Which magnetic and compass course do you give the helmsman?`),
+      text: L(`Jest rok ${dec.year}. Trzeba płynąć kursem rzeczywistym KR = ${deg3(KR)}. Deklinacja z mapy: ${dec.text} – przelicz ją na rok ${dec.year}. Dewiację odczytaj z tabeli (interpoluj liniowo). Jaki kurs magnetyczny i kompasowy podać sternikowi?`, `The year is ${dec.year}. You need to steer a true course KR = ${deg3(KR)}. Variation from the chart: ${dec.text} – update it to ${dec.year}. Read the deviation from the table (interpolate linearly). Which magnetic and compass course do you give the helmsman?`),
       table: { head: ['KK', 'δ'], rows: tab.rows.map(([k, v]) => [deg3(k), signed(v)]) },
       answers: [ans('KM', 'KM', KM, 'deg', 1), ans('KK', 'KK', KK, 'deg', 1)],
       steps: [dec.steps, `KM = KR − d = ${deg3(KR)} − (${plus(dec.d, 1)}) = ${deg3(KM)}`, L(`δ zależy od KK, więc liczymy kolejnymi przybliżeniami: δ(KM) ≈ ${plus(tab.at(KM), 1)} → KK ≈ ${deg3(KM - tab.at(KM))}`, `δ depends on KK, so iterate: δ(KM) ≈ ${plus(tab.at(KM), 1)} → KK ≈ ${deg3(KM - tab.at(KM))}`), `δ(KK) ≈ ${plus(dev, 1)} → KK = KM − δ = ${deg3(KK)}`]
@@ -163,20 +169,20 @@ const BASE_GEN = {
     const cl = Math.cos(P.lat * D2R);
     const obj = (brg, dist) => ({ lat: P.lat + (Math.cos(brg * D2R) * dist) / 60, lon: P.lon + (Math.sin(brg * D2R) * dist) / 60 / cl });
     const A = obj(b1, rf(r, 2, 6, 10)), B = obj(b2, rf(r, 2, 6, 10));
-    const dev = ri(r, -4, 4), d = rf(r, -5, 5, 2), p = dev + d;
+    const dev = ri(r, -4, 4), dec = declination(r), d = dec.d, p = dev + d;
     const NK1 = norm(Math.round(b1 - p)), NK2 = norm(Math.round(b2 - p));
     const NR1 = norm(NK1 + p), NR2 = norm(NK2 + p);
     // rozwiązanie z zaokrąglonych namiarów (tak jak zrobi to nawigator)
     const sol = intersect(A, NR1, B, NR2);
     return {
       cat: 'fix',
-      text: L(`Zmierzono namiary kompasowe: latarnia A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) NK = ${deg3(NK1)}, latarnia B (${fmtLat(B.lat)}, ${fmtLon(B.lon)}) NK = ${deg3(NK2)}. Poprawka: δ = ${signed(dev)}, d = ${signed(d, 1)}. Wyznacz pozycję jachtu (podaj minuty szerokości i długości).`, `Compass bearings taken: lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) NK = ${deg3(NK1)}, lighthouse B (${fmtLat(B.lat)}, ${fmtLon(B.lon)}) NK = ${deg3(NK2)}. Corrections: δ = ${signed(dev)}, d = ${signed(d, 1)}. Fix the yacht's position (give the minutes of latitude and longitude).`),
+      text: L(`Zmierzono namiary kompasowe: latarnia A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) NK = ${deg3(NK1)}, latarnia B (${fmtLat(B.lat)}, ${fmtLon(B.lon)}) NK = ${deg3(NK2)}. Dewiacja δ = ${signed(dev)}; deklinację odczytaj z róży na mapie i przelicz na rok ${dec.year}. Wyznacz pozycję jachtu (podaj minuty szerokości i długości).`, `Compass bearings taken: lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) NK = ${deg3(NK1)}, lighthouse B (${fmtLat(B.lat)}, ${fmtLon(B.lon)}) NK = ${deg3(NK2)}. Deviation δ = ${signed(dev)}; read the variation from the chart’s compass rose and update it to ${dec.year}. Fix the yacht's position (give the minutes of latitude and longitude).`),
       answers: [ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(sol.lat)}°`, latMin(sol.lat), 'min', 0.25), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(sol.lon)).padStart(3, '0')}°`, lonMin(sol.lon), 'min', 0.35)],
-      steps: [`NR_A = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR_B = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
+      steps: [dec.steps, `p = δ + d = ${plus(dev, 0)} ${plus(d, 1)} = ${plus(p, 1)}`, `NR_A = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR_B = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
         L(`Linie pozycyjne kreślimy z latarni w kierunkach zwrotnych: ${deg3(NR1 + 180)} od A i ${deg3(NR2 + 180)} od B`, `Plot the position lines from the lighthouses along the reciprocals: ${deg3(NR1 + 180)} from A and ${deg3(NR2 + 180)} from B`),
         L(`Przecięcie linii: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Intersection: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
       diagram: { kind: 'fix', A, B, NR1, NR2, P: sol },
-      plot: { pts: [{ label: 'A', light: true, ...A }, { label: 'B', light: true, ...B }], sol: { lines: [{ p: A, brg: NR1 }, { p: B, brg: NR2 }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
+      plot: { pts: [{ label: 'A', light: true, ...A }, { label: 'B', light: true, ...B }], sol: { lines: [{ p: A, brg: NR1 }, { p: B, brg: NR2 }], point: sol }, variation: dec.base, rose: dec.rose, seed: Math.floor(r() * 1e9) }
     };
   },
   dr(r) {
@@ -192,7 +198,7 @@ const BASE_GEN = {
       steps: [L(`Droga = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} Mm`, `Distance = SOG · t = ${num(SOG)} kn · ${num(mins / 60, 3)} h = ${num(dist, 2)} NM`),
         L(`Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; odejście = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} Mm`, `Δφ = d · cos KDd = ${num(dist * Math.cos(KDd * D2R), 2)}' ; departure = d · sin KDd = ${num(dist * Math.sin(KDd * D2R), 2)} NM`),
         L(`Δλ = odejście / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`, `Δλ = departure / cos φ = ${num((dist * Math.sin(KDd * D2R)) / cl, 2)}'`), L(`Pozycja zliczona: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`, `DR position: ${fmtLat(E.lat)}, ${fmtLon(E.lon)}`)],
-      plot: { pts: [{ label: '10:00', ...P }], sol: { segs: [{ p: P, brg: KDd, dist }], point: E }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
+      plot: { pts: [{ label: '10:00', ...P }], sol: { segs: [{ p: P, brg: KDd, dist }], point: E }, ...roseOf(r), seed: Math.floor(r() * 1e9) }
     };
   }
 };
@@ -209,10 +215,10 @@ const VAR_GEN = {
   compass: [
     // odwrotnie: z KR do KK
     (r) => {
-      const KR = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r, YEAR), KM = norm(KR - dec.d), KK = norm(KM - dev);
+      const KR = ri(r, 0, 359), dev = ri(r, -6, 6), dec = declination(r), KM = norm(KR - dec.d), KK = norm(KM - dev);
       return {
         cat: 'compass',
-        text: L(`Z mapy wykreślono kurs rzeczywisty KR = ${deg3(KR)}. Deklinacja: ${dec.text}. Dewiacja na tym kursie δ = ${signed(dev)}. Jaki kurs magnetyczny i kompasowy podasz sternikowi w roku ${YEAR}?`, `The true course laid off on the chart is KR = ${deg3(KR)}. Variation: ${dec.text}. Deviation on this heading δ = ${signed(dev)}. Which magnetic and compass course do you give the helmsman in ${YEAR}?`),
+        text: L(`Z mapy wykreślono kurs rzeczywisty KR = ${deg3(KR)}. Deklinacja: ${dec.text}. Dewiacja na tym kursie δ = ${signed(dev)}. Jaki kurs magnetyczny i kompasowy podasz sternikowi w roku ${dec.year}?`, `The true course laid off on the chart is KR = ${deg3(KR)}. Variation: ${dec.text}. Deviation on this heading δ = ${signed(dev)}. Which magnetic and compass course do you give the helmsman in ${dec.year}?`),
         answers: [ans('KM', 'KM', KM, 'deg', 1), ans('KK', 'KK', KK, 'deg', 1)],
         steps: [dec.steps, `KM = KR − d = ${deg3(KR)} − (${plus(dec.d, 1)}) = ${deg3(KM)}`, `KK = KM − δ = ${deg3(KM)} − (${plus(dev)}) = ${deg3(KK)}`, L('Od kursu rzeczywistego do kompasowego poprawki odejmujemy (ze znakiem).', 'Going from true to compass, subtract the corrections (with their signs).')]
       };
@@ -253,7 +259,7 @@ const VAR_GEN = {
         steps: [L(`Pozycja zliczona: z punktu startu odłóż KR ${deg3(KR)} i drogę ${num(V)} · ${num(hrs, 1)} h = ${num(V * hrs, 2)} Mm → ${fmtLat(DR.lat)}, ${fmtLon(DR.lon)}`, `DR position: from the start lay off KR ${deg3(KR)} and ${num(V)} · ${num(hrs, 1)} h = ${num(V * hrs, 2)} NM → ${fmtLat(DR.lat)}, ${fmtLon(DR.lon)}`),
           L(`Prąd to wektor od pozycji zliczonej do obserwowanej: ${deg3(cr.brg)}, ${num(cr.dist, 2)} Mm w ${num(hrs, 1)} h`, `The current is the vector from the DR to the observed position: ${deg3(cr.brg)}, ${num(cr.dist, 2)} NM in ${num(hrs, 1)} h`),
           L(`Prędkość prądu = ${num(cr.dist, 2)} / ${num(hrs, 1)} = ${num(cr.dist / hrs, 2)} kn`, `Rate = ${num(cr.dist, 2)} / ${num(hrs, 1)} = ${num(cr.dist / hrs, 2)} kn`)],
-        plot: { pts: [{ label: fmtTime(t0), ...O }, { label: `${L('obs.', 'obs.')} ${fmtTime(t0 + hrs * 60)}`, ...F }], sol: { vectors: [{ from: O, to: DR, label: L('po wodzie', 'through water'), unit: 'Mm' }, { from: DR, to: F, label: L('prąd', 'current'), unit: 'Mm', main: true }], point: F }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
+        plot: { pts: [{ label: fmtTime(t0), ...O }, { label: `${L('obs.', 'obs.')} ${fmtTime(t0 + hrs * 60)}`, ...F }], sol: { vectors: [{ from: O, to: DR, label: L('po wodzie', 'through water'), unit: 'Mm' }, { from: DR, to: F, label: L('prąd', 'current'), unit: 'Mm', main: true }], point: F }, ...roseOf(r), seed: Math.floor(r() * 1e9) }
       };
     }
   ],
@@ -300,13 +306,13 @@ const VAR_GEN = {
     // namiar i odległość z radaru od jednego obiektu
     (r) => {
       const P = { lat: BASE.lat + rf(r, -0.1, 0.1, 600), lon: BASE.lon + rf(r, -0.15, 0.15, 600) }, b = ri(r, 0, 359), dist = rf(r, 1.5, 5, 10);
-      const A = move(P, b, dist), dev = ri(r, -4, 4), d = rf(r, -5, 5, 2), p = dev + d, NK = norm(Math.round(b - p)), NR = norm(NK + p), sol = move(A, NR + 180, dist);
+      const A = move(P, b, dist), dev = ri(r, -4, 4), dec = declination(r), d = dec.d, p = dev + d, NK = norm(Math.round(b - p)), NR = norm(NK + p), sol = move(A, NR + 180, dist);
       return {
         cat: 'fix',
-        text: L(`Latarnia A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): namiar kompasowy NK = ${deg3(NK)}, odległość z radaru ${num(dist)} Mm. Poprawka: δ = ${signed(dev)}, d = ${signed(d, 1)}. Wyznacz pozycję jachtu.`, `Lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): compass bearing NK = ${deg3(NK)}, radar range ${num(dist)} NM. Corrections: δ = ${signed(dev)}, d = ${signed(d, 1)}. Fix the yacht's position.`),
+        text: L(`Latarnia A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): namiar kompasowy NK = ${deg3(NK)}, odległość z radaru ${num(dist)} Mm. Dewiacja δ = ${signed(dev)}; deklinację odczytaj z róży na mapie i przelicz na rok ${dec.year}. Wyznacz pozycję jachtu.`, `Lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}): compass bearing NK = ${deg3(NK)}, radar range ${num(dist)} NM. Deviation δ = ${signed(dev)}; read the variation from the chart’s compass rose and update it to ${dec.year}. Fix the yacht's position.`),
         answers: [ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(sol.lat)}°`, latMin(sol.lat), 'min', 0.25), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(sol.lon)).padStart(3, '0')}°`, lonMin(sol.lon), 'min', 0.35)],
-        steps: [`NR = ${deg3(NK)} ${plus(p, 1)} = ${deg3(NR)}`, L(`Z latarni wykreśl linię w kierunku zwrotnym ${deg3(NR + 180)} i okrąg o promieniu ${num(dist)} Mm (narzędzie „Okrąg”)`, `From the lighthouse draw the reciprocal ${deg3(NR + 180)} and a circle of radius ${num(dist)} NM (the “Circle” tool)`), L(`Pozycja: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
-        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR }], circles: [{ p: A, r: dist }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
+        steps: [dec.steps, `p = δ + d = ${plus(dev, 0)} ${plus(d, 1)} = ${plus(p, 1)}`, `NR = ${deg3(NK)} ${plus(p, 1)} = ${deg3(NR)}`, L(`Z latarni wykreśl linię w kierunku zwrotnym ${deg3(NR + 180)} i okrąg o promieniu ${num(dist)} Mm (narzędzie „Okrąg”)`, `From the lighthouse draw the reciprocal ${deg3(NR + 180)} and a circle of radius ${num(dist)} NM (the “Circle” tool)`), L(`Pozycja: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
+        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR }], circles: [{ p: A, r: dist }], point: sol }, variation: dec.base, rose: dec.rose, seed: Math.floor(r() * 1e9) }
       };
     },
     // dwa namiary niejednoczesne jednego obiektu i przebyta droga (przeniesiona linia pozycyjna)
@@ -319,20 +325,20 @@ const VAR_GEN = {
         P1 = move(P2, KDd + 180, (SOG * mins) / 60); b1 = rhumb(P1, A).brg;
         if (Math.abs(angDiff(b1, b2)) >= 30) break;
       }
-      const dist = (SOG * mins) / 60, dev = ri(r, -4, 4), d = rf(r, -5, 5, 2), p = dev + d;
+      const dist = (SOG * mins) / 60, dev = ri(r, -4, 4), dec = declination(r), d = dec.d, p = dev + d;
       const NK1 = norm(Math.round(b1 - p)), NK2 = norm(Math.round(b2 - p)), NR1 = norm(NK1 + p), NR2 = norm(NK2 + p);
       // przeniesiona linia NR1: przesunięta o drogę d w kierunku KDd; jej przecięcie z NR2 to pozycja o drugim namiarze
       const A1 = move(A, KDd, dist), sol = intersect(A1, NR1, A, NR2);
       const t0 = ri(r, 9 * 12, 15 * 12) * 5;
       return {
         cat: 'fix',
-        text: L(`O ${fmtTime(t0)} latarnię A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) namierzono: NK = ${deg3(NK1)}. Jacht płynie KDd = ${deg3(KDd)} z SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0 + mins)} tę samą latarnię namierzono ponownie: NK = ${deg3(NK2)}. Poprawka: δ = ${signed(dev)}, d = ${signed(d, 1)}. Wyznacz pozycję obserwowaną o ${fmtTime(t0 + mins)}.`, `At ${fmtTime(t0)} lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) bore NK = ${deg3(NK1)} by compass. The yacht makes good KDd = ${deg3(KDd)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0 + mins)} the same lighthouse bore NK = ${deg3(NK2)}. Corrections: δ = ${signed(dev)}, d = ${signed(d, 1)}. Find the observed position at ${fmtTime(t0 + mins)}.`),
+        text: L(`O ${fmtTime(t0)} latarnię A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) namierzono: NK = ${deg3(NK1)}. Jacht płynie KDd = ${deg3(KDd)} z SOG ${num(SOG)} kn (bez prądu i dryfu). O ${fmtTime(t0 + mins)} tę samą latarnię namierzono ponownie: NK = ${deg3(NK2)}. Dewiacja δ = ${signed(dev)}; deklinację odczytaj z róży na mapie i przelicz na rok ${dec.year}. Wyznacz pozycję obserwowaną o ${fmtTime(t0 + mins)}.`, `At ${fmtTime(t0)} lighthouse A (${fmtLat(A.lat)}, ${fmtLon(A.lon)}) bore NK = ${deg3(NK1)} by compass. The yacht makes good KDd = ${deg3(KDd)} at ${num(SOG)} kn (no current or leeway). At ${fmtTime(t0 + mins)} the same lighthouse bore NK = ${deg3(NK2)}. Deviation δ = ${signed(dev)}; read the variation from the chart’s compass rose and update it to ${dec.year}. Find the observed position at ${fmtTime(t0 + mins)}.`),
         answers: [ans('latm', `${L('Szerokość', 'Latitude')} ${Math.floor(sol.lat)}°`, latMin(sol.lat), 'min', 0.3), ans('lonm', `${L('Długość', 'Longitude')} ${String(Math.floor(sol.lon)).padStart(3, '0')}°`, lonMin(sol.lon), 'min', 0.4)],
-        steps: [`NR₁ = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR₂ = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
+        steps: [dec.steps, `p = δ + d = ${plus(dev, 0)} ${plus(d, 1)} = ${plus(p, 1)}`, `NR₁ = ${deg3(NK1)} ${plus(p, 1)} = ${deg3(NR1)}, NR₂ = ${deg3(NK2)} ${plus(p, 1)} = ${deg3(NR2)}`,
           L(`Droga przebyta między namiarami: d = ${num(SOG)} kn · ${mins} min = ${num(dist, 2)} Mm`, `Distance run between the bearings: d = ${num(SOG)} kn · ${mins} min = ${num(dist, 2)} NM`),
           L(`Wykreśl z latarni linię pierwszego namiaru (kierunek zwrotny ${deg3(NR1 + 180)}). Z dowolnego jej punktu odłóż drogę ${num(dist, 2)} Mm w kierunku KDd ${deg3(KDd)} i przez koniec odcinka poprowadź równoległą do NR₁ – to przeniesiona linia pozycyjna (narzędzia „Kurs i droga” i „Linijka równoległa”).`, `From the lighthouse draw the first position line (reciprocal ${deg3(NR1 + 180)}). From any point on it lay off ${num(dist, 2)} NM along KDd ${deg3(KDd)} and draw a parallel to NR₁ through the end – the transferred position line (the “Course and distance” and “Parallel ruler” tools).`),
           L(`Wykreśl linię drugiego namiaru (kierunek zwrotny ${deg3(NR2 + 180)}). Przecięcie z przeniesioną linią to pozycja obserwowana: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`, `Draw the second position line (reciprocal ${deg3(NR2 + 180)}). Its intersection with the transferred line is the observed position: ${fmtLat(sol.lat)}, ${fmtLon(sol.lon)}`)],
-        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR1 }, { p: A1, brg: NR1 }, { p: A, brg: NR2 }], vectors: [{ from: A, to: A1, label: 'd', unit: 'Mm' }], point: sol }, variation: d, seed: Math.floor(r() * 1e9) }
+        plot: { pts: [{ label: 'A', light: true, ...A }], sol: { lines: [{ p: A, brg: NR1 }, { p: A1, brg: NR1 }, { p: A, brg: NR2 }], vectors: [{ from: A, to: A1, label: 'd', unit: 'Mm' }], point: sol }, variation: dec.base, rose: dec.rose, seed: Math.floor(r() * 1e9) }
       };
     }
   ],
@@ -347,7 +353,7 @@ const VAR_GEN = {
         steps: [L(`Δφ = ${num((B.lat - A.lat) * 60, 2)}', odejście = Δλ · cos φ = ${num(Math.sin(rb.brg * D2R) * rb.dist, 2)} Mm`, `Δφ = ${num((B.lat - A.lat) * 60, 2)}', departure = Δλ · cos φ = ${num(Math.sin(rb.brg * D2R) * rb.dist, 2)} NM`),
           L(`KDd = ${deg3(rb.brg)}, odległość = ${num(rb.dist, 2)} Mm (na mapie: linia od A do B i cyrkiel na skali szerokości)`, `KDd = ${deg3(rb.brg)}, distance = ${num(rb.dist, 2)} NM (on the chart: a line from A to B and dividers on the latitude scale)`),
           L(`Czas = ${num(rb.dist, 2)} / ${num(SOG)} = ${Math.round((rb.dist / SOG) * 60)} min → ${fmtTime(ETA)}`, `Time = ${num(rb.dist, 2)} / ${num(SOG)} = ${Math.round((rb.dist / SOG) * 60)} min → ${fmtTime(ETA)}`)],
-        plot: { pts: [{ label: 'A', ...A }, { label: 'B', ...B }], sol: { segs: [{ p: A, brg: rb.brg, dist: rb.dist }], point: B }, variation: rf(r, -6, 6, 2), seed: Math.floor(r() * 1e9) }
+        plot: { pts: [{ label: 'A', ...A }, { label: 'B', ...B }], sol: { segs: [{ p: A, brg: rb.brg, dist: rb.dist }], point: B }, ...roseOf(r), seed: Math.floor(r() * 1e9) }
       };
     }
   ]

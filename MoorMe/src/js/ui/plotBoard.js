@@ -174,7 +174,7 @@ export class PlotBoard {
       sound.push({ ...q, d: Math.max(1, Math.round(Math.min(deep + r() * 3, 2 + dl * 11 + r() * 4))) });
     }
     // róża kompasowa w najbardziej „pustym” rogu
-    const cands = [[150, 150], [this.W - 150, 150], [150, this.H - 150], [this.W - 150, this.H - 150], [this.W / 2, this.H / 2 + 120], [this.W / 2, 140]].map(([x, y]) => ({ x, y }));
+    const cands = [[165, 165], [this.W - 165, 165], [165, this.H - 165], [this.W - 165, this.H - 165], [this.W / 2, this.H / 2 + 120], [this.W / 2, 140]].map(([x, y]) => ({ x, y }));
     const score = (c) => Math.min(...objs.concat([P]).map((o) => { const q = this.px(o); return Math.hypot(q.x - c.x, q.y - c.y); }), ...lands.map((l) => { const q = this.px(l.c); return Math.hypot(q.x - c.x, q.y - c.y) - l.R * this.k; }));
     this.rose = cands.sort((a, b) => score(b) - score(a))[0];
     this.lands = lands; this.sound = sound;
@@ -335,6 +335,7 @@ export class PlotBoard {
 
   // trójkąt nawigacyjny: krawędź przez środek w kierunku ang (°), uchwyt obrotu na końcu krawędzi
   static PL = 120;
+  static ROSE_R = 105; // promień róży deklinacji na mapce (większa – czytelna)
   plotterGeom() {
     const pl = this.plotter, c = this.px(pl), a = pl.ang * D2R, u = { x: Math.sin(a), y: -Math.cos(a) }, v = { x: Math.cos(a), y: Math.sin(a) };
     return { c, u, v, handle: { x: c.x + u.x * PlotBoard.PL, y: c.y + u.y * PlotBoard.PL } };
@@ -599,9 +600,9 @@ export class PlotBoard {
     for (const l of this.lands) { path(l.poly); ctx.fillStyle = '#f2e2b0'; ctx.fill(); ctx.strokeStyle = '#5b4a2c'; ctx.lineWidth = 1.3; ctx.stroke(); }
     // głębokości
     ctx.fillStyle = 'rgba(40,60,90,0.8)'; ctx.font = 'italic 10px Segoe UI, sans-serif'; ctx.textAlign = 'center';
-    for (const s of this.sound) { const q = this.px(s); if (Math.hypot(q.x - this.rose.x, q.y - this.rose.y) < 86) continue; ctx.fillText(String(s.d), q.x, q.y + 3); }
+    for (const s of this.sound) { const q = this.px(s); if (Math.hypot(q.x - this.rose.x, q.y - this.rose.y) < PlotBoard.ROSE_R + 16) continue; ctx.fillText(String(s.d), q.x, q.y + 3); }
     ctx.textAlign = 'left';
-    this.drawRose(ctx, this.rose.x, this.rose.y, 70);
+    this.drawRose(ctx, this.rose.x, this.rose.y, PlotBoard.ROSE_R);
   }
 
   // róża kompasowa: zewnętrzna – kierunki rzeczywiste, wewnętrzna – magnetyczne (obrócona o deklinację)
@@ -615,17 +616,24 @@ export class PlotBoard {
       }
     };
     ctx.save();
-    ctx.strokeStyle = 'rgba(176,40,140,0.8)'; ctx.fillStyle = 'rgba(176,40,140,0.9)'; ctx.lineWidth = 0.9; ctx.font = '8px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(176,40,140,0.8)'; ctx.fillStyle = 'rgba(176,40,140,0.9)'; ctx.lineWidth = 1; ctx.font = '10.5px Segoe UI, sans-serif'; ctx.textAlign = 'center';
     ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.stroke();
     ring(R, 0, true);
     ctx.beginPath(); ctx.arc(x, y, R * 0.56, 0, Math.PI * 2); ctx.stroke();
     ring(R * 0.56, v, false);
     // gwiazda północy i strzałka północy magnetycznej
-    ctx.beginPath(); ctx.moveTo(x, y - R + 2); ctx.lineTo(x + 5, y - R + 14); ctx.lineTo(x - 5, y - R + 14); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x, y - R + 2); ctx.lineTo(x + 6, y - R + 17); ctx.lineTo(x - 6, y - R + 17); ctx.closePath(); ctx.fill();
     const tm = v * D2R; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.sin(tm) * R * 0.5, y - Math.cos(tm) * R * 0.5); ctx.stroke();
-    ctx.font = 'bold 8px Segoe UI, sans-serif';
-    const vv = Math.abs(v), d = Math.floor(vv + 1e-9), m = Math.round((vv - d) * 60);
-    ctx.fillText(`Var ${d}°${pad2(m)}'${v >= 0 ? 'E' : 'W'}`, x, y + 14);
+    // opis jak na mapie: deklinacja w roku wydania i zmiana roczna, np. 3°40'E 2015 (8'E)
+    const dmS = (val) => { const a = Math.abs(val), d = Math.floor(a + 1e-9), m = Math.round((a - d) * 60); return `${d}°${pad2(m)}'${val >= 0 ? 'E' : 'W'}`; };
+    const rose = this.plot.rose;
+    ctx.font = 'bold 11px Segoe UI, sans-serif';
+    if (rose) {
+      ctx.fillText(`${dmS(rose.base)} ${rose.y0}`, x, y + 16);
+      const cm = Math.round(Math.abs(rose.ch) * 60);
+      ctx.font = '10px Segoe UI, sans-serif';
+      ctx.fillText(`(${cm}'${rose.ch >= 0 ? 'E' : 'W'} ${tr('rocznie')})`, x, y + 29);
+    } else ctx.fillText(`Var ${dmS(v)}`, x, y + 16);
     ctx.restore();
   }
 
