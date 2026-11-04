@@ -247,6 +247,8 @@ function menuScreenTiles({ kicker, items, sel = 0, back, extra = null, settingsB
 
 // Menu główne w formie koła („tortu”): napis MoorMe i opis wybranego modułu w środku, moduły jako wycinki wokół.
 // Poprzedni układ (kafle u dołu) to menuScreen – wystarczy w showModeSelect wywołać znów menuScreen zamiast wheelMenu.
+// nazwa z dwóch wyrazów – każdy w osobnym wierszu
+const twoLines = (txt) => { const w = txt.split(' '); return w.length === 2 ? [w[0], h('br'), w[1]] : [txt]; };
 function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settingsBack = null }) {
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
@@ -294,7 +296,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
     const [lx, ly] = pt((R + R0) / 2, mid);
     const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
-      h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, it.title));
+      h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, ...twoLines(t(it.title))));
     lbl.style.setProperty('--c', it.color);
     labels.push(lbl);
     return path;
