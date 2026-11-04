@@ -324,64 +324,64 @@ function stripSvg(code, W = 210, H = 34) {
 }
 // zestawienie charakterystyk (nazwa, skrót, definicja, obraz graficzny, lampa na żywo)
 const CHAR_TABLE = [
-  [L('Stałe i rozbłyskowe', 'Fixed and fixed-and-flashing'), [
-    ['F', 'F', L('Stałe', 'Fixed'), L('Świeci bez przerwy, zawsze z tą samą jasnością i w tym samym kolorze.', 'Shows continuously with unchanging brightness and colour.')],
-    ['FFl', 'FFl 5s', L('Rozbłyskowe', 'Fixed and flashing'), L('Światło stałe, które co pewien czas na chwilę mocno się rozjaśnia (rozbłysk).', 'A steady light that brightens strongly for a moment at regular intervals.')],
-    ['FFl(2)', 'FFl(2) 8s', L('Rozbłyskowe grupowe', 'Fixed and group flashing'), L('Światło stałe, które w każdym okresie rozjaśnia się grupą kilku rozbłysków.', 'A steady light that brightens with a group of flashes in every period.')]
+  [L('Fixed and fixed-and-flashing (stałe i rozbłyskowe)', 'Fixed and fixed-and-flashing'), [
+    ['F', 'F', L('Fixed (stałe)', 'Fixed'), L('Świeci bez przerwy, zawsze z tą samą jasnością i w tym samym kolorze.', 'Shows continuously with unchanging brightness and colour.')],
+    ['FFl', 'FFl 5s', L('Fixed and flashing (rozbłyskowe)', 'Fixed and flashing'), L('Światło stałe, które co pewien czas na chwilę mocno się rozjaśnia (rozbłysk).', 'A steady light that brightens strongly for a moment at regular intervals.')],
+    ['FFl(2)', 'FFl(2) 8s', L('Fixed and group flashing (rozbłyskowe grupowe)', 'Fixed and group flashing'), L('Światło stałe, które w każdym okresie rozjaśnia się grupą kilku rozbłysków.', 'A steady light that brightens with a group of flashes in every period.')]
   ]],
-  [L('Przerywane', 'Occulting'), [
-    ['Oc', 'Oc 4s', L('Przerywane', 'Occulting'), L('Przeważa światło: krótkie, jednakowe zaciemnienia przerywają dłuższe świecenie. Okres co najmniej 1,5 s.', 'Light predominates: short, equal eclipses interrupt longer periods of light. Period at least 1.5 s.')],
-    ['Oc(2)', 'Oc(2) 8s', L('Przerywane grupowe', 'Group occulting'), L('W każdym okresie grupa kilku zaciemnień, a między grupami dłuższe świecenie.', 'A group of eclipses in every period, with a longer spell of light between the groups.')],
-    ['Oc(2+1)', 'Oc(2+1) 12s', L('Przerywane złożone', 'Composite group occulting'), L('Dwie grupy zaciemnień o różnej liczbie (np. dwa i jedno) w jednym okresie.', 'Two groups with a different number of eclipses (e.g. two and one) in one period.')]
+  [L('Occulting (przerywane)', 'Occulting'), [
+    ['Oc', 'Oc 4s', L('Occulting (przerywane)', 'Occulting'), L('Przeważa światło: krótkie, jednakowe zaciemnienia przerywają dłuższe świecenie. Okres co najmniej 1,5 s.', 'Light predominates: short, equal eclipses interrupt longer periods of light. Period at least 1.5 s.')],
+    ['Oc(2)', 'Oc(2) 8s', L('Group occulting (przerywane grupowe)', 'Group occulting'), L('W każdym okresie grupa kilku zaciemnień, a między grupami dłuższe świecenie.', 'A group of eclipses in every period, with a longer spell of light between the groups.')],
+    ['Oc(2+1)', 'Oc(2+1) 12s', L('Composite group occulting (przerywane złożone)', 'Composite group occulting'), L('Dwie grupy zaciemnień o różnej liczbie (np. dwa i jedno) w jednym okresie.', 'Two groups with a different number of eclipses (e.g. two and one) in one period.')]
   ]],
-  [L('Izofazowe', 'Isophase'), [
-    ['Iso', 'Iso 4s', L('Izofazowe', 'Isophase'), L('Świecenie i ciemność trwają dokładnie tyle samo. Okres co najmniej 2 s.', 'Light and darkness last exactly the same time. Period at least 2 s.')]
+  [L('Isophase (izofazowe)', 'Isophase'), [
+    ['Iso', 'Iso 4s', L('Isophase (izofazowe)', 'Isophase'), L('Świecenie i ciemność trwają dokładnie tyle samo. Okres co najmniej 2 s.', 'Light and darkness last exactly the same time. Period at least 2 s.')]
   ]],
-  [L('Blaskowe', 'Long flashing'), [
-    ['LFl', 'LFl 10s', L('Blaskowe', 'Long flashing'), L('Pojedyncze blaski – długie błyski trwające co najmniej 2 s – wyraźnie krótsze od przerw.', 'Single long flashes of at least 2 s, clearly shorter than the darkness between them.')],
-    ['LFl(2)', 'LFl(2) 12s', L('Blaskowe grupowe', 'Group long flashing'), L('Grupa kilku blasków, po niej dłuższa przerwa.', 'A group of long flashes followed by a longer eclipse.')],
-    ['LFl(2+1)', 'LFl(2+1) 18s', L('Blaskowe złożone', 'Composite group long flashing'), L('Dwie grupy blasków o różnej liczbie w jednym okresie.', 'Two groups with a different number of long flashes in one period.')]
+  [L('Long flashing (blaskowe)', 'Long flashing'), [
+    ['LFl', 'LFl 10s', L('Long flashing (blaskowe)', 'Long flashing'), L('Pojedyncze blaski – długie błyski trwające co najmniej 2 s – wyraźnie krótsze od przerw.', 'Single long flashes of at least 2 s, clearly shorter than the darkness between them.')],
+    ['LFl(2)', 'LFl(2) 12s', L('Group long flashing (blaskowe grupowe)', 'Group long flashing'), L('Grupa kilku blasków, po niej dłuższa przerwa.', 'A group of long flashes followed by a longer eclipse.')],
+    ['LFl(2+1)', 'LFl(2+1) 18s', L('Composite group long flashing (blaskowe złożone)', 'Composite group long flashing'), L('Dwie grupy blasków o różnej liczbie w jednym okresie.', 'Two groups with a different number of long flashes in one period.')]
   ]],
-  [L('Błyskowe', 'Flashing'), [
-    ['Fl', 'Fl 4s', L('Błyskowe', 'Flashing'), L('Krótkie, jednakowe błyski wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę.', 'Short, equal flashes clearly shorter than the darkness, fewer than 50 per minute.')],
-    ['Fl(3)', 'Fl(3) 10s', L('Błyskowe grupowe', 'Group flashing'), L('Grupa kilku błysków (tu trzech), po niej dłuższa przerwa.', 'A group of flashes (here three) followed by a longer eclipse.')],
-    ['Fl(2+1)', 'Fl(2+1) 10s', L('Błyskowe złożone', 'Composite group flashing'), L('Dwie grupy błysków o różnej liczbie – np. dwa błyski, przerwa i jeden błysk.', 'Two groups with a different number of flashes – e.g. two flashes, an eclipse and one flash.')]
+  [L('Flashing (błyskowe)', 'Flashing'), [
+    ['Fl', 'Fl 4s', L('Flashing (błyskowe)', 'Flashing'), L('Krótkie, jednakowe błyski wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę.', 'Short, equal flashes clearly shorter than the darkness, fewer than 50 per minute.')],
+    ['Fl(3)', 'Fl(3) 10s', L('Group flashing (błyskowe grupowe)', 'Group flashing'), L('Grupa kilku błysków (tu trzech), po niej dłuższa przerwa.', 'A group of flashes (here three) followed by a longer eclipse.')],
+    ['Fl(2+1)', 'Fl(2+1) 10s', L('Composite group flashing (błyskowe złożone)', 'Composite group flashing'), L('Dwie grupy błysków o różnej liczbie – np. dwa błyski, przerwa i jeden błysk.', 'Two groups with a different number of flashes – e.g. two flashes, an eclipse and one flash.')]
   ]],
-  [L('Migające (Q)', 'Quick (Q)'), [
-    ['Q', 'Q', L('Migające', 'Quick'), L('Jednakowe błyski bez przerw, od 50 do 79 na minutę (zwykle 60).', 'Equal flashes without a break, 50 to 79 per minute (usually 60).')],
-    ['Q(3)', 'Q(3) 10s', L('Migające grupowe', 'Group quick'), L('Grupa błysków migających, po niej dłuższa przerwa.', 'A group of quick flashes followed by a longer eclipse.')],
-    ['Q(6)+LFl', 'Q(6)+LFl 15s', L('Migające złożone', 'Group quick with long flash'), L('Grupa błysków migających zakończona jednym blaskiem.', 'A group of quick flashes ending with one long flash.')],
-    ['IQ', 'IQ 13s', L('Migające przerywane', 'Interrupted quick'), L('Miga jak Q, ale po serii co najmniej ośmiu błysków robi przerwę trwającą 3 s lub dłużej.', 'Flashes like Q, but after a run of at least eight flashes there is an eclipse of 3 s or more.')]
+  [L('Quick – Q (migające)', 'Quick (Q)'), [
+    ['Q', 'Q', L('Quick (migające)', 'Quick'), L('Jednakowe błyski bez przerw, od 50 do 79 na minutę (zwykle 60).', 'Equal flashes without a break, 50 to 79 per minute (usually 60).')],
+    ['Q(3)', 'Q(3) 10s', L('Group quick (migające grupowe)', 'Group quick'), L('Grupa błysków migających, po niej dłuższa przerwa.', 'A group of quick flashes followed by a longer eclipse.')],
+    ['Q(6)+LFl', 'Q(6)+LFl 15s', L('Group quick with long flash (migające złożone)', 'Group quick with long flash'), L('Grupa błysków migających zakończona jednym blaskiem.', 'A group of quick flashes ending with one long flash.')],
+    ['IQ', 'IQ 13s', L('Interrupted quick (migające przerywane)', 'Interrupted quick'), L('Miga jak Q, ale po serii co najmniej ośmiu błysków robi przerwę trwającą 3 s lub dłużej.', 'Flashes like Q, but after a run of at least eight flashes there is an eclipse of 3 s or more.')]
   ]],
-  [L('Szybko migające (VQ)', 'Very quick (VQ)'), [
-    ['VQ', 'VQ', L('Szybko migające', 'Very quick'), L('Jednakowe błyski bez przerw, od 80 do 159 na minutę (zwykle 120).', 'Equal flashes without a break, 80 to 159 per minute (usually 120).')],
-    ['VQ(3)', 'VQ(3) 5s', L('Szybko migające grupowe', 'Group very quick'), L('Grupa szybkich błysków, po niej dłuższa przerwa.', 'A group of very quick flashes followed by a longer eclipse.')],
-    ['VQ(6)+LFl', 'VQ(6)+LFl 10s', L('Szybko migające złożone', 'Group very quick with long flash'), L('Grupa szybkich błysków zakończona jednym blaskiem.', 'A group of very quick flashes ending with one long flash.')],
-    ['IVQ', 'IVQ 10s', L('Szybko migające przerywane', 'Interrupted very quick'), L('Miga jak VQ, ale po serii co najmniej ośmiu błysków następuje przerwa co najmniej 3 s.', 'Flashes like VQ, but after a run of at least eight flashes there is an eclipse of at least 3 s.')],
-    ['UQ', 'UQ', L('Bardzo szybko migające', 'Ultra quick'), L('Jednakowe błyski bez przerw, 160 i więcej na minutę (zwykle 240–300).', 'Equal flashes without a break, 160 or more per minute (usually 240–300).')]
+  [L('Very quick – VQ (szybko migające)', 'Very quick (VQ)'), [
+    ['VQ', 'VQ', L('Very quick (szybko migające)', 'Very quick'), L('Jednakowe błyski bez przerw, od 80 do 159 na minutę (zwykle 120).', 'Equal flashes without a break, 80 to 159 per minute (usually 120).')],
+    ['VQ(3)', 'VQ(3) 5s', L('Group very quick (szybko migające grupowe)', 'Group very quick'), L('Grupa szybkich błysków, po niej dłuższa przerwa.', 'A group of very quick flashes followed by a longer eclipse.')],
+    ['VQ(6)+LFl', 'VQ(6)+LFl 10s', L('Group very quick with long flash (szybko migające złożone)', 'Group very quick with long flash'), L('Grupa szybkich błysków zakończona jednym blaskiem.', 'A group of very quick flashes ending with one long flash.')],
+    ['IVQ', 'IVQ 10s', L('Interrupted very quick (szybko migające przerywane)', 'Interrupted very quick'), L('Miga jak VQ, ale po serii co najmniej ośmiu błysków następuje przerwa co najmniej 3 s.', 'Flashes like VQ, but after a run of at least eight flashes there is an eclipse of at least 3 s.')],
+    ['UQ', 'UQ', L('Ultra quick (bardzo szybko migające)', 'Ultra quick'), L('Jednakowe błyski bez przerw, 160 i więcej na minutę (zwykle 240–300).', 'Equal flashes without a break, 160 or more per minute (usually 240–300).')]
   ]],
-  [L('Kodowe i zmiennobarwne', 'Morse and alternating'), [
-    ['Mo(A)', 'Mo(A) 6s', L('Kodowe Morse’a', 'Morse code'), L('Krótkie i długie świecenia układają się w literę alfabetu Morse’a – tu A (· –).', 'Short and long flashes form a Morse letter – here A (· –).')],
-    ['Al.WR', 'Al.WR 4s', L('Zmiennobarwne', 'Alternating'), L('W tym samym kierunku światło regularnie zmienia kolor, np. białe i czerwone na zmianę.', 'Seen from the same direction the light regularly changes colour, e.g. white and red in turn.')]
+  [L('Morse and alternating (kodowe i zmiennobarwne)', 'Morse and alternating'), [
+    ['Mo(A)', 'Mo(A) 6s', L('Morse code (kodowe Morse’a)', 'Morse code'), L('Krótkie i długie świecenia układają się w literę alfabetu Morse’a – tu A (· –).', 'Short and long flashes form a Morse letter – here A (· –).')],
+    ['Al.WR', 'Al.WR 4s', L('Alternating (zmiennobarwne)', 'Alternating'), L('W tym samym kierunku światło regularnie zmienia kolor, np. białe i czerwone na zmianę.', 'Seen from the same direction the light regularly changes colour, e.g. white and red in turn.')]
   ]]
 ];
 // opisy „na żywo” (lampa + wykres) dla charakterystyk z zestawienia: [kod przykładu, tytuł, opis]
 const CHAR_LIVE = {
-  F: ['F R', L('F – stałe (fixed)', 'F – fixed'), L('Świeci cały czas, bez przerw i bez zmian. Np. światła na główkach portu.', 'Shows continuously and steadily, with no change. E.g. harbour pier-head lights.')],
-  Fl: ['Fl G 4s', L('Fl – błyskowe (flashing)', 'Fl – flashing'), L('Pojedyncze krótkie błyski (zwykle ok. 0,5 s), wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę (w praktyce najczęściej nie częściej niż 30). Typowe dla znaków bocznych.', 'Single short flashes (usually about 0.5 s), clearly shorter than the eclipses, fewer than 50 per minute (in practice usually no more than 30). Typical of lateral marks.')],
-  'Fl(3)': [null, L('Fl(n) – grupowe błyskowe (group flashing)', 'Fl(n) – group flashing'), L('Grupa kilku błysków, potem dłuższa przerwa. Liczba w nawiasie to liczba błysków w grupie. Fl(2) – znak odosobnionego niebezpieczeństwa.', 'A group of flashes followed by a longer eclipse. The number in brackets is the number of flashes in the group. Fl(2) – isolated danger mark.')],
-  'Fl(2+1)': ['Fl(2+1) R 10s', L('Fl(2+1) – złożone grupowe (composite group flashing)', 'Fl(2+1) – composite group flashing'), L('Dwie grupy o różnej liczbie błysków: 2 błyski, przerwa, 1 błysk, długa przerwa. Znaki rozwidlenia toru.', 'Two groups with a different number of flashes: 2 flashes, an eclipse, 1 flash, a long eclipse. Preferred-channel marks.')],
-  LFl: ['LFl 10s', L('LFl – blaskowe (long flashing)', 'LFl – long flashing'), L('Jeden blask, czyli długi błysk trwający co najmniej 2 s. Np. znak wody bezpiecznej LFl 10s.', 'One long flash of at least 2 s. E.g. a safe-water mark LFl 10s.')],
-  Q: ['Q', L('Q – migające (quick)', 'Q – quick'), L('Błyski szybko jeden po drugim: 50–79 na minutę (zwykle 60, czyli co sekundę), bez przerw między seriami. Znak kardynalny północny.', 'Flashes in quick succession: 50–79 per minute (usually 60, i.e. one per second), continuously. North cardinal mark.')],
-  'Q(3)': ['Q(3) 10s', L('Q(n) – migające grupowe', 'Q(n) – group quick'), L('Grupa szybkich błysków, potem przerwa. Na znakach kardynalnych liczba błysków odpowiada godzinie na tarczy zegara: E – 3, S – 6, W – 9.', 'A group of quick flashes, then an eclipse. On cardinal marks the number of flashes matches the clock face: E – 3, S – 6, W – 9.')],
-  VQ: ['VQ', L('VQ – szybko migające (very quick)', 'VQ – very quick'), L('80–159 błysków na minutę (zwykle 120 – dwa na sekundę). Zamiennie z Q na znakach kardynalnych, często tam, gdzie znaki stoją blisko siebie.', '80–159 flashes per minute (usually 120 – two per second). Used instead of Q on cardinal marks, often where marks stand close together.')],
+  F: ['F R', L('F – fixed (stałe)', 'F – fixed'), L('Świeci cały czas, bez przerw i bez zmian. Np. światła na główkach portu.', 'Shows continuously and steadily, with no change. E.g. harbour pier-head lights.')],
+  Fl: ['Fl G 4s', L('Fl – flashing (błyskowe)', 'Fl – flashing'), L('Pojedyncze krótkie błyski (zwykle ok. 0,5 s), wyraźnie krótsze od przerw, rzadziej niż 50 razy na minutę (w praktyce najczęściej nie częściej niż 30). Typowe dla znaków bocznych.', 'Single short flashes (usually about 0.5 s), clearly shorter than the eclipses, fewer than 50 per minute (in practice usually no more than 30). Typical of lateral marks.')],
+  'Fl(3)': [null, L('Fl(n) – group flashing (grupowe błyskowe)', 'Fl(n) – group flashing'), L('Grupa kilku błysków, potem dłuższa przerwa. Liczba w nawiasie to liczba błysków w grupie. Fl(2) – znak odosobnionego niebezpieczeństwa.', 'A group of flashes followed by a longer eclipse. The number in brackets is the number of flashes in the group. Fl(2) – isolated danger mark.')],
+  'Fl(2+1)': ['Fl(2+1) R 10s', L('Fl(2+1) – composite group flashing (złożone grupowe)', 'Fl(2+1) – composite group flashing'), L('Dwie grupy o różnej liczbie błysków: 2 błyski, przerwa, 1 błysk, długa przerwa. Znaki rozwidlenia toru.', 'Two groups with a different number of flashes: 2 flashes, an eclipse, 1 flash, a long eclipse. Preferred-channel marks.')],
+  LFl: ['LFl 10s', L('LFl – long flashing (blaskowe)', 'LFl – long flashing'), L('Jeden blask, czyli długi błysk trwający co najmniej 2 s. Np. znak wody bezpiecznej LFl 10s.', 'One long flash of at least 2 s. E.g. a safe-water mark LFl 10s.')],
+  Q: ['Q', L('Q – quick (migające)', 'Q – quick'), L('Błyski szybko jeden po drugim: 50–79 na minutę (zwykle 60, czyli co sekundę), bez przerw między seriami. Znak kardynalny północny.', 'Flashes in quick succession: 50–79 per minute (usually 60, i.e. one per second), continuously. North cardinal mark.')],
+  'Q(3)': ['Q(3) 10s', L('Q(n) – group quick (migające grupowe)', 'Q(n) – group quick'), L('Grupa szybkich błysków, potem przerwa. Na znakach kardynalnych liczba błysków odpowiada godzinie na tarczy zegara: E – 3, S – 6, W – 9.', 'A group of quick flashes, then an eclipse. On cardinal marks the number of flashes matches the clock face: E – 3, S – 6, W – 9.')],
+  VQ: ['VQ', L('VQ – very quick (szybko migające)', 'VQ – very quick'), L('80–159 błysków na minutę (zwykle 120 – dwa na sekundę). Zamiennie z Q na znakach kardynalnych, często tam, gdzie znaki stoją blisko siebie.', '80–159 flashes per minute (usually 120 – two per second). Used instead of Q on cardinal marks, often where marks stand close together.')],
   'VQ(6)+LFl': ['VQ(6)+LFl 10s', L('VQ(6)+LFl – znak kardynalny południowy', 'VQ(6)+LFl – south cardinal mark'), L('Sześć szybkich błysków i zaraz po nich blask (długi błysk) – blask pozwala odróżnić 6 od 9 błysków.', 'Six very quick flashes immediately followed by a long flash – the long flash lets you tell 6 from 9 flashes.')],
-  UQ: ['UQ', L('UQ – bardzo szybko migające (ultra quick)', 'UQ – ultra quick'), L('160 i więcej błysków na minutę (zwykle 240–300). Rzadkie – np. na konstrukcjach morskich.', '160 or more flashes per minute (usually 240–300). Rare – e.g. on offshore structures.')],
-  Iso: ['Iso 4s', L('Iso – izofazowe (isophase)', 'Iso – isophase'), L('Światło i ciemność trwają tyle samo. Iso 4s – 2 s światła, 2 s przerwy. Znak wody bezpiecznej.', 'Light and darkness of equal length. Iso 4s – 2 s of light, 2 s of darkness. Safe-water mark.')],
-  Oc: ['Oc 4s', L('Oc – przerywane (occulting)', 'Oc – occulting'), L('Odwrotność błyskowego: świeci dłużej, niż trwają krótkie zaciemnienia. Oc 4s – 3 s światła, 1 s ciemności.', 'The opposite of flashing: the light is on longer than the short eclipses. Oc 4s – 3 s of light, 1 s of darkness.')],
-  'Oc(2)': ['Oc(2) 8s', L('Oc(n) – grupowe przerywane', 'Oc(n) – group occulting'), L('Grupa kilku krótkich zaciemnień w okresie. Oc(2) 8s – dwa zaciemnienia po 1 s.', 'A group of short eclipses in each period. Oc(2) 8s – two 1-s eclipses.')],
-  'Mo(A)': ['Mo(A) 6s', L('Mo – kodem Morse’a', 'Mo – Morse code'), L('Błyski krótkie i długie układają się w literę alfabetu Morse’a. Mo(A) (· –) – znak wody bezpiecznej, często na pławach podejściowych.', 'Short and long flashes form a Morse letter. Mo(A) (· –) – a safe-water mark, often on landfall buoys.')],
-  'Al.WR': [null, L('Al – zmiennobarwne (alternating)', 'Al – alternating'), L('Światło zmienia kolor w kolejnych fazach, np. Al.WR – białe i czerwone. Al.Bu.Y – niebieskie i żółte na znaku nowego niebezpieczeństwa (wraku).', 'The light changes colour in successive phases, e.g. Al.WR – white and red. Al.Bu.Y – blue and yellow on a new-danger (wreck) mark.')]
+  UQ: ['UQ', L('UQ – ultra quick (bardzo szybko migające)', 'UQ – ultra quick'), L('160 i więcej błysków na minutę (zwykle 240–300). Rzadkie – np. na konstrukcjach morskich.', '160 or more flashes per minute (usually 240–300). Rare – e.g. on offshore structures.')],
+  Iso: ['Iso 4s', L('Iso – isophase (izofazowe)', 'Iso – isophase'), L('Światło i ciemność trwają tyle samo. Iso 4s – 2 s światła, 2 s przerwy. Znak wody bezpiecznej.', 'Light and darkness of equal length. Iso 4s – 2 s of light, 2 s of darkness. Safe-water mark.')],
+  Oc: ['Oc 4s', L('Oc – occulting (przerywane)', 'Oc – occulting'), L('Odwrotność błyskowego: świeci dłużej, niż trwają krótkie zaciemnienia. Oc 4s – 3 s światła, 1 s ciemności.', 'The opposite of flashing: the light is on longer than the short eclipses. Oc 4s – 3 s of light, 1 s of darkness.')],
+  'Oc(2)': ['Oc(2) 8s', L('Oc(n) – group occulting (grupowe przerywane)', 'Oc(n) – group occulting'), L('Grupa kilku krótkich zaciemnień w okresie. Oc(2) 8s – dwa zaciemnienia po 1 s.', 'A group of short eclipses in each period. Oc(2) 8s – two 1-s eclipses.')],
+  'Mo(A)': ['Mo(A) 6s', L('Mo – Morse code (kodem Morse’a)', 'Mo – Morse code'), L('Błyski krótkie i długie układają się w literę alfabetu Morse’a. Mo(A) (· –) – znak wody bezpiecznej, często na pławach podejściowych.', 'Short and long flashes form a Morse letter. Mo(A) (· –) – a safe-water mark, often on landfall buoys.')],
+  'Al.WR': [null, L('Al – alternating (zmiennobarwne)', 'Al – alternating'), L('Światło zmienia kolor w kolejnych fazach, np. Al.WR – białe i czerwone. Al.Bu.Y – niebieskie i żółte na znaku nowego niebezpieczeństwa (wraku).', 'The light changes colour in successive phases, e.g. Al.WR – white and red. Al.Bu.Y – blue and yellow on a new-danger (wreck) mark.')]
 };
 
 // jedna charakterystyka: u góry nazwa, skrót, definicja i obraz graficzny; pod spodem lampa na żywo, wykres czasowy i opis
