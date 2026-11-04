@@ -189,6 +189,8 @@ export class View3D {
     this.coilMeshes = new Map();
 
     // piana / bąble
+    this.wake = this.makeWake();
+    scene.add(this.wake.mesh);
     this.particles = this.makeParticles();
     scene.add(this.particles.points);
     // smugi wiatru
@@ -241,6 +243,72 @@ export class View3D {
     grp.userData.fill = fill;
     grp.visible = w.cfg.scenario === 'moor';
     return grp;
+  }
+
+  // kilwater: pas piany za rufą – rozszerza się w „V”, jasne brzegi fal, wirująca woda w środku, zanika z czasem
+  makeWake() {
+    const N = 90, geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(N * 3 * 3), uv = new Float32Array(N * 3 * 2), al = new Float32Array(N * 3);
+    const idx = [];
+    for (let i = 0; i < N - 1; i++) for (let k = 0; k < 2; k++) { const a = i * 3 + k, b2 = a + 1, c = a + 3, d = a + 4; idx.push(a, c, b2, b2, c, d); }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setAttribute('alpha', new THREE.BufferAttribute(al, 1));
+    geo.setIndex(idx);
+    const mat2 = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uT: { value: 0 }, uDark: { value: 0 } },
+      vertexShader: `attribute float alpha; varying float vA; varying vec2 vUv; void main(){ vA = alpha; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: `varying float vA; varying vec2 vUv; uniform float uT; uniform float uDark;
+        float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+        void main(){
+          float u = abs(vUv.x);
+          float edge = smoothstep(0.76, 0.92, u) * (1.0 - smoothstep(0.95, 1.0, u)); // wąskie, jasne brzegi fali
+          float core = (1.0 - smoothstep(0.0, 0.4, u)) * 0.5;                          // wirująca woda w środku
+          float nz = n(vec2(vUv.x * 9.0, vUv.y * 5.0 - uT * 0.3)) * 0.55 + n(vec2(vUv.x * 23.0, vUv.y * 12.0 + uT * 0.5)) * 0.45;
+          float speck = smoothstep(0.62, 0.8, n(vec2(vUv.x * 40.0, vUv.y * 22.0)));    // drobne płaty piany
+          float a = vA * (edge * (0.45 + 0.7 * nz) + core * smoothstep(0.45, 0.85, nz) + 0.25 * speck * (1.0 - u));
+          gl_FragColor = vec4(vec3(0.92, 0.96, 1.0) * (1.0 - 0.75 * uDark), a * 0.7);
+        }`
+    });
+    const mesh = new THREE.Mesh(geo, mat2);
+    mesh.frustumCulled = false; mesh.renderOrder = 3;
+    return { mesh, geo, mat: mat2, hist: [], N };
+  }
+
+  updateWake(dt, t, windKn, windDir) {
+    const W = this.wake, b = this.world.boat, spec = this.world.spec;
+    if (!W) return;
+    const L = spec.loa, { xs } = hullExtents(spec);
+    const st = localToWorld(b.x, b.z, b.th, xs + 0.2, 0);
+    const last = W.hist[W.hist.length - 1], n0 = W.hist.length;
+    const fwd = b.u === undefined ? b.speed : Math.max(0, b.u);
+    if (!last || Math.hypot(st.x - last.x, st.z - last.z) > 0.35) W.hist.push({ x: st.x, z: st.z, th: b.th, t, spd: Math.min(1, fwd / (spec.maxSpeedKn * 0.5144 * 0.6)), d: last ? last.d + Math.hypot(st.x - last.x, st.z - last.z) : 0 });
+    else if (b.speed < 0.12 && n0 === 1) { last.x = st.x; last.z = st.z; last.th = b.th; } // jacht stoi – pojedynczy punkt przy rufie
+    while (W.hist.length > W.N || (W.hist.length && t - W.hist[0].t > 14)) W.hist.shift();
+    const pa = W.geo.attributes.position.array, ua = W.geo.attributes.uv.array, aa = W.geo.attributes.alpha.array;
+    const H = W.hist, n = H.length;
+    for (let i = 0; i < W.N; i++) {
+      const hp = H[n - 1 - i]; // od rufy wstecz
+      for (let k = 0; k < 3; k++) {
+        const o = (i * 3 + k);
+        if (!hp) { aa[o] = 0; pa[o * 3 + 1] = -50; continue; }
+        const age = t - hp.t;
+        const half = spec.beam * 0.24 + age * (0.12 + 0.26 * hp.spd); // rozszerzanie się śladu (kąt ok. 20°)
+        const nx = -Math.sin(hp.th), nz = Math.cos(hp.th); // poprzecznie do kursu w chwili przejścia
+        const side = k - 1;
+        const x = hp.x + nx * half * side, z = hp.z + nz * half * side;
+        pa[o * 3] = x; pa[o * 3 + 2] = z;
+        pa[o * 3 + 1] = this.water.surfaceY(x, z, windKn, windDir) + 0.05;
+        ua[o * 2] = side; ua[o * 2 + 1] = hp.d / Math.max(2, L * 0.4);
+        // środek (spieniona woda zaraz za rufą) gaśnie szybko, brzegi fali (ramiona „V”) trzymają się dłużej
+        aa[o] = hp.spd * Math.max(0, 1 - age / (side === 0 ? 2.5 + 2 * hp.spd : 5 + 9 * hp.spd)) * Math.min(1, i / 3);
+      }
+    }
+    W.geo.attributes.position.needsUpdate = true; W.geo.attributes.uv.needsUpdate = true; W.geo.attributes.alpha.needsUpdate = true;
+    W.mat.uniforms.uT.value = t;
+    W.mat.uniforms.uDark.value = this.atmo && this.atmo.night ? this.atmo.night : 0;
   }
 
   makeParticles() {
@@ -841,9 +909,10 @@ export class View3D {
         for (let k = 0; k < 2; k++) this.spawn(p.x, p.z, nx * 3 + b.vx, nz * 3 + b.vz, 1.0);
       }
     }
-    // fala dziobowa
+    this.updateWake(dt, t, w.env.windSpeed / 0.5144, (w.env.windFromDeg + 180) * DEG);
+    // fala dziobowa (delikatna)
     const spd = b.speed;
-    if (spd > 0.6 && Math.random() < spd * 0.4) {
+    if (spd > 0.8 && Math.random() < spd * 0.2) {
       const bw = localToWorld(b.x, b.z, b.th, b.xb - 0.3, (Math.random() - 0.5) * 0.6);
       this.spawn(bw.x, bw.z, b.vx * 0.3 + (Math.random() - 0.5), b.vz * 0.3 + (Math.random() - 0.5), 1.8);
     }

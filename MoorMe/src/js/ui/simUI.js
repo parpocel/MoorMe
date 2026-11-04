@@ -718,7 +718,9 @@ export class SimScreen {
         this.closeRadial();
         this.renderLines(true);
         if (o.defer) o.fn(); // np. otwarcie kolejnego menu – dopiero po zamknięciu bieżącego
-        if (o.stay && this._radialArgs) this.openRadial(...this._radialArgs); // przełączniki (kabestan) – menu zostaje otwarte
+        // menu zostaje otwarte (z odświeżonymi opcjami) – zamyka je tylko „Oddaj” i polecenia, po których lina znika lub zmienia tryb pracy
+        const closes = o.defer || ['Oddaj', 'Usuń', 'Anuluj', 'Załóż', 'Nowa lina'].includes(o.label);
+        if (!closes && this._radialArgs && this._radialArgs[0] && this.world.lines.includes(this._radialArgs[0])) this.openRadial(...this._radialArgs);
       });
       menu.appendChild(b);
     });

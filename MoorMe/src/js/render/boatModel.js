@@ -707,16 +707,13 @@ function addBoatDetails(heel, root, spec, d) {
   }
   // antena GPS na relingu rufowym
   heel.add(cyl(0.04, 0.05, 0.1, 0xf2f2f2, 8).translateX(xs + 0.3).translateY(sheerHeight(spec, xs + 0.3) + 0.67).translateZ(spec.beam * 0.16));
-  // maszt: kołnierz u podstawy, kicker (vang) i trawelerz (bez liny talii grota)
+  // maszt: kołnierz u podstawy i kicker (vang) – bez trawelera i talii grota w kokpicie
   {
     const bY = d.topY + 1.9;
     const col = cyl(0.13, 0.16, 0.16, COL.mast, 10, { metal: 0.5, rough: 0.4 });
     col.position.set(d.mastX, d.topY + 0.08, 0);
     heel.add(col);
     heel.add(strut([d.mastX, d.topY + 0.3, 0], [d.mastX - 0.5, bY - 0.04, 0], 0.022, COL.metal, 5));
-    const tx = d.ck1 - 0.35, ty = d.fbC + 0.09;
-    heel.add(box(0.05, 0.04, d.ckw * 0.75, COL.metal, tx, ty, 0, { metal: 0.8, rough: 0.3 }));
-    heel.add(box(0.12, 0.06, 0.1, COL.dark, tx, ty + 0.05, 0));
   }
   // dach nadbudówki: panel słoneczny, luk i grzybki wentylacyjne
   {
@@ -962,7 +959,7 @@ export function animatePerson(p, t, walking, working = false) {
   if (!Array.isArray(L) || !A) return;
   const sw = walking ? Math.sin(t * 5.2) * 0.38 : 0; // ok. 0,8 cyklu kroku na sekundę
   L[0].rotation.x = sw; L[1].rotation.x = -sw;
-  if (working) { const r = -1.1 + Math.sin(t * 5) * 0.3; A[0].rotation.x = r; A[1].rotation.x = r - 0.15 * Math.sin(t * 5); }
+  if (working) { A[0].rotation.x = -0.9; A[1].rotation.x = -0.95; } // ręce spokojnie wyciągnięte do liny
   else { A[0].rotation.x = -sw * 0.7; A[1].rotation.x = sw * 0.7; }
 }
 

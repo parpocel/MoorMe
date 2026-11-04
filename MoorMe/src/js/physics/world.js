@@ -1186,7 +1186,7 @@ export class World {
         l.role = role;
         l.name = this.lineName(role, cleat);
         l._roleT = 0;
-        if (l.name !== old) this.log(`${old} pracuje teraz jako ${ROLE_NAMES[role].toLowerCase()} – nowa nazwa: ${l.name}`); // holender zostaje holendrem
+        void old; // nazwa zmienia się po cichu (bez komunikatu)
       }
     }
   }
