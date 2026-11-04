@@ -255,7 +255,7 @@ function wheelMenu({ kicker, items, sel = 0 }) {
   svg.setAttribute('viewBox', '-112 -112 224 224');
   svg.classList.add('wh-svg');
   const defs = document.createElementNS(NS, 'defs');
-  defs.innerHTML = `<radialGradient id="whshine" cx="0.5" cy="0.08" r="0.75"><stop offset="0" stop-color="#fff" stop-opacity="0.38"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.08"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
+  defs.innerHTML = `<radialGradient id="whshine" cx="0.34" cy="0.2" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.7" stop-color="#fff" stop-opacity="0.03"/><stop offset="1" stop-color="#fff" stop-opacity="0.12"/></radialGradient>`;
   svg.appendChild(defs);
   const labels = [];
   const segs = items.map((it, i) => {
@@ -266,22 +266,23 @@ function wheelMenu({ kicker, items, sel = 0 }) {
     // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
     const grad = document.createElementNS(NS, 'linearGradient');
     grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');
-    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 62%, #fff)"/><stop offset="0.55" style="stop-color: ${it.color}"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 70%, #000)"/>`;
+    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.78"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.6"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 75%, #0b1430); stop-opacity: 0.74"/>`;
     defs.appendChild(grad);
     const g = document.createElementNS(NS, 'g');
     g.classList.add('wh-g');
     g.style.setProperty('--dx', `${Math.cos(mid) * 4}px`); g.style.setProperty('--dy', `${Math.sin(mid) * 4}px`);
     const mk = (cls, extra = {}) => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', d); e.classList.add(cls); for (const [k, v] of Object.entries(extra)) e.setAttribute(k, v); g.appendChild(e); return e; };
-    mk('wh-depth', { transform: 'translate(0 5)', style: `fill: color-mix(in srgb, ${it.color} 45%, #0b1024)` });
     const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
     mk('wh-shine', { style: 'fill: url(#whshine)' });
+    // refleks jak na bańce: jasny łuk tuż przy zewnętrznej krawędzi
+    { const rr = R - 3.2, [ax, ay] = pt(rr, s0 + 0.12 * step), [bx, by] = pt(rr, s0 + 0.62 * step); const e = document.createElementNS(NS, 'path'); e.setAttribute('d', `M${ax} ${ay} A${rr} ${rr} 0 0 1 ${bx} ${by}`); e.classList.add('wh-rim'); g.appendChild(e); }
     g.addEventListener('mouseenter', () => select(i));
     g.addEventListener('click', () => activate(i));
     svg.appendChild(g);
     // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
     const [lx, ly] = pt((R + R0) / 2, mid);
     const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
-      h('span.wh-ic', {}, raw(glyph(it.glyph, 26))), h('span.wh-tt', {}, it.title));
+      h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, it.title));
     lbl.style.setProperty('--c', it.color);
     labels.push(lbl);
     return path;
