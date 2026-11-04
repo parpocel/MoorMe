@@ -225,7 +225,12 @@ export class PlotBoard {
           this.bigBtn)),
       this.hint, this.cv, this.readout);
     this.updateHint();
-    const pos = (e) => { const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * this.W, y: ((e.clientY - r.top) / r.height) * this.H }; };
+    // pozycja kursora we własnym układzie płótna: offsetX/Y uwzględniają obrót kartki (transform), getBoundingClientRect – nie
+    const pos = (e) => {
+      const cw = this.cv.clientWidth, ch = this.cv.clientHeight;
+      if (cw && ch && e.target === this.cv && Number.isFinite(e.offsetX)) return { x: (e.offsetX / cw) * this.W, y: (e.offsetY / ch) * this.H };
+      const r = this.cv.getBoundingClientRect(); return { x: ((e.clientX - r.left) / r.width) * this.W, y: ((e.clientY - r.top) / r.height) * this.H };
+    };
     // przesuwanie: narzędzie „Przesuń”, prawy lub środkowy przycisk myszy; dwa palce – szczypanie
     const touches = new Map();
     let pinch = null;
@@ -298,7 +303,7 @@ export class PlotBoard {
       course: 'Wpisz kurs i drogę, potem kliknij punkt startu – odłożony zostanie odcinek z punktem końcowym.',
       plotter: 'Kliknij, aby położyć trójkąt; przeciągnij go, by przesunąć, a za uchwyt (kółko) – by obrócić (także kółko myszy, z Shift ±10°). Kąt krawędzi trafia do pola „Kąt”.',
       parallel: 'Kliknij istniejącą linię, a potem punkt – przez punkt zostanie wykreślona linia równoległa.',
-      dividers: 'Przeciągnij cyrklem albo kliknij dwa punkty, aby zmierzyć odległość (trafia do pola „Droga”). Na skali szerokości przy lewym lub prawym brzegu 1\' = 1 Mm – cyrkiel przyciąga się tam do podziałki co 0,1\'.',
+      dividers: 'Przeciągnij cyrklem albo kliknij dwa punkty, aby zmierzyć odległość (trafia do pola „Droga”). Postawiony cyrkiel możesz chwycić: za ostrze – zmienisz rozwarcie, za ramię – przeniesiesz go z tym samym rozwarciem (np. z mapy na skalę). Na skali szerokości przy lewym lub prawym brzegu 1\' = 1 Mm – cyrkiel przyciąga się tam do podziałki co 0,1\'.',
       circle: 'Wpisz odległość w polu „Droga” i kliknij środek – powstanie okrąg pozycyjny (np. odległość od latarni).',
       point: 'Kliknij, aby postawić punkt i odczytać jego współrzędne.'
     }[this.tool]);
@@ -375,6 +380,10 @@ export class PlotBoard {
       this.delHover = this.nearestItem(p); this.draw(); return;
     }
     const n = this.snap(p);
+    if (this.tool === 'dividers' && !(this.drag && this.drag.click)) {
+      const g = this.grabDividers(p);
+      if (g) { this.mdrag = g; this.draw(); return; }
+    }
     if (this.tool === 'drag' || this.tool === 'dividers') {
       // drugi klik w trybie „klik – klik”: koniec linii / drugie ramię cyrkla
       if (this.drag && this.drag.click) { this.drag.b = n.scale && this.drag.a.scale ? { ...n, x: this.drag.a.x } : n; this.drag.click = false; this.drag.second = true; return; }
@@ -414,7 +423,42 @@ export class PlotBoard {
     }
     this.draw();
   }
+  // postawiony cyrkiel pod kursorem: ostrze (8 px) albo ramiona/przegub
+  grabDividers(p) {
+    for (let i = this.items.length - 1; i >= 0; i--) {
+      const it = this.items[i];
+      if (it.kind !== 'meas') continue;
+      const a = this.px(it.a), b = this.px(it.b);
+      if (Math.hypot(p.x - a.x, p.y - a.y) < 9) return { i, leg: 'a' };
+      if (Math.hypot(p.x - b.x, p.y - b.y) < 9) return { i, leg: 'b' };
+      const h = this.dividersHinge(a, b);
+      if (segDist(p, a, h) < 7 || segDist(p, h, b) < 7 || Math.hypot(p.x - h.x, p.y - h.y) < 10) { const q = this.nm(p.x, p.y); return { i, leg: 'both', ox: q.x, oy: q.y, a0: { ...it.a }, b0: { ...it.b } }; }
+    }
+    return null;
+  }
+  dividersHinge(a, b) {
+    const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2, dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1, hgt = Math.min(70, L * 0.45);
+    let nx = -dy / L, ny = dx / L;
+    if (Math.abs(dy) > Math.abs(dx) ? nx * (this.W / 2 - mx) < 0 : ny > 0) { nx = -nx; ny = -ny; }
+    return { x: mx + nx * hgt, y: my + ny * hgt };
+  }
   move(p) {
+    if (this.mdrag) {
+      const it = this.items[this.mdrag.i];
+      if (it) {
+        if (this.mdrag.leg === 'both') {
+          const q = this.nm(p.x, p.y), ddx = q.x - this.mdrag.ox, ddy = q.y - this.mdrag.oy;
+          it.a = { x: this.mdrag.a0.x + ddx, y: this.mdrag.a0.y + ddy }; it.b = { x: this.mdrag.b0.x + ddx, y: this.mdrag.b0.y + ddy };
+        } else {
+          const n = this.snap(p), other = this.mdrag.leg === 'a' ? it.b : it.a;
+          const np = n.scale && Math.abs(this.px(other).x - p.x) < 40 ? { x: other.x, y: n.y } : { x: n.x, y: n.y }; // na skali szerokości – pionowo
+          it[this.mdrag.leg] = np;
+        }
+        it.len = Math.hypot(it.b.x - it.a.x, it.b.y - it.a.y);
+        this.distIn.value = nm2(it.len);
+      }
+      this.hover = this.snap(p, 9); this.draw(); return;
+    }
     if (this.pdrag && this.plotter) {
       if (this.pdrag.mode === 'rot') { const g = this.plotterGeom(); this.setPlotterAng(Math.atan2(p.x - g.c.x, -(p.y - g.c.y)) / D2R); return; }
       const q = this.nm(p.x - this.pdrag.ox, p.y - this.pdrag.oy), s = this.snap({ x: p.x - this.pdrag.ox, y: p.y - this.pdrag.oy });
@@ -425,11 +469,13 @@ export class PlotBoard {
       if (this.drag.a.scale && this.drag.b.scale) this.drag.b.x = this.drag.a.x; // na skali mierzymy tylko w pionie
     }
     this.hover = this.tool === 'erase' ? null : this.snap(p, 9);
+    if (this.tool === 'dividers' && !this.drag) { const g = this.grabDividers(p); this.cv.style.cursor = g ? (g.leg === 'both' ? 'move' : 'grab') : 'crosshair'; }
     this.delHover = this.tool === 'erase' ? this.nearestItem(p) : null;
     this.draw();
   }
   up() {
     this.pdrag = null;
+    if (this.mdrag) { this.mdrag = null; this.draw(); return; }
     const d = this.drag;
     if (!d || d.click) return;
     const len = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
