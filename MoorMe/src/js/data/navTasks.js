@@ -127,7 +127,7 @@ const BASE_GEN = {
     const KDd = course(g), SOG = Math.hypot(g[0], g[1]);
     return {
       cat: 'current',
-      text: L(`Jacht płynie KR = ${deg3(KR)} z prędkością po wodzie ${num(V)} kn${beta ? `, dryf β = ${signedLR(beta)}` : ''}. Prąd o kierunku ${deg3(set)} (dokąd płynie) i prędkości ${num(c)} kn. Oblicz kurs drogi nad dnem (KDd) i prędkość nad dnem (SOG).`, `The yacht steers KR = ${deg3(KR)} at ${num(V)} kn through the water${beta ? `, leeway β = ${signedLR(beta)}` : ''}. The current sets ${deg3(set)} (towards) at ${num(c)} kn. Find the course over ground (KDd) and speed over ground (SOG).`),
+      text: L(`Jacht płynie KR = ${deg3(KR)} z prędkością po wodzie ${num(V)} kn${beta ? `, dryf β = ${plus(beta)}` : ''}. Prąd o kierunku ${deg3(set)} (dokąd płynie) i prędkości ${num(c)} kn. Oblicz kurs drogi nad dnem (KDd) i prędkość nad dnem (SOG).`, `The yacht steers KR = ${deg3(KR)} at ${num(V)} kn through the water${beta ? `, leeway β = ${plus(beta)}` : ''}. The current sets ${deg3(set)} (towards) at ${num(c)} kn. Find the course over ground (KDd) and speed over ground (SOG).`),
       answers: [ans('KDd', 'KDd', KDd, 'deg', 1.5), ans('SOG', 'SOG', SOG, 'kn', 0.15)],
       steps: [beta ? `KDw = KR + β = ${deg3(KDw)}` : L(`Bez dryfu: KDw = KR = ${deg3(KDw)}`, `No leeway: KDw = KR = ${deg3(KDw)}`),
         L(`Wektor po wodzie: N ${num(w[0], 2)}, E ${num(w[1], 2)} kn; prąd: N ${num(cv[0], 2)}, E ${num(cv[1], 2)} kn`, `Water vector: N ${num(w[0], 2)}, E ${num(w[1], 2)} kn; current: N ${num(cv[0], 2)}, E ${num(cv[1], 2)} kn`),
@@ -228,7 +228,7 @@ const VAR_GEN = {
       const NRn = ri(r, 0, 359), d = rf(r, -6, 6, 2), dev = ri(r, -7, 7), KK = norm(NRn + ri(r, -40, 40)), NK = norm(Math.round(NRn - d - dev)), p = norm(NRn - NK + 180) - 180, devC = Math.round((p - d) * 10) / 10;
       return {
         cat: 'compass',
-        text: L(`Płynąc kursem KK = ${deg3(KK)}, przeciąłeś linię nabieżnika o kierunku z mapy ${deg3(NRn)}. W chwili, gdy znaki nabieżnika były w linii, namiar kompasowy wynosił NK = ${deg3(NK)}. Deklinacja d = ${signed(d, 1)}. Oblicz poprawkę całkowitą i dewiację na tym kursie (E dodatnio, W ujemnie).`, `Steering KK = ${deg3(KK)} you crossed a transit whose charted direction is ${deg3(NRn)}. When the marks were in line the compass bearing was NK = ${deg3(NK)}. Variation d = ${signed(d, 1)}. Find the total correction and the deviation on this heading (E positive, W negative).`),
+        text: L(`Płynąc kursem KK = ${deg3(KK)}, przeciąłeś linię nabieżnika o kierunku z mapy ${deg3(NRn)}. W chwili, gdy znaki nabieżnika były w linii, namiar kompasowy wynosił NK = ${deg3(NK)}. Deklinacja d = ${signed(d, 1)}. Oblicz poprawkę całkowitą i dewiację na tym kursie.`, `Steering KK = ${deg3(KK)} you crossed a transit whose charted direction is ${deg3(NRn)}. When the marks were in line the compass bearing was NK = ${deg3(NK)}. Variation d = ${signed(d, 1)}. Find the total correction and the deviation on this heading.`),
         answers: [ans('p', L('Poprawka p', 'Correction p'), p, 'sdeg', 0.6), ans('dev', 'δ', devC, 'sdeg', 0.6)],
         steps: [`p = NR − NK = ${deg3(NRn)} − ${deg3(NK)} = ${sgn1(p)}`, `δ = p − d = ${sgn1(p)} − (${plus(d, 1)}) = ${sgn1(devC)} (${signed(devC, 1)})`, L('Nabieżnik daje namiar rzeczywisty bez pomiaru pozycji – najprostszy sposób sprawdzenia dewiacji.', 'A transit gives a true bearing without needing a position – the simplest way to check deviation.')]
       };

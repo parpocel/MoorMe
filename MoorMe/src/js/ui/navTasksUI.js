@@ -111,7 +111,7 @@ export function showNavTasks(app, { onExit }) {
         h('button.btn', { onclick: () => { state.showSol = !state.showSol; render(); } }, state.showSol ? 'Ukryj rozwiązanie' : 'Pokaż rozwiązanie'),
         h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →')),
       state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram && !state.board ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null,
-      h('p.small.muted.nt-conv', {}, 'Konwencja: poprawki na E i dryf w prawo są dodatnie (+), na W i w lewo – ujemne (−). KK – kurs kompasowy, KM – magnetyczny, KR – rzeczywisty, KDw – drogi nad wodą, KDd – drogi nad dnem, δ – dewiacja, d – deklinacja, β – dryf. Kąty wpisuj w stopniach (np. 047), ułamki z przecinkiem.'));
+      h('p.small.muted.nt-conv', {}, 'Oznaczenia: KK – kurs kompasowy, KM – magnetyczny, KR – rzeczywisty, KDw – drogi nad wodą, KDd – drogi nad dnem, δ – dewiacja, d – deklinacja, β – dryf. Kąty wpisuj w stopniach (np. 047), ułamki z przecinkiem.'));
     // mapa do kreślenia na cały ekran, karta z zadaniem leży na niej
     const chart = state.board ? h('div.nt-plot.chart-sheet', {}, state.board.el) : null;
     if (state.board) state.board.setSolution(state.showSol);
