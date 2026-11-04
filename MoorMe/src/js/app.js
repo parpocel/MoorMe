@@ -9,6 +9,7 @@ import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
 import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
+import { showChartQuiz } from './ui/chartQuizUI.js';
 import { navBook } from './ui/navBook.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
@@ -366,7 +367,7 @@ function showModeSelect() {
       { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Zbiór pław, staw oraz znaków umożliwiających bezpieczne poruszanie się po akwenie.', go: keep(1, () => showSailIntro()) },
       { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja nocna/dzienna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
-      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => showNavIntro()) },
+      { glyph: 'compass', color: '#4f9d5c', title: 'Nawigacja', desc: 'Przeliczaj kursy, wyznaczaj pozycję z namiarów i poznaj symbole map morskich.', go: keep(4, () => showNavIntro()) },
       { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
       { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.', go: keep(6, () => showMeteoIntro()) }
     ]
@@ -437,11 +438,18 @@ function startMeteo(kind) {
 }
 function showNavIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Zadania nawigacyjne', glyph: 'compass', color: '#4f9d5c', trainTitle: 'Zadania', trainTag: 'kursy, namiary, pozycja', learnTag: 'przeliczanie kursów i namiary', train: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', learn: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); }, onLearn: () => showNavBook(), self: () => showNavIntro() });
+  menuScreen({
+    kicker: 'Nawigacja', back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: () => showNavIntro(),
+    items: [
+      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania', tag: 'kursy, namiary, pozycja', desc: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', go: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } },
+      { glyph: 'map', color: '#b0288c', title: 'Symbole map', tag: 'test z legendy map', desc: 'Test: rozpoznaj symbole z map morskich (wraki, skały, głębokości, obszary, światła, pławy, prądy) i poznaj ich znaczenie. W teście jest też legenda wszystkich symboli.', go: () => showChartQuiz(app, { sceneryEl, onExit: () => showNavIntro() }) },
+      { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: 'przeliczanie kursów i namiary', desc: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', go: () => showNavBook() }
+    ]
+  });
 }
 function showNavBook() {
   menuMusic.start();
-  showHandbook(app, { title: 'podręcznik – zadania nawigacyjne', sections: navBook(), sceneryEl, trainLabel: '🎯 Przejdź do zadań', onExit: () => showNavIntro(), onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } });
+  showHandbook(app, { title: 'podręcznik – nawigacja', sections: navBook(), sceneryEl, trainLabel: '🎯 Przejdź do zadań', onExit: () => showNavIntro(), onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } });
 }
 function showMarksBook() {
   menuMusic.start();

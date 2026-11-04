@@ -979,3 +979,32 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .hud-drop.closed .hud-dropmenu { display: none; }
 /* podpisy płatków nieco mniejsze (0,8×) */
 .wh-lbl { font-size: clamp(12px, 1.6vh, 16.8px); }
+/* test „Symbole map” */
+.chartquiz .cq-wrap { position: relative; z-index: 2; flex: 1; overflow: auto; padding: 16px 24px; display: flex; justify-content: center; }
+.chartquiz .cq-body { width: min(1180px, 100%); }
+.chartquiz .cq-card { background: rgba(255, 247, 241, 0.92); backdrop-filter: blur(6px); border-radius: 18px; padding: 22px 28px; color: #2f4468; box-shadow: 0 12px 40px rgba(20, 20, 50, 0.25); }
+.chartquiz .cq-card h2 { color: #2f4468; font: 800 26px 'Baloo 2', 'Nunito', sans-serif; margin: 2px 0 14px; text-shadow: none; }
+.chartquiz .cq-count { font-size: 14px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #d2695f; }
+.chartquiz .cq-main { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 26px; align-items: center; }
+@media (max-width: 900px) { .chartquiz .cq-main { grid-template-columns: 1fr; } }
+.chartquiz .cq-sym svg { width: 100%; height: auto; display: block; border-radius: 12px; border: 1px solid rgba(47, 68, 104, 0.18); box-shadow: 0 4px 14px rgba(20, 30, 60, 0.12); }
+.chartquiz .cq-opts { display: grid; gap: 10px; }
+.chartquiz .cq-opt { justify-content: flex-start; text-align: left; font-size: 18px; padding: 12px 16px; background: #fff; color: #2f4468; border: 2px solid rgba(47, 68, 104, 0.18); border-radius: 12px; white-space: normal; }
+.chartquiz .cq-opt:not(:disabled):hover { border-color: #5b78d6; background: #f2f5ff; }
+.chartquiz .cq-opt.good { background: #dff3e7; border-color: #2e9d62; color: #1d6b41; font-weight: 800; }
+.chartquiz .cq-opt.bad { background: #fbe3e1; border-color: #d2695f; color: #a3362c; }
+.chartquiz .cq-opt:disabled { opacity: 1; cursor: default; }
+.chartquiz .cq-info { min-height: 64px; margin-top: 16px; }
+.chartquiz .cq-info p { font-size: 18px; line-height: 1.55; margin: 6px 0 0; max-width: 900px; }
+.chartquiz .cq-ok { color: #1d6b41; font-weight: 800; font-size: 19px; }
+.chartquiz .cq-no { color: #a3362c; font-weight: 800; font-size: 19px; }
+.chartquiz .cq-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+.chartquiz .cq-next { font-size: 17px; }
+.chartquiz .cq-score { font-weight: 800; color: #fff; font-size: 17px; align-self: center; }
+.chartquiz .cq-end { text-align: center; }
+.chartquiz .cq-big { font: 800 64px 'Baloo 2', 'Nunito', sans-serif; color: #2f4468; }
+.chartquiz .cq-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(480px, 1fr)); gap: 12px; margin-top: 10px; }
+.chartquiz .cq-leg { display: flex; gap: 14px; align-items: flex-start; background: #fff; border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 12px; padding: 10px 12px; }
+.chartquiz .cq-legsvg svg { display: block; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.14); }
+.chartquiz .cq-leg b { font-size: 17px; }
+.chartquiz .cq-leg p { font-size: 15.5px; line-height: 1.45; margin: 4px 0 0; }
