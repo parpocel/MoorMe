@@ -255,7 +255,7 @@ export const EN = {
   // menu główne 3D
   'Szkolenie żeglarskie': 'Sailing training',
   'manewry portowe': 'harbour manoeuvres', 'locja': 'pilotage', 'ROZPOZNAWANIE STATKÓW': 'VESSEL RECOGNITION',
-  'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'Sygnalizacja nocna/dzienna': 'Night/day signals', 'Sygnalizacja nocna/dzienna · trening': 'Night/day signals · training', 'Sygnalizacja dźwiękowa': 'Sound signals', 'Sygnalizacja nocna/dzienna · trening': 'Light signals · training', 'Sygnalizacja dźwiękowa · trening': 'Sound signals · training', 'światła i znaki dzienne': 'lights and day shapes',
+  'Manewry portowe': 'Harbour manoeuvres', 'Locja': 'Pilotage', 'Rozpoznawanie statków': 'Vessel recognition', 'Sygnalizacja nocna/dzienna': 'Night/day signals', 'Sygnalizacja nocna/dzienna · trening': 'Night/day signals · training', 'Sygnalizacja dźwiękowa': 'Sound signals', 'Sygnalizacja nocna/dzienna · trening': 'Night/day signals · training', 'Sygnalizacja dźwiękowa · trening': 'Sound signals · training', 'światła i znaki dzienne': 'lights and day shapes',
   'Manewry portowe · cumowanie i odcumowanie': 'Harbour manoeuvres · mooring and unmooring',
   'Cumowanie i odcumowywanie łodzi.': 'Mooring and unmooring a boat.',
   'Pławy, stawy oraz światła elementów nawigacyjnych.': 'Buoys, leading marks and the lights of navigational aids.',
