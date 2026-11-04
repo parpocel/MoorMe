@@ -746,3 +746,8 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-charx p { font-size: 13.5px; }
 @media (max-width: 1100px) { .handbook .hb-charx-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 700px) { .handbook .hb-charx-grid { grid-template-columns: 1fr; } }
+/* podręczniki: szersze okno i delikatnie przezroczyste tło (scena prześwituje, tekst nadal czytelny) */
+.screen.handbook .hb-body { max-width: 1840px; }
+.handbook .hb-main { background: rgba(255, 247, 241, 0.86); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.handbook .hb-charx { background: rgba(255, 255, 255, 0.62); }
+.handbook .hb-tab:not(.on) { background: rgba(255, 247, 241, 0.86); }
