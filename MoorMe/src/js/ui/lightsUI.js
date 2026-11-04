@@ -5,7 +5,7 @@ import { h } from './dom.js';
 import { SimScreen } from './simUI.js';
 import { PassageScreen } from './passageUI.js';
 import { PassageWorld } from '../physics/passage.js';
-import { VESSELS, DAY_VESSELS, typesFor, anyVessel, ASPECTS, GEAR_SIDES, CLEAR_SIDES, clearSideSeen, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES } from '../data/shipLights.js';
+import { VESSELS, DAY_VESSELS, typesFor, anyVessel, ASPECTS, GEAR_SIDES, CLEAR_SIDES, clearSideSeen, COLORS, relBearing, aspectOf, visibleLights, spawnVessel, answerOptions, makeDeck, passSide, PASS_SIDES, cpaDist, SAFE_CPA } from '../data/shipLights.js';
 import { DEG, KN, clamp, rng, thetaToCompass } from '../math.js';
 
 const NM = 1852;
@@ -377,6 +377,7 @@ export class LightsScreen extends PassageScreen {
     // piana i bryzgi są liczone dla rufy jachtu – przy małej łodzi pojawiały się przed jej rufą
     if (this.view.particles) this.view.particles.points.visible = false;
     this.view.setView('fpv');
+    this.view.cam.fov = 38; // domyślnie lekko przybliżone na światła (kółkiem można oddalić)
     this._qLast = performance.now();
     this.renderQuiz();
   }
@@ -432,7 +433,7 @@ export class LightsScreen extends PassageScreen {
 
   // Po pojawieniu się statku kamera sama obraca się tak, by był w centrum kadru: w widoku kapitana – kierunek i pochylenie
   // spojrzenia, w widokach z zewnątrz – azymut kamery (jacht między kamerą a statkiem). Ruch kamery przez gracza przerywa obrót.
-  aimAt() { this._aim = { until: performance.now() + 3000, yaw: null }; }
+  aimAt() { this._aim = { until: Infinity, yaw: null }; } // kamera podąża za środkiem statku, dopóki gracz sam jej nie poruszy
   aimCamera(dt) {
     const a = this._aim, v = this.q.vessel, cam = this.view.cam;
     if (!a || !v) return;
@@ -442,7 +443,9 @@ export class LightsScreen extends PassageScreen {
       const p = this.view.camera.position, dir = this.view.camera.getWorldDirection(new THREE.Vector3());
       const want = Math.atan2(v.x - p.x, -(v.z - p.z)), have = Math.atan2(dir.x, -dir.z);
       cam.fpvYaw -= Math.atan2(Math.sin(want - have), Math.cos(want - have)) * k; // fpvYaw rośnie w lewo – przeciwnie do namiaru
-      const pitch = Math.atan2(6 - p.y, Math.hypot(v.x - p.x, v.z - p.z)); // środek statku ok. 6 m nad wodą
+      const ys = (v.lights && v.lights.length ? v.lights : v.shapes || []).map((l) => l.y).filter(Number.isFinite);
+      const midY = ys.length ? (Math.min(...ys) + Math.max(...ys)) / 2 : 6; // środek układu świateł / znaków
+      const pitch = Math.atan2(midY - p.y, Math.hypot(v.x - p.x, v.z - p.z));
       cam.fpvPitch += (pitch - cam.fpvPitch) * k;
     } else if (cam.mode !== 'helm') {
       const want = Math.atan2(-(v.x - b.x), -(v.z - b.z));
@@ -450,6 +453,16 @@ export class LightsScreen extends PassageScreen {
     }
     Object.assign(a, { yaw: cam.fpvYaw, pitch: cam.fpvPitch, az: cam.az, mode: cam.mode });
     if (performance.now() > a.until) this._aim = null;
+  }
+
+  // statek, który minąłby nas za blisko, po fazie obserwacji zmienia kurs w prawo (jak przy wymijaniu kontrkursami) i mija bezpiecznie
+  avoid(dt) {
+    const v = this.q && this.q.vessel;
+    if (!v || !v.moving || !(dt > 0)) return;
+    const o = this.observer(), d = Math.hypot(v.x - o.x, v.z - o.z);
+    if ((this.q.phase === 'active' || this.q.phase === 'observe') && d > 200) return; // najpierw gracz ma rozpoznać statek i zobaczyć, jak idzie
+    if (d > 650 || cpaDist(v, o) >= SAFE_CPA) return;
+    v.hdg = (v.hdg + Math.min(dt, 0.1) * 9 + 360) % 360; // ok. 9°/s w prawo
   }
 
   vesselBearing() {
@@ -595,6 +608,7 @@ export class LightsScreen extends PassageScreen {
         if (b1) b1.textContent = `${this.fmtBrg(this.vesselBearing())}°`;
       }
     }
+    this.avoid(dt);
     this.layer.update(dt, this.view.camera.position, now / 1000, this.view.water);
     this.aimCamera(Math.min((now - (this._aimLast || now)) / 1000, 0.1));
     this._aimLast = now;

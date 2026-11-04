@@ -74,12 +74,15 @@ export class PassageScreen extends SimScreen {
     const top = h('div.hud.glass', { id: 'hud-top' });
     this.pauseBtn = h('button.btn.sm', { onclick: () => this.togglePause(), title: 'Pauza (P)' }, '⏸ Pauza');
     top.appendChild(this.pauseBtn);
+    // rozwijane przyciski „Czas” i „Kamera” – opcje po najechaniu (jak w cumowaniu)
+    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items); return { el: h('div.hud-drop', {}, btn, menu), btn }; };
     this.speedBtns = [1, 2, 4, 8].map((s) => h('button.btn.sm', { class: s === 1 ? 'on' : '', onclick: () => this.setSpeed(s) }, `${s}×`));
-    top.append(...this.speedBtns);
-    top.appendChild(h('span', { style: { width: '8px' } }));
+    this.timeDrop = drop('⏱ Czas 1×', this.speedBtns);
+    top.appendChild(this.timeDrop.el);
     this.followBtn = h('button.btn.sm.on', { onclick: () => { this.view.cam.follow = !this.view.cam.follow; }, title: 'Kamera śledzi jacht (F)' }, '🎯 Śledź');
-    top.appendChild(this.followBtn);
-    for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
+    this.viewBtns = [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']].map(([k, n]) => { const b = h('button.btn.sm', { onclick: () => this.view.setView(k) }, n); b.dataset.view = k; return b; });
+    this.camDrop = drop('🎥 Kamera', [this.followBtn, ...this.viewBtns]);
+    top.appendChild(this.camDrop.el);
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));

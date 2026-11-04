@@ -312,6 +312,17 @@ export function passSide(v, own) {
   const along = (px + rvx * t) * fx + (pz + rvz * t) * fz; // > 0: przed dziobem
   return { side: along > 0 ? 'ahead' : 'astern', along, t };
 }
+// najmniejsza odległość mijania (CPA) w metrach: ruch względny statku wobec naszej łodzi
+export function cpaDist(v, own) {
+  const vh = (v.hdg * Math.PI) / 180, oh = (own.hdg * Math.PI) / 180, os = own.speed || 0;
+  const rvx = Math.sin(vh) * v.speed * 0.514444 - Math.sin(oh) * os, rvz = -Math.cos(vh) * v.speed * 0.514444 + Math.cos(oh) * os;
+  const px = v.x - own.x, pz = v.z - own.z, vv = rvx * rvx + rvz * rvz;
+  if (vv < 1e-9) return Math.hypot(px, pz);
+  const t = Math.max(0, -(px * rvx + pz * rvz) / vv);
+  return Math.hypot(px + rvx * t, pz + rvz * t);
+}
+export const SAFE_CPA = 220; // statki mijają nas w bezpiecznej odległości
+
 export const PASS_SIDES = { ahead: 'Przejdzie przed naszym dziobem', astern: 'Przejdzie za naszą rufą' };
 
 // „Talia” typów: każdy typ pojawia się raz w losowej kolejności, potem talia jest tasowana od nowa
@@ -382,6 +393,16 @@ export function spawnVessel(r, observer, opts = {}) {
       break;
     }
     if (best) { pos = best.pos; pass = best.side; obsT = best.obs; }
+  }
+  if (v.moving && aspect !== 'bow' && observer.speed !== undefined && cpaDist({ ...pos, speed }, observer) < SAFE_CPA) {
+    let best = pos, bd = cpaDist({ ...pos, speed }, observer);
+    for (let k = 1; k <= 24 && bd < SAFE_CPA; k++) for (const sg of [1, -1]) {
+      const h2 = (((pos.hdg + sg * k * 2.5) % 360) + 360) % 360, rel2 = relBearing(pos.x, pos.z, h2, observer.x, observer.z);
+      const same = aspect === 'none' || aspectOf(rel2, true) === aspect;
+      const c = cpaDist({ x: pos.x, z: pos.z, hdg: h2, speed }, observer);
+      if (same && c > bd) { bd = c; best = { ...pos, hdg: h2 }; }
+    }
+    pos = best;
   }
   const base = { type: v.id, name: v.name, L, x: pos.x, z: pos.z, hdg: pos.hdg, pass, obsT, speed: v.moving ? speed : 0, side, moving: v.moving, gear: !!v.gear, clear: !!v.clear, gearSide: v.gear || v.clear ? o.gearSide : null, day: !!opts.day };
   if (opts.day) return { ...base, hull: v.hull, shapes: v.shapes(L, r, o), lights: [] };

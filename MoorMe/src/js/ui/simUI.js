@@ -1081,7 +1081,7 @@ export class SimScreen {
     }
     if (this.crewBtn) this.crewBtn.textContent = w.crew.ashore ? '⤴ Załoga na pokład (L)' : '⤵ Zejdź na ląd (L)';
     this.followBtn.classList.toggle('on', this.view.cam.follow);
-    for (const b of this.viewBtns) b.classList.toggle('on', this.view.cam.mode === b.dataset.view);
+    for (const b of this.viewBtns || []) b.classList.toggle('on', this.view.cam.mode === b.dataset.view);
     // log – wygaszanie
     const now = performance.now();
     for (const it of this.logItems) it.el.style.opacity = now - it.t > 7000 ? 0 : 1;

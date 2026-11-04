@@ -517,14 +517,26 @@ function savePassageCfg() {
 
 function showLightsSetup() {
   menuMusic.start();
-  // zakres przepisów – wybór w karcie nad przyciskiem Start
-  const scope = h('div.m3-seg', {}, h('span.m3-lbl', {}, 'Przepisy'),
-    seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'inland', label: '🏞 Drogi śródlądowe (CEVNI)' }, { value: 'all', label: '🌊 + 🏞 Oba naraz' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
   menuScreen({
-    kicker: 'Sygnalizacja nocna/dzienna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
+    kicker: 'Sygnalizacja nocna/dzienna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(),
     items: [
-      { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => startLights(false) },
-      { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => startLights(true) }
+      { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => showLightsScope(false) },
+      { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => showLightsScope(true) }
+    ]
+  });
+}
+// kontynuacja wybranego kafelka: zakres przepisów (morze, drogi śródlądowe albo oba naraz)
+function showLightsScope(day) {
+  menuMusic.start();
+  const go = (v) => () => { saveSettings({ lightsScope: v }); startLights(day); };
+  const cur = getSettings().lightsScope || 'all';
+  menuScreen({
+    kicker: `Sygnalizacja nocna/dzienna · ${day ? 'dzień' : 'noc'}`, back: { label: 'Wstecz', go: () => showLightsSetup() }, settingsBack: () => showLightsScope(day),
+    sel: ['sea', 'inland', 'all'].indexOf(cur),
+    items: [
+      { glyph: 'wave', color: '#2aa39a', title: 'Morze', tag: 'MPZZM / COLREG', desc: 'Statki na morzu – przepisy MPZZM (COLREG).', go: go('sea') },
+      { glyph: 'river', color: '#4f9d5c', title: 'Śródlądzie', tag: 'CEVNI', desc: 'Statki na rzekach, kanałach i jeziorach – przepisy żeglugowe na śródlądowych drogach wodnych (CEVNI).', go: go('inland') },
+      { glyph: 'horn', color: '#e0a33a', title: 'Oba naraz', tag: 'morze i śródlądzie', desc: 'Statki z morza i z dróg śródlądowych na zmianę.', go: go('all') }
     ]
   });
 }
