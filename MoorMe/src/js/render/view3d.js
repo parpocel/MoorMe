@@ -119,21 +119,7 @@ export class View3D {
     }
 
     // odbijacze
-    this.fenders = new Map();
-    for (const f of world.equip.fenders) {
-      const m = f.ball ? buildBallFender(fenderRadiusOf(f, world.equip.fenderRadius)) : buildFender(world.equip.fenderRadius);
-      this.boat.userData.heel.add(m);
-      this.fenders.set(f.id, { mesh: m, f });
-    }
-    // linki odbijaczy: od ucha odbijacza do krawędzi pokładu (aktualizowane co klatkę – odbijacze się kołyszą)
-    {
-      const n = world.equip.fenders.length;
-      const lg = new THREE.BufferGeometry();
-      lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 6), 3));
-      this.fenderRopes = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x1d3557 }));
-      this.fenderRopes.frustumCulled = false;
-      this.boat.userData.heel.add(this.fenderRopes);
-    }
+    this.rebuildFenders();
 
     // załoga: sternik + osoba na dziobie + osoba na lądzie
     this.helmsman = buildPerson(0xe63946);
@@ -557,6 +543,26 @@ export class View3D {
     if (best == null) return null;
     const line = this.world.lines.find((l) => l.id === best);
     return line ? { line, d: bd } : null;
+  }
+
+  // siatki odbijaczy i ich linek – od nowa (także gdy w trakcie manewru dowieszono lub zdjęto kulę)
+  rebuildFenders() {
+    const world = this.world, heel = this.boat.userData.heel;
+    if (this.fenders) for (const { mesh } of this.fenders.values()) heel.remove(mesh);
+    if (this.fenderRopes) { heel.remove(this.fenderRopes); this.fenderRopes.geometry.dispose(); }
+    this.fenders = new Map();
+    for (const f of world.equip.fenders) {
+      const m = f.ball ? buildBallFender(fenderRadiusOf(f, world.equip.fenderRadius)) : buildFender(world.equip.fenderRadius);
+      heel.add(m);
+      this.fenders.set(f.id, { mesh: m, f });
+    }
+    // linki odbijaczy: od ucha odbijacza do krawędzi pokładu (aktualizowane co klatkę – odbijacze się kołyszą)
+    const n = world.equip.fenders.length;
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(Math.max(1, n) * 6), 3));
+    this.fenderRopes = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x1d3557 }));
+    this.fenderRopes.frustumCulled = false;
+    heel.add(this.fenderRopes);
   }
 
   // odbijacz pod kursorem (tylko wywieszony) – { f, mesh, y } z wysokością punktu chwytu w świecie

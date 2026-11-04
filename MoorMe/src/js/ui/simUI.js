@@ -283,6 +283,31 @@ export class SimScreen {
       fr.appendChild(btn);
     }
     panel.appendChild(fr);
+    // kula odbijacza: dowieszenie i zdjęcie w trakcie manewru
+    const balls = () => w.equip.fenders.filter((f) => f.ball);
+    const ballLbl = h('span.muted', { style: { alignSelf: 'center', fontSize: '12px' } });
+    const refreshBalls = () => { ballLbl.textContent = `${t('kule')}: ${balls().length}`; };
+    const changed = () => { this.view.rebuildFenders(); this.buildPlan(); refreshBalls(); };
+    const addBall = () => {
+      const { xs, xb } = hullExtents(w.spec);
+      // na burcie z wywieszonymi odbijaczami (najpierw lewa), w ćwierci rufowej – przesuniesz ją potem na jachcie lub na rzucie
+      const side = w.fenderOut.port ? -1 : w.fenderOut.starboard ? 1 : -1;
+      if (!w.fenderOut.port && !w.fenderOut.starboard) { w.fenderOut.port = true; this.fenderBtns.port?.classList.add('on'); }
+      const n = balls().length;
+      w.equip.fenders.push({ id: `bs${Date.now() % 1e6}`, ball: true, side, x: +(xs + (xb - xs) * (0.22 + 0.12 * (n % 4))).toFixed(2) });
+      w.log(t('Dowieszono kulę odbijacza – przeciągnij ją na właściwe miejsce'));
+      changed();
+    };
+    const delBall = () => {
+      const b = balls(); if (!b.length) return w.log(t('Brak kul odbijacza'), 'warn');
+      w.equip.fenders.splice(w.equip.fenders.indexOf(b[b.length - 1]), 1);
+      w.log(t('Zdjęto kulę odbijacza'));
+      changed();
+    };
+    panel.appendChild(h('div', { style: { display: 'flex', gap: '6px', marginTop: '6px' } },
+      h('button.btn.sm', { style: { flex: 1 }, title: 'Dowieś kulę odbijacza', onclick: addBall }, '＋ Kula'),
+      h('button.btn.sm', { style: { flex: 1 }, title: 'Zdejmij kulę odbijacza', onclick: delBall }, '－ Kula'), ballLbl));
+    refreshBalls();
     // platforma kąpielowa na rufie
     const pfBtn = h('button.btn.sm', { style: { width: '100%', marginTop: '6px' }, title: 'Opuść / podnieś platformę na pawęży', onclick: () => {
       this.view.platformOpen = !this.view.platformOpen;
