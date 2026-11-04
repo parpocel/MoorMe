@@ -373,7 +373,6 @@ const CHAR_TABLE = [
     ['VQ', 'VQ', L('Very quick (szybko migające)', 'Very quick'), L('Jednakowe błyski bez przerw, od 80 do 159 na minutę (zwykle 120).', 'Equal flashes without a break, 80 to 159 per minute (usually 120).')],
     ['VQ(3)', 'VQ(3) 5s', L('Group very quick (szybko migające grupowe)', 'Group very quick'), L('Grupa szybkich błysków, po niej dłuższa przerwa.', 'A group of very quick flashes followed by a longer eclipse.')],
     ['VQ(6)+LFl', 'VQ(6)+LFl 10s', L('Group very quick with long flash (szybko migające złożone)', 'Group very quick with long flash'), L('Grupa szybkich błysków zakończona jednym blaskiem.', 'A group of very quick flashes ending with one long flash.')],
-    ['IVQ', 'IVQ 10s', L('Interrupted very quick (szybko migające przerywane)', 'Interrupted very quick'), L('Miga jak VQ, ale po serii co najmniej ośmiu błysków następuje przerwa co najmniej 3 s.', 'Flashes like VQ, but after a run of at least eight flashes there is an eclipse of at least 3 s.')],
     ['UQ', 'UQ', L('Ultra quick (bardzo szybko migające)', 'Ultra quick'), L('Jednakowe błyski bez przerw, 160 i więcej na minutę (zwykle 240–300).', 'Equal flashes without a break, 160 or more per minute (usually 240–300).')]
   ]],
   [L('Morse and alternating (kodowe i zmiennobarwne)', 'Morse and alternating'), [
@@ -421,7 +420,6 @@ const CHAR_USE = {
   VQ: L('Znak kardynalny północny (VQ), zwykle tam, gdzie znaki stoją blisko siebie.', 'North cardinal mark (VQ), usually where marks stand close together.'),
   'VQ(3)': L('Znak kardynalny wschodni VQ(3) 5s; VQ(9) 10s – zachodni.', 'East cardinal mark VQ(3) 5s; VQ(9) 10s – west.'),
   'VQ(6)+LFl': L('Znak kardynalny południowy VQ(6)+LFl 10s.', 'South cardinal mark VQ(6)+LFl 10s.'),
-  IVQ: L('Rzadkie – światła na konstrukcjach i przeszkodach, które muszą się wyróżniać spośród innych świateł migających.', 'Rare – lights on structures and obstructions that must stand out from other quick lights.'),
   UQ: L('Platformy i konstrukcje morskie, oznakowanie wraków i przeszkód w strefach intensywnego ruchu.', 'Offshore platforms and structures, marking of wrecks and obstructions in busy waters.'),
   'Mo(A)': L('Znak wody bezpiecznej (pława podejściowa); Mo(U) – platformy wiertnicze.', 'Safe-water mark (landfall buoy); Mo(U) – offshore oil and gas platforms.'),
   'Al.Bu.Y': L('Pława nowego wraku (znak nowego niebezpieczeństwa) – Al.Bu.Y, niebieskie i żółte światło na zmianę, aż wrak trafi na mapy. Inne światła zmiennobarwne, np. Al.WR, spotkasz na latarniach i światłach sektorowych.', 'Emergency wreck marking buoy (new danger mark) – Al.Bu.Y, blue and yellow alternately, until the wreck is charted. Other alternating lights, e.g. Al.WR, are found on lighthouses and sector lights.')
