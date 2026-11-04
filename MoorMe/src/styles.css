@@ -721,3 +721,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .mb-3d-cap { position: absolute; left: 12px; bottom: 12px; background: rgba(10, 16, 28, 0.6); color: #eef4fa; padding: 6px 12px; border-radius: 10px; font-size: 13px; }
 .mb-3d-btns { position: absolute; right: 12px; top: 12px; display: flex; gap: 6px; }
 .mb-3d-btns .btn { background: rgba(10, 16, 28, 0.6); color: #fff; }
+/* charakterystyki świateł: karta na każdą charakterystykę (definicja + obraz graficzny, pod spodem lampa i wykres) */
+.handbook .hb-charx-grp { margin: 18px 0 2px; padding: 5px 10px; border-radius: 6px; background: #f1e6d6; color: #c2410c; font-weight: 800; font-size: 14px; }
+.handbook .hb-charx-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.handbook .hb-charx-head h3 { margin-bottom: 4px; }
+.handbook .hb-charx-strip { margin: 4px 0 10px; }
+.handbook .hb-charx-live { margin-top: 6px; padding: 10px 12px; border-radius: 8px; background: rgba(47, 68, 104, 0.06); }
+.handbook .hb-charx-live h4 { color: #2f4468; font-size: 14.5px; margin: 0 0 4px; }
