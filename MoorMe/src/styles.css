@@ -914,3 +914,14 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 /* środek koła bez przycisku Start – moduł uruchamia kliknięcie płatka */
 .wh-center { padding-top: 15%; }
 .wh-desc { height: 7.4em; }
+/* rozwijane przyciski w górnym pasku symulatora (Czas, Kamera) */
+.hud-drop { position: relative; display: flex; }
+.hud-dropmenu { position: absolute; top: 100%; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; gap: 4px; padding: 8px 6px 6px; min-width: 100%; z-index: 30;
+  background: rgba(14, 26, 42, 0.92); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 12px; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); }
+.hud-drop:hover .hud-dropmenu, .hud-drop:focus-within .hud-dropmenu { display: flex; }
+.hud-dropmenu .btn { white-space: nowrap; width: 100%; justify-content: center; }
+.hud-dropbtn { white-space: nowrap; }
+#hud-top { zoom: 1.3; }
+/* płatki: miękka, delikatna krawędź (szkło jak w nowym iOS) */
+.wh-g .wh-seg, .wh-g:hover .wh-seg { stroke: rgba(255, 255, 255, 0.32); stroke-width: 0.6; stroke-linejoin: round; }
+.wh-g.on .wh-seg { stroke: rgba(255, 255, 255, 0.7); stroke-width: 0.8; }

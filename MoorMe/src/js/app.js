@@ -250,7 +250,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
-  const R = 100, R0 = 54, GAP = 1.6; // promienie w jednostkach viewBox (–110..110)
+  const R = 100, R0 = 54, GAP = 2.2; // promienie w jednostkach viewBox (–110..110)
   const pt = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
   // płatki zawsze tej samej wielkości co w menu głównym (1/7 koła); przy mniejszej liczbie pozycji – zebrane po prawej stronie środka
   const SLOTS = 7, step = (Math.PI * 2) / Math.max(n, SLOTS);
@@ -259,14 +259,21 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
   svg.setAttribute('viewBox', '-112 -112 224 224');
   svg.classList.add('wh-svg');
   const defs = document.createElementNS(NS, 'defs');
-  defs.innerHTML = `<radialGradient id="whshine" cx="0.34" cy="0.2" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.5"/><stop offset="0.35" stop-color="#fff" stop-opacity="0.16"/><stop offset="0.7" stop-color="#fff" stop-opacity="0.03"/><stop offset="1" stop-color="#fff" stop-opacity="0.12"/></radialGradient>`;
+  defs.innerHTML = `<radialGradient id="whshine" cx="0.34" cy="0.2" r="0.7"><stop offset="0" stop-color="#fff" stop-opacity="0.24"/><stop offset="0.4" stop-color="#fff" stop-opacity="0.07"/><stop offset="0.75" stop-color="#fff" stop-opacity="0.01"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/></radialGradient>`;
   svg.appendChild(defs);
   const labels = [];
   const segs = items.map((it, i) => {
     const s0 = a0 + i * step, s1 = s0 + step, mid = (s0 + s1) / 2;
     const g0 = GAP / R, g1 = GAP / R0; // stała szczelina między wycinkami
     const [x1, y1] = pt(R, s0 + g0), [x2, y2] = pt(R, s1 - g0), [x3, y3] = pt(R0, s1 - g1), [x4, y4] = pt(R0, s0 + g1);
-    const d = `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${R0} ${R0} 0 0 0 ${x4} ${y4} Z`;
+    // wycinek z zaokrąglonymi rogami (miękkie krawędzie jak w nowym iOS): łuki skrócone o promień zaokrąglenia, rogi jako krzywe
+    const RC = 7, f = (v) => v.toFixed(2);
+    const lerp = (a, b, tt) => [a[0] + (b[0] - a[0]) * tt, a[1] + (b[1] - a[1]) * tt];
+    const P1 = [x1, y1], P2 = [x2, y2], P3 = [x3, y3], P4 = [x4, y4];
+    const sideL = Math.hypot(P3[0] - P2[0], P3[1] - P2[1]), k = Math.min(0.45, RC / sideL);
+    const oa = pt(R, s0 + g0 + RC / R), ob = pt(R, s1 - g0 - RC / R), ia = pt(R0, s1 - g1 - RC / R0), ib = pt(R0, s0 + g1 + RC / R0);
+    const q2 = lerp(P2, P3, k), q3 = lerp(P3, P2, k), q4 = lerp(P4, P1, k), q1 = lerp(P1, P4, k);
+    const d = `M${f(oa[0])} ${f(oa[1])} A${R} ${R} 0 0 1 ${f(ob[0])} ${f(ob[1])} Q${f(P2[0])} ${f(P2[1])} ${f(q2[0])} ${f(q2[1])} L${f(q3[0])} ${f(q3[1])} Q${f(P3[0])} ${f(P3[1])} ${f(ia[0])} ${f(ia[1])} A${R0} ${R0} 0 0 0 ${f(ib[0])} ${f(ib[1])} Q${f(P4[0])} ${f(P4[1])} ${f(q4[0])} ${f(q4[1])} L${f(q1[0])} ${f(q1[1])} Q${f(P1[0])} ${f(P1[1])} ${f(oa[0])} ${f(oa[1])} Z`;
     // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
     const grad = document.createElementNS(NS, 'linearGradient');
     grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');

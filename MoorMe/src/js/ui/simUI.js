@@ -91,12 +91,15 @@ export class SimScreen {
     const top = h('div.hud.glass', { id: 'hud-top' });
     this.pauseBtn = h('button.btn.sm', { onclick: () => this.togglePause(), title: 'Pauza (P)' }, '⏸ Pauza');
     top.appendChild(this.pauseBtn);
+    // rozwijane przyciski: „Czas” (tempo symulacji) i „Kamera” (śledzenie i widoki) – opcje pojawiają się po najechaniu
+    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items); return { el: h('div.hud-drop', {}, btn, menu), btn }; };
     this.speedBtns = [0.5, 1, 2, 4].map((s) => h('button.btn.sm', { class: s === 1 ? 'on' : '', onclick: () => this.setSpeed(s) }, `${s}×`));
-    top.append(...this.speedBtns);
-    top.appendChild(h('span', { style: { width: '8px' } }));
-    this.followBtn = h('button.btn.sm.on', { onclick: () => { this.view.cam.follow = !this.view.cam.follow; } , title: 'Kamera śledzi jacht (F)' }, '🎯 Śledź');
-    top.appendChild(this.followBtn);
-    for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
+    this.timeDrop = drop('⏱ Czas 1×', this.speedBtns);
+    top.appendChild(this.timeDrop.el);
+    this.followBtn = h('button.btn.sm.on', { onclick: () => { this.view.cam.follow = !this.view.cam.follow; }, title: 'Kamera śledzi jacht (F)' }, '🎯 Śledź');
+    this.viewBtns = [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']].map(([k, n]) => { const b = h('button.btn.sm', { onclick: () => this.view.setView(k) }, n); b.dataset.view = k; return b; });
+    this.camDrop = drop('🎥 Kamera', [this.followBtn, ...this.viewBtns]);
+    top.appendChild(this.camDrop.el);
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
     // chorągiewki wiatru na wodzie: pokaż / ukryj (zapamiętane w ustawieniach)
@@ -966,6 +969,7 @@ export class SimScreen {
   setSpeed(s) {
     this.timeScale = s;
     this.speedBtns.forEach((b) => b.classList.toggle('on', b.textContent === `${s}×`));
+    this.timeDrop.btn.textContent = `⏱ ${t('Czas')} ${s}×`;
   }
 
   // ---------- Pętla ----------
@@ -1077,6 +1081,7 @@ export class SimScreen {
     }
     if (this.crewBtn) this.crewBtn.textContent = w.crew.ashore ? '⤴ Załoga na pokład (L)' : '⤵ Zejdź na ląd (L)';
     this.followBtn.classList.toggle('on', this.view.cam.follow);
+    for (const b of this.viewBtns) b.classList.toggle('on', this.view.cam.mode === b.dataset.view);
     // log – wygaszanie
     const now = performance.now();
     for (const it of this.logItems) it.el.style.opacity = now - it.t > 7000 ? 0 : 1;
