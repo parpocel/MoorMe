@@ -1,7 +1,7 @@
 // Życie w porcie: mewy (latają, siadają na salingach i polerach), spacerowicze, motorówka w oddali
 import * as THREE from 'three';
 import { mat, buildPerson, animatePerson, sheerHeight } from './boatModel.js';
-import { hullExtents } from '../data/boats.js';
+import { hullExtents, halfBeamAt } from '../data/boats.js';
 import { rng, clamp, distToPoly } from '../math.js';
 
 const V = () => new THREE.Vector3();
@@ -412,17 +412,22 @@ export class HarbourLife {
         // blisko aktywnego jachtu? -> wskakuje na pokład
         if (slow && c.cool <= 0) {
           const dist = distToPoly(poly, m.position.x, m.position.z).dist;
-          if (dist < 3.2 && !this.cats.some((o) => o !== c && (o.state === 'jump' || o.state === 'aboard') && o.aboard)) {
+          if (dist < 1.5 && !this.cats.some((o) => o !== c && (o.state === 'jump' || o.state === 'aboard') && o.aboard)) {
             c.state = 'jump'; c.aboard = true; c.u = 0; c.from = m.position.clone(); c.dir = 1;
-            c.side = heel.worldToLocal(m.position.clone()).z < 0 ? -1 : 1;
-            c.arc = this.catArc(c.from, heel.localToWorld(this.deckSpot(c.side)), heel);
+            const lp = heel.worldToLocal(m.position.clone());
+            c.side = lp.z < 0 ? -1 : 1;
+            // ląduje na pokładzie tuż za relingiem, naprzeciw miejsca, z którego skacze (krótki skok)
+            const spec = this.world.spec, { xs: hx0, xb: hx1 } = hullExtents(spec);
+            const sx = clamp(lp.x, hx0 + 0.6, hx1 - 1.2);
+            c.spot = new THREE.Vector3(sx, sheerHeight(spec, sx) + 0.05, c.side * Math.max(0.3, halfBeamAt(spec, sx) - 0.4));
+            c.arc = this.catArc(c.from, heel.localToWorld(c.spot.clone()), heel);
           }
         }
       } else if (c.state === 'jump') {
-        c.u += dt / 0.85;
+        c.u += dt / 0.6;
         const u = Math.min(1, c.u);
         let to;
-        if (c.dir > 0) { to = heel.localToWorld(this.deckSpot(c.side)); }
+        if (c.dir > 0) { to = heel.localToWorld((c.spot || this.deckSpot(c.side)).clone()); }
         else to = c.landing;
         m.position.lerpVectors(c.from, to, u);
         m.position.y += Math.sin(Math.PI * u) * c.arc;
@@ -432,7 +437,7 @@ export class HarbourLife {
           if (c.dir > 0) {
             c.state = 'aboard'; c.timer = 25 + this.r() * 35;
             this.scene.remove(m); heel.add(m);
-            m.position.copy(this.deckSpot(c.side)); m.rotation.set(0, this.r() * 6, 0);
+            m.position.copy(c.spot || this.deckSpot(c.side)); m.rotation.set(0, this.r() * 6, 0);
           } else {
             c.state = 'walk'; c.aboard = false; c.cool = 40 + this.r() * 40; c.wait = 3;
             // ustaw parametr t na ścieżce najbliżej lądowania
@@ -452,7 +457,7 @@ export class HarbourLife {
           const wy = c.way, ux = (wy.b[0] - wy.a[0]) / c.len, uz = (wy.b[1] - wy.a[1]) / c.len;
           const t = clamp((wp.x - wy.a[0]) * ux + (wp.z - wy.a[1]) * uz, 0.5, c.len - 0.5);
           const lx = wy.a[0] + ux * t - uz * c.off, lz = wy.a[1] + uz * t + ux * c.off;
-          if (Math.hypot(lx - wp.x, lz - wp.z) < 5) {
+          if (Math.hypot(lx - wp.x, lz - wp.z) < 2.2) {
             heel.remove(m); this.scene.add(m);
             m.position.copy(wp);
             c.from = wp.clone(); c.landing = new THREE.Vector3(lx, wy.y, lz); c.state = 'jump'; c.dir = -1; c.u = 0;

@@ -660,9 +660,9 @@ function addBoatDetails(heel, root, spec, d) {
       const H = 0.13 + L * 0.004, len = x1 - x0, n = Math.max(8, Math.round(len / 0.12)), er = Math.min(0.5, (H * 0.6) / len);
       const pos = [];
       const col = (k) => {
-        const u = k / n, x = x0 + len * u, yc = sheerHeight(spec, x) * hRel;
-        const e = Math.max(0, Math.abs(2 * u - 1) - (1 - 2 * er)) / (2 * er); // 0 w środku, 1 na końcu okna
-        const hh = (H / 2) * Math.sqrt(Math.max(0, 1 - e * e));
+        // okno prostokątne w rzucie bocznym: stała wysokość i poziome krawędzie (nie podąża za wzniosem pokładu)
+        const u = k / n, x = x0 + len * u, yc = sheerHeight(spec, (x0 + x1) / 2) * hRel;
+        const hh = H / 2; void er;
         return [-1, 1].map((sg) => { const y = yc + sg * hh; return [x, y, side * (hullSurfaceW(stations, x, y, spec) + 0.006)]; });
       };
       let prev = col(0);
