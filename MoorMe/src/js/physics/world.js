@@ -85,6 +85,31 @@ export class World {
       this.boat.vz = Math.sin(this.boat.th) * sp0;
     }
     this.setupDefaultLines();
+    // główki portu: w cumowaniu i swobodnych manewrach jacht nie wypływa w morze – po wyjściu sam zawraca
+    this.gate = null; this.autoReturn = null;
+    const ent = (cfg.scenario === 'moor' || cfg.scenario === 'free') && this.H.port && this.H.port.starts ? this.H.port.starts.find((s) => s.id === 'entrance') : null;
+    if (ent) { const th = (ent.compass - 90) * DEG; this.gate = { x: ent.x, z: ent.z, nx: Math.cos(th), nz: Math.sin(th) }; }
+  }
+
+  // za główkami: autopilot zawraca jacht i wprowadza go z powrotem do portu, potem oddaje ster
+  updateGate() {
+    const g = this.gate, b = this.boat;
+    if (!g) return;
+    const along = (b.x - g.x) * g.nx + (b.z - g.z) * g.nz; // >0 w porcie, <0 za główkami
+    if (!this.autoReturn && along < -22) {
+      this.autoReturn = true;
+      this.log('Jacht wypłynął za główki portu – zawracam do portu', 'warn');
+    }
+    if (!this.autoReturn) return;
+    const tx = g.x + g.nx * 50, tz = g.z + g.nz * 50;
+    const err = wrapPi(Math.atan2(tz - b.z, tx - b.x) - b.th);
+    b.rudderCmd = clamp(err * 1.6, -35 * DEG, 35 * DEG);
+    b.throttle = Math.abs(err) > 1.0 ? 0.4 : 0.5;
+    if (along > 12 && Math.abs(err) < 0.6) {
+      this.autoReturn = false;
+      b.throttle = 0; b.rudderCmd = 0;
+      this.log('Jacht z powrotem w porcie – przejmij ster', 'good');
+    }
   }
 
   log(msg, type = 'info') {
@@ -1012,6 +1037,7 @@ export class World {
     this.env.update(dt);
     this.sea = this.env.seaMotion();
 
+    this.updateGate();
     if (this.engineDead) { b.throttle = 0; }
 
     // liny

@@ -123,7 +123,8 @@ export class SimScreen {
     lines.appendChild(h('div.head', {}, h('h3', { style: { fontSize: '15px' } }, 'Cumy i liny'),
       h('div', { style: { display: 'flex', gap: '6px' } },
         h('button.btn.sm.on', { onclick: () => this.startRig(), title: 'Kliknij knagę, (kluzę/półkluzę) i poler w widoku 3D (K)' }, '🖱 Knaga → poler'),
-        h('button.btn.sm', { onclick: () => this.showPrepareLine() }, '+ Z listy'))));
+        h('button.btn.sm', { onclick: () => this.showPrepareLine() }, '+ Z listy'),
+        h('button.btn.sm', { onclick: () => this.takeAllSlack(), title: 'Załoga wybiera luz na wszystkich założonych linach, aż się napną, i knaguje' }, '⬆ Wybierz luz'))));
     // nad rzutem: karta lin wybranej knagi; pod spodem rzut jachtu z góry z okienkami na knagach
     this.linesList = h('div', { id: 'lines-list' });
     this.plan = h('div.deck-plan');
@@ -150,6 +151,15 @@ export class SimScreen {
   }
 
   // ---------- Panel silnika ----------
+  // wybierz luz na wszystkich założonych linach (aż się napną – potem lina zostaje zaknagowana)
+  takeAllSlack() {
+    const w = this.world;
+    const ls = w.lines.filter((l) => l.state === 'attached' && l.slack > 0.05);
+    if (!ls.length) return w.log('Wszystkie liny są już napięte');
+    for (const l of ls) w.setTending(l, 'take');
+    w.log('Załoga wybiera luz na wszystkich linach');
+  }
+
   buildEngine() {
     const b = this.world.boat;
     const panel = h('div.glass.ctl');

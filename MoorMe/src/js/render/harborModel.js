@@ -1118,6 +1118,60 @@ function sceneryBaltic(group, r, lamps) {
   for (let k = 0; k < 6; k++) group.add(windTurbine(-420 + k * 140, -420 - (k % 2) * 60));
 }
 
+// wzgórza w tle z drzewami stosownymi do klimatu (Dalmacja: makia, cyprysy, oliwki, sosny; Bałtyk: łagodne pagórki, świerki i liściaste)
+function backdropHills(group, H, rects, r) {
+  const B = H.bounds, med = H.style === 'med';
+  const cx = (B.minX + B.maxX) / 2, cz = (B.minZ + B.maxZ) / 2;
+  const onLand = (x, z, m) => rects.some(([a, b, c, d]) => x > a + m && x < c - m && z > b + m && z < d - m);
+  const outside = (x, z, m) => x < B.minX - m || x > B.maxX + m || z < B.minZ - m || z > B.maxZ + m;
+  const hillCols = med ? [0x9c8f6c, 0x8a8a5e, 0x7d8a55, 0xa69a78] : [0x6f8f4e, 0x7a9a55, 0x648a4a, 0x86a060];
+  const hills = [];
+  for (let tries = 0, n = 0; tries < 600 && n < (med ? 26 : 22); tries++) {
+    const x = cx + (r() - 0.5) * 1300, z = cz + (r() - 0.5) * 1300;
+    const R = (med ? 55 : 60) + r() * (med ? 90 : 80);
+    const d = Math.hypot(x - cx, z - cz);
+    if (d > 680 || !outside(x, z, R * 0.6 + 50) || !onLand(x, z, R * 0.35)) continue;
+    const hgt = med ? 22 + r() * 48 + (d > 450 ? 25 : 0) : 9 + r() * 18;
+    const geo = new THREE.ConeGeometry(R, hgt, 9, 3);
+    const pos = geo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < -hgt / 2 + 0.01) continue; // podstawa zostaje okrągła
+      const k = med ? 0.18 : 0.12;
+      pos.setX(i, pos.getX(i) * (1 + (r() - 0.5) * k * 2));
+      pos.setZ(i, pos.getZ(i) * (1 + (r() - 0.5) * k * 2));
+      pos.setY(i, y + (r() - 0.5) * hgt * 0.12);
+    }
+    // zaokrąglony wierzchołek (low-poly kopuła zamiast ostrego szczytu)
+    for (let i = 0; i < pos.count; i++) if (pos.getY(i) > hgt / 2 - 0.01) pos.setY(i, hgt / 2 - hgt * 0.18);
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, mat(hillCols[Math.floor(r() * hillCols.length)], { rough: 1 }));
+    m.scale.set(1, 1, 0.7 + r() * 0.6);
+    m.rotation.y = r() * Math.PI;
+    m.position.set(x, hgt / 2 - 1.5, z);
+    m.receiveShadow = true;
+    group.add(m);
+    hills.push({ x, z, R, hgt });
+    n++;
+  }
+  // drzewa: na zboczach wzgórz i na płaskim lądzie między nimi
+  const S = 1.6; // większe niż w porcie – widać je z daleka
+  for (let tries = 0, n = 0; tries < 4000 && n < (med ? 260 : 320); tries++) {
+    const x = cx + (r() - 0.5) * 1200, z = cz + (r() - 0.5) * 1200;
+    if (Math.hypot(x - cx, z - cz) > 640 || !outside(x, z, 45) || !onLand(x, z, 6)) continue;
+    let y = 0.9;
+    for (const hl of hills) { const dd = Math.hypot(x - hl.x, z - hl.z) / hl.R; if (dd < 0.85) y = Math.max(y, hl.hgt * (1 - dd) * 0.82 - 1.5); }
+    let t;
+    const k = r();
+    if (med) t = k < 0.35 ? cypress(0, 0, 0, 7 + r() * 5) : k < 0.65 ? olive(r, 0, 0, 0) : k < 0.85 ? pine(r, 0, 0, 0) : bush(r, 0, 0, 0, 0x6b7a45);
+    else t = k < 0.7 ? tree(r, 0, 0, 0) : pine(r, 0, 0, 0);
+    t.position.set(x, y, z);
+    t.scale.setScalar(S * (0.8 + r() * 0.5));
+    group.add(t);
+    n++;
+  }
+}
+
 export function buildHarbor(H, scene) {
   const group = new THREE.Group();
   const dyn = new THREE.Group();
@@ -1182,6 +1236,26 @@ export function buildHarbor(H, scene) {
     group.add(m);
     if (s.kind === 'pontoon') group.add(extrudePoly(s.poly, -0.1, -0.6, mat(0x44484d)));
     addEdgeDetails(group, s, r, lamps);
+  }
+
+  // ląd poza portem: lądy i nabrzeża sięgające granic mapy przedłużone daleko w głąb (koniec ukrywa mgła)
+  {
+    const B = H.bounds, FAR = 1400, landRects = [];
+    const backMat = H.style === 'med' ? mat(0xb5aa8a, { rough: 1 }) : mat(0x7d9a5a, { rough: 1 });
+    for (const s of H.structures) {
+      if (s.kind !== 'land' && s.kind !== 'quay' && s.kind !== 'breakwater') continue;
+      let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
+      for (const [x, z] of s.poly) { a = Math.min(a, x); b = Math.min(b, z); c = Math.max(c, x); d = Math.max(d, z); }
+      const x0 = a <= B.minX ? -FAR : a, x1 = c >= B.maxX ? FAR : c, z0 = b <= B.minZ ? -FAR : b;
+      if (s.kind === 'breakwater' && !(b <= B.minZ)) continue; // falochrony w morzu zostają jak są
+      const ms = s.kind === 'land' ? surf(s) : backMat;
+      const piece = (p0, q0, p1, q1) => { if (p1 - p0 > 0.5 && q1 - q0 > 0.5) group.add(extrudePoly([[p0, q0], [p1, q0], [p1, q1], [p0, q1]], s.h, -4, ms)); };
+      piece(x0, z0, x1, b); // za lądem (w głąb)
+      piece(x0, b, a, d); // z lewej
+      piece(c, b, x1, d); // z prawej
+      if (s.kind === 'land' || s.kind === 'quay') landRects.push([x0, z0, x1, d]);
+    }
+    backdropHills(group, H, landRects, rng(4242));
   }
 
   // polery
@@ -1376,22 +1450,22 @@ export class Water {
     const matW = new THREE.MeshPhongMaterial({ color: 0xffffff, flatShading: true, specular: 0x415566, shininess: 95, transparent: true, opacity: 0.97, vertexColors: true });
     // odbicie nieba (Fresnel): przy płaskim kącie patrzenia woda przejmuje barwę horyzontu
     this.skyU = { value: new THREE.Color(0x9fd0e6) };
-    const fadeEdge = this.follow;
-    const patch = (fade) => (sh) => {
+    // brzeg siatki fal łagodnie przechodzi w dalekie morze (to samo odbicie nieba, ten sam kolor)
+    const patch = (fade, cz = 0, f0 = 150, f1 = 252) => (sh) => {
       sh.uniforms.uSky = this.skyU;
       sh.vertexShader = sh.vertexShader
         .replace('void main() {', 'varying vec2 vLocal;\nvoid main() {')
         .replace('#include <begin_vertex>', '#include <begin_vertex>\n vLocal = position.xz;');
       sh.fragmentShader = sh.fragmentShader
         .replace('void main() {', 'uniform vec3 uSky;\nvarying vec2 vLocal;\nvoid main() {')
-        .replace('#include <dithering_fragment>', `
-          // Fresnel: z góry woda ciemna (mało odbija), przy płaskim kącie coraz bardziej odbija niebo
+        .replace('#include <fog_fragment>', `
+          // Fresnel (przed mgłą – dalekie morze ginie w mgle tak jak ląd): z góry woda ciemna (mało odbija), przy płaskim kącie coraz bardziej odbija niebo
           float fr = pow(1.0 - clamp(dot(normalize(normal), normalize(vViewPosition)), 0.0, 1.0), 5.0);
           gl_FragColor.rgb = mix(gl_FragColor.rgb, uSky, clamp(0.03 + fr * 0.75, 0.0, 0.55));
-          ${fade ? 'gl_FragColor.a *= 1.0 - smoothstep(150.0, 252.0, max(abs(vLocal.x), abs(vLocal.y)));' : ''}
-          #include <dithering_fragment>`);
+          ${fade ? `gl_FragColor.a *= 1.0 - smoothstep(${f0.toFixed(1)}, ${f1.toFixed(1)}, max(abs(vLocal.x), abs(vLocal.y - ${cz.toFixed(1)})));` : ''}
+          #include <fog_fragment>`);
     };
-    matW.onBeforeCompile = patch(fadeEdge);
+    matW.onBeforeCompile = this.follow ? patch(true) : patch(true, 100, 205, 258);
     this.patchWater = patch;
     this.sceneRef = scene;
     // kolor wierzchołków: ciemniejsza głęboka woda, jaśniejsza przy brzegu (uzupełniane w setHarbor)
@@ -1429,8 +1503,12 @@ export class Water {
       this.farTex.anisotropy = 16;
       farMat = new THREE.MeshPhongMaterial({ color: 0x0d2f52, flatShading: true, specular: 0x415566, shininess: 95 });
       farMat.onBeforeCompile = this.patchWater(false);
-    } else farMat = new THREE.MeshLambertMaterial({ color: 0x2a7b98 });
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 3000, this.follow ? 24000 : 3000), farMat);
+    } else {
+      // kolor głębokiej wody portowej (wierzchołki × przygaszenie z atmosfery) – bez widocznej granicy
+      farMat = new THREE.MeshPhongMaterial({ color: 0x143856, flatShading: true, specular: 0x415566, shininess: 95 });
+      farMat.onBeforeCompile = this.patchWater(false);
+    }
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(this.follow ? 24000 : 9000, this.follow ? 24000 : 9000), farMat); // w porcie ok. 2,4 Mm w każdą stronę
     far.rotation.x = -Math.PI / 2;
     far.position.y = -0.7; // poniżej dołków fal (inaczej prześwituje przez wodę)
     scene.add(far);
