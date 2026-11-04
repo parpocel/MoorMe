@@ -848,3 +848,59 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-sign p { margin: 0; }
 .handbook .hb-sign .hb-signimg img { max-width: 138px; max-height: 138px; width: auto; height: auto; }
 .handbook .hb-sign.hb-aux h3, .handbook .hb-sign h3.hb-auxt { font: 700 15px 'Nunito', sans-serif; color: #2f4468; }
+
+/* podręczniki („Nauka”): czcionka 1,3× */
+.handbook .hb-main { font-size: 20px; }
+.handbook .hb-tab { font: 700 19.5px 'Nunito', sans-serif; }
+.handbook .hb-main > h2 { font-size: 28.6px; }
+.handbook .hb-entry h3 { font-size: 22.1px; }
+.handbook .hb-entry p { font-size: 18.9px; }
+.handbook figcaption { font-size: 15.6px; }
+.handbook .hb-notation { font-size: 26.0px; }
+.handbook .hb-char-code { font: 800 20.8px Consolas, 'Courier New', monospace; }
+.handbook .hb-rhythm { font-size: 16.9px; }
+.handbook .hb-ctable { font-size: 17.6px; }
+.handbook .hb-ct-abbr { font: 800 18.2px Consolas, 'Courier New', monospace; }
+/* charakterystyki świateł: karta na każdą charakterystykę (definicja + obraz graficzny, pod spodem lampa i wykres) */
+.handbook .hb-charx-grp { font-size: 18.2px; }
+.handbook .hb-charx-live h4 { font-size: 18.9px; }
+.handbook .hb-charx p { font-size: 18.2px; }
+.handbook .hb-charx-use { font-size: 17.6px; }
+.handbook .hb-charx-head h3 { font-size: 20.2px; }
+.handbook .hb-charx p { font-size: 17.6px; }
+.handbook .hb-mark-grid .hb-mark h3 { font-size: 20.2px; }
+.handbook .hb-mark-grid .hb-mark p { font-size: 17.6px; }
+/* nagłówki grup (np. IALA A, znaki kardynalne) większą czcionką */
+.handbook .hb-charx-grp { font-size: 23.4px; }
+.handbook .hb-card-grid .hb-card h3 { font-size: 20.8px; }
+.handbook .hb-card-grid .hb-card p { font-size: 17.6px; }
+.handbook .hb-sign h3 { font: 800 20.8px Consolas, 'Courier New', monospace; }
+.handbook .hb-sign.hb-aux h3, .handbook .hb-sign h3.hb-auxt { font: 700 19.5px 'Nunito', sans-serif; }
+/* przyciski menu (Wstecz, Ustawienia, Wyjście) i przyciski stopek ekranów menu – 2× większe */
+.m3-chip { height: 84px; padding: 0 32px; gap: 14px; font-size: 30px; }
+.m3-chip svg { width: 34px; height: 34px; }
+.m3-chip.quit { width: 84px; }
+.screen-footer .btn { font-size: 28px; padding: 16px 32px; border-radius: 16px; }
+.screen-footer { padding: 18px 28px; }
+/* podmenu w formie kwiatka: tagi pod nazwą, wyszarzone niedostępne, dodatkowe opcje w środku */
+.wh-lbl .wh-tg { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.78em; opacity: 0.85; }
+.wh-lbl.dis { opacity: 0.45; }
+.wh-extra { margin: 0 0 10px; font-size: 13px; }
+.wh-go:disabled { filter: grayscale(0.8) brightness(0.9); opacity: 0.6; }
+/* koło: środek dokładnie w połowie wysokości ekranu, w poziomie na 1/3; trochę większe */
+.wheelmenu .wh-stage { position: absolute; inset: 0; z-index: 1; pointer-events: none; display: block; }
+.wheelmenu .wh-wheel { position: absolute; top: 50%; left: 33.3%; margin: 0; transform: translate(-50%, -50%); width: min(90vh, 64vw, 940px); pointer-events: auto; }
+.wheelmenu .m3-top { position: relative; z-index: 2; }
+@media (max-width: 900px) { .wheelmenu .wh-wheel { left: 50%; width: min(90vh, 96vw); } }
+/* środek koła: stały okrąg, MoorMe zawsze w tym samym miejscu, przycisk Start też */
+.wh-center { width: 48%; height: 48%; aspect-ratio: auto; justify-content: flex-start; padding: 12% 6% 0; overflow: hidden; }
+.wh-logo { flex: none; line-height: 1; }
+.wh-kicker { flex: none; height: 2.6em; display: flex; align-items: flex-start; justify-content: center; margin: 4px 0 6px; line-height: 1.3; overflow: hidden; }
+.wh-title { flex: none; height: 1.25em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.wh-desc { flex: none; height: 5.8em; min-height: 0; overflow: hidden; margin: 6px 0 8px; }
+.wh-go { flex: none; }
+/* dodatkowe opcje podmenu (np. wybór przepisów) – panel obok koła */
+.wh-extra { position: absolute; left: calc(100% + 28px); top: 50%; transform: translateY(-50%); width: 280px; margin: 0; padding: 16px 18px; border-radius: 18px; font-size: 15px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06)); border: 1px solid rgba(255, 255, 255, 0.26); backdrop-filter: blur(16px) saturate(1.3); }
+@media (max-width: 900px) { .wh-extra { left: 50%; top: calc(100% + 12px); transform: translateX(-50%); } }
+.wh-lbl { font-size: clamp(15px, 2vh, 21px); }

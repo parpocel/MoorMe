@@ -176,7 +176,9 @@ function menuBackdrop() {
 }
 
 // items: { id, glyph, color, title, tag, desc, go, disabled }
-function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack = null }) {
+function menuScreen(opts) { return wheelMenu(opts); }
+// poprzedni układ menu (kafle u dołu) – zostawiony do ewentualnego powrotu
+function menuScreenTiles({ kicker, items, sel = 0, back, extra = null, settingsBack = null }) {
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
   const heroTitle = h('h2.m3-title'), heroDesc = h('p.m3-desc'), heroGlyph = h('div.m3-hglyph');
@@ -244,7 +246,7 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
 
 // Menu główne w formie koła („tortu”): napis MoorMe i opis wybranego modułu w środku, moduły jako wycinki wokół.
 // Poprzedni układ (kafle u dołu) to menuScreen – wystarczy w showModeSelect wywołać znów menuScreen zamiast wheelMenu.
-function wheelMenu({ kicker, items, sel = 0 }) {
+function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settingsBack = null }) {
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
@@ -296,8 +298,9 @@ function wheelMenu({ kicker, items, sel = 0 }) {
     const it = items[i];
     segs.forEach((p, k) => p.parentNode.classList.toggle('on', k === i));
     labels.forEach((l, k) => l.classList.toggle('on', k === i));
-    cTitle.textContent = t(it.title); cDesc.textContent = t(it.desc);
+    cTitle.textContent = t(it.title); cDesc.textContent = t(it.disabled && it.disabledDesc ? it.disabledDesc : it.desc);
     goBtn.style.setProperty('--c', it.color);
+    goBtn.disabled = !!it.disabled;
     center.classList.remove('swap'); void center.offsetWidth; center.classList.add('swap');
   }
   function activate(i) { const it = items[i]; if (it && !it.disabled) { document.removeEventListener('keydown', onKey); it.go(); } }
@@ -306,16 +309,17 @@ function wheelMenu({ kicker, items, sel = 0 }) {
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); select((cur + 1) % n); }
     else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); select((cur + n - 1) % n); }
     else if (e.key === 'Enter' && !(document.activeElement instanceof HTMLButtonElement)) activate(cur);
+    else if (e.key === 'Escape' && back) { document.removeEventListener('keydown', onKey); back.go(); }
   };
   document.addEventListener('keydown', onKey);
   const quit = window.moorme && window.moorme.quit;
   const scr = h('div.screen.menu3d.wheelmenu', {}, menuBackdrop(), h('div.m3-shade.wh-shade'),
     h('div.m3-top', {},
-      h('span'),
+      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('span'),
       h('div.m3-sp'),
-      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => showModeSelect()); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
+      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
-    h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center)));
+    h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center, extra ? h('div.wh-extra', {}, extra) : null)));
   app.appendChild(scr);
   select(cur);
   return scr;
@@ -365,7 +369,7 @@ function trainOrLearn({ kicker, glyph: g, color, trainTag, learnTag, train, lear
     kicker, back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: self,
     items: [
       { glyph: g, color, title: 'Trening w symulacji', tag: trainTag, desc: train, go: onTrain },
-      { glyph: 'book', color: '#5b78d6', title: 'Nauka – podręcznik', tag: learnTag, desc: learn, go: onLearn }
+      { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: learnTag, desc: learn, go: onLearn }
     ]
   });
 }
