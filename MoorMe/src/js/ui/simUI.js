@@ -247,13 +247,24 @@ export class SimScreen {
     const fr = h('div.seg');
     this.fenderBtns = {};
     for (const [k, n] of [['port', 'Lewa'], ['starboard', 'Prawa'], ['stern', 'Rufa']]) {
-      const btn = h('button', { class: w.fenderOut[k] ? 'on' : '', onclick: () => { w.fenderOut[k] = !w.fenderOut[k]; btn.classList.toggle('on', w.fenderOut[k]); } }, n);
+      const btn = h('button', { class: w.fenderOut[k] ? 'on' : '', onclick: () => {
+        // opuszczona platforma zajmuje pawęż – odbijaczy rufowych nie da się wtedy wywiesić
+        if (k === 'stern' && !w.fenderOut.stern && this.view.platformOpen) return w.log('Najpierw podnieś platformę rufową', 'warn');
+        w.fenderOut[k] = !w.fenderOut[k]; btn.classList.toggle('on', w.fenderOut[k]);
+      } }, n);
+      this.fenderBtns[k] = btn;
       fr.appendChild(btn);
     }
     panel.appendChild(fr);
     // platforma kąpielowa na rufie
     const pfBtn = h('button.btn.sm', { style: { width: '100%', marginTop: '6px' }, title: 'Opuść / podnieś platformę na pawęży', onclick: () => {
       this.view.platformOpen = !this.view.platformOpen;
+      // przed opuszczeniem platformy załoga zdejmuje odbijacze z rufy (inaczej platforma przeszłaby przez nie)
+      if (this.view.platformOpen && w.fenderOut.stern) {
+        w.fenderOut.stern = false;
+        this.fenderBtns.stern?.classList.remove('on');
+        w.log('Odbijacze zdjęte z rufy przed opuszczeniem platformy');
+      }
       pfBtn.textContent = t(this.view.platformOpen ? '⬆ Podnieś platformę' : '⬇ Opuść platformę');
       pfBtn.classList.toggle('on', this.view.platformOpen);
     } }, '⬇ Opuść platformę');

@@ -165,6 +165,8 @@ export const EN = {
   'Brak obsługi grafiki 3D': '3D graphics not supported', 'Nie udało się uruchomić WebGL. Zaktualizuj sterowniki karty graficznej i spróbuj ponownie.': 'WebGL could not be started. Update your graphics drivers and try again.',
   'Wróć': 'Back',
   'Cumowanie': 'Mooring', 'Odcumowanie': 'Unmooring', 'Jacht zatrzymany': 'Yacht stopped', 'Wszystkie liny oddane': 'All lines released', 'Załoga na pokładzie': 'Crew aboard',
+  '⬇ Opuść platformę': '⬇ Lower platform', '⬆ Podnieś platformę': '⬆ Raise platform', 'Opuść / podnieś platformę na pawęży': 'Lower / raise the transom platform',
+  'Odbijacze zdjęte z rufy przed opuszczeniem platformy': 'Stern fenders taken in before lowering the platform', 'Najpierw podnieś platformę rufową': 'Raise the transom platform first',
   'Silnik: lina w śrubie!': 'Engine: line in the propeller!', 'STOP': 'STOP',
   'Uderzenia kadłubem:': 'Hull impacts:',
   'Prędkość (SOG)': 'Speed (SOG)', 'Kurs': 'Heading', 'Ruch wzdłużny': 'Surge', 'Obrót': 'Turn rate', 'Wiatr rzecz.': 'True wind', 'Wiatr pozorny': 'Apparent wind', 'Czas': 'Time', 'Godzina': 'Time of day',

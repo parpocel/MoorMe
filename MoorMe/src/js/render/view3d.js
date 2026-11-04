@@ -409,12 +409,11 @@ export class View3D {
 
   makeWindStreaks() {
     // chorągiewki wiatru jak na mapach synoptycznych: drzewce + pierzaste kreski (5/10 kn) i trójkąty (50 kn)
-    const N = 96, SEG = 9;
+    const N = 100, SEG = 9; // siatka 10 × 10
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * SEG * 6), 3));
     const m = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
     m.frustumCulled = false;
-    m.userData.items = Array.from({ length: N }, () => ({ x: (Math.random() - 0.5) * 120, z: (Math.random() - 0.5) * 120, y: 1 + Math.random() * 6, life: Math.random() * 4 }));
     return m;
   }
 
@@ -619,7 +618,7 @@ export class View3D {
       const pos = p.position, dx = tgt.x - pos.x;
       const side = Math.sign(tgt.z || pos.z || 1);
       const wayZ = Math.abs(dx) > 0.8 ? side * Math.max(0.3, halfBeamAt(spec, pos.x) - 0.38) : tgt.z;
-      const sp = 1.1 * dt; // ok. 1 m/s
+      const sp = 1.8 * dt; // ok. 1,8 m/s – sprawny marsz po pokładzie
       const mx = clamp(dx, -sp, sp), mz = clamp(wayZ - pos.z, -sp, sp);
       pos.x += mx; pos.z += mz;
       const moving = Math.abs(mx) + Math.abs(mz) > 0.002;
@@ -1023,44 +1022,44 @@ export class View3D {
     P.geo.attributes.position.needsUpdate = true;
     P.geo.attributes.alpha.needsUpdate = true;
 
-    // smugi wiatru
+    // chorągiewki wiatru: stała siatka zaczepiona w świecie, leżą płasko na powierzchni wody
     const wv = w.env.windVec();
     const ws = this.windStreaks, wp = ws.geometry.attributes.position.array;
-    const SEG = 9, SH = 3.2, BL = 1.0, BS = 0.42;
+    const SEG = 9, SH = 2.3, BL = 0.7, BS = 0.3, GS = 11, GN = 10;
     const wn = Math.hypot(wv.x, wv.z) || 1, ux = -wv.x / wn, uz = -wv.z / wn; // ku nawietrznej
     const px = -uz, pz = ux; // kreski na jedną stronę drzewca
     let r5 = Math.round(windKn / 5);
     const pen = Math.floor(r5 / 10); r5 -= pen * 10;
     const full = Math.min(4, Math.floor(r5 / 2)), half5 = r5 % 2;
-    ws.userData.items.forEach((it, i) => {
-      it.life -= dt;
-      it.x += wv.x * dt; it.z += wv.z * dt;
-      if (it.life <= 0 || Math.abs(it.x - this.cam.tx) > 70 || Math.abs(it.z - this.cam.tz) > 70) {
-        it.x = this.cam.tx + (Math.random() - 0.5) * 120; it.z = this.cam.tz + (Math.random() - 0.5) * 120;
-        it.life = 2 + Math.random() * 3; it.y = 1 + Math.random() * 8;
-      }
-      // drzewce od czoła (z wiatrem) do ogona po stronie nawietrznej, na ogonie pierzaste kreski
+    const gx0 = Math.round(this.cam.tx / GS) - GN / 2, gz0 = Math.round(this.cam.tz / GS) - GN / 2;
+    const sy = (x, z) => this.water.surfaceY(x, z, windKn, windDir) + 0.06;
+    for (let i = 0; i < GN * GN; i++) {
+      // środek drzewca w węźle siatki; czoło z wiatrem, kreski na końcu nawietrznym
+      const cx = (gx0 + (i % GN)) * GS, cz = (gz0 + Math.floor(i / GN)) * GS;
+      const hx = cx - ux * SH / 2, hz = cz - uz * SH / 2;
+      const tx = hx + ux * SH, tz = hz + uz * SH;
       let o = i * SEG * 6, k = 0;
-      const seg = (x1, y1, z1, x2, y2, z2) => { if (k >= SEG) return; wp[o++] = x1; wp[o++] = y1; wp[o++] = z1; wp[o++] = x2; wp[o++] = y2; wp[o++] = z2; k++; };
-      const tx = it.x - ux * SH, tz = it.z - uz * SH, y = it.y;
-      seg(it.x, y, it.z, tx, y, tz);
+      const seg = (x1, z1, x2, z2) => { if (k >= SEG) return; wp[o++] = x1; wp[o++] = sy(x1, z1); wp[o++] = z1; wp[o++] = x2; wp[o++] = sy(x2, z2); wp[o++] = z2; k++; };
+      seg(hx, hz, tx, tz);
       let d = 0;
-      const tip = (s, l) => { const bx = tx + ux * s, bz = tz + uz * s; return [bx, bz, bx + (px - ux * 0.45) * l, y + l * 0.35, bz + (pz - uz * 0.45) * l]; };
+      // kreska wyrasta z drzewca d metrów od nawietrznego końca i odchyla się ku wiatrowi (jak na mapach)
+      const tip = (s, l) => { const bx = tx - ux * s, bz = tz - uz * s; return [bx, bz, bx + (px + ux * 0.45) * l, bz + (pz + uz * 0.45) * l]; };
       for (let j = 0; j < pen; j++) {
-        const [bx, bz, ex, ey, ez] = tip(d, BL);
-        seg(bx, y, bz, ex, ey, ez);
-        seg(ex, ey, ez, bx + ux * BS * 1.3, y, bz + uz * BS * 1.3);
+        const [bx, bz, ex, ez] = tip(d, BL);
+        seg(bx, bz, ex, ez);
+        seg(ex, ez, bx - ux * BS * 1.3, bz - uz * BS * 1.3);
         d += BS * 1.6;
       }
-      for (let j = 0; j < full; j++) { const [bx, bz, ex, ey, ez] = tip(d, BL); seg(bx, y, bz, ex, ey, ez); d += BS; }
-      if (half5) { if (!pen && !full) d += BS; const [bx, bz, ex, ey, ez] = tip(d, BL * 0.55); seg(bx, y, bz, ex, ey, ez); }
-      while (k < SEG) seg(it.x, y, it.z, it.x, y, it.z);
-    });
+      for (let j = 0; j < full; j++) { const [bx, bz, ex, ez] = tip(d, BL); seg(bx, bz, ex, ez); d += BS; }
+      if (half5) { if (!pen && !full) d += BS; const [bx, bz, ex, ez] = tip(d, BL * 0.55); seg(bx, bz, ex, ez); }
+      const y0 = wp[i * SEG * 6 + 1];
+      while (k < SEG) { wp[o++] = hx; wp[o++] = y0; wp[o++] = hz; wp[o++] = hx; wp[o++] = y0; wp[o++] = hz; k++; }
+    }
     ws.geometry.attributes.position.needsUpdate = true;
     // po zmroku smugi gasną – na ciemnym niebie wyglądałyby jak jasne kreski gwiazd
     const dark = this.atmo ? this.atmo.night || 0 : 0;
-    ws.material.opacity = clamp(windKn / 25, 0.05, 0.5) * (1 - 0.85 * dark);
-    ws.material.color.setScalar(1 - 0.55 * dark);
+    ws.material.opacity = clamp(windKn / 30, 0.04, 0.3) * (1 - 0.85 * dark);
+    ws.material.color.setRGB(0.78, 0.88, 0.94).multiplyScalar(1 - 0.55 * dark);
 
     // kamera
     const cam = this.cam;

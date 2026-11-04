@@ -15,6 +15,12 @@ function aabb(poly) {
   return { minX: a, minZ: b, maxX: c, maxZ: d };
 }
 
+function segX(a, b, c, d) {
+  const cr = (p, q, r) => (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]);
+  const d1 = cr(c, d, a), d2 = cr(c, d, b), d3 = cr(a, b, c), d4 = cr(a, b, d);
+  return d1 * d2 < 0 && d3 * d4 < 0;
+}
+
 // wysokość punktu zaczepienia liny nad podstawą polera (szyjka polera, róg knagi, pierścień, obejma dalby)
 export const TARGET_DY = { bollard: 0.3, cleat: 0.15, ring: 0.07, pile: 0 }; // lina na szyjce polera / pod rogiem knagi
 
@@ -74,6 +80,7 @@ export class World {
       const s = cfg.start;
       this.boat.reset(s.x, s.z, (s.compass - 90) * DEG);
       const sp0 = (cfg.start.speedKn || 0) * KN;
+      this.clearStart();
       this.boat.vx = Math.cos(this.boat.th) * sp0;
       this.boat.vz = Math.sin(this.boat.th) * sp0;
     }
@@ -829,6 +836,39 @@ export class World {
     this.crew.task = null;
     this.crew.manual = false;
     this.log('Załoga na pokładzie');
+  }
+
+  // czy jacht w danym miejscu zachodzi (z zapasem m) na pomost, keję albo innego jachtu
+  startBlocked(x, z, th, m = 1.5) {
+    const sp = this.boat.spec, kx = 1 + m / (sp.loa / 2), ky = 1 + m / (sp.beam / 2);
+    const pts = this.boat.outline.map(([lx, ly]) => localToWorld(x, z, th, lx * kx, ly * ky));
+    for (let lx = -sp.loa / 2; lx <= sp.loa / 2; lx += 1) pts.push(localToWorld(x, z, th, lx, 0));
+    const poly = pts.slice(0, this.boat.outline.length).map((p) => [p.x, p.z]);
+    const R = sp.loa / 2 + m;
+    for (const o of this.obstacles) {
+      if (x + R < o.box.minX || x - R > o.box.maxX || z + R < o.box.minZ || z - R > o.box.maxZ) continue;
+      for (const p of pts) if (p.x >= o.box.minX && p.x <= o.box.maxX && p.z >= o.box.minZ && p.z <= o.box.maxZ && pointInConvex(o.poly, p.x, p.z)) return true;
+      for (const [vx, vz] of o.poly) if (pointInConvex(poly, vx, vz)) return true;
+      // cienkie przeszkody (Y-bomy) mogą przecinać kadłub w poprzek, omijając punkty – test przecięć krawędzi
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        for (let j = 0; j < o.poly.length; j++) if (segX(a, b, o.poly[j], o.poly[(j + 1) % o.poly.length])) return true;
+      }
+    }
+    return false;
+  }
+
+  // start nie może wypaść na przeszkodzie – inaczej kolizja wystrzeliłaby jacht; szukamy najbliższej wolnej wody
+  clearStart() {
+    const b = this.boat, B = this.H.bounds;
+    if (!this.startBlocked(b.x, b.z, b.th)) return;
+    for (let r = 3; r <= 90; r += 3) {
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2, x = b.x + Math.cos(a) * r, z = b.z + Math.sin(a) * r;
+        if (B && (x < B.minX + 10 || x > B.maxX - 10 || z < B.minZ + 10 || z > B.maxZ - 10)) continue;
+        if (!this.startBlocked(x, z, b.th)) { b.reset(x, z, b.th); return; }
+      }
+    }
   }
 
   boatPolyWorld() {

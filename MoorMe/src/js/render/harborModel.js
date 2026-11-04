@@ -778,8 +778,9 @@ function ferryNameTexture() {
 // z zaokrąglonym przodem i pasami okien, pochylony komin, mostek ze skrzydłami, szalupy na żurawikach.
 function ferryHullBand(L, B, H, y0, y1, color, deck = false) {
   // s: 0 = rufa, 1 = dziób; na dole dziób cofnięty (pochylona dziobnica), u góry wznos pokładu
-  const N = 30;
-  const f = (s) => (s < 0.62 ? 1 : Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.62) / 0.38, 2.2))));
+  const N = 40;
+  // rzut z góry: równoległy śródokręć, potem ostrołukowy dziób zbiegający się w ostrą dziobnicę
+  const f = (s) => (s < 0.6 ? 1 : Math.max(0, 1 - Math.pow((s - 0.6) / 0.4, 1.9)));
   const sheer = (s) => H + 2.2 * Math.pow(Math.max(0, (s - 0.6) / 0.4), 2);
   const pt = (s, yy, side) => {
     const top = sheer(s), k = Math.min(1, Math.max(0, yy === 'top' ? 1 : yy / top));
