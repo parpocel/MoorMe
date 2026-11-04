@@ -205,33 +205,63 @@ export class View3D {
   }
 
   makeBerthMarker() {
+    // stanowisko jako prostokąt: przy cumowaniu burtą można stanąć w dowolną stronę (lewą lub prawą burtą do kei)
     const w = this.world, b = w.H.berth, spec = w.spec;
-    const out = hullOutline(spec, 12);
-    const pts = out.map(([x, y]) => new THREE.Vector3(x, 0.05, y));
-    pts.push(pts[0].clone());
-    const g = new THREE.BufferGeometry().setFromPoints(pts);
-    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.5, depthTest: false }));
-    line.renderOrder = 8;
+    const { xs, xb } = hullExtents(spec);
+    const longside = w.H.method === 'longside';
+    const len = spec.loa + (longside ? 2.2 : 2 * b.tolAlong), wid = b.slotW ? b.slotW : longside ? spec.beam + 0.66 : spec.beam + 2 * b.tolAcross; // przy kei: wewnętrzna krawędź na nabrzeżu
+    const cx = (xs + xb) / 2, hx = len / 2, hz = wid / 2;
+    const corners = [[cx - hx, -hz], [cx + hx, -hz], [cx + hx, hz], [cx - hx, hz]];
     const grp = new THREE.Group();
-    grp.add(line);
-    const shape = new THREE.Shape();
-    out.forEach(([x, y], i) => (i ? shape.lineTo(x, -y) : shape.moveTo(x, -y)));
-    const fill = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.16, depthWrite: false, depthTest: false }));
-    fill.renderOrder = 7;
-    fill.rotation.x = -Math.PI / 2;
-    fill.position.y = 0.04;
-    grp.add(fill);
-    // strzałka dziobu
-    const arr = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 3), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.6 }));
-    arr.rotation.z = -Math.PI / 2;
-    arr.position.set(hullExtents(spec).xb + 1.2, 0.1, 0);
-    grp.add(arr);
+    const pts = corners.concat([corners[0]]).map(([x, z]) => new THREE.Vector3(x, 0.05, z));
+    const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.8, depthTest: false }));
+    line.renderOrder = 8; grp.add(line);
+    // narożniki pogrubione (jak oznaczenie miejsca postojowego)
+    const ck = Math.min(1.2, hz * 0.6);
+    for (const [x, z] of corners) {
+      const sx = x > cx ? -1 : 1, sz = z > 0 ? -1 : 1;
+      const c = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x + sx * ck * 1.6, 0.06, z), new THREE.Vector3(x, 0.06, z), new THREE.Vector3(x, 0.06, z + sz * ck)]), line.material);
+      c.renderOrder = 8; grp.add(c);
+    }
+    const fill = new THREE.Mesh(new THREE.PlaneGeometry(len, wid), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.12, depthWrite: false, depthTest: false }));
+    fill.renderOrder = 7; fill.rotation.x = -Math.PI / 2; fill.position.set(cx, 0.04, 0); grp.add(fill);
+    // przy stanowiskach dziobem/rufą do pomostu kierunek jest ustalony – strzałka dziobu
+    if (!longside) {
+      const arr = new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.2, 3), new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.6 }));
+      arr.rotation.z = -Math.PI / 2; arr.position.set(xb + 1.2, 0.1, 0); grp.add(arr);
+    }
     grp.position.set(b.x, 0.12, b.z);
     grp.rotation.y = -b.th;
     grp.userData.line = line;
     grp.userData.fill = fill;
     grp.visible = w.cfg.scenario === 'moor';
+    // droga do stanowiska: przerywana linia od jachtu przez punkt podejścia
+    const rg = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, () => new THREE.Vector3()));
+    this.routeLine = new THREE.Line(rg, new THREE.LineDashedMaterial({ color: 0x7fd1ff, dashSize: 1.2, gapSize: 0.8, transparent: true, opacity: 0.85, depthTest: false }));
+    this.routeLine.renderOrder = 9; this.routeLine.frustumCulled = false; this.routeLine.visible = false;
+    this.scene.add(this.routeLine);
     return grp;
+  }
+
+  // przebieg drogi: jacht → punkt podejścia (od strony wody) → stanowisko; odświeżane kilka razy na sekundę
+  updateRoute() {
+    const w = this.world, b = w.H.berth, F = b.frame, boat = w.boat, L = w.spec.loa;
+    const show = w.cfg.scenario === 'moor' && !w.result && !w.poseOk && F;
+    this.routeLine.visible = !!show;
+    if (!show) return;
+    const me = F.toLocal(boat.x, boat.z), bl = F.toLocal(b.x, b.z);
+    const longside = w.H.method === 'longside';
+    const s = Math.sign(me.u - bl.u) || 1;
+    // podejście: przy kei – pod niewielkim kątem wzdłuż nabrzeża od strony jachtu; przy pomoście – prostopadle z wody
+    const A = longside ? F.toWorld(bl.u + s * 1.5 * L, bl.v + 0.9 * L) : F.toWorld(bl.u, bl.v + 1.5 * L);
+    const P0 = new THREE.Vector3(boat.x, 0.2, boat.z), P2 = new THREE.Vector3(b.x, 0.2, b.z);
+    const dA = Math.hypot(boat.x - A.x, boat.z - A.z), dB = Math.hypot(boat.x - b.x, boat.z - b.z);
+    const pts = dB < 1.3 * L || dA > dB ? [P0, P2] : [P0, new THREE.Vector3(A.x, 0.2, A.z), P2];
+    const curve = pts.length === 2 ? new THREE.LineCurve3(pts[0], pts[1]) : new THREE.CatmullRomCurve3(pts, false, 'centripetal');
+    const arr = this.routeLine.geometry.attributes.position;
+    curve.getPoints(arr.count - 1).forEach((p, i) => arr.setXYZ(i, p.x, 0.2, p.z));
+    arr.needsUpdate = true;
+    this.routeLine.computeLineDistances();
   }
 
   // kilwater: pas piany za rufą – rozszerza się w „V”, jasne brzegi fal, wirująca woda w środku, zanika z czasem
@@ -1030,6 +1060,7 @@ export class View3D {
     this.life.update(dt);
 
     // znacznik stanowiska
+    if (this.routeLine) { this._routeT = (this._routeT || 0) - dt; if (this._routeT <= 0) { this._routeT = 0.25; this.updateRoute(); } }
     if (this.berthMarker.visible) {
       const ok = w.poseOk;
       const col = ok ? (w.linesOk ? 0x3ddc84 : 0xffd166) : 0x7fd1ff;

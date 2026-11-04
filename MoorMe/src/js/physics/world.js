@@ -1267,7 +1267,9 @@ export class World {
   berthError() {
     const b = this.boat, t = this.H.berth;
     const loc = worldToLocal(t.x, t.z, t.th, b.x, b.z);
-    const dth = wrapPi(b.th - t.th) / DEG;
+    let dth = wrapPi(b.th - t.th) / DEG;
+    // burtą do kei można stanąć w obie strony (lewą albo prawą burtą) – liczy się odchyłka od osi stanowiska
+    if (this.H.method === 'longside' && Math.abs(dth) > 90) dth = wrapPi(b.th - t.th - Math.PI) / DEG;
     return { along: loc.x, across: loc.y, dth };
   }
 
