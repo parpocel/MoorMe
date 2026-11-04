@@ -235,33 +235,32 @@ export class View3D {
     grp.userData.line = line;
     grp.userData.fill = fill;
     grp.visible = w.cfg.scenario === 'moor';
-    // droga do stanowiska: przerywana linia od jachtu przez punkt podejścia
-    const rg = new THREE.BufferGeometry().setFromPoints(Array.from({ length: 48 }, () => new THREE.Vector3()));
-    this.routeLine = new THREE.Line(rg, new THREE.LineDashedMaterial({ color: 0x7fd1ff, dashSize: 1.2, gapSize: 0.8, transparent: true, opacity: 0.85, depthTest: false }));
-    this.routeLine.renderOrder = 9; this.routeLine.frustumCulled = false; this.routeLine.visible = false;
-    this.scene.add(this.routeLine);
+    // wskazówka drogi: dyskretna, płaska strzałka na wodzie przy jachcie, w stronę punktu podejścia albo stanowiska
+    const sh = new THREE.Shape();
+    sh.moveTo(1.6, 0); sh.lineTo(-0.9, 1.1); sh.lineTo(-0.35, 0); sh.lineTo(-0.9, -1.1); sh.closePath();
+    const ag = new THREE.ShapeGeometry(sh); ag.rotateX(-Math.PI / 2);
+    this.routeArrow = new THREE.Mesh(ag, new THREE.MeshBasicMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false }));
+    this.routeArrow.renderOrder = 9; this.routeArrow.visible = false;
+    this.scene.add(this.routeArrow);
     return grp;
   }
 
-  // przebieg drogi: jacht → punkt podejścia (od strony wody) → stanowisko; odświeżane kilka razy na sekundę
-  updateRoute() {
+  // kierunek do celu: najpierw punkt podejścia (od strony wody), potem samo stanowisko; blisko stanowiska strzałka znika
+  updateRoute(t = 0) {
     const w = this.world, b = w.H.berth, F = b.frame, boat = w.boat, L = w.spec.loa;
-    const show = w.cfg.scenario === 'moor' && !w.result && !w.poseOk && F;
-    this.routeLine.visible = !!show;
+    const dB = Math.hypot(boat.x - b.x, boat.z - b.z);
+    const show = w.cfg.scenario === 'moor' && !w.result && !w.poseOk && F && dB > 1.4 * L;
+    this.routeArrow.visible = !!show;
     if (!show) return;
     const me = F.toLocal(boat.x, boat.z), bl = F.toLocal(b.x, b.z);
-    const longside = w.H.method === 'longside';
     const s = Math.sign(me.u - bl.u) || 1;
-    // podejście: przy kei – pod niewielkim kątem wzdłuż nabrzeża od strony jachtu; przy pomoście – prostopadle z wody
-    const A = longside ? F.toWorld(bl.u + s * 1.5 * L, bl.v + 0.9 * L) : F.toWorld(bl.u, bl.v + 1.5 * L);
-    const P0 = new THREE.Vector3(boat.x, 0.2, boat.z), P2 = new THREE.Vector3(b.x, 0.2, b.z);
-    const dA = Math.hypot(boat.x - A.x, boat.z - A.z), dB = Math.hypot(boat.x - b.x, boat.z - b.z);
-    const pts = dB < 1.3 * L || dA > dB ? [P0, P2] : [P0, new THREE.Vector3(A.x, 0.2, A.z), P2];
-    const curve = pts.length === 2 ? new THREE.LineCurve3(pts[0], pts[1]) : new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-    const arr = this.routeLine.geometry.attributes.position;
-    curve.getPoints(arr.count - 1).forEach((p, i) => arr.setXYZ(i, p.x, 0.2, p.z));
-    arr.needsUpdate = true;
-    this.routeLine.computeLineDistances();
+    const A = w.H.method === 'longside' ? F.toWorld(bl.u + s * 1.5 * L, bl.v + 0.9 * L) : F.toWorld(bl.u, bl.v + 1.5 * L);
+    const dA = Math.hypot(boat.x - A.x, boat.z - A.z);
+    const T = dA > 0.8 * L && dA < dB ? A : b;
+    const a = Math.atan2(T.z - boat.z, T.x - boat.x), r = 0.95 * L;
+    this.routeArrow.position.set(boat.x + Math.cos(a) * r, 0.25, boat.z + Math.sin(a) * r);
+    this.routeArrow.rotation.y = -a;
+    this.routeArrow.scale.setScalar(Math.max(1, L / 11));
   }
 
   // kilwater: pas piany za rufą – rozszerza się w „V”, jasne brzegi fal, wirująca woda w środku, zanika z czasem
@@ -1060,7 +1059,7 @@ export class View3D {
     this.life.update(dt);
 
     // znacznik stanowiska
-    if (this.routeLine) { this._routeT = (this._routeT || 0) - dt; if (this._routeT <= 0) { this._routeT = 0.25; this.updateRoute(); } }
+    if (this.routeArrow) { this.updateRoute(); this.routeArrow.material.opacity = 0.22 + 0.12 * Math.sin(t * 2.2); }
     if (this.berthMarker.visible) {
       const ok = w.poseOk;
       const col = ok ? (w.linesOk ? 0x3ddc84 : 0xffd166) : 0x7fd1ff;
