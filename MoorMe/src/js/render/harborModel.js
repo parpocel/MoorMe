@@ -1434,7 +1434,11 @@ export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = Math.round((this.follow ? 117 : 161) * (opts.detail || 1)); // oczko ok. 3,2 m // na otwartym morzu większe trójkąty (styl low-poly)
+    // połowa wierzchołków względem pierwotnej siatki (161/117 → ×√0,5) – oczko ok. 4,6 m w porcie; na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 117 : 161) * Math.SQRT1_2 * (opts.detail || 1));
+    // fale za krótkie dla oczka siatki są w rysunku wygaszane (inaczej migotanie / aliasing); kołysanie jachtu liczy pełną sumę
+    const cell = size / seg;
+    this.drawAmp = WAVES.map((W) => clamp((2 * Math.PI / W.k / cell - 1.6) / 1.0, 0, 1));
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;
@@ -1548,13 +1552,15 @@ export class Water {
     this.baseCol = col.array.slice();
   }
   // wysokość i nachylenie sumy fal w punkcie
-  wave(x, z, t, a, windDir, out) {
+  wave(x, z, t, a, windDir, out, gain = null) {
     let h = 0, gx = 0, gz = 0;
-    for (const W of WAVES) {
+    for (let j = 0; j < WAVES.length; j++) {
+      const W = WAVES[j];
+      if (gain && !gain[j]) continue;
       const dir = windDir + W.d;
       const kx = Math.sin(dir) * W.k, kz = -Math.cos(dir) * W.k;
       const ph = x * kx + z * kz - t * W.w;
-      const amp = a * W.a;
+      const amp = a * W.a * (gain ? gain[j] : 1);
       h += amp * Math.sin(ph);
       const c = amp * Math.cos(ph);
       gx += c * kx; gz += c * kz;
@@ -1599,7 +1605,7 @@ export class Water {
     const g = {};
     const cl = this.baseCol ? this.geo.attributes.color.array : null;
     for (let i = 0; i < p.length; i += 3) {
-      p[i + 1] = this.wave(this.base[i] + this.ox, this.base[i + 2] + this.oz, this.t, a, windDir, g);
+      p[i + 1] = this.wave(this.base[i] + this.ox, this.base[i + 2] + this.oz, this.t, a, windDir, g, this.drawAmp);
       if (cl) { const k = 1 + clamp(p[i + 1] / (a * 2.2), -1, 1) * 0.16; cl[i] = this.baseCol[i] * k; cl[i + 1] = this.baseCol[i + 1] * k; cl[i + 2] = this.baseCol[i + 2] * k; }
     }
     this.geo.attributes.position.needsUpdate = true;
@@ -1607,7 +1613,7 @@ export class Water {
   }
   // wysokość narysowanej powierzchni (do unoszących się obiektów)
   surfaceY(x, z, windKn, windDir) {
-    return this.wave(x, z, this.t, (0.04 + Math.min(windKn, 35) * 0.0045) * this.waveGain, windDir);
+    return this.wave(x, z, this.t, (0.04 + Math.min(windKn, 35) * 0.0045) * this.waveGain, windDir, null, this.drawAmp);
   }
   heightAt(x, z, windKn, windDir) {
     const a = 0.03 + Math.min(windKn, 35) * 0.0032;

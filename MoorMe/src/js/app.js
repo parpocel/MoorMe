@@ -251,7 +251,9 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
   app.innerHTML = '';
   let cur = Math.min(sel, items.length - 1);
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
-  const R = 100, R0 = 54, GAP = 2.2; // promienie w jednostkach viewBox (–110..110)
+  // promienie w jednostkach viewBox (–112..112); środkowe koło ma promień 0,48·224/2 ≈ 53,8 –
+  // R0 dobrane tak, by przerwa od koła była równa przerwie między płatkami (2·GAP)
+  const R = 100, GAP = 2.2, R0 = 0.48 * 112 + 2 * GAP;
   const pt = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
   // płatki zawsze tej samej wielkości co w menu głównym (1/7 koła); przy mniejszej liczbie pozycji – zebrane po prawej stronie środka
   const SLOTS = 7, step = (Math.PI * 2) / Math.max(n, SLOTS);

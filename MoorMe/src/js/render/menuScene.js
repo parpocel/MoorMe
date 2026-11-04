@@ -15,7 +15,9 @@ const flat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flat
 // bryła z poszarpanymi wierzchołkami (skały, wyspy, chmury)
 function jagged(geo, amp, r, keepBase = true) {
   geo = geo.toNonIndexed();
-  const p = geo.attributes.position, key = (x, y, z) => `${x.toFixed(3)},${y.toFixed(3)},${z.toFixed(3)}`;
+  // klucz wierzchołka zaokrąglony do 0,01 (bez „-0”), żeby szwy bryły dostały to samo przesunięcie – inaczej powstają dziury
+  const q = (v) => Math.round(v * 100) + 0;
+  const p = geo.attributes.position, key = (x, y, z) => `${q(x)},${q(y)},${q(z)}`;
   const off = new Map();
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i), k = key(x, y, z);
@@ -198,7 +200,7 @@ export class MenuScene {
     for (let i = 0; i < 16; i++) {
       const a = -2.6 + i * 0.16, d = 820 + R() * 120;
       if (Math.abs(a - SUN_AZ) < 0.32) continue; // otwarty horyzont pod słońcem
-      const m = new THREE.Mesh(jagged(new THREE.ConeGeometry(70 + R() * 90, 60 + R() * 110, 6, 1), 30, R), flat(0x6a4f86));
+      const m = new THREE.Mesh(jagged(new THREE.ConeGeometry(70 + R() * 90, 60 + R() * 110, 6, 1), 30, R), flat(0x6a4f86, { side: THREE.DoubleSide }));
       m.position.set(Math.cos(a) * d, -4, Math.sin(a) * d);
       scene.add(m);
     }
