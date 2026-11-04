@@ -487,7 +487,7 @@ export class View3D {
       pos.x += mx; pos.z += mz;
       const moving = Math.abs(mx) + Math.abs(mz) > 0.002;
       const baseY = Math.abs(dx) < 0.05 && Math.abs(tgt.z - pos.z) < 0.05 ? tgt.y : sheerHeight(spec, pos.x) + 0.02;
-      pos.y += (baseY + (moving ? Math.abs(Math.sin(t * 9)) * 0.035 : 0) - pos.y) * clamp(dt * 8, 0, 1);
+      pos.y += (baseY + (moving ? Math.abs(Math.sin(t * 5.2)) * 0.025 : 0) - pos.y) * clamp(dt * 8, 0, 1);
       const want = moving ? -Math.atan2(mz, mx) + Math.PI / 2 : face;
       let dr = want - p.rotation.y; dr = Math.atan2(Math.sin(dr), Math.cos(dr));
       p.rotation.y += dr * clamp(dt * 6, 0, 1);
@@ -792,7 +792,7 @@ export class View3D {
     this.shoreCrew.visible = w.crew.ashore;
     if (w.crew.ashore) {
       const gy = this.groundHeightAt(w.crew.x, w.crew.z);
-      this.shoreCrew.position.set(w.crew.x, gy + (w.crew.walking ? Math.abs(Math.sin(t * 8)) * 0.05 : 0), w.crew.z);
+      this.shoreCrew.position.set(w.crew.x, gy + (w.crew.walking ? Math.abs(Math.sin(t * 5.2)) * 0.03 : 0), w.crew.z);
       animatePerson(this.shoreCrew, t, !!w.crew.walking, !w.crew.walking && w.lines.some((l) => l.state === 'pending' && l.pendingVia === 'crew'));
       if (w.crew.heading !== undefined) this.shoreCrew.rotation.y = -w.crew.heading + Math.PI / 2;
     }

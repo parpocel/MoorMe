@@ -960,7 +960,7 @@ export function buildPerson(jacket = 0xe63946) {
 export function animatePerson(p, t, walking, working = false) {
   const L = p.userData.legs, A = p.userData.arms;
   if (!Array.isArray(L) || !A) return;
-  const sw = walking ? Math.sin(t * 8) * 0.45 : 0;
+  const sw = walking ? Math.sin(t * 5.2) * 0.38 : 0; // ok. 0,8 cyklu kroku na sekundę
   L[0].rotation.x = sw; L[1].rotation.x = -sw;
   if (working) { const r = -1.1 + Math.sin(t * 5) * 0.3; A[0].rotation.x = r; A[1].rotation.x = r - 0.15 * Math.sin(t * 5); }
   else { A[0].rotation.x = -sw * 0.7; A[1].rotation.x = sw * 0.7; }

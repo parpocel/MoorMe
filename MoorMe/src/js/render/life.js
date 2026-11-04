@@ -329,7 +329,7 @@ export class HarbourLife {
       p.phase += dt * p.speed * 5;
       const q = pos();
       p.mesh.position.set(q.x, w.y + Math.abs(Math.sin(p.phase)) * 0.025, q.z);
-      animatePerson(p.mesh, p.phase / 1.6, true);
+      animatePerson(p.mesh, this.t * (0.75 + p.speed * 0.25) + p.off * 3, true);
       p.mesh.rotation.y = Math.atan2(ux * Math.sign(s), uz * Math.sign(s));
     }
   }

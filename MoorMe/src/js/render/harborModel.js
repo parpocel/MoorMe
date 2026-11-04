@@ -209,21 +209,58 @@ function house(r, x, z, y, rotY, pal = PALETTES.default) {
   g.add(box(w + 0.08, 0.5, d + 0.08, 0x8d8a82, 0, 0.25, 0));
   g.add(box(w + 0.3, 0.18, d + 0.3, 0xefe9dd, 0, h - 0.05, 0));
   for (let f = 1; f < floors; f++) g.add(box(w + 0.06, 0.1, d + 0.06, 0xe9e2d4, 0, 0.5 + f * fh, 0));
-  // dach dwuspadowy z dachówką
-  const roofH = 1.6 + r() * 1.2;
-  const shape = new THREE.Shape();
-  shape.moveTo(-d / 2 - 0.35, 0); shape.lineTo(d / 2 + 0.35, 0); shape.lineTo(0, roofH); shape.lineTo(-d / 2 - 0.35, 0);
-  const rg = new THREE.ExtrudeGeometry(shape, { depth: w + 0.5, bevelEnabled: false });
-  rg.translate(0, 0, -(w + 0.5) / 2);
-  rg.rotateY(Math.PI / 2);
-  const roof = new THREE.Mesh(rg, roofMat(roofColors[Math.floor(r() * roofColors.length)]));
-  roof.position.y = h + 0.02;
-  roof.castShadow = true;
-  g.add(roof);
-  // komin
-  const chx = (r() - 0.5) * w * 0.6;
-  g.add(box(0.6, 1.4, 0.6, 0x9a6b55, chx, h + roofH * 0.6, -d * 0.12));
-  g.add(box(0.75, 0.12, 0.75, 0x6f6f6f, chx, h + roofH * 0.6 + 0.72, -d * 0.12));
+  // dach: dwuspadowy z dachówką, czterospadowy albo (na południu) płaski z tarasem
+  const rk = r(), roofKind = pal === PALETTES.med && rk < 0.25 ? 'flat' : rk < 0.5 ? 'hip' : 'gable';
+  let roofH = 1.6 + r() * 1.2;
+  const rcol = roofColors[Math.floor(r() * roofColors.length)];
+  if (roofKind === 'flat') {
+    roofH = 0;
+    g.add(box(w + 0.1, 0.5, 0.15, 0xefe9dd, 0, h + 0.25, d / 2)); g.add(box(w + 0.1, 0.5, 0.15, 0xefe9dd, 0, h + 0.25, -d / 2));
+    g.add(box(0.15, 0.5, d, 0xefe9dd, w / 2, h + 0.25, 0)); g.add(box(0.15, 0.5, d, 0xefe9dd, -w / 2, h + 0.25, 0));
+    const tank = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.0, 8), mat(0xd9d9d6)); tank.rotation.z = Math.PI / 2; tank.position.set(w * 0.25, h + 0.75, -d * 0.2); g.add(tank);
+    g.add(box(1.6, 1.9, 1.6, wc, -w * 0.28, h + 0.95, -d * 0.15)); // wyjście na taras
+    if (r() < 0.6) { const pr = new THREE.Mesh(new THREE.ConeGeometry(1.3, 0.6, 6), mat(0xf5f1e8)); pr.position.set(w * 0.1, h + 2.3, d * 0.15); g.add(pr); g.add(box(0.06, 2.0, 0.06, 0x8a8a8a, w * 0.1, h + 1.0, d * 0.15)); }
+  } else if (roofKind === 'hip') {
+    const cg = new THREE.ConeGeometry(1, roofH, 4, 1); cg.rotateY(Math.PI / 4); cg.scale((w + 0.5) / 1.414, 1, (d + 0.7) / 1.414);
+    const roof = new THREE.Mesh(cg, roofMat(rcol)); roof.position.y = h + roofH / 2 + 0.02; roof.castShadow = true; g.add(roof);
+  } else {
+    const shape = new THREE.Shape();
+    shape.moveTo(-d / 2 - 0.35, 0); shape.lineTo(d / 2 + 0.35, 0); shape.lineTo(0, roofH); shape.lineTo(-d / 2 - 0.35, 0);
+    const rg = new THREE.ExtrudeGeometry(shape, { depth: w + 0.5, bevelEnabled: false });
+    rg.translate(0, 0, -(w + 0.5) / 2);
+    rg.rotateY(Math.PI / 2);
+    const roof = new THREE.Mesh(rg, roofMat(rcol));
+    roof.position.y = h + 0.02;
+    roof.castShadow = true;
+    g.add(roof);
+    // lukarna (okienko w dachu) od frontu
+    if (r() < 0.4 && w > 7) {
+      const dx = (r() - 0.5) * w * 0.4;
+      g.add(box(1.3, 1.0, 1.2, wc, dx, h + roofH * 0.35, d * 0.22));
+      g.add(box(0.7, 0.6, 0.06, 0x243447, dx, h + roofH * 0.35, d * 0.22 + 0.62, { rough: 0.15, metal: 0.4 }));
+      const dr = new THREE.Mesh(new THREE.ConeGeometry(1.0, 0.6, 4), roofMat(rcol)); dr.rotation.y = Math.PI / 4; dr.scale.set(0.75, 1, 0.9); dr.position.set(dx, h + roofH * 0.35 + 0.78, d * 0.22); g.add(dr);
+    }
+  }
+  if (roofKind !== 'flat') {
+    // komin
+    const chx = (r() - 0.5) * w * 0.6;
+    g.add(box(0.6, 1.4, 0.6, 0x9a6b55, chx, h + roofH * 0.6, -d * 0.12));
+    g.add(box(0.75, 0.12, 0.75, 0x6f6f6f, chx, h + roofH * 0.6 + 0.72, -d * 0.12));
+  }
+  // antena albo talerz satelitarny
+  const ant = r();
+  if (ant < 0.3) {
+    const ax = (r() - 0.5) * w * 0.4, ay = h + (roofKind === 'flat' ? 0.5 : roofH * 0.85);
+    g.add(box(0.05, 1.4, 0.05, 0x55595e, ax, ay + 0.7, 0));
+    for (let k = 0; k < 3; k++) g.add(box(0.7 - k * 0.15, 0.03, 0.03, 0x55595e, ax, ay + 0.9 + k * 0.22, 0));
+  } else if (ant < 0.5) {
+    const dish = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 4, 0, Math.PI * 2, 0, Math.PI / 3), mat(0xe8e8e8));
+    dish.rotation.x = -1.1; dish.position.set(w / 2 - 0.6, h - 0.6, d / 2 + 0.25); g.add(dish);
+  }
+  // rynny i rury spustowe w narożnikach frontu
+  for (const sx of [-1, 1]) g.add(box(0.1, h, 0.1, 0x6b6e72, sx * (w / 2 - 0.08), h / 2, d / 2 + 0.08));
+  // klimatyzator na ścianie bocznej (częściej na południu)
+  if (r() < (pal === PALETTES.med ? 0.5 : 0.15)) g.add(box(0.15, 0.5, 0.8, 0xe8e8e4, w / 2 + 0.1, 0.5 + fh * Math.min(floors - 1, 1) + 1.4, 0));
   // okna z ramami, parapetami i okiennicami (front i tył)
   const shutters = r() < 0.55, sc = shutterColors[Math.floor(r() * shutterColors.length)];
   const nWin = Math.max(2, Math.floor(w / 2.1));
@@ -239,6 +276,10 @@ function house(r, x, z, y, rotY, pal = PALETTES.default) {
           g.add(box(1.1, 2.2, 0.1, 0x5a3b26, wx, 0.5 + 1.1, zf));
           g.add(box(1.4, 0.12, 0.12, 0xefe9dd, wx, 0.5 + 2.3, zf + s * 0.02));
           g.add(box(1.6, 0.2, 0.6, 0x9a978f, wx, 0.1, zf + s * 0.3));
+          if (r() < 0.6) for (const sd of [-1, 1]) {
+            const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.17, 0.4, 7), mat(0xb5603a)); pot.position.set(wx + sd * 1.05, 0.2, zf + 0.3); g.add(pot);
+            const pl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 0), mat(0x4f7a3a)); pl.position.set(wx + sd * 1.05, 0.62, zf + 0.3); g.add(pl);
+          }
           continue;
         }
         const big = shop && s === 1 && f === 0;
@@ -248,6 +289,10 @@ function house(r, x, z, y, rotY, pal = PALETTES.default) {
         if (!big) {
           g.add(box(ww + 0.3, 0.07, 0.22, 0xe6e0d2, wx, wy - wh / 2 - 0.06, zf + s * 0.08));
           if (shutters) for (const sd of [-1, 1]) g.add(box(0.45, wh, 0.05, sc, wx + sd * (ww / 2 + 0.26), wy, zf + s * 0.03));
+          if (s === 1 && f > 0 && r() < 0.3) { // skrzynka z kwiatami
+            g.add(box(ww + 0.1, 0.18, 0.22, 0x7a4a2a, wx, wy - wh / 2 - 0.15, zf + 0.14));
+            for (let q = 0; q < 3; q++) { const fl = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 0), mat([0xd8434e, 0xe96aa0, 0xf2c14e][(q + k) % 3])); fl.position.set(wx - ww / 3 + q * (ww / 3), wy - wh / 2 - 0.02, zf + 0.16); g.add(fl); }
+          }
         }
       }
       // balkon na piętrze
@@ -514,6 +559,66 @@ function addEdgeDetails(group, s, r, lamps) {
     }
     void mid;
   }
+}
+
+// ---------- Drobne elementy portu (low-poly) ----------
+function car(r, x, z, y, rotY = 0) {
+  const g = new THREE.Group();
+  const col = [0xc0392b, 0x2e6fa7, 0xf2f2f2, 0x2d3436, 0x95a5a6, 0xe0a030, 0x3c8d5a][Math.floor(r() * 7)];
+  g.add(box(4.0, 0.7, 1.75, col, 0, 0.55, 0));
+  const cab = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.95, 2.2, 4, 1), mat(col)); cab.rotation.set(0, Math.PI / 4, 0); cab.scale.set(1.2, 0.55, 0.8); cab.position.set(-0.2, 1.15, 0); g.add(cab);
+  g.add(box(2.0, 0.45, 1.6, 0x1d2a38, -0.2, 1.15, 0, { rough: 0.2, metal: 0.4 }));
+  for (const [wx, wz] of [[1.3, 0.85], [-1.3, 0.85], [1.3, -0.85], [-1.3, -0.85]]) { const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.22, 8), mat(0x1b1b1b)); wh.rotation.x = Math.PI / 2; wh.position.set(wx, 0.33, wz); g.add(wh); }
+  g.position.set(x, y, z); g.rotation.y = rotY;
+  return g;
+}
+function flagpole(x, z, y, color) {
+  const g = new THREE.Group();
+  g.add(box(0.08, 7, 0.08, 0xe8e8e8, 0, 3.5, 0));
+  const fl = box(1.4, 0.9, 0.03, color, 0.72, 6.4, 0); g.add(fl);
+  g.position.set(x, y, z);
+  return g;
+}
+function bush(r, x, z, y, color = 0x4f7a3a) {
+  const g = new THREE.Group();
+  for (let k = 0; k < 3; k++) { const b = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55 + r() * 0.4, 0), mat(k === 2 && color === 0xc2457a ? 0x4f7a3a : color)); b.position.set((r() - 0.5) * 1.1, 0.45 + r() * 0.3, (r() - 0.5) * 0.6); g.add(b); }
+  g.position.set(x, y, z);
+  return g;
+}
+function kiosk(x, z, y, color = 0x2a6f97) {
+  const g = new THREE.Group();
+  g.add(box(2.6, 2.3, 2.0, 0xf5f1e8, 0, 1.15, 0));
+  g.add(box(2.2, 0.9, 0.05, 0x1d2a38, 0, 1.5, 1.01, { rough: 0.2, metal: 0.4 }));
+  const aw = box(3.0, 0.08, 0.9, color, 0, 2.45, 1.2); aw.rotation.x = 0.3; g.add(aw);
+  g.add(box(2.9, 0.25, 2.3, color, 0, 2.45, 0));
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.8, 6), mat(0xe8c98f)); cone.rotation.x = Math.PI; cone.position.set(0, 3.2, 0); g.add(cone);
+  const sc = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), mat(0xf3b6c8)); sc.position.set(0, 3.65, 0); g.add(sc);
+  g.position.set(x, y, z);
+  return g;
+}
+function bike(x, z, y, rotY, color) {
+  const g = new THREE.Group();
+  for (const sx of [-0.55, 0.55]) { const w2 = new THREE.Mesh(new THREE.TorusGeometry(0.33, 0.035, 4, 10), mat(0x222222)); w2.position.set(sx, 0.35, 0); g.add(w2); }
+  g.add(box(1.0, 0.05, 0.05, color, 0, 0.55, 0)); g.add(box(0.05, 0.4, 0.05, color, -0.15, 0.55, 0)); g.add(box(0.25, 0.05, 0.12, 0x222222, -0.15, 0.78, 0)); g.add(box(0.05, 0.06, 0.45, 0x222222, 0.45, 0.85, 0));
+  g.position.set(x, y, z); g.rotation.y = rotY;
+  return g;
+}
+function crates(r, x, z, y) {
+  const g = new THREE.Group();
+  for (let k = 0; k < 6; k++) g.add(box(0.8, 0.4, 0.55, [0x2e6fa7, 0xd35400, 0x27ae60][k % 3], (k % 3) * 0.85, 0.2 + Math.floor(k / 3) * 0.42, (r() - 0.5) * 0.1));
+  for (let k = 0; k < 4; k++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.28, 8, 6), mat(k % 2 ? 0xe67e22 : 0xf2f2f2)); b.position.set(3.1 + (k % 2) * 0.55, 0.28 + Math.floor(k / 2) * 0.5, 0); g.add(b); }
+  g.position.set(x, y, z);
+  return g;
+}
+function kayakRack(x, z, y) {
+  const g = new THREE.Group();
+  for (const sx of [-1.4, 1.4]) { g.add(box(0.08, 1.6, 0.08, 0x8a6a48, sx, 0.8, -0.3)); g.add(box(0.08, 1.6, 0.08, 0x8a6a48, sx, 0.8, 0.3)); }
+  for (let k = 0; k < 3; k++) {
+    const kk = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 3.2, 2, 6), mat([0xe74c3c, 0xf1c40f, 0x27ae60][k])); kk.rotation.z = Math.PI / 2; kk.scale.set(1, 1, 0.55); kk.position.set(0, 0.45 + k * 0.45, 0); g.add(kk);
+    g.add(box(3.0, 0.05, 0.75, 0x8a6a48, 0, 0.2 + k * 0.45, 0));
+  }
+  g.position.set(x, y, z);
+  return g;
 }
 
 // ---------- Elementy scenografii ----------
@@ -807,6 +912,13 @@ function sceneryMed(group, r, lamps) {
     }
   }
   group.add(bellTower(-55, -66, 1.6 + 4 * 3.4));
+  // żywopłoty i kwitnące krzewy na tyłach promenady, kiosk z lodami, rowery, parking i maszty z flagami przy marinie
+  for (let x = -140; x < 75; x += 6) group.add(bush(r, x + r() * 2, -13.6, 1.0, r() < 0.3 ? 0xc2457a : 0x4f7a3a));
+  group.add(kiosk(42, -11.2, 1.0, 0xc0392b));
+  for (let k = 0; k < 4; k++) group.add(bike(52 + k * 0.8, -11.5, 1.0, Math.PI / 2, [0x2e6fa7, 0xc0392b, 0x2d3436, 0x27ae60][k]));
+  for (let k = 0; k < 9; k++) group.add(car(r, 102 + k * 3.1, -14.2, 1.0, Math.PI / 2));
+  [0x1d4e89, 0xe8e8e8, 0xc0392b].forEach((c, k) => group.add(flagpole(91.5 + k * 2, -5.2, 1.0, c)));
+  for (let x = -140; x < 170; x += 9 + r() * 8) group.add(r() < 0.5 ? cypress(x, -69 - r() * 2, 1.6 + 4 * 3.4, 6 + r() * 3) : olive(r, x, -69 - r() * 2, 1.6 + 4 * 3.4));
   // budynek mariny z tablicą
   group.add(box(14, 4, 8, 0xf5f5f0, 88, 3, -12));
   group.add(box(15, 0.4, 9, 0xd0d0d0, 88, 5.2, -12));
@@ -858,6 +970,13 @@ function sceneryBaltic(group, r, lamps) {
   }
   for (let x = -145; x < 58; x += 11) group.add(tree(r, x + r() * 4, -24 - r() * 6, 1.0));
   group.add(churchSpire(-55, -95, 1.0));
+  // żywopłot przed trawnikiem, parking, skrzynki rybackie i boje, stojak z kajakami, rowery
+  for (let x = -145; x < 58; x += 5) group.add(bush(r, x + r() * 2, -22.6, 1.0));
+  for (let k = 0; k < 8; k++) group.add(car(r, 16 + k * 3.1, -14.5, 1.0, Math.PI / 2));
+  group.add(crates(r, -40, -9, 1.0));
+  group.add(kayakRack(-75, -9.5, 1.0));
+  for (let k = 0; k < 5; k++) group.add(bike(-95 + k * 0.8, -8.8, 1.0, Math.PI / 2, [0x2e6fa7, 0xc0392b, 0x2d3436, 0x27ae60, 0xf2f2f2][k]));
+  [0x006aa7, 0xfecc00, 0xc8102e].forEach((c, k) => group.add(flagpole(-20 + k * 2, -8.5, 1.0, c)));
   // plaża na zachód od falochronu: wydmy, domki plażowe
   for (let z = -30; z < 250; z += 9) {
     const d = new THREE.Mesh(new THREE.SphereGeometry(4 + r() * 3, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2), mat(0x8fa45f));
