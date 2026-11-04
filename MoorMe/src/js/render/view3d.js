@@ -258,7 +258,7 @@ export class View3D {
     geo.setAttribute('alpha', new THREE.BufferAttribute(al, 1));
     geo.setIndex(idx);
     const mat2 = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false,
+      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16,
       uniforms: { uT: { value: 0 }, uDark: { value: 0 } },
       vertexShader: `attribute float alpha; varying float vA; varying vec2 vUv; void main(){ vA = alpha; vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `varying float vA; varying vec2 vUv; uniform float uT; uniform float uDark;
@@ -289,7 +289,7 @@ export class View3D {
     geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
     geo.setIndex(idx);
     const mat2 = new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false,
+      transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -16,
       uniforms: { uT: { value: 0 }, uA: { value: 0 }, uDark: { value: 0 } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `varying vec2 vUv; uniform float uT; uniform float uA; uniform float uDark;
@@ -299,7 +299,7 @@ export class View3D {
           float v = vUv.y, u = vUv.x;
           float body = (1.0 - smoothstep(0.55, 1.0, abs(u))) * smoothstep(0.0, 0.12, v) * (1.0 - smoothstep(0.55, 1.0, v));
           // wiry: szum przesuwany wzdłuż strumienia i skręcany (obrót śruby)
-          vec2 q = vec2(u * 3.0 + sin(v * 6.0 - uT * 2.0) * 0.6, v * 7.0 - uT * 3.2);
+          vec2 q = vec2(u * 3.0 + sin(v * 5.0 - uT * 0.9) * 0.4, v * 6.0 - uT * 1.4);
           float boil = n(q) * 0.6 + n(q * 2.3 + 7.0) * 0.4;
           float foam = smoothstep(0.42, 0.8, boil);
           float a = uA * body * (0.35 + 0.75 * foam);
@@ -332,11 +332,12 @@ export class View3D {
         const ly = u * width;
         const p = localToWorld(b.x, b.z, b.th, lx, ly);
         const o = (i * W.C + j) * 3;
-        pa[o] = p.x; pa[o + 2] = p.z; pa[o + 1] = this.water.surfaceY(p.x, p.z, windKn, windDir) + 0.06;
+        pa[o] = p.x; pa[o + 2] = p.z; pa[o + 1] = this.water.surfaceY(p.x, p.z, windKn, windDir) + 0.13;
       }
     }
     W.geo.attributes.position.needsUpdate = true;
-    W.mat.uniforms.uT.value = t * (0.6 + Math.abs(thrust));
+    W.ph = (W.ph || 0) + dt * (0.5 + 0.5 * Math.abs(thrust)); // płynna faza (bez skoków przy zmianie obrotów)
+    W.mat.uniforms.uT.value = W.ph;
     W.mat.uniforms.uA.value = W.a;
     W.mat.uniforms.uDark.value = this.atmo && this.atmo.night ? this.atmo.night : 0;
   }
@@ -364,7 +365,7 @@ export class View3D {
         const side = k - 1;
         const x = hp.x + nx * half * side, z = hp.z + nz * half * side;
         pa[o * 3] = x; pa[o * 3 + 2] = z;
-        pa[o * 3 + 1] = this.water.surfaceY(x, z, windKn, windDir) + 0.05;
+        pa[o * 3 + 1] = this.water.surfaceY(x, z, windKn, windDir) + 0.11;
         ua[o * 2] = side; ua[o * 2 + 1] = hp.d / Math.max(2, L * 0.4);
         // środek (spieniona woda zaraz za rufą) gaśnie szybko, brzegi fali (ramiona „V”) trzymają się dłużej
         aa[o] = hp.spd * Math.max(0, 1 - age / (side === 0 ? 2.5 + 2 * hp.spd : 5 + 9 * hp.spd)) * Math.min(1, i / 3);
