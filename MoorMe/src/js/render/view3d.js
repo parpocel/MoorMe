@@ -593,7 +593,8 @@ export class View3D {
     for (const l of w.lines) if (l.state === 'pending' && l.pendingVia === 'deck') push(l);
     for (const l of w.lines) if (l.state === 'attached' && ['haul', 'ease', 'take'].includes(l.tending)) push(l);
     for (const l of w.lines) if (l.selected) push(l);
-    const workers = [w.crew.ashore ? null : this.deckhand, this.mate2, this.mate1].filter(Boolean);
+    const sickP = this.seasick && this.seasick.cur ? this.seasick.cur.c.p : null;
+    const workers = [w.crew.ashore ? null : this.deckhand, this.mate2, this.mate1].filter((q) => q && q !== sickP);
     // przydział: każdemu najbliższe wolne zadanie
     const free = new Set(jobs), assign = new Map();
     for (const p of workers) {
@@ -602,7 +603,9 @@ export class View3D {
       if (best) { free.delete(best); assign.set(p, best); }
     }
     const tmp = this._tmpV || (this._tmpV = new THREE.Vector3());
+    const sick = this.seasick && this.seasick.cur ? this.seasick.cur.c.p : null; // ten ktoś jest akurat przy relingu
     for (const p of [this.deckhand, this.mate1, this.mate2]) {
+      if (p === sick) continue;
       const job = assign.get(p);
       let tgt, face;
       if (job) {

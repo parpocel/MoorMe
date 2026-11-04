@@ -2,7 +2,7 @@
 // Wymiociny spadają na wodę i odpływają zgodnie z kierunkiem fal.
 import * as THREE from 'three';
 import { halfBeamAt } from '../data/boats.js';
-import { sheerHeight } from './boatModel.js';
+import { sheerHeight, animatePerson } from './boatModel.js';
 import { rng } from '../math.js';
 
 const KN = 0.5144;
@@ -77,6 +77,7 @@ export class Seasick {
           const x = c.home.x;
           c.rail = new THREE.Vector3(x, sheerHeight(spec, x) - 0.05, side * (halfBeamAt(spec, x) - 0.3));
           c.side = side;
+          c.home = c.p.position.clone(); c.homeYaw = c.p.rotation.y; // start z miejsca, w którym akurat jest
           this.cur = { c, t: 0 };
           w.log(`${c.name} nie czuje się najlepiej…`);
         }
@@ -88,21 +89,30 @@ export class Seasick {
     const p = c.p;
     const WALK = 2.5, RETCH = 3.4, BACK = 2.5;
     const ease = (u) => u * u * (3 - 2 * u);
+    const up = p.userData.upper, arms = p.userData.arms;
+    const yawRail = c.side > 0 ? 0 : Math.PI;
     if (T < WALK) {
       const u = ease(T / WALK);
       p.position.lerpVectors(c.home, c.rail, u);
-      p.rotation.set(0, c.side > 0 ? 0 : Math.PI, 0);
+      p.rotation.set(0, yawRail, 0);
+      if (up) up.rotation.x = 0;
+      animatePerson(p, T, u > 0.02 && u < 0.98);
     } else if (T < WALK + RETCH) {
       const u = (T - WALK) / RETCH;
       p.position.copy(c.rail);
-      const lean = Math.min(1, u * 4) * 0.95 - Math.max(0, u - 0.85) * 5;
-      p.rotation.set(Math.max(0, lean) + Math.sin(T * 14) * 0.05 * (u > 0.15 && u < 0.8 ? 1 : 0), c.side > 0 ? 0 : Math.PI, 0);
+      p.rotation.set(0, yawRail, 0); // nogi stoją prosto
+      // wychyla się tylko tułów (z głową), ręce trzymają sztormreling
+      const lean = Math.max(0, Math.min(1, u * 4) * 0.95 - Math.max(0, u - 0.85) * 6.3);
+      const spasm = Math.sin(T * 9) * 0.035 * (u > 0.15 && u < 0.8 ? 1 : 0);
+      if (up) up.rotation.x = lean + spasm;
+      if (arms) for (const a of arms) a.rotation.x = 0.22 - (lean + spasm); // dłonie na linie relingu ok. 0,65 m nad pokładem
+      if (p.userData.legs) for (const l of p.userData.legs) l.rotation.x = 0;
       if (u > 0.25 && u < 0.75) {
         this.emit += dt * 14;
         p.updateMatrixWorld(true);
         while (this.emit >= 1) {
           this.emit -= 1;
-          const mouth = p.localToWorld(new THREE.Vector3(0, 1.3, 0.32));
+          const mouth = (up || p).localToWorld(up ? new THREE.Vector3(0, 0.72, 0.14) : new THREE.Vector3(0, 1.3, 0.32));
           const out = new THREE.Vector3(0, 0, c.side).transformDirection(v.boat.userData.heel.matrixWorld);
           this.spawn(mouth, out, kn);
         }
@@ -110,10 +120,14 @@ export class Seasick {
     } else if (T < WALK + RETCH + BACK) {
       const u = ease((T - WALK - RETCH) / BACK);
       p.position.lerpVectors(c.rail, c.home, u);
-      p.rotation.set(0, (c.side > 0 ? 0 : Math.PI) + (c.homeYaw - (c.side > 0 ? 0 : Math.PI)) * u, 0);
+      p.rotation.set(0, yawRail + (c.homeYaw - yawRail) * u, 0);
+      if (up) up.rotation.x = 0;
+      animatePerson(p, T, u > 0.02 && u < 0.98);
     } else {
       p.position.copy(c.home);
       p.rotation.set(0, c.homeYaw, 0);
+      if (up) up.rotation.x = 0;
+      animatePerson(p, T, false);
       this.cur = null;
     }
   }

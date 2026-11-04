@@ -715,11 +715,10 @@ function addBoatDetails(heel, root, spec, d) {
     heel.add(col);
     heel.add(strut([d.mastX, d.topY + 0.3, 0], [d.mastX - 0.5, bY - 0.04, 0], 0.022, COL.metal, 5));
   }
-  // dach nadbudówki: panel słoneczny, luk i grzybki wentylacyjne
+  // dach nadbudówki: luk i grzybki wentylacyjne
   {
     const x0 = d.cabin.userData.x0, x1 = d.cabin.userData.x1;
-    const mx = x0 + (x1 - x0) * 0.62;
-    heel.add(box(0.75, 0.025, 0.55, 0x1b2a4a, mx, d.topY + 0.03, 0, { rough: 0.25, metal: 0.4 }));
+    // (bez panelu słonecznego – zachodził na stopę masztu)
     heel.add(box(0.5, 0.04, 0.5, 0xe8e6e1, x0 + (x1 - x0) * 0.25, d.topY + 0.03, 0));
     heel.add(box(0.42, 0.045, 0.42, 0x16202b, x0 + (x1 - x0) * 0.25, d.topY + 0.032, 0, glass));
   }
@@ -937,17 +936,21 @@ export function buildPerson(jacket = 0xe63946) {
     mesh(new THREE.BoxGeometry(0.14, 0.84, 0.16), pants, 0, -0.42, 0, hip);
     legs.push(hip);
   }
-  mesh(new THREE.BoxGeometry(0.4, 0.62, 0.26), jk, 0, 1.13, 0);
+  // górna część ciała na przegubie w biodrach (pochylanie bez nóg)
+  const upper = new THREE.Group(); upper.position.y = 0.86; g.add(upper);
+  const U = 0.86;
+  mesh(new THREE.BoxGeometry(0.4, 0.62, 0.26), jk, 0, 1.13 - U, 0, upper);
   const arms = [];
   for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.25, 1.4, 0); g.add(sh);
+    const sh = new THREE.Group(); sh.position.set(sx * 0.25, 1.4 - U, 0); upper.add(sh);
     mesh(new THREE.BoxGeometry(0.1, 0.6, 0.12), jk, 0, -0.3, 0, sh);
     arms.push(sh);
   }
-  mesh(new THREE.IcosahedronGeometry(0.13, 0), skin, 0, 1.6, 0);
+  mesh(new THREE.IcosahedronGeometry(0.13, 0), skin, 0, 1.6 - U, 0, upper);
   // czapka: niska, zaokrąglona (półkula) z krótkim daszkiem
-  const cap = mesh(new THREE.SphereGeometry(0.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.66, 0); cap.scale.set(1, 0.7, 1.05);
-  const brim = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.015, 10, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.665, 0.06); brim.scale.z = 0.8;
+  const cap = mesh(new THREE.SphereGeometry(0.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.66 - U, 0, upper); cap.scale.set(1, 0.7, 1.05);
+  const brim = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.015, 10, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.665 - U, 0.06, upper); brim.scale.z = 0.8;
+  g.userData.upper = upper;
   g.userData.legs = legs;
   g.userData.arms = arms;
   return g;
