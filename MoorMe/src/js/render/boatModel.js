@@ -416,36 +416,43 @@ export function buildBoat(spec, opts = {}) {
     heel.add(box(bl, 0.02, 0.42, 0x3b2a1b, bx, fbC + 0.385, bz)); // podkład – ciemne szczeliny
     for (let k = 0; k < 6; k++) heel.add(box(bl, 0.03, 0.055, COL.teak, bx, fbC + 0.405, bz - 0.175 + k * 0.07));
   }
-  // oparcia za ławkami = zrębnice kokpitu wyprofilowane w laminacie pokładu: wewnątrz pochylone oparcie,
-  // obła krawędź, na zewnątrz łagodny spadek do pokładu bocznego; z przodu wchodzą w nadbudówkę
+  // oparcia = zrębnice kokpitu będące przedłużeniem burt nadbudówki (jak w serii Cruiser): z przodu na wysokości
+  // dachu i w linii boków nadbudówki, ku rufie łagodnie się obniżają i kończą obło przed kołami sterowymi
   {
-    const zIn = ckw / 2 + 0.02, zOut = Math.max(zIn + 0.32, halfBeamAt(spec, (ck0 + ck1) / 2) - 0.32);
-    const y0 = -0.02, yS = 0.4, yT = 0.64; // wysokości względem pokładu kokpitu – niskie oparcie
-    const sh = new THREE.Shape();
-    sh.moveTo(zIn, y0); sh.lineTo(zIn, yS); sh.lineTo(zIn + 0.05, yT - 0.06);
-    sh.quadraticCurveTo(zIn + 0.06, yT, zIn + 0.13, yT);
-    sh.quadraticCurveTo(zIn + 0.2, yT, zIn + 0.24, yT - 0.12);
-    sh.quadraticCurveTo((zIn + zOut) / 2 + 0.08, 0.22, zOut, 0.03);
-    sh.lineTo(zOut, y0); sh.closePath();
-    const len = Math.max(0.8, ck1 + 0.12 - (ck0 + 1.35)); // kończą się przed kołami sterowymi
-    const geo = new THREE.ExtrudeGeometry(sh, { depth: len, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.02, bevelSegments: 5, curveSegments: 10 });
-    geo.rotateY(Math.PI / 2); // wzdłuż jachtu
-    const sm = smoothNormals(geo, 40);
-    const cm = new THREE.MeshStandardMaterial({ color: COL.deck, roughness: 0.5, side: THREE.DoubleSide });
-    for (const s of [-1, 1]) {
-      const g2 = sm.clone();
-      if (s > 0) {
-        g2.scale(1, 1, -1);
-        // odbicie lustrzane odwraca kolejność wierzchołków – przywracamy ją, żeby ściany były przednie (jasne)
-        for (const name of ['position', 'normal', 'uv']) {
-          const at = g2.attributes[name]; if (!at) continue;
-          const a = at.array, k = at.itemSize;
-          for (let i = 0; i < a.length; i += 3 * k) for (let j = 0; j < k; j++) { const t = a[i + k + j]; a[i + k + j] = a[i + 2 * k + j]; a[i + 2 * k + j] = t; }
-          at.needsUpdate = true;
-        }
+    const cu = cabin.userData;
+    const xa = ck0 + 1.35, xf = cu.x0 + 0.3; // od końca (przed kołami) do wnętrza nadbudówki
+    const cabTop = cu.topY - fbC - 0.03, yAft = 0.56;
+    const NS = 26, prof = [];
+    const sm = (q) => q * q * (3 - 2 * q);
+    for (let i = 0; i <= NS; i++) {
+      const u = i / NS, x = xa + (xf - xa) * u;
+      const q = sm(Math.min(1, Math.max(0, (x - (cu.x0 - 1.6)) / 1.6))); // ostatnie ~1,6 m przed nadbudówką – wznosi się do dachu
+      const yT = yAft + (cabTop - yAft) * q;
+      const zIn = (ckw / 2 + 0.02) + ((cu.wA - 0.04) - (ckw / 2 + 0.02)) * q;
+      const zOut = Math.max(zIn + 0.3, halfBeamAt(spec, x) - 0.3);
+      const end = Math.min(1, 0.35 + u * 7); // obła końcówka od strony rufy
+      const top = yT * end, yS = Math.min(0.4, top * 0.7);
+      prof.push([[zIn, -0.02], [zIn, yS], [zIn + 0.04, top - 0.05], [zIn + 0.1, top], [zIn + 0.18, top - 0.02], [zIn + 0.24, top - 0.1], [(zIn + zOut) / 2 + 0.06, top * 0.38], [zOut, 0.03], [zOut, -0.02]].map(([z, y]) => [x - (1 - end) * 0.08, y, z]));
+    }
+    const P = prof[0].length;
+    const cm = new THREE.MeshStandardMaterial({ color: COL.deck, roughness: 0.5 });
+    for (const sd of [-1, 1]) {
+      const pos = [], idx = [];
+      for (const st of prof) for (const [x, y, z] of st) pos.push(x, fbC + y, sd * z);
+      const V = (i, j) => i * P + j;
+      for (let i = 0; i < NS; i++) for (let j = 0; j < P - 1; j++) {
+        const a1 = V(i, j), b1 = V(i + 1, j), c1 = V(i + 1, j + 1), d1 = V(i, j + 1);
+        if (sd < 0) idx.push(a1, b1, c1, a1, c1, d1); else idx.push(a1, c1, b1, a1, d1, c1);
       }
-      const m = new THREE.Mesh(g2, cm);
-      m.position.set(ck1 + 0.12 - len, fbC, 0);
+      // zamknięcie końca od strony rufy (wachlarz)
+      const c0 = pos.length / 3; const st0 = prof[0]; const cx = st0.reduce((q, p2) => q + p2[0], 0) / P, cy = st0.reduce((q, p2) => q + p2[1], 0) / P, cz = st0.reduce((q, p2) => q + p2[2], 0) / P;
+      pos.push(cx - 0.03, fbC + cy, sd * cz);
+      for (let j = 0; j < P - 1; j++) { if (sd < 0) idx.push(c0, V(0, j + 1), V(0, j)); else idx.push(c0, V(0, j), V(0, j + 1)); }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setIndex(idx);
+      geo.computeVertexNormals(); // indeksowana siatka – gładkie, obłe powierzchnie
+      const m = new THREE.Mesh(geo, cm);
       m.castShadow = true; m.receiveShadow = true;
       heel.add(m);
     }
