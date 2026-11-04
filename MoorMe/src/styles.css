@@ -1033,3 +1033,8 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .sb-eq b { font: 800 24px 'Baloo 2', 'Nunito', sans-serif; color: #d2695f; }
 .handbook .sb-cmp td:first-child { white-space: nowrap; }
 .handbook .sb-legend { margin-top: 4px; }
+/* przyciski menu na dole ekranu: „Tryby” w miejscu przycisku „Wstecz” z innych ekranów, Ustawienia i Wyjdź po prawej */
+.menu3d.wheelmenu > .m3-top { position: absolute; left: 28px; right: 28px; bottom: 18px; top: auto; z-index: 3; padding: 0; margin: 0; }
+.wheelmenu .m3-chip { height: 54px; font-size: 21px; padding: 0 24px; border-radius: 14px; }
+.wheelmenu .m3-chip svg { width: 22px; height: 22px; }
+.menu3d.wheelmenu > .wh-stage { position: absolute; inset: 0; }
