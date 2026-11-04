@@ -877,10 +877,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-sign h3 { font: 800 20.8px Consolas, 'Courier New', monospace; }
 .handbook .hb-sign.hb-aux h3, .handbook .hb-sign h3.hb-auxt { font: 700 19.5px 'Nunito', sans-serif; }
 /* przyciski menu (Wstecz, Ustawienia, Wyjście) i przyciski stopek ekranów menu – 2× większe */
-.m3-chip { height: 84px; padding: 0 32px; gap: 14px; font-size: 30px; }
-.m3-chip svg { width: 34px; height: 34px; }
-.m3-chip.quit { width: 84px; }
-.screen-footer .btn { font-size: 28px; padding: 16px 32px; border-radius: 16px; }
+.m3-chip { height: 63px; padding: 0 24px; gap: 11px; font-size: 22.5px; }
+.m3-chip svg { width: 27px; height: 27px; }
+.m3-chip.quit { width: 63px; }
+.screen-footer .btn { font-size: 21px; padding: 12px 24px; border-radius: 14px; }
 .screen-footer { padding: 18px 28px; }
 /* podmenu w formie kwiatka: tagi pod nazwą, wyszarzone niedostępne, dodatkowe opcje w środku */
 .wh-lbl .wh-tg { font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 0.78em; opacity: 0.85; }
