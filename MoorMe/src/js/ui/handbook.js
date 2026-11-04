@@ -91,7 +91,7 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
 function lightsEntry(v) {
   const sc = vesselScale(v);
   const views = h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
-  return h('div.hb-entry', {}, h('h3', {}, v.name), views, h('p', {}, v.explain));
+  return h('div.hb-entry.hb-card.hb-card-wide', {}, h('h3', {}, v.name), views, h('p', {}, v.explain));
 }
 
 // ---------- znaki dzienne ----------
@@ -186,7 +186,7 @@ function dayView(v, W = 300, H = dayH(v)) {
   if (!shapes.length) g += `<text x="${W / 2}" y="22" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#2f4468">${t('brak znaków')}</text>`;
   return g;
 }
-const dayEntry = (v) => h('div.hb-entry', {}, h('h3', {}, v.name), svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
+const dayEntry = (v) => h('div.hb-entry.hb-card', {}, h('h3', {}, v.name), svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
 
 export function lightsBook() {
   return [
@@ -633,7 +633,7 @@ function marksBookRaw() {
     const lightP = rg === 'A' ? 'R' : 'G', lightS = rg === 'A' ? 'G' : 'R';
     return [
       e(L('Znak boczny lewy', 'Port-hand mark'), buoy([P], tm.can(P), { char: `Fl ${lightP} 4s`}), [[L('Wygląd', 'Look'), L(`${pName}, kształt beczki (lub pława filarowa/tyczkowa), znak szczytowy – ${pName} walec`, `${pName}, can shape (or pillar/spar), topmark – a ${pName} can`)], [L('Światło', 'Light'), L(`${lightP}, dowolny rytm oprócz Fl(2+1), np. Fl ${lightP} 4s`, `${lightP}, any rhythm except Fl(2+1), e.g. Fl ${lightP} 4s`)], [L('Znaczenie', 'Meaning'), L('Wyznacza lewą granicę toru wodnego, patrząc w kierunku oznakowania (od morza do portu, w górę rzeki). Głęboka woda toru jest po jego prawej stronie, a za znakiem – płycizna lub przeszkoda.', 'Marks the port-hand edge of the channel, looking in the direction of buoyage (from seaward into harbour, upriver). The deep water of the channel is to its starboard side; beyond the mark there are shallows or obstructions.')], [L('Jak mijać', 'How to pass'), L('W kierunku oznakowania – zostaw po lewej burcie.', 'In the direction of buoyage – leave it to port.')]], `Fl ${lightP} 4s`),
-      e(L('Znak boczny prawy', 'Starboard-hand mark'), buoy([S], tm.cone(S), { char: `Fl ${lightS} 4s`}), [[L('Wygląd', 'Look'), L(`${sName}, stożek (lub pława filarowa/tyczkowa), znak szczytowy – ${sName} stożek wierzchołkiem do góry`, `${sName}, conical (or pillar/spar), topmark – a ${sName} cone point up`)], [L('Światło', 'Light'), L(`${lightS}, np. Fl ${lightS} 4s`, `${lightS}, e.g. Fl ${lightS} 4s`)], [L('Znaczenie', 'Meaning'), L('Wyznacza prawą granicę toru wodnego, patrząc w kierunku oznakowania. Głęboka woda toru jest po jego lewej stronie, a za znakiem – płycizna lub przeszkoda.', 'Marks the starboard-hand edge of the channel, looking in the direction of buoyage. The deep water of the channel is to its port side; beyond the mark there are shallows or obstructions.')], [L('Jak mijać', 'How to pass'), L('W kierunku oznakowania – zostaw po prawej burcie.', 'In the direction of buoyage – leave it to starboard.')]], `Fl ${lightS} 4s`),
+      e(L('Znak boczny prawy', 'Starboard-hand mark'), buoy([S], tm.cone(S), { char: `Fl ${lightS} 4s`}), [[L('Wygląd', 'Look'), L(`${sName}, stożek (lub pława filarowa/tyczkowa), znak szczytowy – ${sName} stożek wierzchołkiem do góry`, `${sName}, conical (or pillar/spar), topmark – a ${sName} cone point up`)], [L('Światło', 'Light'), L(`${lightS}, dowolny rytm oprócz Fl(2+1), np. Fl ${lightS} 4s`, `${lightS}, any rhythm except Fl(2+1), e.g. Fl ${lightS} 4s`)], [L('Znaczenie', 'Meaning'), L('Wyznacza prawą granicę toru wodnego, patrząc w kierunku oznakowania. Głęboka woda toru jest po jego lewej stronie, a za znakiem – płycizna lub przeszkoda.', 'Marks the starboard-hand edge of the channel, looking in the direction of buoyage. The deep water of the channel is to its port side; beyond the mark there are shallows or obstructions.')], [L('Jak mijać', 'How to pass'), L('W kierunku oznakowania – zostaw po prawej burcie.', 'In the direction of buoyage – leave it to starboard.')]], `Fl ${lightS} 4s`),
       e(L('Rozwidlenie – główny tor w prawo', 'Preferred channel to starboard'), buoy([P, S, P], tm.can(P), { char: `Fl(2+1) ${lightP} 10s`}), [[L('Wygląd', 'Look'), L('Kolor znaku lewego z jednym szerokim pasem koloru prawego, beczka.', 'Port-hand colour with one broad band of the starboard colour, can shape.')], [L('Światło', 'Light'), `Fl(2+1) ${lightP}`], [L('Znaczenie', 'Meaning'), L('Tor główny prowadzi w prawo – znak traktujesz jak lewy.', 'The main channel is to starboard – treat it as a port-hand mark.')]], `Fl(2+1) ${lightP} 10s`),
       e(L('Rozwidlenie – główny tor w lewo', 'Preferred channel to port'), buoy([S, P, S], tm.cone(S), { char: `Fl(2+1) ${lightS} 10s`}), [[L('Wygląd', 'Look'), L('Kolor znaku prawego z jednym szerokim pasem koloru lewego, stożek.', 'Starboard-hand colour with one broad band of the port colour, conical.')], [L('Światło', 'Light'), `Fl(2+1) ${lightS}`], [L('Znaczenie', 'Meaning'), L('Tor główny prowadzi w lewo – znak traktujesz jak prawy.', 'The main channel is to port – treat it as a starboard-hand mark.')]], `Fl(2+1) ${lightS} 10s`)
     ];
@@ -798,7 +798,16 @@ export function showHandbook(app, { title, sections, onExit, onTrain, sceneryEl,
     for (const s of sections) nav.appendChild(h('button.hb-tab', { class: s.id === cur ? 'on' : '', onclick: () => { cur = s.id; render(); main.scrollTop = 0; } }, s.name));
     main.innerHTML = '';
     const s = sections.find((q) => q.id === cur);
-    main.append(h('h2', {}, s.name), ...s.entries);
+    // kolejne karty (.hb-card) w siatce – tło dopasowane do treści, bez pustych pól po bokach
+    const items = [];
+    let grid = null, kind = '';
+    for (const el of s.entries) {
+      const card = el && el.classList && el.classList.contains('hb-card');
+      const k = card ? (el.classList.contains('hb-card-wide') ? 'wide' : 'std') : '';
+      if (card) { if (!grid || k !== kind) { grid = h(`div.hb-card-grid${k === 'wide' ? '.wide' : ''}`); items.push(grid); kind = k; } grid.appendChild(el); }
+      else { grid = null; items.push(el); }
+    }
+    main.append(h('h2', {}, s.name), ...items);
     kickLamps();
   };
   render();

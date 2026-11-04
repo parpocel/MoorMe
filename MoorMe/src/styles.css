@@ -779,3 +779,15 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-charx-lamprow .hb-char-code { margin: 0; }
 .handbook .hb-charx-live h4 { margin: 2px 0 0; }
 .handbook .hb-charx-live p { margin: 0; }
+/* podręczniki: karty w siatce (światła nocne, znaki dzienne) */
+.handbook .hb-card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 12px; margin: 8px 0 12px; align-items: start; }
+.handbook .hb-card-grid.wide { grid-template-columns: repeat(auto-fill, minmax(860px, 1fr)); }
+.handbook .hb-card-grid .hb-card { background: rgba(255, 255, 255, 0.62); border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 10px; padding: 10px 14px; margin: 0; }
+.handbook .hb-card-grid .hb-card h3 { font-size: 16px; }
+.handbook .hb-card-grid .hb-card p { font-size: 13.5px; }
+@media (max-width: 1250px) { .handbook .hb-card-grid.wide { grid-template-columns: 1fr; } }
+.handbook .hb-card-grid.wide { grid-template-columns: repeat(auto-fill, minmax(700px, 1fr)); }
+.handbook .hb-card-grid .hb-views { display: flex; gap: 8px; flex-wrap: wrap; }
+.handbook .hb-card-grid .hb-views figure { margin: 0; }
+.handbook .hb-card-grid .hb-views svg { width: 160px; height: auto; display: block; }
+@media (max-width: 1250px) { .handbook .hb-card-grid.wide { grid-template-columns: 1fr; } }
