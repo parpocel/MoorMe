@@ -977,3 +977,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .nb-text .hb-ctable { font-size: 17px; }
 .handbook .nb-text .hb-ctable td:first-child { font-weight: 800; color: #2f4468; white-space: nowrap; }
 .hud-drop.closed .hud-dropmenu { display: none; }
+/* nazwy płatków na łuku zewnętrznym (SVG textPath); napis w przycisku tylko dla czytników ekranu */
+.wh-arc { font: 800 5.6px 'Baloo 2', 'Nunito', sans-serif; letter-spacing: 0.15px; fill: #fff; paint-order: stroke; stroke: rgba(12, 18, 44, 0.45); stroke-width: 0.9px; stroke-linejoin: round; pointer-events: none; }
+.wh-g.on .wh-arc { fill: #fff; stroke: rgba(12, 18, 44, 0.6); }
+.wh-tt.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

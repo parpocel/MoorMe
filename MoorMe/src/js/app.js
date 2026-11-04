@@ -288,13 +288,24 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     const mk = (cls, extra = {}) => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', d); e.classList.add(cls); for (const [k, v] of Object.entries(extra)) e.setAttribute(k, v); g.appendChild(e); return e; };
     const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
     mk('wh-shine', { style: 'fill: url(#whshine)' });
+    // nazwa po łuku zewnętrznym: u góry czubkami liter na zewnątrz, u dołu litery stoją na dużym okręgu (czubkami do środka)
+    const lower = Math.sin(mid) > 0.02, rT = lower ? R - 7 : R - 12.5, a1 = s0 + g0 + 0.04, a2 = s1 - g0 - 0.04;
+    const [ax, ay] = pt(rT, lower ? a2 : a1), [bx, by] = pt(rT, lower ? a1 : a2);
+    const arcP = document.createElementNS(NS, 'path');
+    arcP.id = `wharc${i}`; arcP.setAttribute('d', `M${f(ax)} ${f(ay)} A${rT} ${rT} 0 0 ${lower ? 0 : 1} ${f(bx)} ${f(by)}`);
+    defs.appendChild(arcP);
+    const tx = document.createElementNS(NS, 'text'); tx.classList.add('wh-arc');
+    const tp = document.createElementNS(NS, 'textPath');
+    tp.setAttribute('href', `#wharc${i}`); tp.setAttribute('startOffset', '50%'); tp.setAttribute('text-anchor', 'middle');
+    tp.textContent = t(it.title);
+    tx.appendChild(tp); g.appendChild(tx);
     g.addEventListener('mouseenter', () => select(i));
     g.addEventListener('click', () => activate(i));
     svg.appendChild(g);
     // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
-    const [lx, ly] = pt((R + R0) / 2, mid);
-    const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
-      h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, it.title));
+    const [lx, ly] = pt(Math.sin(mid) > 0.02 ? R0 + 16 : R0 + 14, mid); // ikona bliżej środka – nazwa biegnie po łuku zewnętrznym
+    const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, title: it.title, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
+      h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt.sr', {}, it.title));
     lbl.style.setProperty('--c', it.color);
     labels.push(lbl);
     return path;
