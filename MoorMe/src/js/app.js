@@ -357,7 +357,7 @@ function showModeSelect() {
   wheelMenu({
     kicker: 'Szkolenie żeglarskie', sel: modeSel,
     items: [
-      { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
+      { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Poznaj zasady podchodzenia oraz odchodzenia od keji przy różnych warunkach pogodowych. Ćwicz pracę na cumach oraz poruszanie się po porcie.', go: keep(0, () => showTitle()) },
       { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Zbiór pław, staw oraz znaków umożliwiających bezpieczne poruszanie się po akwenie.', go: keep(1, () => showSailIntro()) },
       { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja nocna/dzienna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
