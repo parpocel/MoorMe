@@ -39,20 +39,20 @@ export const PORTS = {
       { kind: 'land', style: 'rock', poly: R4(185, -60, 300, 260), h: 3.5 },
       { kind: 'breakwater', style: 'concrete', poly: R4(20, 150, 185, 168), h: 1.4, walk: true, edges: [[20, 150, 185, 150]] },
       { kind: 'breakwater', style: 'rock', poly: R4(-150, 178, -85, 192), h: 2.0 },
-      { kind: 'pontoon', poly: R4(48.5, 0, 51.5, 98), h: 0.6, walk: true, edges: [[48.5, 0, 48.5, 98], [51.5, 0, 51.5, 98]] },
-      { kind: 'pontoon', poly: R4(118.5, 0, 121.5, 98), h: 0.6, walk: true, edges: [[118.5, 0, 118.5, 98], [121.5, 0, 121.5, 98]] }
+      { kind: 'pontoon', poly: R4(48.5, 0, 51.5, 74), h: 0.6, walk: true, edges: [[48.5, 0, 48.5, 74], [51.5, 0, 51.5, 74]] },
+      { kind: 'pontoon', poly: R4(118.5, 0, 121.5, 74), h: 0.6, walk: true, edges: [[118.5, 0, 118.5, 74], [121.5, 0, 121.5, 74]] }
     ],
     deco: [
       { type: 'lighthouse', x: -88, z: 185, color: 0xd62828 },
       { type: 'lighthouse', x: 24, z: 159, color: 0x2a9d4a }
     ],
     zones: [
-      { id: 'riva', name: 'Riva – kamienne nabrzeże miejskie', a: [-140, 0], b: [26, 0], quay: 'stone', methods: ['mooringStern', 'mooringBow'], ownU: 20 },
-      { id: 'pierA', name: 'Pomost A (strona wschodnia)', a: [51.5, 94], b: [51.5, 4], quay: 'pontoon', methods: ['mooringStern', 'mooringBow'], ownU: 0 },
-      { id: 'pierAw', a: [48.5, 4], b: [48.5, 94], quay: 'pontoon', decor: 'mooringStern' },
-      { id: 'pierBw', a: [118.5, 4], b: [118.5, 94], quay: 'pontoon', decor: 'mooringBow' },
-      { id: 'pierBe', a: [121.5, 94], b: [121.5, 4], quay: 'pontoon', decor: 'mooringStern' },
-      { id: 'breakwater', name: 'Falochron – keja wewnętrzna', a: [178, 150], b: [28, 150], quay: 'concrete', methods: ['longside'], ownU: -10 }
+      { id: 'riva', name: 'Riva – kamienne nabrzeże miejskie', a: [-120, 0], b: [5, 0], quay: 'stone', methods: ['mooringStern', 'mooringBow'], ownU: 20 },
+      { id: 'pierA', name: 'Pomost A (strona wschodnia)', a: [51.5, 70], b: [51.5, 4], quay: 'pontoon', methods: ['mooringStern', 'mooringBow'], ownU: 0 },
+      { id: 'pierAw', a: [48.5, 4], b: [48.5, 70], quay: 'pontoon', decor: 'mooringStern' },
+      { id: 'pierBw', a: [118.5, 4], b: [118.5, 70], quay: 'pontoon', decor: 'mooringBow' },
+      { id: 'pierBe', a: [121.5, 70], b: [121.5, 4], quay: 'pontoon', decor: 'mooringStern' },
+      { id: 'breakwater', name: 'Falochron – keja wewnętrzna', a: [157, 150], b: [49, 150], quay: 'concrete', methods: ['longside'], ownU: -10 }
     ],
     starts: [
       { id: 'entrance', name: 'Wejście do portu (między główkami)', x: -32, z: 172, compass: 347 },
@@ -78,9 +78,9 @@ export const PORTS = {
       { kind: 'breakwater', style: 'concrete', poly: R4(60, -60, 76, 232), h: 2.6 },
       { kind: 'land', style: 'port', poly: R4(76, -60, 260, 0), h: 2.0 },
       { kind: 'land', style: 'port', poly: R4(150, 0, 260, 260), h: 2.0 },
-      { kind: 'pier', style: 'wood', poly: R4(-95, 0, -92.5, 96), h: 0.9, walk: true, edges: [[-95, 0, -95, 96], [-92.5, 0, -92.5, 96]] },
-      { kind: 'pier', style: 'wood', poly: R4(-40, 0, -37.5, 96), h: 0.8, walk: true, edges: [[-40, 0, -40, 96], [-37.5, 0, -37.5, 96]] },
-      { kind: 'pier', style: 'wood', poly: R4(15, 0, 17.5, 84), h: 0.8, walk: true, edges: [[15, 0, 15, 84], [17.5, 0, 17.5, 84]] }
+      { kind: 'pier', style: 'wood', poly: R4(-95, 0, -92.5, 72), h: 0.9, walk: true, edges: [[-95, 0, -95, 72], [-92.5, 0, -92.5, 72]] },
+      { kind: 'pier', style: 'wood', poly: R4(-40, 0, -37.5, 72), h: 0.8, walk: true, edges: [[-40, 0, -40, 72], [-37.5, 0, -37.5, 72]] },
+      { kind: 'pier', style: 'wood', poly: R4(15, 0, 17.5, 63), h: 0.8, walk: true, edges: [[15, 0, 15, 63], [17.5, 0, 17.5, 63]] }
     ],
     deco: [
       { type: 'lighthouse', x: -46, z: 197, color: 0xd62828 },
@@ -88,14 +88,14 @@ export const PORTS = {
       { type: 'ferry', x: 108, z: 100, th: -Math.PI / 2 }
     ],
     zones: [
-      { id: 'north', name: 'Keja północna – muringi', a: [26, 0], b: [58, 0], quay: 'wood', methods: ['mooringStern', 'mooringBow'], ownU: 0 },
-      { id: 'pierAe', name: 'Pomost A – dalby (strona wschodnia)', a: [-92.5, 92], b: [-92.5, 4], quay: 'wood', methods: ['pilesBow', 'pilesStern'], ownU: 4 },
-      { id: 'pierAw', a: [-95, 4], b: [-95, 92], quay: 'wood', decor: 'pilesBow' },
-      { id: 'pierBe', name: 'Pomost B – Y-bomy (strona wschodnia)', a: [-37.5, 92], b: [-37.5, 4], quay: 'wood', methods: ['yboomBow', 'yboomStern'], ownU: 4 },
-      { id: 'pierBw', a: [-40, 4], b: [-40, 92], quay: 'wood', decor: 'yboomBow' },
-      { id: 'pierCw', a: [15, 4], b: [15, 80], quay: 'wood', decor: 'yboomBow' },
-      { id: 'pierCe', a: [17.5, 80], b: [17.5, 4], quay: 'wood', decor: 'longside' },
-      { id: 'west', name: 'Pomost wzdłuż falochronu – burtą', a: [-135, 180], b: [-135, 10], quay: 'wood', methods: ['longside'], ownU: -20 }
+      { id: 'north', name: 'Keja północna – muringi', a: [30, 0], b: [54, 0], quay: 'wood', methods: ['mooringStern', 'mooringBow'], ownU: 0 },
+      { id: 'pierAe', name: 'Pomost A – dalby (strona wschodnia)', a: [-92.5, 68], b: [-92.5, 4], quay: 'wood', methods: ['pilesBow', 'pilesStern'], ownU: 4 },
+      { id: 'pierAw', a: [-95, 4], b: [-95, 68], quay: 'wood', decor: 'pilesBow' },
+      { id: 'pierBe', name: 'Pomost B – Y-bomy (strona wschodnia)', a: [-37.5, 68], b: [-37.5, 4], quay: 'wood', methods: ['yboomBow', 'yboomStern'], ownU: 4 },
+      { id: 'pierBw', a: [-40, 4], b: [-40, 68], quay: 'wood', decor: 'yboomBow' },
+      { id: 'pierCw', a: [15, 4], b: [15, 59], quay: 'wood', decor: 'yboomBow' },
+      { id: 'pierCe', a: [17.5, 59], b: [17.5, 4], quay: 'wood', decor: 'longside' },
+      { id: 'west', name: 'Pomost wzdłuż falochronu – burtą', a: [-135, 150], b: [-135, 22], quay: 'wood', methods: ['longside'], ownU: -29 }
     ],
     starts: [
       { id: 'entrance', name: 'Wejście do portu (między główkami)', x: 11, z: 211, compass: 14 },
@@ -230,7 +230,7 @@ function genZone(H, Z, own, R, ctx) {
       for (const [lx, du] of [[xb - 1, 2.5], [xs + 0.5, -2.5]]) {
         const p = boatLocal(n, lx, qs * halfBeamAt(spec, lx));
         const dir = Math.sign(boatLocal(n, 1, 0).u - boatLocal(n, 0, 0).u) || 1;
-        n.ropes.push({ lx, ly: qs * halfBeamAt(spec, lx), to: qTo(p.u + du * dir, -0.5, qh + 0.3), sag: 0.3 });
+        n.ropes.push({ lx, ly: qs * halfBeamAt(spec, lx), to: qTo(p.u + du * dir, -0.5, qh + 0.3), sag: 0.07 });
       }
     };
     if (own) {
@@ -317,11 +317,11 @@ function genZone(H, Z, own, R, ctx) {
       for (const sd of [-1, 1]) {
         const ly = sd * halfBeamAt(nSpec, quayEndX) * 0.85;
         const p = boatLocal(n, quayEndX, ly);
-        n.ropes.push({ lx: quayEndX, ly, to: qTo(p.u + Math.sign(p.u - s.u) * 0.8, -0.45, qh + 0.3), sag: 0.25 });
+        n.ropes.push({ lx: quayEndX, ly, to: qTo(p.u + Math.sign(p.u - s.u) * 0.8, -0.45, qh + 0.3), sag: 0.06 });
       }
       if (isMooring) {
         const p = boatLocal(n, farX, 0);
-        n.ropes.push({ lx: farX, ly: 0, to: qTo(p.u, p.v + 7, -1.5), sag: 0.6, grey: true });
+        n.ropes.push({ lx: farX, ly: 0, to: qTo(p.u, p.v + 7, -1.5), sag: 0.22, grey: true });
       }
       s.neighbor = n;
     }
@@ -356,7 +356,7 @@ function genZone(H, Z, own, R, ctx) {
           const ly = sd * halfBeamAt(n.spec, 0);
           const p = boatLocal(n, 0, ly);
           const ue = p.u > s.u ? s.u + s.w / 2 : s.u - s.w / 2;
-          n.ropes.push({ lx: 0, ly, to: qTo(ue, bl - 0.35, qh * 0.8 + 0.1), sag: 0.2 });
+          n.ropes.push({ lx: 0, ly, to: qTo(ue, bl - 0.35, qh * 0.8 + 0.1), sag: 0.05 });
         }
       }
     }
@@ -378,7 +378,7 @@ function genZone(H, Z, own, R, ctx) {
           const ly = sd * halfBeamAt(n.spec, farX) * 0.8;
           const p = boatLocal(n, farX, ly);
           const ue = p.u > s.u ? s.u + s.w / 2 : s.u - s.w / 2;
-          n.ropes.push({ lx: farX, ly, to: qTo(ue, pv, 2.4), sag: 0.35 });
+          n.ropes.push({ lx: farX, ly, to: qTo(ue, pv, 2.4), sag: 0.09 });
         }
       }
     }
