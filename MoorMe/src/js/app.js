@@ -271,7 +271,7 @@ function showModeSelect() {
     items: [
       { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
       { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
-      { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja świetlna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
+      { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja nocna/dzienna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
       { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
@@ -294,7 +294,7 @@ function trainOrLearn({ kicker, glyph: g, color, trainTag, learnTag, train, lear
 
 function showLightsIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Sygnalizacja świetlna', glyph: 'lights', color: '#6a6fd6', trainTag: 'noc i dzień, morze i śródlądowe', learnTag: 'światła z czterech stron, znaki dzienne', train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).', onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), self: () => showLightsIntro() });
+  trainOrLearn({ kicker: 'Sygnalizacja nocna/dzienna', glyph: 'lights', color: '#6a6fd6', trainTag: 'noc i dzień, morze i śródlądowe', learnTag: 'światła z czterech stron, znaki dzienne', train: 'Noc albo dzień, morze albo drogi śródlądowe: rozpoznawaj jednostki po światłach i znakach dziennych, określ, którą stronę widzisz, jak przejdą i z której strony je minąć.', learn: 'Podręcznik: sektory świateł, światła nocne wszystkich jednostek z czterech stron, znaki dzienne i rozdział o drogach śródlądowych (CEVNI).', onTrain: () => showLightsSetup(), onLearn: () => showLightsBook(), self: () => showLightsIntro() });
 }
 function showLightsBook() {
   menuMusic.start();
@@ -424,7 +424,7 @@ function showLightsSetup() {
   const scope = h('div.m3-seg', {}, h('span.m3-lbl', {}, 'Przepisy'),
     seg([{ value: 'sea', label: '🌊 Morze (MPZZM / COLREG)' }, { value: 'inland', label: '🏞 Drogi śródlądowe (CEVNI)' }, { value: 'all', label: '🌊 + 🏞 Oba naraz' }], getSettings().lightsScope || 'all', (v) => saveSettings({ lightsScope: v })));
   menuScreen({
-    kicker: 'Sygnalizacja świetlna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
+    kicker: 'Sygnalizacja nocna/dzienna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(), extra: scope,
     items: [
       { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => startLights(false) },
       { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => startLights(true) }
