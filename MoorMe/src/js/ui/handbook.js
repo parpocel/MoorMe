@@ -192,33 +192,50 @@ const dayEntry = (v) => h('div.hb-entry.hb-card', {}, h('h3', {}, v.name), svgEl
 // wstęp do sygnalizacji: rodzaje świateł, co widzisz → jak płynie statek, najczęstsze kombinacje świateł dookólnych
 const LC = { W: '#fff7d6', R: '#ff3b2f', G: '#29e05a', Y: '#ffd166' };
 const lampStack = (cols) => { const n = cols.length, H = 26 + n * 24; let g = `<rect width="70" height="${H}" rx="10" fill="#141b2b"/><rect x="33" y="10" width="4" height="${H - 20}" fill="#273246"/>`; cols.forEach((c, i) => { const y = 22 + i * 24; g += `<circle cx="35" cy="${y}" r="13" fill="${LC[c]}" opacity="0.22"/><circle cx="35" cy="${y}" r="7" fill="${LC[c]}"/>`; }); return svgEl(70, H, g, 'li-stack'); };
-const sectorMini = (a0, a1, col) => {
-  const cx = 60, cy = 60, R = 50, p = (a) => [cx + Math.sin((a * Math.PI) / 180) * R, cy - Math.cos((a * Math.PI) / 180) * R], [x0, y0] = p(a0), [x1, y1] = p(a1);
-  const sec = a1 - a0 >= 360 ? `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${col}" opacity="0.45"/>` : `<path d="M${cx} ${cy} L${x0} ${y0} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1} Z" fill="${col}" opacity="0.5"/>`;
-  return svgEl(120, 120, `<rect width="120" height="120" rx="12" fill="#f6f1e1"/>${sec}<path d="M${cx} ${cy - 16} L${cx + 6} ${cy - 4} L${cx + 5} ${cy + 15} L${cx - 5} ${cy + 15} L${cx - 6} ${cy - 4} Z" fill="#2f4468"/>`, 'li-sec');
-};
+// widok z góry nocą: kadłub i świecące sektory (gradient od lampy na zewnątrz); secs: [[a0, a1, kolor, promień]]
+let SECT_ID = 0;
+const NIGHT_LAMP = { W: '#fffbe8', G: '#3ef07a', R: '#ff4b3e' };
+function nightSectors(W, H, cx, cy, secs, hullL, extra = '') {
+  let defs = '', g = '';
+  for (const [a0, a1, c, R] of secs) {
+    const id = `ns${++SECT_ID}`, col = NIGHT_LAMP[c];
+    defs += `<radialGradient id="${id}" cx="${cx}" cy="${cy}" r="${R}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${col}" stop-opacity="0.95"/><stop offset="0.55" stop-color="${col}" stop-opacity="0.45"/><stop offset="1" stop-color="${col}" stop-opacity="0.08"/></radialGradient>`;
+    const p = (a) => [cx + Math.sin((a * Math.PI) / 180) * R, cy - Math.cos((a * Math.PI) / 180) * R], [x0, y0] = p(a0), [x1, y1] = p(a1);
+    g += a1 - a0 >= 360 ? `<circle cx="${cx}" cy="${cy}" r="${R}" fill="url(#${id})"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${col}" stroke-opacity="0.5"/>`
+      : `<path d="M${cx} ${cy} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="url(#${id})" stroke="${col}" stroke-opacity="0.55" stroke-width="1"/>`;
+  }
+  const L2 = hullL / 2, B = hullL * 0.34;
+  const hull = `<path d="M${cx} ${cy - L2} C${cx + B * 0.62} ${cy - L2 * 0.45} ${cx + B / 2} ${cy + L2 * 0.5} ${cx + B * 0.42} ${cy + L2} L${cx - B * 0.42} ${cy + L2} C${cx - B / 2} ${cy + L2 * 0.5} ${cx - B * 0.62} ${cy - L2 * 0.45} ${cx} ${cy - L2} Z" fill="#3a465e" stroke="#8fa1c2" stroke-width="1.2"/>`;
+  return `<defs>${defs}</defs><rect width="${W}" height="${H}" rx="12" fill="#0f1626"/>${g}${hull}${extra}<circle cx="${cx}" cy="${cy}" r="2.6" fill="#fffbe8"/>`;
+}
+const sectorMini = (secs) => svgEl(120, 120, nightSectors(120, 120, 60, 60, secs.map((q) => [...q, 52]), 30), 'li-sec');
 function lightsIntro() {
   const card = (title, ...kids) => h('section.sb-card', {}, h('h3', {}, title), ...kids);
   const kind = (fig, name, txt) => h('div.li-kind', {}, fig, h('div', {}, h('b', {}, name), h('p', {}, txt)));
   const combo = (cols, name, txt) => h('div.li-combo', {}, lampStack(cols), h('div', {}, h('b', {}, name), h('p', {}, txt)));
-  const aspect = (cols, see, means) => h('div.li-aspect', {}, h('div.li-dots', {}, ...cols.map((c) => h('span', { style: { background: LC[c], boxShadow: `0 0 10px ${LC[c]}` } }))), h('b', {}, see), h('p', {}, means));
+  // lampy w układzie jak na statku: masztowe (górne) nad burtowymi, rufowe nisko; pts: [[kolor, x (−1..1), poziom 0 – góra, 1 – dół]]
+  const aspect = (pts, see, means) => {
+    let g = '';
+    for (const [c, x, lv] of pts) { const cx = 45 + x * 22, cy = 12 + lv * 26; g += `<circle cx="${cx}" cy="${cy}" r="11" fill="${LC[c]}" opacity="0.25"/><circle cx="${cx}" cy="${cy}" r="6.5" fill="${LC[c]}"/>`; }
+    return h('div.li-aspect', {}, svgEl(90, 50, g, 'li-dots'), h('b', {}, see), h('p', {}, means));
+  };
   return [
     h('div.sb-lead', {}, h('div.sb-lead-ic', {}, '🌙'), h('div', {},
       h('h3', {}, L('Nocą statek mówi światłami, w dzień – czarnymi znakami', 'At night a vessel speaks with lights, by day with black shapes')),
       h('p', {}, L('Po kilku kolorowych punktach w ciemności poznasz, jaki to statek, co robi i w którą stronę płynie – a więc kto komu ustępuje. W dzień tę samą informację niosą czarne kule, stożki, romby i walce na masztach.', 'From a few coloured dots in the dark you can tell what kind of vessel it is, what it is doing and which way it is heading – and so who gives way to whom. By day the same message is carried by black balls, cones, diamonds and cylinders on the masts.')))),
     card(L('Rodzaje świateł', 'Kinds of lights'),
       h('div.li-kinds', {},
-        kind(sectorMini(-112.5, 112.5, '#e9e2c6'), L('Masztowe – białe', 'Masthead – white'), L('225° do przodu. Statek z napędem w drodze; dwa masztowe – statek ≥ 50 m (tylne wyżej).', '225° ahead. A power-driven vessel underway; two masthead lights – a vessel ≥ 50 m (the after one higher).')),
-        kind(sectorMini(0, 112.5, '#1f9d55'), L('Burtowe – zielone i czerwone', 'Sidelights – green and red'), L('Po 112,5°: zielone na prawej, czerwone na lewej burcie.', '112.5° each: green to starboard, red to port.')),
-        kind(sectorMini(112.5, 247.5, '#c9c2ae'), L('Rufowe – białe', 'Sternlight – white'), L('135° do tyłu. Widzisz je, gdy statek płynie od ciebie.', '135° astern. You see it when the vessel is moving away from you.')),
-        kind(sectorMini(0, 360, '#e9e2c6'), L('Dookólne', 'All-round'), L('Widoczne ze wszystkich stron (360°). Ich kolory w pionie mówią, czym jest statek i co robi.', 'Visible all round (360°). Their colours in a vertical line tell you what the vessel is and what it is doing.'))),
-      h('div.li-sectorbig', {}, svgEl(320, 220, sectorDiagram()), h('p', {}, L('Patrząc na statek od dziobu, jego zieloną burtę widzisz po swojej lewej, a czerwoną po prawej.', 'Looking at a vessel head-on, you see its green side on your left and its red side on your right.')))),
+        kind(sectorMini([[-112.5, 112.5, 'W']]), L('Masztowe – białe', 'Masthead – white'), L('225° do przodu. Statek z napędem w drodze; dwa masztowe – statek ≥ 50 m (tylne wyżej).', '225° ahead. A power-driven vessel underway; two masthead lights – a vessel ≥ 50 m (the after one higher).')),
+        kind(sectorMini([[0, 112.5, 'G'], [-112.5, 0, 'R']]), L('Burtowe – zielone i czerwone', 'Sidelights – green and red'), L('Po 112,5°: zielone na prawej, czerwone na lewej burcie.', '112.5° each: green to starboard, red to port.')),
+        kind(sectorMini([[112.5, 247.5, 'W']]), L('Rufowe – białe', 'Sternlight – white'), L('135° do tyłu. Widzisz je, gdy statek płynie od ciebie.', '135° astern. You see it when the vessel is moving away from you.')),
+        kind(sectorMini([[0, 360, 'W']]), L('Dookólne', 'All-round'), L('Widoczne ze wszystkich stron (360°). Ich kolory w pionie mówią, czym jest statek i co robi.', 'Visible all round (360°). Their colours in a vertical line tell you what the vessel is and what it is doing.'))),
+      h('div.li-sectorbig', {}, svgEl(420, 360, sectorDiagram()), h('p', {}, L('Patrząc na statek od dziobu, jego zieloną burtę widzisz po swojej lewej, a czerwoną po prawej.', 'Looking at a vessel head-on, you see its green side on your left and its red side on your right.')))),
     card(L('Co widzisz → jak płynie statek', 'What you see → how the vessel is heading'),
       h('div.li-aspects', {},
-        aspect(['G', 'W', 'R'], L('Czerwone i zielone pod białym', 'Red and green below white'), L('Statek idzie prosto na ciebie – oba statki skręcają w prawo.', 'The vessel is heading straight for you – both vessels turn to starboard.')),
-        aspect(['W', 'R'], L('Tylko czerwone (i białe)', 'Only red (and white)'), L('Widzisz jego lewą burtę: masz go po swojej prawej – ty ustępujesz.', 'You see its port side: it is on your starboard side – you give way.')),
-        aspect(['W', 'G'], L('Tylko zielone (i białe)', 'Only green (and white)'), L('Widzisz jego prawą burtę: to on powinien ustąpić – ty trzymasz kurs i obserwujesz.', 'You see its starboard side: it should give way – you hold your course and keep watching.')),
-        aspect(['W'], L('Samo białe, nisko', 'A single white, low'), L('Rufa statku – wyprzedzasz go albo on się oddala. Wyprzedzający zawsze ustępuje.', 'The vessel’s stern – you are overtaking it or it is moving away. The overtaking vessel always keeps clear.')))),
+        aspect([['W', 0, 0], ['G', -1, 1], ['R', 1, 1]], L('Czerwone i zielone pod białym', 'Red and green below white'), L('Statek idzie prosto na ciebie – oba statki skręcają w prawo.', 'The vessel is heading straight for you – both vessels turn to starboard.')),
+        aspect([['W', 0, 0], ['R', 0.15, 1]], L('Tylko czerwone (i białe)', 'Only red (and white)'), L('Widzisz jego lewą burtę: masz go po swojej prawej – ty ustępujesz.', 'You see its port side: it is on your starboard side – you give way.')),
+        aspect([['W', 0, 0], ['G', -0.15, 1]], L('Tylko zielone (i białe)', 'Only green (and white)'), L('Widzisz jego prawą burtę: to on powinien ustąpić – ty trzymasz kurs i obserwujesz.', 'You see its starboard side: it should give way – you hold your course and keep watching.')),
+        aspect([['W', 0, 1]], L('Samo białe, nisko', 'A single white, low'), L('Rufa statku – wyprzedzasz go albo on się oddala. Wyprzedzający zawsze ustępuje.', 'The vessel’s stern – you are overtaking it or it is moving away. The overtaking vessel always keeps clear.')))),
     card(L('Najczęstsze światła dookólne – ściąga', 'Common all-round lights – cheat sheet'),
       h('div.li-combos', {},
         combo(['W'], L('Na kotwicy', 'At anchor'), L('Jedno białe dookólne (statek < 50 m).', 'One white all-round light (vessel < 50 m).')),
@@ -250,15 +267,16 @@ export function lightsBook() {
   ];
 }
 function sectorDiagram() {
-  const cx = 160, cy = 120, R = 92;
-  const arc = (a0, a1, col) => { const p = (a) => [cx + Math.sin((a * Math.PI) / 180) * R, cy - Math.cos((a * Math.PI) / 180) * R]; const [x0, y0] = p(a0), [x1, y1] = p(a1); return `<path d="M${cx} ${cy} L${x0} ${y0} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1} Z" fill="${col}" opacity="0.35"/>`; };
-  let g = `<rect width="320" height="220" fill="#f6f1e1"/>`;
-  g += arc(0, 112.5, '#1f9d55') + arc(-112.5, 0, '#d62828') + arc(112.5, 247.5, '#c9c2ae');
-  g += `<path d="M${cx} ${cy - 28} L${cx + 10} ${cy - 6} L${cx + 9} ${cy + 26} L${cx - 9} ${cy + 26} L${cx - 10} ${cy - 6} Z" fill="#2f4468"/>`;
-  const lab = (x, y, s) => `<text x="${x}" y="${y}" font-size="12" font-family="sans-serif" font-weight="700" fill="#1b1f24" text-anchor="middle">${s}</text>`;
-  g += lab(cx + 62, cy - 40, '112,5°') + lab(cx - 62, cy - 40, '112,5°') + lab(cx, cy + 80, t('rufowe 135°')) + lab(cx, 16, t('masztowe 225°'));
-  g += lab(cx + 78, cy + 10, t('zielone')) + lab(cx - 78, cy + 10, t('czerwone'));
-  return g;
+  const W = 420, H = 360, cx = 210, cy = 182;
+  const p = (a, r) => [cx + Math.sin((a * Math.PI) / 180) * r, cy - Math.cos((a * Math.PI) / 180) * r];
+  const lab = (a, r, txt, col, fs = 14, b = 800) => { const [x, y] = p(a, r); return `<text x="${x.toFixed(1)}" y="${(y + 5).toFixed(1)}" font-size="${fs}" font-family="Nunito, sans-serif" font-weight="${b}" fill="${col}" text-anchor="middle">${txt}</text>`; };
+  // granice sektorów: 22,5° za trawersem
+  let extra = '';
+  for (const a of [112.5, -112.5]) { const [x, y] = p(a, 150); extra += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#c8d3e8" stroke-width="1.2" stroke-dasharray="5 4"/>`; }
+  { const [x1, y1] = p(-90, 150), [x2, y2] = p(90, 150); extra += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#c8d3e8" stroke-opacity="0.35" stroke-width="1"/>`; }
+  extra += lab(0, 160, `${t('masztowe')} 225°`, '#fffbe8', 15) + lab(40, 58, '112,5°', '#0f1626', 13) + lab(-40, 58, '112,5°', '#fff', 13) + lab(180, 112, `${t('rufowe')} 135°`, '#fffbe8', 14);
+  extra += lab(72, 70, t('zielone'), '#0f1626', 14) + lab(-72, 72, t('czerwone'), '#fff', 14) + lab(112.5, 172, '22,5°', '#c8d3e8', 11, 700) + lab(-112.5, 172, '22,5°', '#c8d3e8', 11, 700);
+  return nightSectors(W, H, cx, cy, [[-112.5, 112.5, 'W', 145], [0, 112.5, 'G', 90], [-112.5, 0, 'R', 90], [112.5, 247.5, 'W', 90]], 66, extra);
 }
 
 // ---------- sygnały dźwiękowe ----------
