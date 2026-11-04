@@ -110,7 +110,7 @@ export class Preview3D {
     this.clear();
     const parent = new THREE.Scene(); // buildHarbor dodaje elementy do „sceny” – zbieramy je do grupy
     const res = buildHarbor(H, parent);
-    const water = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshLambertMaterial({ color: 0x8bc9c9, transparent: true, opacity: 0.9 }));
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.MeshPhongMaterial({ color: 0x2a6a8e, specular: 0x6f93a8, shininess: 60, transparent: true, opacity: 0.93 }));
     water.rotation.x = -Math.PI / 2;
     water.position.y = -0.05;
     this.content.add(water);
