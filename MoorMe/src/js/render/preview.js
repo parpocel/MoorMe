@@ -122,7 +122,7 @@ export class Preview3D {
     const b = H.bounds;
     this.target.set((b.minX + b.maxX) / 2, 0, (b.minZ + b.maxZ) / 2);
     const span = Math.max(b.maxX - b.minX, b.maxZ - b.minZ);
-    this.dist = span * 1.05; this.minDist = 40; this.maxDist = span * 2.2;
+    this.dist = span * 0.75; this.minDist = 40; this.maxDist = span * 2.2;
     this.el_ = 0.7;
     const sc = this.sun.shadow.camera;
     sc.left = -span * 0.6; sc.right = span * 0.6; sc.top = span * 0.6; sc.bottom = -span * 0.6; sc.far = 800;
