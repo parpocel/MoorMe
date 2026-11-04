@@ -154,7 +154,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 #hud-lines:not(.open) #lines-list { padding: 0 10px 8px 0; width: 230px; }
 .line-card .top .st { margin-left: 2px; }
 .lines-body { display: flex; gap: 8px; flex: 1 1 auto; min-height: 0; align-items: stretch; }
-.deck-plan { position: relative; margin: 0 0 10px 8px; flex: none; height: min(288px, calc(100vh - 490px)); min-height: 180px; align-self: flex-start; }
+.deck-plan { position: relative; margin: 0 0 10px 8px; flex: none; height: min(346px, calc(100vh - 440px)); min-height: 216px; align-self: flex-start; }
 .deck-plan .plan-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; touch-action: none; }
 .plan-hull { fill: none; stroke: #cfdcea; stroke-width: 2; }
 .plan-cockpit { fill: rgba(201, 149, 102, 0.75); }

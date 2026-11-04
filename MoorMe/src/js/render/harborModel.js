@@ -1110,20 +1110,20 @@ function rippleTexture() {
 
 // Woda – animowana siatka z sumą kilku fal (gładkie normalne, delikatny połysk)
 const WAVES = [
-  // (siatka ma ~2,3 m oczka – fale krótsze niż ~6 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
+  // (siatka ma ~3,2 m oczka – fale krótsze niż ~9 m dawałyby aliasing, więc drobne zmarszczki zostają w teksturze)
   { d: 0, k: 0.42, w: 1.3, a: 1.0 },
   { d: 0.5, k: 0.55, w: 1.5, a: 0.5 },
   { d: -0.7, k: 0.3, w: 1.05, a: 0.6 },
   { d: 1.4, k: 0.22, w: 0.85, a: 0.6 },
   { d: -0.25, k: 0.62, w: 1.6, a: 0.3 },
-  { d: 0.9, k: 0.95, w: 2.0, a: 0.16 } // krótsza fala – widoczna dzięki gęstszej siatce
+  { d: 0.9, k: 0.7, w: 1.75, a: 0.14 } // krótsza fala (dopasowana do oczka siatki)
 ];
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 export class Water {
   // follow: siatka wody podąża za jachtem (rejs po otwartym akwenie), przesuwana co oczko siatki; tekstury zakotwiczone w świecie
   constructor(scene, opts = {}) {
     this.follow = !!opts.follow;
-    const size = 520, seg = Math.round((this.follow ? 165 : 228) * (opts.detail || 1)); // gęsta siatka (oczko ok. 2,3 m) // na otwartym morzu większe trójkąty (styl low-poly)
+    const size = 520, seg = Math.round((this.follow ? 117 : 161) * (opts.detail || 1)); // oczko ok. 3,2 m // na otwartym morzu większe trójkąty (styl low-poly)
     this.waveGain = this.follow ? 1.8 : 1.9;
     this.size = size; this.seg = seg;
     this.ox = 0; this.oz = 0;

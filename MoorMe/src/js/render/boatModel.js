@@ -415,14 +415,14 @@ export function buildBoat(spec, opts = {}) {
   // obła krawędź, na zewnątrz łagodny spadek do pokładu bocznego; z przodu wchodzą w nadbudówkę
   {
     const zIn = ckw / 2 + 0.02, zOut = Math.max(zIn + 0.32, halfBeamAt(spec, (ck0 + ck1) / 2) - 0.32);
-    const y0 = -0.02, yS = 0.4, yT = 0.82; // wysokości względem pokładu kokpitu
+    const y0 = -0.02, yS = 0.4, yT = 0.64; // wysokości względem pokładu kokpitu – niskie oparcie
     const sh = new THREE.Shape();
     sh.moveTo(zIn, y0); sh.lineTo(zIn, yS); sh.lineTo(zIn + 0.05, yT - 0.06);
     sh.quadraticCurveTo(zIn + 0.06, yT, zIn + 0.13, yT);
     sh.quadraticCurveTo(zIn + 0.2, yT, zIn + 0.24, yT - 0.12);
     sh.quadraticCurveTo((zIn + zOut) / 2 + 0.08, 0.22, zOut, 0.03);
     sh.lineTo(zOut, y0); sh.closePath();
-    const len = (ck1 - ck0) * 0.82;
+    const len = Math.max(0.8, ck1 + 0.12 - (ck0 + 1.35)); // kończą się przed kołami sterowymi
     const geo = new THREE.ExtrudeGeometry(sh, { depth: len, bevelEnabled: true, bevelThickness: 0.18, bevelSize: 0.02, bevelSegments: 5, curveSegments: 10 });
     geo.rotateY(Math.PI / 2); // wzdłuż jachtu
     const sm = smoothNormals(geo, 40);
@@ -876,18 +876,22 @@ export function buildDeckGear(spec, deck) {
 
 // Odbijacz (cylinder)
 export function buildFender(r) {
+  // odbijacz walcowy: gładki korpus z obłymi „ramionami”, granatowe końcówki z uchem na górze
   const g = new THREE.Group();
-  const body = cyl(r, r, r * 4.2, COL.fender, 8, { rough: 0.6 });
-  body.castShadow = true;
-  g.add(body);
-  const cap1 = cyl(r * 0.6, r, r * 0.4, 0x1d3557, 8);
-  cap1.position.y = r * 2.3;
-  g.add(cap1);
-  const cap2 = cyl(r, r * 0.6, r * 0.4, 0x1d3557, 8);
-  cap2.position.y = -r * 2.3;
-  g.add(cap2);
+  const H = r * 2.1, R = r;
+  const prof = [[0.001, -H], [R * 0.45, -H], [R * 0.75, -H + R * 0.12], [R * 0.95, -H + R * 0.4], [R, -H + R * 0.8], [R, H - R * 0.8], [R * 0.95, H - R * 0.4], [R * 0.75, H - R * 0.12], [R * 0.45, H], [0.001, H]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 28), FENDER_MAT);
+  body.castShadow = true; g.add(body);
+  for (const sy of [-1, 1]) {
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(R * (sy > 0 ? 0.42 : 0.5), R * (sy > 0 ? 0.5 : 0.42), R * 0.35, 20), FENDER_CAP);
+    cap.position.y = sy * (H + R * 0.1); g.add(cap);
+  }
+  const eye = new THREE.Mesh(new THREE.TorusGeometry(R * 0.2, R * 0.07, 8, 16), FENDER_CAP); eye.position.y = H + R * 0.42; g.add(eye);
+  g.userData.top = H + R * 0.55; // punkt zawieszenia linki
   return g;
 }
+const FENDER_MAT = new THREE.MeshStandardMaterial({ color: 0xf4f4f1, roughness: 0.4 });
+const FENDER_CAP = new THREE.MeshStandardMaterial({ color: 0x1d3557, roughness: 0.5 });
 
 // Kula odbijacza
 export function buildBallFender(r) {
@@ -902,53 +906,37 @@ export function buildBallFender(r) {
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.18, r * 0.32, r * 0.3, 20), pvc); neck.position.y = r * 0.98; g.add(neck);
   const eye = new THREE.Mesh(new THREE.TorusGeometry(r * 0.15, r * 0.07, 12, 20), pvc); eye.position.y = r * 1.24; g.add(eye);
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshStandardMaterial({ color: 0x1d3557, roughness: 0.8 })); knot.position.y = r * 1.24; g.add(knot);
-  const rope = cyl(0.008, 0.008, 0.5, 0x1d3557, 4);
-  rope.position.y = r * 1.24 + 0.25;
-  g.add(rope);
+  g.userData.top = r * 1.3; // punkt zawieszenia linki (ucho)
   return g;
 }
 
 // Postać członka załogi
-// Postać członka załogi (ok. 1,75 m), prosto: nogi, biodra, kurtka, kołnierz kamizelki, ręce, głowa z czapką.
-// Przód postaci = lokalna oś +z. userData: legs/arms (przeguby do animacji chodu i pracy przy linie).
-const PMATS = new Map();
-const pm = (c, r = 0.75) => { const k = c + ':' + r; if (!PMATS.has(k)) PMATS.set(k, new THREE.MeshStandardMaterial({ color: c, roughness: r })); return PMATS.get(k); };
+// Postać członka załogi (ok. 1,75 m). Przód postaci = lokalna oś +z. userData: legs/arms (przeguby do animacji).
 const PANTS = [0x2b2d42, 0x3d4a5c, 0x6b5b45, 0x22303f];
 const CAPS = [0x1d3557, 0xf2f2f2, 0xc0392b, 0x2a2a2a];
 const SKIN = [0xf1c9a5, 0xe0b48f, 0xc99a74, 0xf5d3b5];
 let personSeq = 0;
 export function buildPerson(jacket = 0xe63946) {
+  // prosta, niskopoligonowa postać (jak reszta modeli): nogi, tułów, ręce, głowa i czapka
   const g = new THREE.Group();
   const k = personSeq++;
-  const skin = pm(SKIN[k % SKIN.length], 0.6), pants = pm(PANTS[k % PANTS.length], 0.85), jk = pm(jacket, 0.6), dark = pm(0x1b1d22, 0.7);
+  const skin = mat(SKIN[k % SKIN.length]), pants = mat(PANTS[k % PANTS.length]), jk = mat(jacket), capM = mat(CAPS[k % CAPS.length]);
   const mesh = (geo, m, x, y, z, parent = g) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); o.castShadow = true; parent.add(o); return o; };
-  // nogi na przegubach biodrowych (do animacji chodu)
   const legs = [];
   for (const sx of [-1, 1]) {
-    const hip = new THREE.Group(); hip.position.set(sx * 0.095, 0.86, 0); g.add(hip);
-    mesh(new THREE.CapsuleGeometry(0.08, 0.7, 3, 8), pants, 0, -0.43, 0, hip);
+    const hip = new THREE.Group(); hip.position.set(sx * 0.09, 0.84, 0); g.add(hip);
+    mesh(new THREE.BoxGeometry(0.14, 0.84, 0.16), pants, 0, -0.42, 0, hip);
     legs.push(hip);
   }
-  // biodra i tułów (kurtka), kołnierz i suwak
-  const hips = mesh(new THREE.CylinderGeometry(0.17, 0.16, 0.16, 16), pants, 0, 0.9, 0); hips.scale.z = 0.72;
-  const torso = mesh(new THREE.CapsuleGeometry(0.17, 0.36, 6, 16), jk, 0, 1.2, 0); torso.scale.set(1.1, 1, 0.72);
-  void dark;
-  // kamizelka pneumatyczna (kołnierz na ramionach)
-  const vest = pm(0xc0392b, 0.55);
-  const yoke = mesh(new THREE.TorusGeometry(0.13, 0.04, 6, 16, Math.PI), vest, 0, 1.43, 0); yoke.rotation.x = -Math.PI / 2;
-  // ręce na przegubach barkowych (do machania przy chodzie i pracy przy linie)
+  mesh(new THREE.BoxGeometry(0.4, 0.62, 0.26), jk, 0, 1.13, 0);
   const arms = [];
   for (const sx of [-1, 1]) {
-    const sh = new THREE.Group(); sh.position.set(sx * 0.23, 1.38, 0); g.add(sh);
-    const up = mesh(new THREE.CapsuleGeometry(0.055, 0.5, 3, 8), jk, 0, -0.3, 0.01, sh); up.rotation.z = sx * 0.05;
-    mesh(new THREE.SphereGeometry(0.05, 8, 6), skin, sx * 0.012, -0.61, 0.02, sh); // dłoń
+    const sh = new THREE.Group(); sh.position.set(sx * 0.25, 1.4, 0); g.add(sh);
+    mesh(new THREE.BoxGeometry(0.1, 0.6, 0.12), jk, 0, -0.3, 0, sh);
     arms.push(sh);
   }
-  // szyja, głowa, uszy, nos, czapka z daszkiem
-  const head = mesh(new THREE.SphereGeometry(0.115, 14, 10), skin, 0, 1.62, 0); head.scale.set(0.92, 1.05, 1);
-  const capM = pm(CAPS[k % CAPS.length], 0.7);
-  const cap = mesh(new THREE.SphereGeometry(0.12, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.66, 0); cap.scale.set(0.96, 0.75, 1.02);
-  const brim = mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.012, 12, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.665, 0.07); brim.scale.z = 0.9;
+  mesh(new THREE.IcosahedronGeometry(0.13, 0), skin, 0, 1.6, 0);
+  mesh(new THREE.BoxGeometry(0.24, 0.08, 0.26), capM, 0, 1.71, 0.01);
   g.userData.legs = legs;
   g.userData.arms = arms;
   return g;

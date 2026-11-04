@@ -125,6 +125,15 @@ export class View3D {
       this.boat.userData.heel.add(m);
       this.fenders.set(f.id, { mesh: m, f });
     }
+    // linki odbijaczy: od ucha odbijacza do krawędzi pokładu (aktualizowane co klatkę – odbijacze się kołyszą)
+    {
+      const n = world.equip.fenders.length;
+      const lg = new THREE.BufferGeometry();
+      lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(n * 6), 3));
+      this.fenderRopes = new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ color: 0x1d3557 }));
+      this.fenderRopes.frustumCulled = false;
+      this.boat.userData.heel.add(this.fenderRopes);
+    }
 
     // załoga: sternik + osoba na dziobie + osoba na lądzie
     this.helmsman = buildPerson(0xe63946);
@@ -733,11 +742,15 @@ export class View3D {
 
     // odbijacze
     const rf = w.equip.fenderRadius;
+    let ropeIdx = -1;
+    const { xs: xsF, xb: xbF } = hullExtents(spec);
     for (const { mesh, f } of this.fenders.values()) {
+      ropeIdx++;
       const out = f.stern ? w.fenderOut.stern : f.side < 0 ? w.fenderOut.port : w.fenderOut.starboard;
       if (!out) {
-        // schowany: leży na pokładzie
+        // schowany: leży na pokładzie (bez linki)
         mesh.visible = false;
+        if (this.fenderRopes) this.fenderRopes.geometry.attributes.position.array.fill(0, ropeIdx * 6, ropeIdx * 6 + 6);
         continue;
       }
       mesh.visible = true;
@@ -757,8 +770,20 @@ export class View3D {
       mesh.position.set(g.x - g.n.x * g.r * (1 - k) - tx * hh2 * Math.sin(swA) + nxw * hh2 * Math.sin(swB), hy, g.y - g.n.y * g.r * (1 - k) - tz * hh2 * Math.sin(swA) + nzw * hh2 * Math.sin(swB));
       mesh.rotation.order = 'YXZ';
       mesh.rotation.set(swA, ry, swB);
+      // linka: od ucha odbijacza do relingu/listwy przy krawędzi pokładu nad nim
+      if (this.fenderRopes) {
+        mesh.updateMatrix();
+        const top = new THREE.Vector3(0, mesh.userData.top || rf * 2.6, 0).applyMatrix4(mesh.matrix);
+        const ax = f.stern ? xsF + 0.08 : clamp(g.x, xsF + 0.2, xbF - 0.2);
+        const az = f.stern ? g.y : Math.sign(f.side) * halfBeamAt(spec, ax) * 0.96;
+        const arr = this.fenderRopes.geometry.attributes.position.array, o2 = ropeIdx * 6;
+        arr[o2] = top.x; arr[o2 + 1] = top.y; arr[o2 + 2] = top.z;
+        arr[o2 + 3] = ax; arr[o2 + 4] = sheerHeight(spec, ax) + 0.04; arr[o2 + 5] = az;
+      }
       mesh.scale.set(1 - comp * 0.5, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
     }
+
+    if (this.fenderRopes) this.fenderRopes.geometry.attributes.position.needsUpdate = true;
 
     // załoga: każda lina w pracy (zakładanie z pokładu, wybieranie, luzowanie) dostaje własnego członka załogi
     this.deckhand.visible = !(w.crew.ashore) && this.cam.mode !== 'fpv';
