@@ -190,7 +190,7 @@ const dayEntry = (v) => h('div.hb-entry', {}, h('h3', {}, v.name), svgEl(300, da
 
 export function lightsBook() {
   return [
-    { id: 'intro', name: L('Zasady', 'Basics'), entries: [h('div.hb-entry', {},
+    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [h('div.hb-entry', {},
       h('h3', {}, L('Sektory świateł', 'Light sectors')),
       svgEl(320, 220, sectorDiagram()),
       h('p', {}, L('Masztowe (białe) świeci 225° do przodu, burtowe po 112,5°: zielone na prawej, czerwone na lewej burcie. Rufowe (białe) – 135° do tyłu. Światła dookólne widać z każdej strony. Kolory widziane z boku i z dziobu mówią, w którą stronę płynie statek.', 'The masthead light (white) shows over 225° ahead, the sidelights over 112.5° each: green to starboard, red to port. The sternlight (white) shows over 135° astern. All-round lights are seen from every direction. The colours you see tell you which way a vessel is heading.')),
@@ -240,7 +240,7 @@ export function soundsBook(play) {
     h('div.hb-notation', {}, notation(s.p)), timeline(s.p), h('p', {}, s.desc));
   const ctxSec = (id, name) => ({ id, name, entries: [h('p.hb-ctx', {}, CONTEXTS[id]), ...SIGNALS.filter((s) => s.ctx === id).map(entry)] });
   return [
-    { id: 'intro', name: L('Zasady', 'Basics'), entries: [h('div.hb-entry', {},
+    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [h('div.hb-entry', {},
       h('h3', {}, L('Krótki i długi dźwięk', 'Short and prolonged blasts')),
       h('p', {}, L('• krótki dźwięk – ok. 1 s, — długi dźwięk – 4–6 s, · bardzo krótki – ok. ¼ s. Sygnały manewrowe daje się tylko wtedy, gdy statki się widzą. W ograniczonej widoczności statki w drodze dają sygnał co najwyżej co 2 minuty, statki na kotwicy dzwonią co minutę.', '• short blast – about 1 s, — prolonged blast – 4–6 s, · very short – about ¼ s. Manoeuvring signals are given only when vessels are in sight of one another. In restricted visibility vessels under way sound at intervals of not more than 2 minutes, vessels at anchor ring the bell every minute.')),
       h('p', {}, L('Wyposażenie (morze): jednostka < 12 m – dowolne skuteczne urządzenie dźwiękowe; ≥ 12 m – gwizd (buczek); ≥ 20 m – gwizd i dzwon; ≥ 100 m – także gong.', 'Equipment (sea): a vessel < 12 m – any efficient sound signal; ≥ 12 m – a whistle; ≥ 20 m – a whistle and a bell; ≥ 100 m – also a gong.')),
@@ -504,7 +504,7 @@ function board(inner) {
   return `<rect width="${W}" height="${H}" fill="#e3f0f7"/><rect y="150" width="${W}" height="20" fill="#8fc3dc"/><rect x="57" y="96" width="6" height="56" fill="#6b7280"/><g transform="translate(24 28)">${inner}</g>`;
 }
 const sg = {
-  noPass: `<rect width="72" height="72" fill="#fff" stroke="#1b1f24"/><rect width="72" height="24" fill="#d62828"/><rect y="48" width="72" height="24" fill="#d62828"/>`,
+  noPass: `<rect y="14" width="72" height="44" fill="#fff" stroke="#1b1f24"/><rect y="14" width="72" height="14.7" fill="#d62828"/><rect y="43.3" width="72" height="14.7" fill="#d62828"/>`,
   P: `<text x="36" y="51" font-size="40" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">P</text>`,
   waves: `<path d="M12 30 q6 -7 12 0 t12 0 t12 0 t12 0 M12 44 q6 -7 12 0 t12 0 t12 0 t12 0" fill="none" stroke="#16181c" stroke-width="4"/>`,
   prohib: (inner) => `<rect width="72" height="72" fill="#fff" stroke="#1b1f24"/>${inner}<rect x="3" y="3" width="66" height="66" fill="none" stroke="#d62828" stroke-width="6"/><path d="M6 6 L66 66" stroke="#d62828" stroke-width="6"/>`,
@@ -513,16 +513,20 @@ const sg = {
   blue: (inner) => `<rect width="72" height="72" fill="#1f5fd1" stroke="#1b1f24"/>${inner}`,
   num: (t) => `<text x="36" y="48" font-size="28" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">${t}</text>`,
   limit: (t, d) => {
-    const txt = `<text x="${d === 'v' ? 44 : 36}" y="${d === 'h' ? 34 : d === 'd' ? 30 : 42}" font-size="${d === 'h' ? 20 : 17}" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">${t}</text>`;
-    const ar = d === 'v' ? `<path d="M20 14 V58 M14 22 L20 14 L26 22 M14 50 L20 58 L26 50" stroke="#16181c" stroke-width="3" fill="none"/>`
-      : d === 'h' ? `<path d="M12 48 H60 M20 42 L12 48 L20 54 M52 42 L60 48 L52 54" stroke="#16181c" stroke-width="3" fill="none"/>`
-      : `<path d="M36 38 V60 M29 52 L36 60 L43 52" stroke="#16181c" stroke-width="3" fill="none"/>`;
-    return sg.mand(txt + ar);
+    const tri = (pts) => `<polygon points="${pts}" fill="#16181c"/>`;
+    const txt = (x, y, fs) => `<text x="${x}" y="${y}" font-size="${fs}" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">${t}</text>`;
+    let g;
+    if (d === 'v') g = tri('26,9 46,9 36,21') + txt(36, 44, 17) + tri('26,63 46,63 36,51'); // wysokość: grotki z góry i z dołu na liczbę
+    else if (d === 'h') g = tri('9,26 9,46 21,36') + txt(36, 42, 18) + tri('63,26 63,46 51,36'); // szerokość: grotki z boków
+    else if (d === 'd') g = txt(36, 32, 17) + `<rect x="14" y="40" width="44" height="3" fill="#16181c"/>` + tri('26,46 46,46 36,60'); // głębokość: liczba nad linią wody, grotek w dół
+    else if (d === 'c4') g = `<rect x="31" y="12" width="10" height="32" fill="#16181c"/><rect x="31" y="50" width="10" height="9" fill="#16181c"/>`;
+    else g = txt(46, 42, 18) + `<rect x="8" y="12" width="4" height="48" fill="#16181c"/>` + tri('14,36 24,30 24,42'); // C.5: odległość od brzegu
+    return sg.mand(g);
   },
   arrow: `<path d="M36 58 V20 M24 32 L36 18 L48 32" stroke="#16181c" stroke-width="6" fill="none" stroke-linecap="round"/>`,
   horn: `<path d="M18 30 H28 L46 18 V54 L28 42 H18 Z" fill="#16181c"/><path d="M52 26 q6 10 0 20" stroke="#16181c" stroke-width="3" fill="none"/>`,
   vhf: `<text x="36" y="34" font-size="17" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">VHF</text><text x="36" y="56" font-size="17" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">16</text>`,
-  entryOk: `<rect width="72" height="72" fill="#fff" stroke="#1b1f24"/><rect width="72" height="24" fill="#2a9d4a"/><rect y="48" width="72" height="24" fill="#2a9d4a"/>`,
+  entryOk: `<rect y="8" width="72" height="56" fill="#fff" stroke="#1b1f24"/><rect y="8" width="24" height="56" fill="#2a9d4a"/><rect x="48" y="8" width="24" height="56" fill="#2a9d4a"/>`,
   bankR: `<rect x="10" y="10" width="52" height="52" fill="#d62828" stroke="#1b1f24"/>`,
   bankL: `<polygon points="36,8 66,62 6,62" fill="#2a9d4a" stroke="#1b1f24"/>`,
   crossX: `<path d="M12 12 L60 60 M60 12 L12 60" stroke="#f2c230" stroke-width="11" stroke-linecap="square"/><path d="M12 12 L60 60 M60 12 L12 60" stroke="#1b1f24" stroke-width="1" fill="none" opacity="0.4"/>`,
@@ -537,6 +541,31 @@ const sg = {
   rowboat: `<path d="M10 40 H62 L54 50 H18 Z" fill="#16181c"/><path d="M20 60 L54 22" stroke="#16181c" stroke-width="3"/><ellipse cx="18" cy="61" rx="5" ry="2.5" fill="#16181c" transform="rotate(-48 18 61)"/>`,
   slipway: `<path d="M8 56 L62 30" stroke="#16181c" stroke-width="4"/><path d="M24 40 L52 27 L56 32 L30 46 Z" fill="#16181c"/><path d="M8 62 q6 -4 12 0 t12 0" stroke="#16181c" stroke-width="2.5" fill="none"/>`,
   a10: `<g stroke="#1b1f24"><polygon points="12,6 22,16 12,26 2,16" fill="#fff"/><polygon points="12,6 22,16 12,26" fill="#d62828"/><polygon points="60,6 70,16 60,26 50,16" fill="#fff"/><polygon points="60,6 50,16 60,26" fill="#d62828"/></g><path d="M12 28 V60 M60 28 V60" stroke="#16181c" stroke-dasharray="3 3"/><path d="M16 56 H56 M22 51 L15 56 L22 61 M50 51 L57 56 L50 61" stroke="#16181c" stroke-width="2" fill="none" stroke-dasharray="4 3"/>`,
+  d2: `<g stroke="#1b1f24"><polygon points="12,6 22,16 12,26 2,16" fill="#fff"/><polygon points="12,6 22,16 12,26" fill="#2a9d4a"/><polygon points="60,6 70,16 60,26 50,16" fill="#fff"/><polygon points="60,6 50,16 60,26" fill="#2a9d4a"/></g><path d="M16 56 H56 M22 51 L15 56 L22 61 M50 51 L57 56 L50 61" stroke="#16181c" stroke-width="2" fill="none"/>`,
+  d3: `<rect width="72" height="72" fill="#fff" stroke="#1b1f24"/><path d="M14 36 H54 M42 24 L56 36 L42 48" stroke="#16181c" stroke-width="7" fill="none"/>`,
+  b2a: `<path d="M44 62 V40 Q44 26 30 26 H20 M28 16 L18 26 L28 36" stroke="#16181c" stroke-width="6" fill="none"/>`,
+  b2b: `<path d="M28 62 V40 Q28 26 42 26 H52 M44 16 L54 26 L44 36" stroke="#16181c" stroke-width="6" fill="none"/>`,
+  b3a: `<path d="M24 62 V18 M14 30 L24 16 L34 30" stroke="#16181c" stroke-width="6" fill="none"/><path d="M50 14 V62" stroke="#16181c" stroke-width="2" stroke-dasharray="4 4"/>`,
+  b3b: `<path d="M48 62 V18 M38 30 L48 16 L58 30" stroke="#16181c" stroke-width="6" fill="none"/><path d="M22 14 V62" stroke="#16181c" stroke-width="2" stroke-dasharray="4 4"/>`,
+  b4a: `<path d="M50 62 L22 22 M20 36 L20 18 L36 22" stroke="#16181c" stroke-width="6" fill="none"/>`,
+  b4b: `<path d="M22 62 L50 22 M36 22 L52 18 L52 36" stroke="#16181c" stroke-width="6" fill="none"/>`,
+  bar: `<rect x="12" y="31" width="48" height="10" fill="#16181c"/>`,
+  excl: `<rect x="31" y="14" width="10" height="30" fill="#16181c"/><rect x="31" y="50" width="10" height="9" fill="#16181c"/>`,
+  b9a: `<path d="M14 26 H58" stroke="#16181c" stroke-width="9"/><path d="M36 64 V34" stroke="#16181c" stroke-width="4"/>`,
+  b9b: `<path d="M14 36 H58" stroke="#16181c" stroke-width="9"/><path d="M36 64 V8" stroke="#16181c" stroke-width="4"/>`,
+  weir: `<path d="M8 20 H64" stroke="#fff" stroke-width="5"/><path d="M14 20 V40 M28 20 V40 M44 20 V40 M58 20 V40" stroke="#fff" stroke-width="4"/><path d="M8 48 q7 -6 14 0 t14 0 t14 0 t14 0 M8 58 q7 -6 14 0 t14 0 t14 0 t14 0" stroke="#fff" stroke-width="3" fill="none"/>`,
+  ferryRope: `<path d="M4 22 H68" stroke="#fff" stroke-width="2"/><path d="M36 22 V34" stroke="#fff" stroke-width="2"/><path d="M14 40 H58 L52 50 H20 Z" fill="#fff"/><path d="M8 58 q7 -5 14 0 t14 0 t14 0 t14 0" stroke="#fff" stroke-width="2.5" fill="none"/>`,
+  ferry: `<path d="M12 40 H60 L54 50 H18 Z M24 40 V32 H46 V40" fill="#fff"/><path d="M8 58 q7 -5 14 0 t14 0 t14 0 t14 0" stroke="#fff" stroke-width="2.5" fill="none"/>`,
+  pNum: (t) => `<text x="30" y="46" font-size="32" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#fff">P</text><text x="56" y="62" font-size="13" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#fff">${t}</text>`,
+  pRoman: (t) => `<text x="30" y="46" font-size="32" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#fff">P</text><text x="56" y="62" font-size="13" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#fff">${t}</text>`,
+  junction: `<path d="M16 66 V6" stroke="#fff" stroke-width="10"/><path d="M16 34 H62" stroke="#fff" stroke-width="4"/>`,
+  junction2: `<path d="M16 66 V6" stroke="#fff" stroke-width="4"/><path d="M16 34 H62" stroke="#fff" stroke-width="10"/>`,
+  endBar: `<path d="M8 64 L64 8" stroke="#fff" stroke-width="8"/>`,
+  tap: `<path d="M14 26 H40 Q50 26 50 36 V42" stroke="#fff" stroke-width="7" fill="none"/><rect x="24" y="16" width="6" height="10" fill="#fff"/><path d="M50 50 q-4 6 0 9 q4 -3 0 -9" fill="#fff"/>`,
+  phone: `<path d="M18 22 q18 -12 36 0 l-4 8 h-8 l-2 -6 q-4 -2 -8 0 l-2 6 h-8 Z" fill="#fff"/><rect x="22" y="38" width="28" height="20" rx="3" fill="#fff"/>`,
+  speedW: `<path d="M10 46 H48 L56 38 H18 Z" fill="#fff"/><path d="M6 30 H26 M4 38 H14 M10 54 H32" stroke="#fff" stroke-width="3"/>`,
+  aux: (t) => `<rect y="20" width="72" height="30" fill="#fff" stroke="#1b1f24" stroke-width="1.5"/><text x="36" y="41" font-size="${t.length > 5 ? 15 : 17}" font-weight="800" text-anchor="middle" font-family="sans-serif" fill="#16181c">${t}</text>`,
+  auxArrow: `<rect y="20" width="72" height="30" fill="#fff" stroke="#1b1f24" stroke-width="1.5"/><path d="M12 35 H58 M48 27 L60 35 L48 43" stroke="#16181c" stroke-width="4" fill="none"/>`,
   twoBoats: `<path d="M12 30 H34 L30 37 H16 Z M38 46 H60 L56 53 H42 Z" fill="#16181c"/>`,
   anchor: `<path d="M36 16 V56 M26 24 H46 M18 44 q18 22 36 0" stroke="#16181c" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="36" cy="14" r="4" fill="none" stroke="#16181c" stroke-width="3"/>`,
   anchorW: `<path d="M36 16 V56 M26 24 H46 M18 44 q18 22 36 0" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="36" cy="14" r="4" fill="none" stroke="#fff" stroke-width="3"/>`,
@@ -550,18 +579,26 @@ const sg = {
   jetski: `<path d="M10 50 H62 L56 58 H18 Z M26 50 L32 40 H44 L48 50" fill="#16181c"/><circle cx="40" cy="30" r="5" fill="#16181c"/>`,
   cable: `<path d="M6 22 q30 22 60 0" stroke="#fff" stroke-width="3" fill="none"/><path d="M36 30 L28 46 H40 L32 62" stroke="#fff" stroke-width="4" fill="none" stroke-linejoin="round"/>`
 };
-// most z przęsłami: n = 1 – jeden żółty romb, 2 – dwa romby, 0 – tablice biało-czerwone na zamkniętych przęsłach
+// most łukowy z trzema przęsłami: n = 1 – jeden żółty romb, 2 – dwa romby, 0 – romb nad przęsłem żeglownym i tablice A.1 nad zamkniętymi
 function bridgePic(n) {
-  const W = 120, H = 170, dia = (cx, cy) => `<polygon points="${cx},${cy - 7} ${cx + 7},${cy} ${cx},${cy + 7} ${cx - 7},${cy}" fill="#f2c230" stroke="#1b1f24"/>`;
-  const rw = (x) => `<rect x="${x - 4}" y="68" width="8" height="26" fill="#fff" stroke="#1b1f24"/><rect x="${x - 4}" y="68" width="8" height="8" fill="#d62828"/><rect x="${x - 4}" y="86" width="8" height="8" fill="#d62828"/>`;
-  let g = `<rect width="${W}" height="${H}" fill="#e3f0f7"/><rect y="120" width="${W}" height="50" fill="#8fc3dc"/><rect x="0" y="40" width="${W}" height="14" fill="#9aa1a7" stroke="#5b6168"/>`;
-  for (const x of [8, 40, 80, 112]) g += `<rect x="${x - 5}" y="54" width="10" height="70" fill="#b8bcc0" stroke="#5b6168"/>`;
-  if (n === 1) g += dia(60, 66);
-  if (n === 2) g += dia(60, 64) + dia(60, 80);
-  if (n === 0) g += dia(60, 66) + rw(24) + rw(96);
+  const W = 120, H = 170, sky = '#e3f0f7', stone = '#b9b2a6', dark = '#8d867b';
+  const dia = (cx, cy) => `<polygon points="${cx},${cy - 6} ${cx + 6},${cy} ${cx},${cy + 6} ${cx - 6},${cy}" fill="#f2c230" stroke="#1b1f24"/>`;
+  const a1 = (cx, cy) => `<rect x="${cx - 11}" y="${cy - 5}" width="22" height="10" fill="#fff" stroke="#1b1f24" stroke-width="0.8"/><rect x="${cx - 11}" y="${cy - 5}" width="22" height="3.3" fill="#d62828"/><rect x="${cx - 11}" y="${cy + 1.7}" width="22" height="3.3" fill="#d62828"/>`;
+  const arch = (x0, x1, top) => { const r = (x1 - x0) / 2; return `<path d="M${x0} 124 V${top + r * 0.55} A${r} ${r * 0.55} 0 0 1 ${x1} ${top + r * 0.55} V124 Z" fill="${sky}"/>`; };
+  let g = `<rect width="${W}" height="${H}" fill="${sky}"/>`;
+  g += `<rect x="0" y="44" width="${W}" height="80" fill="${stone}"/>`; // przyczółki, filary i przęsła
+  g += arch(4, 34, 60) + arch(42, 78, 54) + arch(86, 116, 60);
+  g += `<rect x="0" y="44" width="${W}" height="8" fill="${dark}"/>`; // pomost
+  g += `<path d="M0 36 H${W}" stroke="#5b6168" stroke-width="1.5"/>` + Array.from({ length: 13 }, (_, k) => `<path d="M${k * 10} 36 V44" stroke="#5b6168" stroke-width="1"/>`).join(''); // balustrada
+  g += `<rect y="120" width="${W}" height="50" fill="#8fc3dc"/>`;
+  g += `<path d="M6 132 q6 -3 12 0 t12 0 M84 140 q6 -3 12 0 t12 0" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.7"/>`;
+  if (n === 1) g += dia(60, 64);
+  if (n === 2) g += dia(60, 62) + dia(60, 76);
+  if (n === 0) g += dia(60, 64) + a1(19, 66) + a1(101, 66);
   return g;
 }
-export function marksBook() {
+for (const k of ['propeller', 'sport', 'skier', 'rowboat', 'windsurf', 'slipway', 'jetski', 'vhf', 'uturn']) sg[k + 'W'] = sg[k].replace(/#16181c/g, '#fff');
+function marksBookRaw() {
   const lc = lateralColors(), P = hex(lc.port), S = hex(lc.stbd), B = '#16181c', Y = '#f2c230', R = '#d62828', W = '#ffffff', IG = '#2a9d4a';
   const reg = IALA.region;
   const e = (title, pic, rows, char) => animLamps(h('div.hb-entry.hb-mark', {}, svgEl(120, 170, pic), h('div', {}, h('h3', {}, title), ...rows.map(([a, b]) => h('p', {}, h('b', {}, a + ': '), b)),
@@ -582,7 +619,7 @@ export function marksBook() {
     ];
   };
   return [
-    { id: 'intro', name: L('Zasady', 'Basics'), entries: [h('div.hb-entry', {},
+    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [h('div.hb-entry', {},
       h('h3', {}, L('Czym jest locja', 'What pilotage is')),
       h('p', {}, L('Locja to wiedza o akwenie potrzebna do bezpiecznego prowadzenia jachtu: o torach wodnych i ich oznakowaniu, niebezpieczeństwach nawigacyjnych, portach i przepisach obowiązujących na danych wodach. Tak nazywa się też publikacja – „locja” (ang. pilot, sailing directions) – opisujące konkretny akwen.', 'Pilotage is the knowledge of a sea area needed to navigate a yacht safely: its fairways and their marking, navigational hazards, harbours and the local rules. The word also names the publication – a pilot or sailing directions – describing a particular area.')),
       h('p', {}, h('b', {}, L('Dlaczego się ją stosuje: ', 'Why it is used: ')), L('mapa pokazuje głębokości i znaki, ale nie mówi wszystkiego. Locja wyjaśnia, jak podejść do portu, gdzie są płycizny, prądy i przeszkody, jak oznakowany jest tor, gdzie wolno się zatrzymać i jakie obowiązują lokalne zasady. Dzięki temu wiesz, czego się spodziewać, zanim tam dopłyniesz – zwłaszcza nocą i w złej widoczności.', 'the chart shows depths and marks but not everything. A pilot explains how to approach a harbour, where the shoals, currents and obstructions are, how the channel is marked, where you may stop and which local rules apply – so you know what to expect before you get there, especially at night and in poor visibility.')),
@@ -626,10 +663,9 @@ export function marksBook() {
       h('div.hb-charx-grp', {}, L('Śródlądowe – przejścia pod mostami', 'Inland – passages under bridges')),
       e(L('D.1a – zalecane przejście (ruch w obu kierunkach)', 'D.1a – recommended passage (two-way traffic)'), bridgePic(1), [[L('Wygląd', 'Look'), L('Jeden żółty romb nad przęsłem (nocą żółte światło stałe).', 'One yellow diamond above the span (fixed yellow light at night).')], [L('Znaczenie', 'Meaning'), L('Zalecane przejście pod mostem – ruch w obu kierunkach.', 'Recommended passage under the bridge – traffic in both directions.')]]),
       e(L('D.1b – zalecane przejście (ruch w jednym kierunku)', 'D.1b – recommended passage (one-way traffic)'), bridgePic(2), [[L('Wygląd', 'Look'), L('Dwa żółte romby jeden nad drugim (nocą dwa żółte światła).', 'Two yellow diamonds one above the other (two yellow lights at night).')], [L('Znaczenie', 'Meaning'), L('Przejście zalecane tylko w tym kierunku – z przeciwnej strony przęsło jest zamknięte.', 'Passage recommended in this direction only – the span is closed for traffic from the other side.')]]),
-      e(L('A.10 – zakaz żeglugi poza wskazanym przejściem', 'A.10 – no passage outside the indicated area'), bridgePic(0), [[L('Wygląd', 'Look'), L('Biało-czerwone tablice na filarach mostu.', 'Red-and-white boards on the bridge piers.')], [L('Znaczenie', 'Meaning'), L('Przęsła oznaczone tymi tablicami są zamknięte – przepływaj tylko wskazanym przejściem.', 'The spans marked with these boards are closed – pass only through the indicated passage.')]]),
-      e(L('C.2 – ograniczona wysokość', 'C.2 – limited headroom'), board(sg.limit("4,5", "v")), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i liczbą metrów między strzałkami pionowymi.', 'A white board with a red border and the number of metres between vertical arrows.')], [L('Znaczenie', 'Meaning'), L('Prześwit pod mostem lub linią – tu 4,5 m nad aktualnym stanem wody. Sprawdź wysokość masztu!', 'Headroom under a bridge or cable – here 4.5 m above the current water level. Check your mast height!')]]),
-      e(L('C.3 – ograniczona szerokość', 'C.3 – limited width'), board(sg.limit("12", "h")), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i liczbą metrów między strzałkami poziomymi.', 'A white board with a red border and the number of metres between horizontal arrows.')], [L('Znaczenie', 'Meaning'), L('Szerokość przejścia lub szlaku ograniczona – tu do 12 m.', 'The width of the passage or fairway is limited – here to 12 m.')]]),
-      e(L('C.1 – ograniczona głębokość', 'C.1 – limited depth'), board(sg.limit("2,2", "d")), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem, liczba metrów nad strzałką w dół.', 'A white board with a red border, the number of metres above a downward arrow.')], [L('Znaczenie', 'Meaning'), L('Głębokość wody ograniczona – tu 2,2 m. Porównaj z zanurzeniem jachtu.', 'The depth of water is limited – here 2.2 m. Compare it with your draught.')]]),
+      e(L('A.1 nad przęsłem – przęsło zamknięte', 'A.1 above a span – span closed'), bridgePic(0), [[L('Wygląd', 'Look'), L('Poziome tablice czerwono-biało-czerwone nad przęsłami, którymi nie wolno płynąć; żółty romb nad przęsłem żeglownym.', 'Horizontal red-white-red boards above the spans you may not use; a yellow diamond above the navigable span.')], [L('Znaczenie', 'Meaning'), L('Przepływaj tylko przęsłem oznaczonym żółtym rombem.', 'Pass only through the span marked with the yellow diamond.')]]),
+      e(L('D.2 – zalecenie trzymania się wskazanego obszaru', 'D.2 – recommendation to keep within the area indicated'), board(sg.d2), [[L('Wygląd', 'Look'), L('Zielono-białe romby na filarach (nocą zielone światła).', 'Green-and-white diamonds on the piers (green lights at night).')], [L('Znaczenie', 'Meaning'), L('Dwie tablice w kształcie rombu (pół zielone, pół białe) wyznaczają zalecane przejście, np. pod mostem lub przez jaz – trzymaj się między nimi.', 'Two diamond-shaped boards (half green, half white) mark the recommended passage, e.g. under a bridge or through a weir – keep between them.')]]),
+      e(L('D.3 – zalecenie przejścia w kierunku strzałki', 'D.3 – recommendation to proceed in the direction of the arrow'), board(sg.d3), [[L('Znaczenie', 'Meaning'), L('Płyń w kierunku wskazanym strzałką, a nocą w kierunku białego światła izofazowego.', 'Proceed in the direction of the arrow – at night towards the white isophase light.')]]),
       h('div.hb-charx-grp', {}, L('Śródlądowe – znaki zakazu (A)', 'Inland – prohibitory signs (A)')),
       h('p.small.muted', {}, L('Znaki zakazu: biała tablica z czerwonym obramowaniem i czerwoną ukośną kreską, czarny symbol.', 'Prohibitory signs: a white board with a red border and a red diagonal bar, a black symbol.')),
       e(L('A.1 – zakaz przejścia', 'A.1 – no passage'), board(sg.noPass), [[L('Znaczenie', 'Meaning'), L('Tablica czerwona – biała – czerwona albo dwa czerwone światła (lub czerwone flagi). Np. zamknięta śluza lub odcinek drogi wodnej. Światło czerwone z zielonym: zakaz przejścia – przygotuj się do wejścia lub przejścia.', 'A red – white – red board or two red lights (or red flags). E.g. a closed lock or section of the waterway. A red light with a green one: no passage – prepare to enter or pass.')]]),
@@ -652,19 +688,75 @@ export function marksBook() {
       e(L('A.19 – zakaz wodowania i wciągania statków na brzeg', 'A.19 – no launching or beaching of vessels'), board(sg.prohib(sg.slipway)), [[L('Znaczenie', 'Meaning'), L('Nie wolno tu wodować ani wyciągać jednostek na brzeg.', 'Launching and beaching of vessels is prohibited here.')]]),
       e(L('A.20 – zakaz ruchu skuterów wodnych', 'A.20 – no water bikes'), board(sg.prohib(sg.jetski)), [[L('Znaczenie', 'Meaning'), L('Zakaz pływania skuterami wodnymi.', 'No water bikes (jet skis).')]]),
       h('div.hb-charx-grp', {}, L('Śródlądowe – znaki nakazu (B)', 'Inland – mandatory signs (B)')),
-      e(L('B.1 – nakaz płynięcia w kierunku strzałki', 'B.1 – proceed in the direction of the arrow'), board(sg.mand(sg.arrow)), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i czarną strzałką.', 'A white board with a red border and a black arrow.')], [L('Znaczenie', 'Meaning'), L('Płyń w kierunku wskazanym strzałką.', 'Proceed in the direction shown by the arrow.')]]),
-      e(L('B.6 – ograniczenie prędkości', 'B.6 – speed limit'), board(sg.mand(sg.num("12"))), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i liczbą (km/h).', 'A white board with a red border and a number (km/h).')], [L('Znaczenie', 'Meaning'), L('Nie przekraczaj podanej prędkości – tu 12 km/h względem brzegu.', 'Do not exceed the speed shown – here 12 km/h relative to the bank.')]]),
-      e(L('B.7 – nakaz podania sygnału dźwiękowego', 'B.7 – sound your horn'), board(sg.mand(sg.horn)), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i symbolem sygnału.', 'A white board with a red border and a horn symbol.')], [L('Znaczenie', 'Meaning'), L('Podaj długi sygnał dźwiękowy (np. przed zakrętem lub mostem).', 'Give a long blast (e.g. before a bend or bridge).')]]),
-      e(L('B.11 – nakaz łączności radiowej', 'B.11 – radio communication required'), board(sg.mand(sg.vhf)), [[L('Wygląd', 'Look'), L('Biała tablica z czerwonym obramowaniem i napisem VHF z numerem kanału.', 'A white board with a red border, VHF and a channel number.')], [L('Znaczenie', 'Meaning'), L('Nawiąż łączność na podanym kanale VHF (śluzy, mosty zwodzone, porty).', 'Make contact on the VHF channel shown (locks, lifting bridges, ports).')]]),
+      h('p.small.muted', {}, L('Znaki nakazu: biała tablica z czerwonym obramowaniem, czarny symbol (bez ukośnej kreski).', 'Mandatory signs: a white board with a red border and a black symbol (no diagonal bar).')),
+      e(L('B.1 – nakaz ruchu w kierunku wskazanym strzałką', 'B.1 – proceed in the direction shown by the arrow'), board(sg.mand(sg.arrow)), [[L('Znaczenie', 'Meaning'), L('Płyń w kierunku wskazanym strzałką.', 'Proceed in the direction shown by the arrow.')]]),
+      e(L('B.2a – nakaz przejścia na stronę szlaku po lewej burcie', 'B.2a – move to the side of the fairway on your port side'), board(sg.mand(sg.b2a)), [[L('Znaczenie', 'Meaning'), L('Przejdź na tę stronę szlaku, która jest po twojej lewej burcie.', 'Move to the side of the fairway on your port side.')]]),
+      e(L('B.2b – nakaz przejścia na stronę szlaku po prawej burcie', 'B.2b – move to the side of the fairway on your starboard side'), board(sg.mand(sg.b2b)), [[L('Znaczenie', 'Meaning'), L('Przejdź na tę stronę szlaku, która jest po twojej prawej burcie.', 'Move to the side of the fairway on your starboard side.')]]),
+      e(L('B.3a – nakaz trzymania się strony szlaku po lewej burcie', 'B.3a – keep to the side of the fairway on your port side'), board(sg.mand(sg.b3a)), [[L('Znaczenie', 'Meaning'), L('Trzymaj się strony szlaku po twojej lewej burcie.', 'Keep to the side of the fairway on your port side.')]]),
+      e(L('B.3b – nakaz trzymania się strony szlaku po prawej burcie', 'B.3b – keep to the side of the fairway on your starboard side'), board(sg.mand(sg.b3b)), [[L('Znaczenie', 'Meaning'), L('Trzymaj się strony szlaku po twojej prawej burcie.', 'Keep to the side of the fairway on your starboard side.')]]),
+      e(L('B.4a – nakaz przejścia na drugą stronę szlaku w lewo', 'B.4a – cross the fairway to port'), board(sg.mand(sg.b4a)), [[L('Znaczenie', 'Meaning'), L('Przejdź na drugą stronę szlaku – w lewo.', 'Cross the fairway to port.')]]),
+      e(L('B.4b – nakaz przejścia na drugą stronę szlaku w prawo', 'B.4b – cross the fairway to starboard'), board(sg.mand(sg.b4b)), [[L('Znaczenie', 'Meaning'), L('Przejdź na drugą stronę szlaku – w prawo.', 'Cross the fairway to starboard.')]]),
+      e(L('B.5 – nakaz zatrzymania się', 'B.5 – stop as prescribed'), board(sg.mand(sg.bar)), [[L('Znaczenie', 'Meaning'), L('Zatrzymaj statek w warunkach określonych przepisami (np. przed śluzą, mostem zwodzonym).', 'Stop as prescribed by the regulations (e.g. before a lock or lifting bridge).')]]),
+      e(L('B.6 – nakaz nieprzekraczania prędkości', 'B.6 – do not exceed the speed indicated'), board(sg.mand(sg.num("12"))), [[L('Znaczenie', 'Meaning'), L('Nie przekraczaj podanej prędkości – tu 12 km/h względem brzegu.', 'Do not exceed the speed shown – here 12 km/h relative to the bank.')]]),
+      e(L('B.7 – nakaz podania sygnału dźwiękowego', 'B.7 – give a sound signal'), board(sg.mand(sg.horn)), [[L('Znaczenie', 'Meaning'), L('Podaj długi sygnał dźwiękowy (np. przed zakrętem lub mostem).', 'Give a long blast (e.g. before a bend or bridge).')]]),
+      e(L('B.8 – nakaz zachowania szczególnej ostrożności', 'B.8 – keep a particularly sharp lookout'), board(sg.mand(sg.excl)), [[L('Znaczenie', 'Meaning'), L('Zachowaj szczególną ostrożność – np. przed niebezpiecznym miejscem lub wejściem do portu.', 'Keep a particularly sharp lookout – e.g. before a hazard or harbour entrance.')]]),
+      e(L('B.9a – nakaz upewnienia się przed wejściem na drogę główną', 'B.9a – do not enter the main waterway until sure it is safe'), board(sg.mand(sg.b9a)), [[L('Znaczenie', 'Meaning'), L('Wpływając z drogi bocznej na główną (lub ją przecinając), upewnij się, że nie zmusisz statków na drodze głównej do zmiany kursu lub prędkości.', 'When entering or crossing the main waterway from a side one, make sure you will not force vessels on the main waterway to change course or speed.')]]),
+      e(L('B.9b – nakaz upewnienia się przed przecięciem drogi głównej', 'B.9b – do not cross the main waterway until sure it is safe'), board(sg.mand(sg.b9b)), [[L('Znaczenie', 'Meaning'), L('Jak B.9a – przy przecinaniu drogi głównej.', 'As B.9a – when crossing the main waterway.')]]),
+      e(L('B.11 – nakaz nawiązania łączności radiowej', 'B.11 – make radio contact'), board(sg.mand(sg.vhf)), [[L('Znaczenie', 'Meaning'), L('Nawiąż łączność na podanym kanale VHF (śluzy, mosty zwodzone, porty).', 'Make contact on the VHF channel shown (locks, lifting bridges, ports).')]]),
+      h('div.hb-charx-grp', {}, L('Śródlądowe – znaki ograniczenia (C)', 'Inland – restrictive signs (C)')),
+      h('p.small.muted', {}, L('Znaki ograniczenia: biała tablica z czerwonym obramowaniem; czarne trójkątne grotki wskazują na liczbę – głębokość, wysokość lub szerokość w metrach.', 'Restrictive signs: a white board with a red border; black triangular arrowheads point at the number – the depth, headroom or width in metres.')),
+      e(L('C.1 – ograniczona głębokość', 'C.1 – depth of water limited'), board(sg.limit('2,20', 'd')), [[L('Znaczenie', 'Meaning'), L('Głębokość wody ograniczona – tu 2,20 m. Porównaj z zanurzeniem jachtu.', 'The depth of water is limited – here 2.20 m. Compare it with your draught.')]]),
+      e(L('C.2 – ograniczona wysokość prześwitu', 'C.2 – headroom limited'), board(sg.limit('4,40', 'v')), [[L('Znaczenie', 'Meaning'), L('Prześwit nad zwierciadłem wody (pod mostem, linią) – tu 4,40 m. Sprawdź wysokość masztu!', 'Headroom above the water (under a bridge or cable) – here 4.40 m. Check your mast height!')]]),
+      e(L('C.3 – ograniczona szerokość szlaku lub kanału', 'C.3 – width of fairway or channel limited'), board(sg.limit('25', 'h')), [[L('Znaczenie', 'Meaning'), L('Szerokość przejścia lub szlaku ograniczona – tu do 25 m.', 'The width of the passage or fairway is limited – here to 25 m.')]]),
+      e(L('C.4 – inne ograniczenia ruchu', 'C.4 – other restrictions on navigation'), board(sg.limit('', 'c4')), [[L('Znaczenie', 'Meaning'), L('Na tym odcinku obowiązują ograniczenia – dowiedz się o nie (tablica pomocnicza wyjaśnia, jakie).', 'Restrictions on navigation apply here – find out what they are (an auxiliary panel explains).')]]),
+      e(L('C.5 – granica szlaku oddalona od brzegu', 'C.5 – fairway at a distance from the bank'), board(sg.limit('40', 'c5')), [[L('Znaczenie', 'Meaning'), L('Szlak żeglowny jest oddalony od prawego (lewego) brzegu o podaną liczbę metrów – tu 40 m.', 'The fairway lies the given number of metres from the right (left) bank – here 40 m.')]]),
       h('div.hb-charx-grp', {}, L('Śródlądowe – znaki informacyjne (E)', 'Inland – informative signs (E)')),
-      e(L('E.1 – wejście dozwolone', 'E.1 – entry permitted'), board(sg.entryOk), [[L('Wygląd', 'Look'), L('Tablica zielona – biała – zielona albo dwa zielone światła.', 'A green – white – green board or two green lights.')], [L('Znaczenie', 'Meaning'), L('Wolno wpłynąć (np. do śluzy) lub przepłynąć.', 'Entry (e.g. into a lock) or passage is permitted.')]]),
-      e(L('E.5 – postój dozwolony', 'E.5 – berthing permitted'), board(sg.blueP), [[L('Wygląd', 'Look'), L('Niebieska kwadratowa tablica z białą literą P.', 'A blue square board with a white letter P.')], [L('Znaczenie', 'Meaning'), L('Miejsce, w którym wolno stać i cumować po tej stronie drogi wodnej.', 'A place where berthing and mooring are permitted on this side of the waterway.')]]),
-      e(L('E.6 – kotwiczenie dozwolone', 'E.6 – anchoring permitted'), board(sg.blue(sg.anchorW)), [[L('Wygląd', 'Look'), L('Niebieska tablica z białą kotwicą.', 'A blue board with a white anchor.')], [L('Znaczenie', 'Meaning'), L('Miejsce, w którym wolno kotwiczyć.', 'A place where anchoring is permitted.')]]),
-      e(L('E.7 – cumowanie do brzegu dozwolone', 'E.7 – making fast to the bank permitted'), board(sg.blue(sg.bollardW)), [[L('Wygląd', 'Look'), L('Niebieska tablica z białym polerem.', 'A blue board with a white bollard.')], [L('Znaczenie', 'Meaning'), L('Wolno cumować do brzegu.', 'Making fast to the bank is permitted.')]]),
-      e(L('E.2 – linia napowietrzna', 'E.2 – overhead cable'), board(sg.blue(sg.cable)), [[L('Wygląd', 'Look'), L('Niebieska tablica z symbolem linii.', 'A blue board with a cable symbol.')], [L('Znaczenie', 'Meaning'), L('Nad drogą wodną przebiega linia napowietrzna – uważaj na maszt!', 'An overhead cable crosses the waterway – mind your mast!')]]),
-      e(L('E.17 / E.18 – narciarstwo wodne / żegluga dozwolone', 'E.17 / E.18 – water skiing / sailing permitted'), board(sg.blue(sg.sailW)), [[L('Wygląd', 'Look'), L('Niebieska tablica z białym symbolem (narciarz, jacht żaglowy, deska…).', 'A blue board with a white symbol (skier, sailing boat, sailboard…).')], [L('Znaczenie', 'Meaning'), L('Strefa, w której dana aktywność jest dozwolona.', 'An area where that activity is permitted.')]]),
+      h('p.small.muted', {}, L('Znaki informacyjne: niebieska kwadratowa tablica z białym symbolem; wyjątek – E.1 (prostokąt w zielono-białe pasy pionowe).', 'Informative signs: a blue square board with a white symbol; the exception is E.1 (a rectangle with green and white vertical stripes).')),
+      e(L('E.1 – zezwolenie przejścia', 'E.1 – entry permitted'), board(sg.entryOk), [[L('Wygląd', 'Look'), L('Prostokąt z trzema pionowymi pasami: zielony – biały – zielony.', 'A rectangle with three vertical stripes: green – white – green.')], [L('Znaczenie', 'Meaning'), L('Wolno przepłynąć (np. wpłynąć do śluzy). Może być też pokazane zielonymi światłami.', 'Passage (e.g. entry into a lock) is permitted. It may also be shown by green lights.')]]),
+      e(L('E.2 – skrzyżowanie z linią napowietrzną', 'E.2 – overhead cable'), board(sg.blue(sg.cable)), [[L('Znaczenie', 'Meaning'), L('Nad drogą wodną biegnie linia napowietrzna – liczba w rogu podaje jej wysokość. Uważaj na maszt!', 'An overhead cable crosses the waterway – the number in the corner gives its height. Mind your mast!')]]),
+      e(L('E.3 – jaz w bliskiej odległości', 'E.3 – weir ahead'), board(sg.blue(sg.weir)), [[L('Znaczenie', 'Meaning'), L('Niedaleko jest jaz – trzymaj się szlaku i oznakowanego przejścia.', 'A weir is close by – keep to the fairway and the marked passage.')]]),
+      e(L('E.4a – prom nieporuszający się swobodnie', 'E.4a – ferry not moving independently'), board(sg.blue(sg.ferryRope)), [[L('Znaczenie', 'Meaning'), L('Przeprawa promu na linie lub łańcuchu – nie przepływaj blisko promu, linia może być tuż pod wodą.', 'A cable or chain ferry – keep clear, the cable may be just below the surface.')]]),
+      e(L('E.4b – prom poruszający się swobodnie', 'E.4b – ferry moving independently'), board(sg.blue(sg.ferry)), [[L('Znaczenie', 'Meaning'), L('Przeprawa promu płynącego swobodnie – uważaj na jego ruch.', 'A free-moving ferry crossing – watch its movements.')]]),
+      e(L('E.5 – postój dozwolony', 'E.5 – berthing permitted'), board(sg.blueP), [[L('Znaczenie', 'Meaning'), L('Miejsce, w którym wolno stać na kotwicy lub cumach po tej stronie drogi wodnej.', 'Berthing (at anchor or moored) is permitted on this side of the waterway.')]]),
+      e(L('E.5.1 – postój dozwolony na szerokości', 'E.5.1 – berthing permitted within the width shown'), board(sg.blue(sg.pNum("40"))), [[L('Znaczenie', 'Meaning'), L('Postój dozwolony na pasie wody o podanej szerokości w metrach (od znaku).', 'Berthing permitted within the width of water shown in metres (from the sign).')]]),
+      e(L('E.5.3 – postój – największa liczba statków burta w burtę', 'E.5.3 – berthing – maximum number of vessels abreast'), board(sg.blue(sg.pRoman("III"))), [[L('Znaczenie', 'Meaning'), L('Liczba rzymska podaje, ile statków może stać obok siebie burta w burtę.', 'The Roman numeral gives how many vessels may berth abreast.')]]),
+      e(L('E.6 – kotwiczenie dozwolone', 'E.6 – anchoring permitted'), board(sg.blue(sg.anchorW)), [[L('Znaczenie', 'Meaning'), L('Miejsce, w którym wolno kotwiczyć.', 'Anchoring is permitted here.')]]),
+      e(L('E.7 – cumowanie do brzegu dozwolone', 'E.7 – making fast to the bank permitted'), board(sg.blue(sg.bollardW)), [[L('Znaczenie', 'Meaning'), L('Wolno cumować do brzegu.', 'Making fast to the bank is permitted.')]]),
+      e(L('E.8 – miejsce do zawracania', 'E.8 – turning area'), board(sg.blue(sg.uturnW)), [[L('Znaczenie', 'Meaning'), L('Tu wolno zawracać.', 'Turning is permitted here.')]]),
+      e(L('E.9a – skrzyżowanie z drogą boczną', 'E.9a – junction – side waterway ahead'), board(sg.blue(sg.junction)), [[L('Znaczenie', 'Meaning'), L('Droga wodna, po której płyniesz, łączy się z drogą boczną. Grubsza linia to droga główna.', 'The waterway you are on meets a side waterway. The thicker line is the main waterway.')]]),
+      e(L('E.10 – droga, na którą wpływasz, jest główna', 'E.10 – the waterway you are entering is the main one'), board(sg.blue(sg.junction2)), [[L('Znaczenie', 'Meaning'), L('Wpływasz z drogi bocznej na główną (grubsza linia).', 'You are entering the main waterway (the thicker line) from a side one.')]]),
+      e(L('E.11 – koniec zakazu, nakazu lub ograniczenia', 'E.11 – end of a prohibition, obligation or restriction'), board(sg.blue(sg.endBar)), [[L('Znaczenie', 'Meaning'), L('Koniec odcinka, na którym obowiązywał zakaz, nakaz lub ograniczenie.', 'End of the stretch where a prohibition, obligation or restriction applied.')]]),
+      e(L('E.13 – woda pitna', 'E.13 – drinking water'), board(sg.blue(sg.tap)), [[L('Znaczenie', 'Meaning'), L('Punkt poboru wody pitnej.', 'Drinking water supply.')]]),
+      e(L('E.14 – telefon', 'E.14 – telephone'), board(sg.blue(sg.phone)), [[L('Znaczenie', 'Meaning'), L('Telefon.', 'Telephone.')]]),
+      e(L('E.15 – ruch statków o napędzie mechanicznym dozwolony', 'E.15 – motorised vessels permitted'), board(sg.blue(sg.propellerW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać jednostkom z silnikiem.', 'Motorised vessels are permitted.')]]),
+      e(L('E.16 – ruch statków sportowych lub rekreacyjnych dozwolony', 'E.16 – sport or pleasure craft permitted'), board(sg.blue(sg.sportW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać jednostkom sportowym i rekreacyjnym.', 'Sport and pleasure craft are permitted.')]]),
+      e(L('E.17 – narciarstwo wodne dozwolone', 'E.17 – water skiing permitted'), board(sg.blue(sg.skierW)), [[L('Znaczenie', 'Meaning'), L('Strefa, w której wolno uprawiać narciarstwo wodne.', 'Water skiing is permitted in this area.')]]),
+      e(L('E.18 – ruch statków żaglowych dozwolony', 'E.18 – sailing vessels permitted'), board(sg.blue(sg.sailW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać pod żaglami.', 'Sailing vessels are permitted.')]]),
+      e(L('E.19 – ruch statków bez napędu mechanicznego i żagli dozwolony', 'E.19 – vessels other than motorised or sailing permitted'), board(sg.blue(sg.rowboatW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać łodziom wiosłowym, kajakom itp.', 'Rowing boats, kayaks and similar craft are permitted.')]]),
+      e(L('E.20 – pływanie na desce z żaglem dozwolone', 'E.20 – sailboarding permitted'), board(sg.blue(sg.windsurfW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać na deskach z żaglem.', 'Sailboarding is permitted.')]]),
+      e(L('E.21 – strefa szybkiej żeglugi', 'E.21 – high-speed zone'), board(sg.blue(sg.speedW)), [[L('Znaczenie', 'Meaning'), L('Odcinek, na którym jednostki sportowe mogą płynąć z dużą prędkością.', 'A stretch where sport craft may travel at high speed.')]]),
+      e(L('E.22 – wodowanie i wyciąganie na brzeg dozwolone', 'E.22 – launching and beaching permitted'), board(sg.blue(sg.slipwayW)), [[L('Znaczenie', 'Meaning'), L('Miejsce do wodowania i wyciągania jednostek (slip).', 'A place for launching and beaching vessels (slipway).')]]),
+      e(L('E.23 – informacja nautyczna przez radiotelefon', 'E.23 – nautical information by radio'), board(sg.blue(sg.vhfW)), [[L('Znaczenie', 'Meaning'), L('Na podanym kanale VHF nadawane są informacje nautyczne.', 'Nautical information is broadcast on the VHF channel shown.')]]),
+      e(L('E.24 – ruch skuterów wodnych dozwolony', 'E.24 – water bikes permitted'), board(sg.blue(sg.jetskiW)), [[L('Znaczenie', 'Meaning'), L('Wolno pływać skuterami wodnymi.', 'Water bikes (jet skis) are permitted.')]]),
+      h('div.hb-charx-grp', {}, L('Śródlądowe – znaki pomocnicze', 'Inland – auxiliary signs')),
+      e(L('Tabliczka odległości – odległość do miejsca, którego dotyczy znak', 'Tabliczka odległości – distance to the place the sign applies to'), board(sg.aux('1000 m')), [[L('Znaczenie', 'Meaning'), L('Umieszczona pod znakiem głównym: znak obowiązuje w podanej odległości.', 'Placed under the main sign: the sign applies at the distance shown.')]]),
+      e(L('Tabliczka kierunku – kierunek, którego dotyczy znak', 'Tabliczka kierunku – direction the sign applies to'), board(sg.auxArrow), [[L('Znaczenie', 'Meaning'), L('Strzałka pod znakiem głównym wskazuje kierunek, w którym znak obowiązuje (np. odcinek drogi wodnej).', 'An arrow under the main sign shows the direction in which the sign applies.')]]),
+      e(L('Tabliczka objaśniająca – dodatkowe informacje', 'Tabliczka objaśniająca – additional information'), board(sg.aux('PORT')), [[L('Znaczenie', 'Meaning'), L('Napis lub symbol wyjaśnia znak główny (np. czego dotyczy ograniczenie C.4).', 'Text or a symbol explains the main sign (e.g. what a C.4 restriction concerns).')]]),
     ] }
   ];
+}
+
+// znaki w siatce kart: kolejne wpisy .hb-mark grupowane w jeden blok (karty dopasowane do ilości tekstu)
+export function marksBook() {
+  return marksBookRaw().map((sec) => {
+    const out = [];
+    let grid = null;
+    for (const el of sec.entries) {
+      if (el && el.classList && el.classList.contains('hb-mark')) { if (!grid) { grid = h('div.hb-mark-grid'); out.push(grid); } grid.appendChild(el); }
+      else { grid = null; out.push(el); }
+    }
+    return { ...sec, entries: out };
+  });
 }
 
 // ---------- ekran podręcznika ----------
