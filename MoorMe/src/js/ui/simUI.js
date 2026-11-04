@@ -251,6 +251,13 @@ export class SimScreen {
       fr.appendChild(btn);
     }
     panel.appendChild(fr);
+    // platforma kąpielowa na rufie
+    const pfBtn = h('button.btn.sm', { style: { width: '100%', marginTop: '6px' }, title: 'Opuść / podnieś platformę na pawęży', onclick: () => {
+      this.view.platformOpen = !this.view.platformOpen;
+      pfBtn.textContent = t(this.view.platformOpen ? '⬆ Podnieś platformę' : '⬇ Opuść platformę');
+      pfBtn.classList.toggle('on', this.view.platformOpen);
+    } }, '⬇ Opuść platformę');
+    panel.appendChild(pfBtn);
     const names = this.view.crewNames;
     panel.appendChild(h('h4', { style: { marginTop: '10px' } }, `${names[0]} (kapitan) · ${names.slice(1).join(' · ')}`));
     this.crewBtn = h('button.btn.sm', { style: { width: '100%' }, onclick: () => (w.crew.ashore ? w.crewAboard() : w.crewAshore()) }, 'Zejdź na ląd');

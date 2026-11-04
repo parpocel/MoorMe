@@ -1,7 +1,7 @@
 // Widok 3D symulacji (kamera w rzucie izometrycznym jak w grach RTS)
 import * as THREE from 'three';
 import { Seasick } from './seasick.js';
-import { buildBoat, buildDeckGear, buildFender, buildBallFender, waveFlag, animatePerson, buildPerson, sheerHeight, mat } from './boatModel.js';
+import { buildBoat, buildDeckGear, buildFender, buildBallFender, waveFlag, animatePerson, setTransomPlatform, buildPerson, sheerHeight, mat } from './boatModel.js';
 import { buildHarbor, Water } from './harborModel.js';
 import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
@@ -876,6 +876,20 @@ export class View3D {
 
     // poler / knaga, na które zaplanowano założenie cumy – delikatnie pulsuje, żeby było wiadomo, gdzie podpłynąć
     if (!w.isPassage) this.updatePlannedTargets(t);
+
+    // platforma rufowa: płynne opuszczanie / podnoszenie (ok. 4 s)
+    {
+      const pf = this.boat.userData.platform;
+      if (pf) {
+        const want = this.platformOpen ? 1 : 0, cur = pf.userData.open || 0;
+        if (Math.abs(want - cur) > 1e-3) {
+          this._pfLin = clamp((this._pfLin ?? cur) + Math.sign(want - cur) * dt / 4, 0, 1);
+          const e = this._pfLin, k = e * e * (3 - 2 * e);
+          setTransomPlatform(pf, k);
+          if (Math.abs(this._pfLin - want) < 1e-3) setTransomPlatform(pf, want);
+        }
+      }
+    }
 
     // odbijacze
     const rf = w.equip.fenderRadius;

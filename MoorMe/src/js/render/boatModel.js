@@ -188,24 +188,57 @@ export function smoothNormals(geo, creaseDeg = 50) {
   return g;
 }
 
-// Opuszczana platforma kąpielowa w pawęży (jak w serii Cruiser): środkowa część pawęży odchylona do poziomu,
-// (platforma zamknięta – bez drabinki)
+// Opuszczana platforma kąpielowa w pawęży (jak w serii Cruiser)
 function buildTransomPlatform(spec) {
-  // platforma zamknięta: złożona stanowi środkową część pawęży – widać tylko szczelinę wokół niej i zawiasy na dole
+  // opuszczana platforma: środkowa część pawęży na zawiasach przy dolnej krawędzi (userData.pivot.rotation.z: 0 – zamknięta, π/2 – opuszczona)
   const g = new THREE.Group();
   const st = hullStations(spec)[0];
   const xs = st[0].x, fb = st[0].y;
   const hw = Math.min(st[3].w, st[0].w) * 0.78;
-  const y0 = 0.3, y1 = fb - 0.04;
-  const seam = new THREE.MeshStandardMaterial({ color: 0x8e9196, roughness: 0.6 });
+  const y0 = 0.3, Lp = fb - 0.04 - y0, T = 0.05;
+  const white = new THREE.MeshStandardMaterial({ color: 0xf2f1ee, roughness: 0.45 });
+  const teak = new THREE.MeshStandardMaterial({ color: COL.teak, roughness: 0.75 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xd5d9de, metalness: 0.85, roughness: 0.25 });
-  const add = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); };
-  add(0.012, 0.012, hw * 2, seam, xs - 0.004, y0, 0);
+  const add = (w, h, d, m, x, y, z, parent = g) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; o.receiveShadow = true; parent.add(o); return o; };
+  // otwór w pawęży (widoczny po opuszczeniu): stopień i podłoga kokpitu
+  const recess = new THREE.Group(); g.add(recess);
+  add(0.012, Lp - 0.04, hw * 2 - 0.04, new THREE.MeshStandardMaterial({ color: 0x6e5236, roughness: 0.8 }), xs - 0.008, y0 + Lp / 2, 0, recess);
+  add(0.3, 0.04, hw * 2 - 0.06, teak, xs + 0.14, y0 + Lp * 0.5, 0, recess);
+  recess.visible = false;
+  // płyta na zawiasie
+  const pivot = new THREE.Group(); pivot.position.set(xs, y0, 0); g.add(pivot);
+  add(T, Lp, hw * 2, white, -T / 2, Lp / 2, 0, pivot); // zewnętrzna (biała) strona – na zewnątrz pawęży
+  for (let k = 0; k < 9; k++) add(0.012, Lp - 0.06, (hw * 2 - 0.08) / 9 - 0.012, teak, 0.004, Lp / 2, -hw + 0.04 + ((k + 0.5) * (hw * 2 - 0.08)) / 9, pivot); // tek od wewnątrz – po opuszczeniu na wierzchu
+  for (const sz of [-1, 1]) add(0.03, 0.06, 0.16, steel, -T - 0.004, 0.03, sz * (hw - 0.25), pivot); // zawiasy
+  // amortyzatory gazowe (widoczne przy opuszczaniu)
+  const struts = [];
   for (const sz of [-1, 1]) {
-    add(0.012, y1 - y0, 0.012, seam, xs - 0.004, (y0 + y1) / 2, sz * hw);
-    add(0.03, 0.06, 0.16, steel, xs - 0.012, y0 + 0.02, sz * (hw - 0.25)); // zawiasy
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1, 8), steel);
+    rod.visible = false; g.add(rod); struts.push({ rod, sz });
   }
+  g.userData = { pivot, recess, struts, xs, y0, Lp, hw, fb, open: 0 };
   return g;
+}
+
+// ustawienie platformy (0 – zamknięta, 1 – opuszczona) wraz z amortyzatorami
+export function setTransomPlatform(g, open) {
+  const u = g && g.userData; if (!u || !u.pivot) return;
+  u.open = open;
+  const ang = open * Math.PI / 2;
+  u.pivot.rotation.z = ang;
+  u.recess.visible = open > 0.05;
+  for (const { rod, sz } of u.struts) {
+    rod.visible = open > 0.05;
+    if (!rod.visible) continue;
+    // od punktu na płycie (70% długości) do pawęży pod pokładem
+    const along = u.Lp * 0.7;
+    const a = new THREE.Vector3(u.xs - Math.sin(ang) * along, u.y0 + Math.cos(ang) * along, sz * (u.hw - 0.06));
+    const b = new THREE.Vector3(u.xs - 0.01, u.fb - 0.22, sz * (u.hw - 0.06));
+    const len = a.distanceTo(b);
+    rod.scale.set(1, Math.max(0.01, len), 1);
+    rod.position.copy(a).add(b).multiplyScalar(0.5);
+    rod.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize());
+  }
 }
 
 // Prostopadłościan ułatwiający (x wzdłuż, y góra, z w poprzek)
@@ -353,7 +386,9 @@ export function buildBoat(spec, opts = {}) {
   const heel = new THREE.Group(); // do przechyłu
   root.add(heel);
   heel.add(buildHull(spec, hullColor, stripe));
-  heel.add(buildTransomPlatform(spec));
+  const platform = buildTransomPlatform(spec);
+  heel.add(platform);
+  root.userData.platform = platform;
 
   // kil + bulb
   const keelH = spec.draft - spec.canoeDraft;

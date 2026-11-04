@@ -6,7 +6,9 @@ export function mergeByMaterial(root, { castShadow = true, receiveShadow = true 
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
   const buckets = new Map();
   const others = [];
+  const shown = (o) => { for (let q = o; q && q !== root; q = q.parent) if (q.visible === false) return false; return true; };
   root.traverse((o) => {
+    if (o.isMesh && !shown(o)) return; // ukryte elementy (np. otwór platformy) nie trafiają do scalonej bryły
     if (o.isMesh && !o.userData.keep && o.material && !Array.isArray(o.material) && o.material.visible !== false) {
       const key = o.material.uuid;
       if (!buckets.has(key)) buckets.set(key, { material: o.material, parts: [] });
