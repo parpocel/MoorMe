@@ -274,8 +274,6 @@ function wheelMenu({ kicker, items, sel = 0 }) {
     const mk = (cls, extra = {}) => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', d); e.classList.add(cls); for (const [k, v] of Object.entries(extra)) e.setAttribute(k, v); g.appendChild(e); return e; };
     const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
     mk('wh-shine', { style: 'fill: url(#whshine)' });
-    // refleks jak na bańce: jasny łuk tuż przy zewnętrznej krawędzi
-    { const rr = R - 3.2, [ax, ay] = pt(rr, s0 + 0.12 * step), [bx, by] = pt(rr, s0 + 0.62 * step); const e = document.createElementNS(NS, 'path'); e.setAttribute('d', `M${ax} ${ay} A${rr} ${rr} 0 0 1 ${bx} ${by}`); e.classList.add('wh-rim'); g.appendChild(e); }
     g.addEventListener('mouseenter', () => select(i));
     g.addEventListener('click', () => activate(i));
     svg.appendChild(g);
