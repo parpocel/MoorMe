@@ -243,6 +243,76 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
   return s;
 }
 
+// Menu główne w formie koła („tortu”): napis MoorMe i opis wybranego modułu w środku, moduły jako wycinki wokół.
+// Poprzedni układ (kafle u dołu) to menuScreen – wystarczy w showModeSelect wywołać znów menuScreen zamiast wheelMenu.
+function wheelMenu({ kicker, items, sel = 0 }) {
+  app.innerHTML = '';
+  let cur = Math.min(sel, items.length - 1);
+  const NS = 'http://www.w3.org/2000/svg', n = items.length;
+  const R = 100, R0 = 54, GAP = 1.6; // promienie w jednostkach viewBox (–110..110)
+  const pt = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
+  const step = (Math.PI * 2) / n, a0 = -Math.PI / 2 - step / 2;
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '-112 -112 224 224');
+  svg.classList.add('wh-svg');
+  const labels = [];
+  const segs = items.map((it, i) => {
+    const s0 = a0 + i * step, s1 = s0 + step, mid = (s0 + s1) / 2;
+    const g0 = GAP / R, g1 = GAP / R0; // stała szczelina między wycinkami
+    const [x1, y1] = pt(R, s0 + g0), [x2, y2] = pt(R, s1 - g0), [x3, y3] = pt(R0, s1 - g1), [x4, y4] = pt(R0, s0 + g1);
+    const path = document.createElementNS(NS, 'path');
+    path.setAttribute('d', `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${R0} ${R0} 0 0 0 ${x4} ${y4} Z`);
+    path.classList.add('wh-seg');
+    path.style.setProperty('--c', it.color);
+    path.style.setProperty('--dx', `${Math.cos(mid) * 4}px`); path.style.setProperty('--dy', `${Math.sin(mid) * 4}px`);
+    path.addEventListener('mouseenter', () => select(i));
+    path.addEventListener('click', () => activate(i));
+    svg.appendChild(path);
+    // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
+    const [lx, ly] = pt((R + R0) / 2, mid);
+    const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
+      h('span.wh-ic', {}, raw(glyph(it.glyph, 26))), h('span.wh-tt', {}, it.title));
+    lbl.style.setProperty('--c', it.color);
+    labels.push(lbl);
+    return path;
+  });
+  const cTitle = h('div.wh-title'), cDesc = h('p.wh-desc');
+  const goBtn = h('button.m3-go.wh-go', { onclick: () => activate(cur) }, h('span', {}, 'Start'), raw(glyph('play', 18)));
+  const center = h('div.wh-center', {},
+    h('div.m3-logo.wh-logo', {}, 'Moor', h('span', {}, 'Me')),
+    h('div.wh-kicker', {}, kicker),
+    cTitle, cDesc, goBtn);
+  function select(i) {
+    cur = i;
+    const it = items[i];
+    segs.forEach((p, k) => p.classList.toggle('on', k === i));
+    labels.forEach((l, k) => l.classList.toggle('on', k === i));
+    cTitle.textContent = t(it.title); cDesc.textContent = t(it.desc);
+    goBtn.style.setProperty('--c', it.color);
+    center.classList.remove('swap'); void center.offsetWidth; center.classList.add('swap');
+  }
+  function activate(i) { const it = items[i]; if (it && !it.disabled) { document.removeEventListener('keydown', onKey); it.go(); } }
+  const onKey = (e) => {
+    if (!scr.isConnected) { document.removeEventListener('keydown', onKey); return; }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); select((cur + 1) % n); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); select((cur + n - 1) % n); }
+    else if (e.key === 'Enter' && !(document.activeElement instanceof HTMLButtonElement)) activate(cur);
+  };
+  document.addEventListener('keydown', onKey);
+  const quit = window.moorme && window.moorme.quit;
+  const scr = h('div.screen.menu3d.wheelmenu', {}, menuBackdrop(), h('div.m3-shade.wh-shade'),
+    h('div.m3-top', {},
+      h('div.m3-flags', {}, raw(signalFlagsHTML())),
+      h('div.m3-sp'),
+      h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => showModeSelect()); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
+      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
+    h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center)),
+    h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
+  app.appendChild(scr);
+  select(cur);
+  return scr;
+}
+
 // ---------- Ekran tytułowy (cumowanie) ----------
 let titleSel = 0;
 function showTitle() {
@@ -266,7 +336,7 @@ let modeSel = 0;
 function showModeSelect() {
   menuMusic.start();
   const keep = (i, fn) => () => { modeSel = i; fn(); };
-  menuScreen({
+  wheelMenu({
     kicker: 'Szkolenie żeglarskie', sel: modeSel,
     items: [
       { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
