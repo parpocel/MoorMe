@@ -774,65 +774,174 @@ function ferryNameTexture() {
   return t;
 }
 
+// Prom (low-poly): wyprofilowany kadłub z pochylonym dziobem i wznosem pokładu, schodkowa nadbudówka
+// z zaokrąglonym przodem i pasami okien, pochylony komin, mostek ze skrzydłami, szalupy na żurawikach.
+function ferryHullBand(L, B, H, y0, y1, color, deck = false) {
+  // s: 0 = rufa, 1 = dziób; na dole dziób cofnięty (pochylona dziobnica), u góry wznos pokładu
+  const N = 30;
+  const f = (s) => (s < 0.62 ? 1 : Math.sqrt(Math.max(0, 1 - Math.pow((s - 0.62) / 0.38, 2.2))));
+  const sheer = (s) => H + 2.2 * Math.pow(Math.max(0, (s - 0.6) / 0.4), 2);
+  const pt = (s, yy, side) => {
+    const top = sheer(s), k = Math.min(1, Math.max(0, yy === 'top' ? 1 : yy / top));
+    const y = yy === 'top' ? top : yy;
+    const xb = -L / 2 + 1.5 + s * (L - 10), xt = -L / 2 + s * L; // rufa lekko podcięta, dziób pochylony
+    const x = xb + (xt - xb) * k;
+    const hw = (B / 2) * (0.9 + 0.1 * k) * f(s);
+    return new THREE.Vector3(x, y, side * hw);
+  };
+  const pos = [];
+  const tri = (a, b, c, hint) => {
+    const n = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3().subVectors(c, a));
+    if (n.dot(hint) < 0) [b, c] = [c, b];
+    pos.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+  };
+  const lv = (s) => (y1 === 'top' ? 'top' : Math.min(y1, sheer(s)));
+  for (let i = 0; i < N; i++) {
+    const s0 = i / N, s1 = (i + 1) / N;
+    for (const side of [-1, 1]) {
+      const h = new THREE.Vector3(0, 0, side);
+      const a = pt(s0, y0, side), b = pt(s1, y0, side), c = pt(s1, lv(s1), side), e = pt(s0, lv(s0), side);
+      tri(a, b, c, h); tri(a, c, e, h);
+    }
+    if (deck) {
+      const up = new THREE.Vector3(0, 1, 0);
+      const a = pt(s0, 'top', -1), b = pt(s1, 'top', -1), c = pt(s1, 'top', 1), e = pt(s0, 'top', 1);
+      tri(a, b, c, up); tri(a, c, e, up);
+    }
+  }
+  // pawęż
+  const back = new THREE.Vector3(-1, 0, 0);
+  const a = pt(0, y0, -1), b = pt(0, y0, 1), c = pt(0, lv(0), 1), e = pt(0, lv(0), -1);
+  tri(a, b, c, back); tri(a, c, e, back);
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, mat(color));
+  m.castShadow = true; m.receiveShadow = true;
+  return { mesh: m, halfAt: (x, y) => { const s = Math.min(1, Math.max(0, (x + L / 2) / L)); return (B / 2) * f(s); }, sheer };
+}
+
+// płyta nadbudówki: prostokąt z eliptycznie zaokrąglonym przodem (i lekko przyciętą rufą), wyciągnięty w górę
+function ferrySlab(len, w, h, r, color, x, y, opts) {
+  const sh = new THREE.Shape();
+  const x0 = -len / 2, x1 = len / 2 - r, hw = w / 2;
+  sh.moveTo(x0, -hw + 0.6);
+  sh.lineTo(x0 + 0.6, -hw);
+  sh.lineTo(x1, -hw);
+  for (let k = 1; k <= 8; k++) { const a = -Math.PI / 2 + (k / 8) * Math.PI; sh.lineTo(x1 + Math.cos(a) * r, Math.sin(a) * hw); }
+  sh.lineTo(x0 + 0.6, hw);
+  sh.lineTo(x0, hw - 0.6);
+  sh.closePath();
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false, curveSegments: 1 });
+  geo.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(geo, mat(color, opts));
+  m.position.set(x, y, 0);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
 function ferry(d) {
   const g = new THREE.Group();
-  const L = 150, B = 26;
-  const white = 0xf4f4f2, navy = 0x1d4e89, glass = 0x1c2a38;
-  // kadłub: burta, pas wodnicy (antifouling), czerwona linia burtowa
-  g.add(box(L, 9, B, white, 0, 4, 0));
-  g.add(box(L * 0.99, 1.4, B + 0.15, 0x7a1f1f, 0, 0.9, 0));
-  g.add(box(L * 0.98, 0.6, B + 0.12, navy, 0, 2.0, 0));
-  // pokład samochodowy: ciemne otwory wzdłuż burt i rufowa rampa
+  const L = 150, B = 26, H = 10;
+  const white = 0xf4f4f2, navy = 0x1d4e89, red = 0x7a1f1f, dark = 0x252b31;
+  const glass = 0x243447, gl = { rough: 0.2, metal: 0.4 }; // te same szyby co w domach – nocą się świecą
+  // kadłub w pasach: antifouling, granatowy pas, biała burta z pokładem
+  const hull = ferryHullBand(L, B, H, -0.5, 1.4, red);
+  g.add(hull.mesh);
+  g.add(ferryHullBand(L, B, H, 1.4, 2.6, navy).mesh);
+  g.add(ferryHullBand(L, B, H, 2.6, 'top', white, true).mesh);
+  const half = hull.halfAt;
+  const sideZ = (y) => (B / 2) * (0.9 + 0.1 * Math.min(1, y / H)); // burty lekko rozchylone ku górze
+  // pokład samochodowy: otwory wentylacyjne i rząd iluminatorów (w części o stałej szerokości)
   for (const s of [-1, 1]) {
-    g.add(box(L * 0.8, 3.4, 0.2, 0x252b31, -4, 5.0, s * (B / 2 + 0.05)));
-    for (let k = 0; k < 24; k++) g.add(box(1.0, 1.0, 0.15, glass, -L * 0.42 + k * 2.4 + 8, 8.3, s * (B / 2 + 0.08), { rough: 0.2, metal: 0.4 })); // iluminatory
+    for (let k = 0; k < 5; k++) g.add(box(5.2, 1.6, 0.2, dark, -60 + k * 9.5, 5.4, s * (sideZ(5.4) + 0.02)));
+    for (let k = 0; k < 26; k++) g.add(box(0.9, 0.9, 0.16, glass, -60 + k * 3.6, 8.3, s * (sideZ(8.3) + 0.03), gl));
+    // kotwica w kluzie przy dziobie
+    const ax = L / 2 - 12;
+    g.add(box(1.8, 1.4, 0.5, dark, ax, 8.2, s * (half(ax) * 0.97)));
   }
-  g.add(box(0.6, 6, B * 0.8, 0x252b31, -L / 2 - 0.05, 5.2, 0));
-  // pokłady pasażerskie z długimi rzędami okien
-  g.add(box(L * 0.72, 6, B * 0.94, 0xf8f8f6, -8, 12.5, 0));
-  g.add(box(L * 0.62, 5, B * 0.86, 0xf8f8f6, -12, 17.5, 0));
-  for (const [y, len, w] of [[12.5, 0.7, B * 0.94], [16, 0.68, B * 0.94], [17.5, 0.6, B * 0.86], [19.6, 0.58, B * 0.86]]) {
-    for (const s of [-1, 1]) g.add(box(L * len, 1.0, 0.15, glass, -8, y, s * (w / 2 + 0.05), { rough: 0.2, metal: 0.4 }));
+  // rufowa furta samochodowa i zarys wizjera dziobowego
+  g.add(box(0.25, 6.2, 12, dark, -L / 2 + 1.5 * (1 - 6.4 / H) - 0.1, 6.4, 0));
+  g.add(box(0.3, 0.3, 13, 0xc9ccd0, -L / 2 + 0.1, 9.7, 0));
+  // nadbudówka: cztery schodkowe pokłady z zaokrąglonymi przodami i pasami okien
+  const decks = [
+    // [długość, szerokość, wysokość, promień przodu, środek x, poziom y]
+    [112, B - 1.0, 4.4, 13, -6, H],
+    [98, B - 2.4, 4.0, 12, -10, H + 4.4],
+    [64, B - 8, 3.6, 9, -22, H + 8.4]
+  ];
+  for (const [len, w, h, r, x, y] of decks) {
+    g.add(ferrySlab(len, w, h, r, white, x, y));
+    g.add(ferrySlab(len + 0.3, w + 0.3, 1.5, r + 0.15, glass, x, y + h * 0.42, gl)); // pas okien
+    g.add(ferrySlab(len + 1.6, w + 1.6, 0.35, r + 0.8, 0xe6e8ea, x, y + h, {})); // okap / pokład spacerowy
   }
-  // mostek z szerokim oknem i skrzydłami
-  g.add(box(12, 5, B * 0.78, 0xf8f8f6, 24, 22, 0));
-  g.add(box(0.2, 1.8, B * 0.78 - 0.4, glass, 30.1, 22.6, 0, { rough: 0.2, metal: 0.4 }));
-  g.add(box(9, 0.6, B + 4, 0xf8f8f6, 24, 20.2, 0)); // skrzydła mostka
-  // komin z pasem i logo
-  g.add(box(9, 11, 6, white, -36, 25, 0));
-  g.add(box(9.05, 2.6, 6.05, navy, -36, 28, 0));
-  g.add(box(9.4, 0.6, 6.4, 0x222222, -36, 30.7, 0));
-  // maszt z radarem i flagą
-  g.add(box(0.4, 9, 0.4, 0xdddddd, 27, 29, 0));
-  g.add(box(4.5, 0.3, 0.9, 0x333333, 27, 33.4, 0));
-  // szalupy ratunkowe na pokładzie łodziowym (pomarańczowe)
+  // granatowy pas wzdłuż górnego pokładu
+  g.add(ferrySlab(98.4, B - 2.0, 0.5, 12.2, navy, -10, H + 4.4 + 3.3));
+  // mostek ze skrzydłami i pochyłymi oknami
+  const by = H + 8.4;
+  g.add(ferrySlab(12, B * 0.82, 3.8, 3.5, white, 20, by));
+  g.add(ferrySlab(12.3, B * 0.82 + 0.3, 1.4, 3.65, glass, 20, by + 1.9, gl));
+  g.add(box(4.5, 3.0, B + 2.6, white, 22.5, by + 2.1, 0));
+  for (const s of [-1, 1]) g.add(box(4.6, 1.2, 0.2, glass, 22.5, by + 2.6, s * (B / 2 + 1.32), gl));
+  g.add(box(4.7, 0.3, B + 2.8, 0xe6e8ea, 22.5, by + 3.75, 0));
+  g.add(ferrySlab(12.8, B * 0.82 + 0.8, 0.3, 3.9, 0xe6e8ea, 20, by + 3.8, {}));
+  // maszt nad mostkiem z radarami i światłami
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.4, 9, 6), mat(0xdedede));
+  mast.position.set(20, by + 8.5, 0); g.add(mast);
+  g.add(box(1.0, 0.25, 7, 0xdedede, 20, by + 9.4, 0));
+  g.add(box(5.0, 0.3, 0.8, 0x333333, 20, by + 11.4, 0)); // antena radaru
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.8, 8, 5), mat(0xffffff));
+  dome.position.set(20, by + 13.3, 0); g.add(dome);
+  for (const s of [-1, 1]) g.add(box(0.3, 0.3, 0.3, s < 0 ? 0xd62828 : 0x2a9d4a, 22.5, by + 3.9, s * (B / 2 + 1.1)));
+  // komin pochylony ku rufie: biały z granatowym pasem i czarną koroną
+  const fx = -38, fy = H + 12;
+  const stack = (y0, y1, wz, color) => {
+    const sh = new THREE.Shape(), k = 0.32;
+    const back = (y) => -5 - y * k + y * 0.11, front = (y) => 5 - y * k - y * 0.08; // zwęża się ku górze
+    sh.moveTo(back(y0), y0); sh.lineTo(front(y0), y0); sh.lineTo(front(y1), y1); sh.lineTo(back(y1), y1); sh.closePath();
+    const geo = new THREE.ExtrudeGeometry(sh, { depth: wz, bevelEnabled: false });
+    geo.translate(0, 0, -wz / 2);
+    const m = new THREE.Mesh(geo, mat(color)); m.position.set(fx, fy, 0); m.castShadow = true;
+    return m;
+  };
+  g.add(stack(0, 10.5, 6.6, white));
+  g.add(stack(6.0, 8.6, 6.75, navy));
+  g.add(stack(10.5, 11.3, 6.9, 0x222222));
+  for (const s of [-1, 1]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.6, 6), mat(0x333333)); r.position.set(fx - 3.6, fy + 11.8, s * 1.4); g.add(r); }
+  // szalupy zamknięte (pomarańczowe) na żurawikach przy burtach pokładu łodziowego
+  const boatGeo = new THREE.CapsuleGeometry(1.25, 5.2, 3, 8);
   for (const s of [-1, 1]) for (let k = 0; k < 4; k++) {
-    g.add(box(8, 2.2, 2.6, 0xff6a13, -34 + k * 10, 16.6 + 3.4, s * (B * 0.43 + 1.4)));
-    g.add(box(8.2, 0.4, 2.8, 0xf2f2f2, -34 + k * 10, 20.2, s * (B * 0.43 + 1.4)));
+    const x = -48 + k * 9.5, z = s * (B / 2 - 2.6), y = H + 8.4 + 1.6;
+    const lb = new THREE.Mesh(boatGeo, mat(0xff6a13)); lb.rotation.z = Math.PI / 2; lb.scale.set(1, 1, 1.05); lb.position.set(x, y, z); lb.castShadow = true; g.add(lb);
+    g.add(box(7.2, 0.5, 2.7, 0xf2f2f2, x, y - 0.9, z)); // biały kadłub szalupy
+    for (const dx of [-3, 3]) g.add(box(0.3, 3.4, 0.3, 0xb9bec4, x + dx, y + 0.3, z - s * 1.2)); // żurawiki
   }
-  // pomost/reling wokół górnego pokładu
-  for (const s of [-1, 1]) g.add(box(L * 0.7, 0.15, 0.15, 0xdddddd, -10, 21.2, s * B * 0.42));
+  // tratwy ratunkowe w pojemnikach na skraju pokładu
+  const raft = new THREE.CylinderGeometry(0.55, 0.55, 1.5, 8);
+  for (const s of [-1, 1]) for (let k = 0; k < 6; k++) { const r = new THREE.Mesh(raft, mat(0xf2f2f2)); r.rotation.x = Math.PI / 2; r.position.set(2 + k * 2, H + 8.4 + 0.7, s * (B / 2 - 2.0)); g.add(r); }
+  // relingi na pokładach
+  for (const [len, w, x, y] of [[96, B - 1.8, -10, H + 8.4 + 1.05], [62, B - 7.4, -22, H + 12 + 1.05]]) {
+    for (const s of [-1, 1]) g.add(box(len, 0.12, 0.12, 0xdddddd, x, y, s * w / 2));
+  }
+  // dziób: kabestany i wznos pokładu dziobowego z falochronem
+  const sh = hull.sheer(0.93);
+  g.add(box(2.4, 1.0, 2.4, 0x9aa1a7, L / 2 - 14, sh - 0.5, -3)); g.add(box(2.4, 1.0, 2.4, 0x9aa1a7, L / 2 - 14, sh - 0.5, 3));
+  g.add(box(1.0, 1.6, B * 0.55, white, L / 2 - 20, H + 1.4, 0)); // falochron na dziobie
+  // flaga na rufie
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 5), mat(0xdedede));
+  pole.position.set(-L / 2 + 3, H + 2.5, 0); g.add(pole);
+  g.add(box(0.05, 1.6, 2.6, 0x006aa7, -L / 2 + 3, H + 4.2, 1.3));
+  g.add(box(0.06, 0.32, 2.6, 0xfecc00, -L / 2 + 3, H + 4.2, 1.3));
+  g.add(box(0.06, 1.6, 0.32, 0xfecc00, -L / 2 + 3, H + 4.2, 0.95));
   // napis na burtach
   const nameMat = new THREE.MeshBasicMaterial({ map: ferryNameTexture(), transparent: true, depthWrite: false });
   for (const s of [-1, 1]) {
     const pl = new THREE.Mesh(new THREE.PlaneGeometry(24, 3), nameMat);
-    pl.position.set(20, 5.0, s * (B / 2 + 0.2));
+    pl.position.set(6, 6.0, s * (sideZ(6) + 0.25));
     if (s < 0) pl.rotation.y = Math.PI;
     pl.userData.keep = true;
     g.add(pl);
   }
-  // dziób: półwalec + zaostrzenie + dzwon kotwiczny
-  const bow = new THREE.Mesh(new THREE.CylinderGeometry(B / 2, B / 2, 9, 16, 1, false, 0, Math.PI), mat(white));
-  bow.rotation.y = -Math.PI / 2;
-  bow.position.set(L / 2, 4, 0);
-  g.add(bow);
-  const bowNavy = new THREE.Mesh(new THREE.CylinderGeometry(B / 2 + 0.1, B / 2 + 0.1, 1.4, 16, 1, false, 0, Math.PI), mat(0x7a1f1f));
-  bowNavy.rotation.y = -Math.PI / 2;
-  bowNavy.position.set(L / 2, 0.9, 0);
-  g.add(bowNavy);
-  g.add(box(6, 1.2, 6, 0x9aa1a7, L / 2 - 6, 9.6, 0)); // kabestan dziobowy
-  // duże okna / kurtyna w salonie dziobowym
-  g.add(box(0.2, 2.2, B * 0.7, glass, -8 + L * 0.36 + 0.1, 14.4, 0, { rough: 0.2, metal: 0.4 }));
   g.position.set(d.x, 0, d.z);
   g.rotation.y = -d.th;
   return g;
