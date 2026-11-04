@@ -252,7 +252,9 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
   const R = 100, R0 = 54, GAP = 1.6; // promienie w jednostkach viewBox (–110..110)
   const pt = (r, a) => [r * Math.cos(a), r * Math.sin(a)];
-  const step = (Math.PI * 2) / n, a0 = -Math.PI / 2 - step / 2;
+  // płatki zawsze tej samej wielkości co w menu głównym (1/7 koła); przy mniejszej liczbie pozycji – zebrane po prawej stronie środka
+  const SLOTS = 7, step = (Math.PI * 2) / Math.max(n, SLOTS);
+  const a0 = n >= SLOTS ? -Math.PI / 2 - step / 2 : -(n * step) / 2;
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', '-112 -112 224 224');
   svg.classList.add('wh-svg');
@@ -272,7 +274,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     defs.appendChild(grad);
     const g = document.createElementNS(NS, 'g');
     g.classList.add('wh-g');
-    g.style.setProperty('--dx', `${Math.cos(mid) * 4}px`); g.style.setProperty('--dy', `${Math.sin(mid) * 4}px`);
+    g.style.setProperty('--dx', `${Math.cos(mid) * 2}px`); g.style.setProperty('--dy', `${Math.sin(mid) * 2}px`);
     const mk = (cls, extra = {}) => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', d); e.classList.add(cls); for (const [k, v] of Object.entries(extra)) e.setAttribute(k, v); g.appendChild(e); return e; };
     const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
     mk('wh-shine', { style: 'fill: url(#whshine)' });
