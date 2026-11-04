@@ -936,7 +936,9 @@ export function buildPerson(jacket = 0xe63946) {
     arms.push(sh);
   }
   mesh(new THREE.IcosahedronGeometry(0.13, 0), skin, 0, 1.6, 0);
-  mesh(new THREE.BoxGeometry(0.24, 0.08, 0.26), capM, 0, 1.71, 0.01);
+  // czapka: niska, zaokrąglona (półkula) z krótkim daszkiem
+  const cap = mesh(new THREE.SphereGeometry(0.135, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capM, 0, 1.66, 0); cap.scale.set(1, 0.7, 1.05);
+  const brim = mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.015, 10, 1, false, -Math.PI / 2, Math.PI), capM, 0, 1.665, 0.06); brim.scale.z = 0.8;
   g.userData.legs = legs;
   g.userData.arms = arms;
   return g;
