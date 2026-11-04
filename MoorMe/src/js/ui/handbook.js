@@ -620,7 +620,7 @@ for (const k of ['propeller', 'sport', 'skier', 'rowboat', 'windsurf', 'slipway'
 function marksBookRaw() {
   const lc = lateralColors(), P = hex(lc.port), S = hex(lc.stbd), B = '#16181c', Y = '#f2c230', R = '#d62828', W = '#ffffff', IG = '#2a9d4a';
   const reg = IALA.region;
-  const e = (title, pic, rows, char) => animLamps(h('div.hb-entry.hb-mark', { class: pic && pic.img ? 'hb-sign' : '' }, pic && pic.img ? h('div.hb-signimg', {}, h('img', { src: pic.img, alt: title, decoding: 'async' })) : pic && pic.big ? svgEl(120, 140, `<g transform="translate(0,-30)">${pic.big}</g>`, 'hb-big') : svgEl(120, 170, pic), h('div', {}, h('h3', {}, title), ...rows.map((r) => (typeof r === 'string' ? h('p', {}, r) : h('p', {}, h('b', {}, r[0] + ': '), r[1]))),
+  const e = (title, pic, rows, char) => animLamps(h('div.hb-entry.hb-mark', { class: pic && pic.img ? 'hb-sign' : '' }, pic && pic.img ? h('div.hb-signimg', {}, h('img', { src: pic.img, alt: title, decoding: 'async' })) : pic && typeof pic === 'object' && typeof pic.big === 'string' ? svgEl(120, 140, `<g transform="translate(0,-30)">${pic.big}</g>`, 'hb-big') : svgEl(120, 170, pic), h('div', {}, h('h3', {}, title), ...rows.map((r) => (typeof r === 'string' ? h('p', {}, r) : h('p', {}, h('b', {}, r[0] + ': '), r[1]))),
     char ? h('div.hb-rhythm', {}, h('span.muted', {}, `${L('Światło nocą', 'Light at night')} – ${char}:`), h('div.hb-rhythm-row', {}, nightLamp(char, 46), svgEl(300, 50, timelineSvg(char), 'hb-tl'))) : null)));
   // znaki żeglugowe – rysunki i określenia dokładnie z załącznika nr 7 (Dz.U. 2003 nr 212 poz. 2072)
   const officialSigns = () => [
