@@ -337,7 +337,7 @@ function showTitle() {
     kicker: 'Manewry portowe · cumowanie i odcumowanie', sel: titleSel,
     back: { label: 'Tryby', go: () => showModeSelect() },
     items: [
-      { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Cumowanie i odcumowywanie jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.', go: keep(0, () => { config.random = false; showStep(0); }) },
+      { glyph: 'play', color: '#e0705f', title: 'Nowa symulacja', tag: 'jacht, keja i pogoda', desc: 'Skonfiguruj swoją sytuację w porcie i wyznacz sobie manewr do wykonania.', go: keep(0, () => { config.random = false; showStep(0); }) },
       { glyph: 'dice', color: '#a76bd6', title: 'Random', tag: 'losowe zadanie', desc: 'Losowe zadanie w losowych warunkach', go: keep(1, () => showRandom()) },
       { glyph: 'fast', color: '#2aa39a', title: 'Szybki start', tag: 'ostatnie ustawienia', desc: 'Uruchom symulację z ostatnimi ustawieniami.', disabledDesc: 'Najpierw ustaw i uruchom symulację', disabled: !saved, go: keep(2, () => startSim()) },
       { glyph: 'help', color: '#5b78d6', title: 'Pomoc', tag: 'sterowanie i cumy', desc: 'Pomoc – sterowanie i praca na cumach', go: keep(3, () => showHelp()) }

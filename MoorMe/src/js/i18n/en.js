@@ -5,7 +5,7 @@ export const EN = {
   'Jacht': 'Yacht', 'Wyposażenie': 'Equipment', 'Keja i cumowanie': 'Quay & mooring', 'Pogoda i start': 'Weather & start',
   'Dalej →': 'Next →', '← Wstecz': '← Back', '← Menu': '← Menu',
   'PORT BAŁTYK': 'BALTIC PORT',
-  'Cumowanie i odcumowywanie jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.':
+  'Skonfiguruj swoją sytuację w porcie i wyznacz sobie manewr do wykonania.': 'Set up your situation in the harbour and choose a manoeuvre to perform.', 'Cumowanie i odcumowywanie jachtów żaglowych. Wiatr, dryf, zarzucanie rufy przez śrubę, stery strumieniowe, cumy, szpringi i muringi – przećwicz manewry portowe z załogą jachtu Anneliese zanim zrobisz je naprawdę.':
     'Mooring and unmooring sailing yachts. Wind, leeway, propeller walk, thrusters, mooring lines, springs and lazy lines – practise your harbour manoeuvres with the crew of the yacht Anneliese before you do it for real.',
   'Nowa symulacja': 'New simulation', 'Random': 'Random', 'Losowe zadanie w losowych warunkach': 'Random task in random conditions',
   'Szybki start': 'Quick start', 'ostatnie ustawienia': 'last settings', 'Najpierw ustaw i uruchom symulację': 'Set up and run a simulation first',
