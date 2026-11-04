@@ -908,3 +908,9 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .m3-chip.quit { width: auto; padding: 0 24px; justify-content: flex-start; }
 /* środkowe koło bez cienia rzucanego na wycinki (zostaje tylko delikatny wewnętrzny połysk) */
 .wh-center { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3); }
+/* górne panele modułów (zadania nawigacyjne, bezpieczeństwo, meteorologia, podręczniki, symulator) – większe */
+.navtasks.desk .nt-bar, .safety .sf-bar, .meteo .mt-bar { zoom: 1.4; }
+.screen .screen-header { zoom: 1.4; }
+/* środek koła bez przycisku Start – moduł uruchamia kliknięcie płatka */
+.wh-center { padding-top: 15%; }
+.wh-desc { height: 7.4em; }

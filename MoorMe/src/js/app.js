@@ -290,19 +290,16 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     return path;
   });
   const cTitle = h('div.wh-title'), cDesc = h('p.wh-desc');
-  const goBtn = h('button.m3-go.wh-go', { onclick: () => activate(cur) }, h('span', {}, 'Start'), raw(glyph('play', 18)));
   const center = h('div.wh-center', {},
     h('div.m3-logo.wh-logo', {}, 'Moor', h('span', {}, 'Me')),
     h('div.wh-kicker', {}, kicker),
-    cTitle, cDesc, goBtn);
+    cTitle, cDesc);
   function select(i) {
     cur = i;
     const it = items[i];
     segs.forEach((p, k) => p.parentNode.classList.toggle('on', k === i));
     labels.forEach((l, k) => l.classList.toggle('on', k === i));
     cTitle.textContent = t(it.title); cDesc.textContent = t(it.disabled && it.disabledDesc ? it.disabledDesc : it.desc);
-    goBtn.style.setProperty('--c', it.color);
-    goBtn.disabled = !!it.disabled;
     center.classList.remove('swap'); void center.offsetWidth; center.classList.add('swap');
   }
   function activate(i) { const it = items[i]; if (it && !it.disabled) { document.removeEventListener('keydown', onKey); it.go(); } }
