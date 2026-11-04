@@ -1017,6 +1017,7 @@ export function buildHarbor(H, scene) {
   const woodMat = new THREE.MeshStandardMaterial({ map: plankTexture(), flatShading: true, roughness: 0.85 });
   const pontMat = new THREE.MeshStandardMaterial({ map: concreteTexture(), color: 0xe4e2dc, flatShading: true, roughness: 0.9 });
   const lamps = [];
+  const booms = [];
   const surf = (s) => {
     const st = s.style || s.kind;
     if (st === 'wood' || s.kind === 'pier') return woodMat;
@@ -1031,28 +1032,28 @@ export function buildHarbor(H, scene) {
 
   for (const s of H.structures) {
     if (s.kind === 'boom') {
+      // Y-bom: osobna grupa z punktem obrotu w mocowaniu przy kei – końcówka unosi się na fali
       const bm = mat(0xb9c0c8, { metal: 0.5, rough: 0.4 });
       const f = s.fork;
       const fv = 3.2; // od tego miejsca bom rozwidla się w „Y” ku pomostowi
-      const P = (a, b2) => [f.bx + f.nx * a + f.tx * b2, f.bz + f.nz * a + f.tz * b2];
-      group.add(extrudePoly([P(fv, -0.18), P(f.len, -0.18), P(f.len, 0.18), P(fv, 0.18)], s.h, s.h - 0.25, bm));
-      // dwa ramiona rozwidlenia opierające się o pomost
+      const root = new THREE.Group(); root.position.set(f.bx, 0, f.bz); root.rotation.y = -Math.atan2(f.nz, f.nx);
+      const tilt = new THREE.Group(); tilt.position.y = s.h; root.add(tilt);
+      // lokalnie: x wzdłuż bomu (od kei), z w poprzek; y względem pokładu bomu
+      const sgn = Math.sign(f.nx * f.tz - f.nz * f.tx) || 1; // orientacja osi poprzecznej
+      const L2 = (a2, b2) => [a2, sgn * b2];
+      tilt.add(extrudePoly([L2(fv, -0.18), L2(f.len, -0.18), L2(f.len, 0.18), L2(fv, 0.18)], 0, -0.25, bm));
       for (const sd of [-1, 1]) {
-        const a0 = P(fv, 0), a1 = P(0.15, sd * 0.6);
+        const a0 = L2(fv, 0), a1 = L2(0.15, sd * 0.6);
         const dx = a1[0] - a0[0], dz = a1[1] - a0[1], len = Math.hypot(dx, dz);
         const arm = new THREE.Mesh(new THREE.BoxGeometry(len + 0.1, 0.25, 0.3), bm);
-        arm.position.set((a0[0] + a1[0]) / 2, s.h - 0.125, (a0[1] + a1[1]) / 2);
+        arm.position.set((a0[0] + a1[0]) / 2, -0.125, (a0[1] + a1[1]) / 2);
         arm.rotation.y = -Math.atan2(dz, dx);
         arm.castShadow = true;
-        group.add(arm);
+        tilt.add(arm);
       }
-      // pływaki wzdłuż pnia
-      for (let t = fv + 1.2; t < f.len; t += 3) {
-        const p = P(t, 0);
-        const fl = box(0.9, 0.45, 0.5, 0x1d2126, p[0], 0.02, p[1]); // czarne pływaki (polietylen)
-        fl.rotation.y = -Math.atan2(f.nz, f.nx);
-        group.add(fl);
-      }
+      for (let t2 = fv + 1.2; t2 < f.len; t2 += 3) tilt.add(box(0.9, 0.45, 0.5, 0x1d2126, t2, 0.02 - s.h, 0)); // czarne pływaki (polietylen)
+      dyn.add(root);
+      booms.push({ root, tilt, f, len: f.len, h: s.h });
       continue;
     }
     if (s.kind === 'pile') {
@@ -1078,10 +1079,16 @@ export function buildHarbor(H, scene) {
   for (const b of H.bollards) {
     const m = buildBollard(b.kind);
     m.position.set(b.x, b.h, b.z);
+    if (b.onBoom && booms.length) {
+      // przypięty do najbliższego Y-bomu (porusza się razem z nim)
+      let best = null, bd = 1e9;
+      for (const bo of booms) { const d = Math.hypot(b.x - (bo.f.bx + bo.f.nx * bo.len * 0.6), b.z - (bo.f.bz + bo.f.nz * bo.len * 0.6)); if (d < bd) { bd = d; best = bo; } }
+      if (best) { best.root.updateMatrixWorld(true); best.tilt.updateMatrixWorld(true); const lp = best.tilt.worldToLocal(new THREE.Vector3(b.x, b.h, b.z)); m.position.copy(lp); best.tilt.add(m); b._boomMesh = m; }
+    }
     // knaga ustawiona wzdłuż krawędzi pomostu (prostopadle do kierunku na wodę)
     if (b.kind === 'cleat' && b.approach) m.rotation.y = -Math.atan2(b.approach.z - b.z, b.approach.x - b.x) + Math.PI / 2;
     m.userData.bollard = b;
-    group.add(m);
+    if (!b._boomMesh) group.add(m);
     const hit = new THREE.Mesh(new THREE.SphereGeometry(0.9, 8, 6), new THREE.MeshBasicMaterial({ visible: false }));
     hit.position.set(b.x, b.h + 0.3, b.z);
     hit.userData.bollard = b;
@@ -1156,7 +1163,7 @@ export function buildHarbor(H, scene) {
   scene.add(merged);
   scene.add(dyn);
   const lighthouses = H.deco.filter((d) => d.type === 'lighthouse').map((d) => ({ x: d.x, y: 2.2 + 8.6, z: d.z, color: d.color }));
-  return { group: merged, dyn, bollardMeshes, lamps, lighthouses };
+  return { group: merged, dyn, bollardMeshes, lamps, lighthouses, booms };
 }
 
 // Stonowana tekstura wody: plamy głębi + delikatne jaśniejsze zmarszczki (kafelkowalna)

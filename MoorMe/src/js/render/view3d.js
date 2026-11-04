@@ -848,6 +848,12 @@ export class View3D {
     const windKn = w.env.windSpeed / 0.5144;
     const windDir = (w.env.windFromDeg + 180) * DEG;
     this.water.update(dt, windKn, windDir, b.x, b.z);
+    // Y-bomy kołyszą się na fali – obrót wokół mocowania przy kei
+    if (this.harbor && this.harbor.booms) for (const bo of this.harbor.booms) {
+      const tx = bo.f.bx + bo.f.nx * bo.len, tz = bo.f.bz + bo.f.nz * bo.len;
+      const hgt = this.water.heightAt(tx, tz, windKn, windDir) * 0.5;
+      bo.tilt.rotation.z = clamp(hgt / bo.len, -0.025, 0.025);
+    }
 
     // jacht
     // kołysanie z fizyki (to samo, które zmienia naciąg cum)
