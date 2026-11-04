@@ -739,7 +739,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 /* trzy charakterystyki w rzędzie */
 .handbook .hb-charx-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .handbook .hb-charx { padding: 10px 11px; min-width: 0; }
-.handbook .hb-charx .hb-svg svg { max-width: 100%; height: auto; }
+.handbook .hb-charx .hb-svg svg { max-width: 100%; }
 .handbook .hb-charx-live { flex-direction: column; gap: 8px; padding: 9px 10px; }
 .handbook .hb-charx-live .hb-svg:first-child svg { width: 52px; }
 .handbook .hb-charx-head h3 { font-size: 15.5px; }
@@ -758,3 +758,24 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-mark-grid .hb-mark p { font-size: 13.5px; }
 /* nagłówki grup (np. IALA A, znaki kardynalne) większą czcionką */
 .handbook .hb-charx-grp { font-size: 18px; padding: 8px 14px; margin-top: 22px; }
+/* wykresy czasu zawsze w ramce karty */
+.handbook .hb-rhythm-row { display: flex; gap: 8px; align-items: center; min-width: 0; }
+.handbook .hb-rhythm-row .hb-svg { min-width: 0; }
+.handbook .hb-rhythm-row .hb-svg:last-child { flex: 1; }
+.handbook .hb-tl { min-width: 0; max-width: 100%; }
+.handbook .hb-tl svg { width: 100%; max-width: 320px; height: auto; display: block; }
+.handbook .hb-mark-grid .hb-mark > div:last-child { min-width: 0; flex: 1; }
+/* karty charakterystyk: subgrid – te same elementy na tej samej wysokości w całym rzędzie */
+.handbook .hb-charx-grid { align-items: stretch; row-gap: 14px; }
+.handbook .hb-charx { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: 8px; align-content: start; }
+.handbook .hb-charx > * { margin: 0; min-width: 0; }
+.handbook .hb-charx-head { display: flex; align-items: flex-start; gap: 10px; }
+.handbook .hb-charx-head h3 { flex: 1; margin: 0; line-height: 1.3; }
+.handbook .hb-charx-head .hb-play { margin-left: 0; flex: none; white-space: nowrap; }
+.handbook .hb-charx-strip { margin: 0; align-self: end; }
+.handbook .hb-charx-live { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-radius: 8px; background: rgba(47, 68, 104, 0.06); }
+.handbook .hb-charx-lamprow { display: flex; align-items: center; gap: 12px; }
+.handbook .hb-charx-lamprow .hb-svg svg { width: 52px; height: 52px; }
+.handbook .hb-charx-lamprow .hb-char-code { margin: 0; }
+.handbook .hb-charx-live h4 { margin: 2px 0 0; }
+.handbook .hb-charx-live p { margin: 0; }
