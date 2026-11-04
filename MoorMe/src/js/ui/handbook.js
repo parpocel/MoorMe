@@ -235,18 +235,61 @@ function timeline(p) {
   for (let s = 0; s <= total; s += 2) g += `<text x="${10 + s * sc}" y="38" font-size="8" fill="#7a8290" font-family="sans-serif">${s}s</text>`;
   return svgEl(W, 40, g, 'hb-tl');
 }
+// wstęp do sygnałów dźwiękowych: alfabet dźwięków z odsłuchem, kiedy jakie sygnały, wyposażenie, morze vs śródlądzie
+function soundsIntro(play) {
+  const pb = (p, label) => h('button.btn.sm.primary.sb-play', { onclick: () => play(p), title: L('Odsłuchaj', 'Listen') }, '▶', label ? h('span', {}, label) : null);
+  const tile = (p, sym, name, dur, note) => h('div.sb-tile', {}, h('div.sb-sym', {}, sym), h('div.sb-name', {}, name), h('div.sb-dur', {}, dur), timeline(p), note ? h('p', {}, note) : null, pb(p, L('posłuchaj', 'listen')));
+  const card = (title, ...kids) => h('section.sb-card', {}, h('h3', {}, title), ...kids);
+  return [
+    h('div.sb-lead', {},
+      h('div.sb-lead-ic', {}, '📯'),
+      h('div', {},
+        h('h3', {}, L('Mów buczkiem, gdy nie da się krzyknąć', 'Speak with your horn when shouting won’t do')),
+        h('p', {}, L('Na wodzie nie ma kierunkowskazów. Kilka krótkich i długich dźwięków mówi innym statkom, co zamierzasz: że skręcasz, cofasz się, wyprzedzasz albo że coś jest nie tak. We mgle dźwięk zastępuje oczy – po nim poznasz, kto jest w pobliżu i co robi, choć go nie widać.', 'There are no indicators on the water. A few short and long blasts tell other vessels what you intend to do: that you are turning, going astern, overtaking or that something is wrong. In fog sound replaces your eyes – it tells you who is nearby and what they are doing although you cannot see them.')))),
+    card(L('Alfabet dźwięków', 'The sound alphabet'),
+      h('p', {}, L('Każdy sygnał składa się z kilku „liter”. Posłuchaj ich – resztę ułożysz sam.', 'Every signal is built from a few “letters”. Listen to them – you can put the rest together yourself.')),
+      h('div.sb-tiles', {},
+        tile('S', '•', L('krótki', 'short'), L('ok. 1 s', 'about 1 s')),
+        tile('L', '—', L('długi', 'prolonged'), L('4–6 s', '4–6 s')),
+        tile('vvvvvvvv', '· · ·', L('bardzo krótkie', 'very short'), L('ok. ¼ s każdy', 'about ¼ s each'), L('tylko na drogach śródlądowych', 'inland waterways only')),
+        tile('B', '🔔', L('dzwon', 'bell'), L('szybkie dzwonienie ok. 5 s', 'rapid ringing about 5 s')),
+        tile('G', '◎', L('gong', 'gong'), L('ok. 5 s', 'about 5 s'), L('statki ≥ 100 m na kotwicy', 'vessels ≥ 100 m at anchor')))),
+    h('div.sb-two', {},
+      card(L('☀ Statki się widzą', '☀ Vessels in sight'),
+        h('ul', {},
+          h('li', {}, L('Sygnały manewrowe: mówisz, co właśnie robisz – ', 'Manoeuvring signals: you say what you are doing right now – '), h('b', {}, '•'), L(' w prawo, ', ' to starboard, '), h('b', {}, '• •'), L(' w lewo, ', ' to port, '), h('b', {}, '• • •'), L(' śruba wstecz.', ' going astern.')),
+          h('li', {}, L('Pięć i więcej krótkich – „nie rozumiem twoich zamiarów”, uważaj!', 'Five or more short – “I don’t understand your intentions”, watch out!')),
+          h('li', {}, L('Daje się je tylko wtedy, gdy statki się widzą.', 'They are given only when vessels can see each other.'))),
+        h('div.sb-ex', {}, pb('S', '•'), pb('SS', '• •'), pb('SSS', '• • •'), pb('SSSSS', '• • • • •'))),
+      card(L('🌫 Mgła i słaba widoczność', '🌫 Fog and restricted visibility'),
+        h('ul', {},
+          h('li', {}, L('Sygnały powtarza się regularnie: statki w drodze co najwyżej co 2 minuty, na kotwicy – dzwon co minutę.', 'Signals are repeated regularly: vessels under way at least every 2 minutes, at anchor – the bell every minute.')),
+          h('li', {}, L('Sygnał mówi, kim jesteś: jeden długi – statek z napędem w ruchu, długi + dwa krótkie – żaglowiec, rybak, holownik itd.', 'The signal says what you are: one prolonged – a power-driven vessel making way, prolonged + two short – sailing vessel, fishing vessel, tug and so on.')),
+          h('li', {}, L('Nie widzisz nadawcy – kierunek dźwięku bywa we mgle zwodniczy.', 'You cannot see the sender – the direction of a sound in fog can be misleading.'))),
+        h('div.sb-ex', {}, pb('L', '—'), pb('LSS', '— • •'), pb('B', '🔔')))),
+    card(L('Co musisz mieć na pokładzie (morze)', 'What you must carry (sea)'),
+      h('div.sb-eq', {},
+        h('div', {}, h('b', {}, '< 12 m'), h('span', {}, L('dowolne skuteczne urządzenie dźwiękowe (np. ręczny buczek gazowy)', 'any efficient means of making a sound (e.g. a hand-held gas horn)'))),
+        h('div', {}, h('b', {}, '≥ 12 m'), h('span', {}, L('gwizd (buczek)', 'a whistle (horn)'))),
+        h('div', {}, h('b', {}, '≥ 20 m'), h('span', {}, L('gwizd i dzwon', 'a whistle and a bell'))),
+        h('div', {}, h('b', {}, '≥ 100 m'), h('span', {}, L('gwizd, dzwon i gong', 'a whistle, a bell and a gong'))))),
+    card(L('Uwaga: morze ≠ drogi śródlądowe', 'Careful: sea ≠ inland waterways'),
+      h('p', {}, L('Ten sam dźwięk może znaczyć coś innego na morzu (MPZZM/COLREG) i na rzece czy jeziorze (CEVNI):', 'The same sound can mean something different at sea (COLREG) and on a river or lake (CEVNI):')),
+      h('div.hb-ct-wrap', {}, h('table.hb-ctable.sb-cmp', {},
+        h('tr', {}, h('th', {}, L('Sygnał', 'Signal')), h('th', {}, L('Na morzu', 'At sea')), h('th', {}, L('Na drogach śródlądowych', 'Inland'))),
+        h('tr', {}, h('td', {}, pb('L', '—')), h('td', {}, L('zakręt z ograniczoną widocznością; we mgle – statek z napędem w ruchu', 'approaching a blind bend; in fog – a power-driven vessel making way')), h('td', {}, L('„uwaga”', '“attention”'))),
+        h('tr', {}, h('td', {}, pb('SSSS', '• • • •')), h('td', {}, L('we mgle – sygnał rozpoznawczy pilotówki', 'in fog – a pilot vessel’s identity signal')), h('td', {}, L('„nie mogę manewrować”', '“I am unable to manoeuvre”'))),
+        h('tr', {}, h('td', {}, pb('vvvvvvvv', '· · · ·')), h('td', {}, L('nie stosuje się', 'not used')), h('td', {}, L('„niebezpieczeństwo zderzenia”', '“danger of collision”')))))),
+    h('p.small.muted.sb-legend', {}, L('Na osiach czasu: granatowy – buczek, czerwony – dzwon, brązowy – gong.', 'On the timelines: navy – whistle, red – bell, brown – gong.'))
+  ];
+}
 export function soundsBook(play) {
   const entry = (s) => h('div.hb-entry.hb-sound', {},
     h('div.hb-sound-h', {}, h('button.btn.sm.primary', { onclick: () => play(s.p) }, '▶'), h('h3', {}, s.name)),
     h('div.hb-notation', {}, notation(s.p)), timeline(s.p), h('p', {}, s.desc));
   const ctxSec = (id, name) => ({ id, name, entries: [h('p.hb-ctx', {}, CONTEXTS[id]), ...SIGNALS.filter((s) => s.ctx === id).map(entry)] });
   return [
-    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [h('div.hb-entry', {},
-      h('h3', {}, L('Krótki i długi dźwięk', 'Short and prolonged blasts')),
-      h('p', {}, L('• krótki dźwięk – ok. 1 s, — długi dźwięk – 4–6 s, · bardzo krótki – ok. ¼ s. Sygnały manewrowe daje się tylko wtedy, gdy statki się widzą. W ograniczonej widoczności statki w drodze dają sygnał co najwyżej co 2 minuty, statki na kotwicy dzwonią co minutę.', '• short blast – about 1 s, — prolonged blast – 4–6 s, · very short – about ¼ s. Manoeuvring signals are given only when vessels are in sight of one another. In restricted visibility vessels under way sound at intervals of not more than 2 minutes, vessels at anchor ring the bell every minute.')),
-      h('p', {}, L('Wyposażenie (morze): jednostka < 12 m – dowolne skuteczne urządzenie dźwiękowe; ≥ 12 m – gwizd (buczek); ≥ 20 m – gwizd i dzwon; ≥ 100 m – także gong.', 'Equipment (sea): a vessel < 12 m – any efficient sound signal; ≥ 12 m – a whistle; ≥ 20 m – a whistle and a bell; ≥ 100 m – also a gong.')),
-      h('p', {}, L('Morze i drogi śródlądowe mają częściowo różne sygnały. Na morzu (MPZZM/COLREG) cztery krótkie dźwięki we mgle to sygnał rozpoznawczy statku pilotowego, a jeden długi – zbliżanie się do zakrętu albo, we mgle, statek o napędzie mechanicznym w ruchu. Na drogach śródlądowych (CEVNI) jeden długi znaczy „uwaga”, cztery krótkie – „nie mogę manewrować”, a seria bardzo krótkich – „niebezpieczeństwo zderzenia”.', 'The sea and inland waterways partly use different signals. At sea (COLREG) four short blasts in fog are a pilot vessel’s identity signal, and one prolonged blast means approaching a bend or, in fog, a power-driven vessel making way. On inland waterways (CEVNI) one long blast means “attention”, four short – “I am unable to manoeuvre”, and a series of very short blasts – “danger of collision”.')),
-      h('p.small.muted', {}, L('Na osi czasu: granatowy – buczek, czerwony – dzwon, brązowy – gong.', 'On the timeline: navy – whistle, red – bell, brown – gong.')))] },
+    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: soundsIntro(play) },
     ctxSec('sight', L('Morze – statki się widzą', 'Sea – in sight')),
     ctxSec('fog', L('Morze – ograniczona widoczność', 'Sea – restricted visibility')),
     ctxSec('inland', L('Drogi śródlądowe (CEVNI)', 'Inland waterways (CEVNI)'))

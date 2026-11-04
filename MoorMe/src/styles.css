@@ -1008,3 +1008,28 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .chartquiz .cq-legsvg svg { display: block; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.14); }
 .chartquiz .cq-leg b { font-size: 17px; }
 .chartquiz .cq-leg p { font-size: 15.5px; line-height: 1.45; margin: 4px 0 0; }
+/* wstęp do sygnałów dźwiękowych */
+.handbook .sb-lead { display: flex; gap: 18px; align-items: center; background: linear-gradient(120deg, #2f4468, #45608f); color: #fff7f1; border-radius: 16px; padding: 18px 24px; margin: 4px 0 16px; }
+.handbook .sb-lead h3 { color: #ffd9a0; font-size: 24px; margin: 0 0 6px; }
+.handbook .sb-lead p { color: #fff7f1; font-size: 18px; line-height: 1.55; margin: 0; max-width: 980px; }
+.handbook .sb-lead-ic { font-size: 54px; }
+.handbook .sb-card { background: rgba(255, 255, 255, 0.72); border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 14px; padding: 16px 22px; margin: 0 0 16px; }
+.handbook .sb-card > h3 { color: #2f4468; font-size: 22px; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 2px solid rgba(210, 105, 95, 0.35); }
+.handbook .sb-card p, .handbook .sb-card li { font-size: 17.5px; line-height: 1.55; }
+.handbook .sb-card ul { margin: 6px 0 10px; padding-left: 22px; }
+.handbook .sb-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.handbook .sb-tile { background: #fff; border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.handbook .sb-tile .sb-sym { font: 800 34px 'Baloo 2', 'Nunito', sans-serif; color: #2f4468; line-height: 1; min-height: 38px; }
+.handbook .sb-tile .sb-name { font-weight: 800; font-size: 18px; color: #2f4468; }
+.handbook .sb-tile .sb-dur { font-size: 15px; color: #6b7280; }
+.handbook .sb-tile p { font-size: 14.5px; margin: 0; color: #c2410c; }
+.handbook .sb-tile .hb-tl svg { width: 100%; max-width: 260px; }
+.handbook .sb-play { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; }
+.handbook .sb-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 16px; }
+.handbook .sb-two .sb-card { margin: 0 0 16px; }
+.handbook .sb-ex { display: flex; flex-wrap: wrap; gap: 8px; }
+.handbook .sb-eq { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.handbook .sb-eq > div { background: #fff; border-radius: 12px; border: 1px solid rgba(47, 68, 104, 0.14); padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; font-size: 16.5px; }
+.handbook .sb-eq b { font: 800 24px 'Baloo 2', 'Nunito', sans-serif; color: #d2695f; }
+.handbook .sb-cmp td:first-child { white-space: nowrap; }
+.handbook .sb-legend { margin-top: 4px; }
