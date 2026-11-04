@@ -303,7 +303,7 @@ export class View3D {
           float boil = n(q) * 0.6 + n(q * 2.3 + 7.0) * 0.4;
           float foam = smoothstep(0.42, 0.8, boil);
           float a = uA * body * (0.35 + 0.75 * foam);
-          gl_FragColor = vec4(mix(vec3(0.55, 0.78, 0.8), vec3(0.95, 0.98, 1.0), foam) * (1.0 - 0.75 * uDark), a * 0.9);
+          gl_FragColor = vec4(mix(vec3(0.55, 0.78, 0.8), vec3(0.95, 0.98, 1.0), foam) * (1.0 - 0.75 * uDark), a * 0.45);
         }`
     });
     const mesh = new THREE.Mesh(geo, mat2);
@@ -315,13 +315,13 @@ export class View3D {
     const W = this.wash, b = this.world.boat, spec = this.world.spec;
     if (!W) return;
     const thrust = this.world.engineDead ? 0 : b.gear * Math.max(0, b.rpm);
-    W.a += (Math.min(1, Math.abs(thrust) * 1.4) - W.a) * Math.min(1, dt * 2.5);
+    W.a += (Math.min(1, Math.abs(thrust) * 1.1) - W.a) * Math.min(1, dt * 2.5); // delikatny efekt
     W.mesh.visible = W.a > 0.02;
     if (!W.mesh.visible) return;
     const dir = thrust >= 0 ? -1 : 1; // kierunek strumienia w układzie jachtu (oś x)
     const { xs } = hullExtents(spec);
     const x0 = thrust >= 0 ? Math.min(b.xProp, xs + 0.6) : b.xProp; // naprzód: wybija spod rufy
-    const len = (2 + 6 * Math.abs(thrust)) * (thrust >= 0 ? 1 : 0.7);
+    const len = (1.6 + 4 * Math.abs(thrust)) * (thrust >= 0 ? 1 : 0.7);
     const pa = W.geo.attributes.position.array;
     for (let i = 0; i < W.R; i++) {
       const v = i / (W.R - 1), lx = x0 + dir * len * v;
@@ -967,7 +967,7 @@ export class View3D {
       const pp = localToWorld(b.x, b.z, b.th, b.xProp - 0.4, 0);
       const dir = -b.gear;
       const sp = 1.5 + b.rpm * 3;
-      if (Math.random() < 0.5) this.spawn(pp.x, pp.z, c * dir * sp + b.vx, s * dir * sp + b.vz, 1.0 + b.rpm);
+      if (Math.random() < 0.2) this.spawn(pp.x, pp.z, c * dir * sp + b.vx, s * dir * sp + b.vz, 0.8 + b.rpm * 0.6);
     }
     for (const [kind, x] of [['bow', b.xBow], ['stern', b.xStern]]) {
       const out = b[kind + 'Out'];
