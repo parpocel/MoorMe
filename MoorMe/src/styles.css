@@ -841,3 +841,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .wh-lbl.on { transform: translate(-50%, -50%); }
 .wh-gem { width: 58px; height: 58px; margin-bottom: 2px; transition: transform 0.3s cubic-bezier(.3, 1.6, .5, 1); }
 .wh-lbl.on .wh-gem, .wh-lbl:hover .wh-gem { transform: translateY(-6px) rotate(-8deg) scale(1.1); }
+/* znaki z rozporządzenia (rysunki) */
+.handbook .hb-sign .hb-signimg { flex: none; width: 150px; height: 150px; display: grid; place-items: center; background: #fff; border-radius: 8px; border: 1px solid rgba(47, 68, 104, 0.12); padding: 6px; box-sizing: border-box; }
+.handbook .hb-sign .hb-signimg img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.handbook .hb-sign h3 { font: 800 16px Consolas, 'Courier New', monospace; color: #c2410c; margin-bottom: 4px; }
+.handbook .hb-sign p { margin: 0; }
+.handbook .hb-sign .hb-signimg img { max-width: 138px; max-height: 138px; width: auto; height: auto; }
+.handbook .hb-sign.hb-aux h3, .handbook .hb-sign h3.hb-auxt { font: 700 15px 'Nunito', sans-serif; color: #2f4468; }

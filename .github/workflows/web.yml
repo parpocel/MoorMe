@@ -12,9 +12,11 @@ permissions:
   pages: write
   id-token: write
 
+# trwająca publikacja nie jest przerywana kolejnym pushem (przerwane wdrożenia potrafią zablokować Pages);
+# w kolejce czeka tylko najnowsza wersja
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -67,3 +69,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          timeout: 1800000 # 30 min – przy przeciążeniu GitHub Pages domyślne 10 min nie wystarcza
