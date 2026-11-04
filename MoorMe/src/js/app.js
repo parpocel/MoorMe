@@ -363,7 +363,7 @@ function showModeSelect() {
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
       { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
-      { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Skala Beauforta, rodzaje chmur, mapa synoptyczna, barometr i zjawiska pogodowe ważne dla żeglarza.', go: keep(6, () => showMeteoIntro()) }
+      { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.', go: keep(6, () => showMeteoIntro()) }
     ]
   });
 }

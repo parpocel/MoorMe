@@ -313,7 +313,7 @@ export const EN = {
   "Trójkąt prędkości: wektory odkładaj dla 1 godziny (1 kn = 1 Mm). Wpisz kierunek i długość w węzłach, potem kliknij początek wektora – zwykle punkt O albo koniec poprzedniego wektora.": "Velocity triangle: lay off the vectors for 1 hour (1 kn = 1 NM). Enter the direction and the length in knots, then click where the vector starts – usually point O or the end of the previous vector.",
   "Wpisz prędkość po wodzie w polu „Długość” i kliknij koniec wektora prądu – okrąg przetnie linię drogi nad dnem w miejscu, gdzie kończy się wektor po wodzie.": "Enter the speed through the water in the “Length” field and click the end of the current vector – the circle cuts the ground track where the water vector ends.",
   "Przeciągnij między dwoma punktami (np. od O do końca ostatniego wektora) – odczytasz kierunek i prędkość wypadkową. Linie przyciągają się do końców wektorów i przecięć.": "Drag between two points (e.g. from O to the end of the last vector) to read the resulting direction and speed. Lines snap to vector ends and intersections.",
-  'Wyjdź z gry': 'Quit game', 'Czas': 'Time', '⏱ Czas 1×': '⏱ Time 1×', '🎥 Kamera': '🎥 Camera', 'Wyjdź': 'Quit',
+  'Wyjdź z gry': 'Quit game', 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.': 'Learn about the weather phenomena that can affect the safety of your passage.', 'Czas': 'Time', '⏱ Czas 1×': '⏱ Time 1×', '🎥 Kamera': '🎥 Camera', 'Wyjdź': 'Quit',
   'Przeciągnij, aby przesunąć kartę': 'Drag to move the card',
   'Rozwiń kartę': 'Expand the card',
   'Zwiń kartę': 'Collapse the card',
