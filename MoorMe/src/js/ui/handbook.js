@@ -189,13 +189,52 @@ function dayView(v, W = 300, H = dayH(v)) {
 }
 const dayEntry = (v) => h('div.hb-entry.hb-card', {}, h('h3', {}, v.name), svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
 
+// wstęp do sygnalizacji: rodzaje świateł, co widzisz → jak płynie statek, najczęstsze kombinacje świateł dookólnych
+const LC = { W: '#fff7d6', R: '#ff3b2f', G: '#29e05a', Y: '#ffd166' };
+const lampStack = (cols) => { const n = cols.length, H = 26 + n * 24; let g = `<rect width="70" height="${H}" rx="10" fill="#141b2b"/><rect x="33" y="10" width="4" height="${H - 20}" fill="#273246"/>`; cols.forEach((c, i) => { const y = 22 + i * 24; g += `<circle cx="35" cy="${y}" r="13" fill="${LC[c]}" opacity="0.22"/><circle cx="35" cy="${y}" r="7" fill="${LC[c]}"/>`; }); return svgEl(70, H, g, 'li-stack'); };
+const sectorMini = (a0, a1, col) => {
+  const cx = 60, cy = 60, R = 50, p = (a) => [cx + Math.sin((a * Math.PI) / 180) * R, cy - Math.cos((a * Math.PI) / 180) * R], [x0, y0] = p(a0), [x1, y1] = p(a1);
+  const sec = a1 - a0 >= 360 ? `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${col}" opacity="0.45"/>` : `<path d="M${cx} ${cy} L${x0} ${y0} A${R} ${R} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1} ${y1} Z" fill="${col}" opacity="0.5"/>`;
+  return svgEl(120, 120, `<rect width="120" height="120" rx="12" fill="#f6f1e1"/>${sec}<path d="M${cx} ${cy - 16} L${cx + 6} ${cy - 4} L${cx + 5} ${cy + 15} L${cx - 5} ${cy + 15} L${cx - 6} ${cy - 4} Z" fill="#2f4468"/>`, 'li-sec');
+};
+function lightsIntro() {
+  const card = (title, ...kids) => h('section.sb-card', {}, h('h3', {}, title), ...kids);
+  const kind = (fig, name, txt) => h('div.li-kind', {}, fig, h('div', {}, h('b', {}, name), h('p', {}, txt)));
+  const combo = (cols, name, txt) => h('div.li-combo', {}, lampStack(cols), h('div', {}, h('b', {}, name), h('p', {}, txt)));
+  const aspect = (cols, see, means) => h('div.li-aspect', {}, h('div.li-dots', {}, ...cols.map((c) => h('span', { style: { background: LC[c], boxShadow: `0 0 10px ${LC[c]}` } }))), h('b', {}, see), h('p', {}, means));
+  return [
+    h('div.sb-lead', {}, h('div.sb-lead-ic', {}, '🌙'), h('div', {},
+      h('h3', {}, L('Nocą statek mówi światłami, w dzień – czarnymi znakami', 'At night a vessel speaks with lights, by day with black shapes')),
+      h('p', {}, L('Po kilku kolorowych punktach w ciemności poznasz, jaki to statek, co robi i w którą stronę płynie – a więc kto komu ustępuje. W dzień tę samą informację niosą czarne kule, stożki, romby i walce na masztach.', 'From a few coloured dots in the dark you can tell what kind of vessel it is, what it is doing and which way it is heading – and so who gives way to whom. By day the same message is carried by black balls, cones, diamonds and cylinders on the masts.')))),
+    card(L('Rodzaje świateł', 'Kinds of lights'),
+      h('div.li-kinds', {},
+        kind(sectorMini(-112.5, 112.5, '#e9e2c6'), L('Masztowe – białe', 'Masthead – white'), L('225° do przodu. Statek z napędem w drodze; dwa masztowe – statek ≥ 50 m (tylne wyżej).', '225° ahead. A power-driven vessel underway; two masthead lights – a vessel ≥ 50 m (the after one higher).')),
+        kind(sectorMini(0, 112.5, '#1f9d55'), L('Burtowe – zielone i czerwone', 'Sidelights – green and red'), L('Po 112,5°: zielone na prawej, czerwone na lewej burcie.', '112.5° each: green to starboard, red to port.')),
+        kind(sectorMini(112.5, 247.5, '#c9c2ae'), L('Rufowe – białe', 'Sternlight – white'), L('135° do tyłu. Widzisz je, gdy statek płynie od ciebie.', '135° astern. You see it when the vessel is moving away from you.')),
+        kind(sectorMini(0, 360, '#e9e2c6'), L('Dookólne', 'All-round'), L('Widoczne ze wszystkich stron (360°). Ich kolory w pionie mówią, czym jest statek i co robi.', 'Visible all round (360°). Their colours in a vertical line tell you what the vessel is and what it is doing.'))),
+      h('div.li-sectorbig', {}, svgEl(320, 220, sectorDiagram()), h('p', {}, L('Patrząc na statek od dziobu, jego zieloną burtę widzisz po swojej lewej, a czerwoną po prawej.', 'Looking at a vessel head-on, you see its green side on your left and its red side on your right.')))),
+    card(L('Co widzisz → jak płynie statek', 'What you see → how the vessel is heading'),
+      h('div.li-aspects', {},
+        aspect(['G', 'W', 'R'], L('Czerwone i zielone pod białym', 'Red and green below white'), L('Statek idzie prosto na ciebie – oba statki skręcają w prawo.', 'The vessel is heading straight for you – both vessels turn to starboard.')),
+        aspect(['W', 'R'], L('Tylko czerwone (i białe)', 'Only red (and white)'), L('Widzisz jego lewą burtę: masz go po swojej prawej – ty ustępujesz.', 'You see its port side: it is on your starboard side – you give way.')),
+        aspect(['W', 'G'], L('Tylko zielone (i białe)', 'Only green (and white)'), L('Widzisz jego prawą burtę: to on powinien ustąpić – ty trzymasz kurs i obserwujesz.', 'You see its starboard side: it should give way – you hold your course and keep watching.')),
+        aspect(['W'], L('Samo białe, nisko', 'A single white, low'), L('Rufa statku – wyprzedzasz go albo on się oddala. Wyprzedzający zawsze ustępuje.', 'The vessel’s stern – you are overtaking it or it is moving away. The overtaking vessel always keeps clear.')))),
+    card(L('Najczęstsze światła dookólne – ściąga', 'Common all-round lights – cheat sheet'),
+      h('div.li-combos', {},
+        combo(['W'], L('Na kotwicy', 'At anchor'), L('Jedno białe dookólne (statek < 50 m).', 'One white all-round light (vessel < 50 m).')),
+        combo(['R', 'W'], L('Rybak', 'Fishing'), L('Czerwone nad białym – statek zajęty połowem (nie trawler).', 'Red over white – a vessel engaged in fishing (not trawling).')),
+        combo(['G', 'W'], L('Trawler', 'Trawler'), L('Zielone nad białym – statek trałujący.', 'Green over white – a vessel trawling.')),
+        combo(['W', 'R'], L('Pilotówka', 'Pilot vessel'), L('Białe nad czerwonym – statek pilotowy na służbie.', 'White over red – a pilot vessel on duty.')),
+        combo(['R', 'R'], L('Nie odpowiada za swoje ruchy', 'Not under command'), L('Dwa czerwone – statek nie może manewrować, omijaj go.', 'Two reds – the vessel cannot manoeuvre, keep clear of it.')),
+        combo(['R', 'W', 'R'], L('Ograniczona zdolność manewrowa', 'Restricted in ability to manoeuvre'), L('Czerwone–białe–czerwone – np. pogłębiarka, kładzenie kabla.', 'Red–white–red – e.g. dredging, cable laying.')),
+        combo(['R', 'R', 'R'], L('Ograniczony zanurzeniem', 'Constrained by draught'), L('Trzy czerwone – głęboki statek trzyma się toru.', 'Three reds – a deep vessel keeping to the channel.')),
+        combo(['R', 'G'], L('Żaglowiec (opcjonalnie)', 'Sailing vessel (optional)'), L('Czerwone nad zielonym na topie masztu.', 'Red over green at the masthead.')))),
+    h('p.small.muted.sb-legend', {}, L('Szczegóły każdej jednostki – z czterech stron i w dzień – znajdziesz w kolejnych rozdziałach.', 'Details of each vessel – from four sides and by day – are in the following chapters.'))
+  ];
+}
 export function lightsBook() {
   return [
-    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [h('div.hb-entry', {},
-      h('h3', {}, L('Sektory świateł', 'Light sectors')),
-      svgEl(320, 220, sectorDiagram()),
-      h('p', {}, L('Masztowe (białe) świeci 225° do przodu, burtowe po 112,5°: zielone na prawej, czerwone na lewej burcie. Rufowe (białe) – 135° do tyłu. Światła dookólne widać z każdej strony. Kolory widziane z boku i z dziobu mówią, w którą stronę płynie statek.', 'The masthead light (white) shows over 225° ahead, the sidelights over 112.5° each: green to starboard, red to port. The sternlight (white) shows over 135° astern. All-round lights are seen from every direction. The colours you see tell you which way a vessel is heading.')),
-      h('p', {}, L('Pamiętaj: patrząc na statek od dziobu widzisz jego zieloną burtę po swojej lewej, a czerwoną po prawej.', 'Remember: looking at a vessel head-on, its green side is on your left and its red side on your right.')))] },
+    { id: 'intro', name: L('Wstęp', 'Introduction'), entries: lightsIntro() },
     { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.filter((v) => !v.inland).flatMap((v) => (v.id !== 'sailing' ? [lightsEntry(v)] : [lightsEntry(v),
       // wariant jachtu: dodatkowe czerwone nad zielonym na topie masztu
       lightsEntry({ ...v, name: L('Jednostka żaglowa w drodze – czerwone nad zielonym', 'Sailing vessel underway – red over green'), lights: (Lm, r, o) => v.lights(Lm, () => 0.9, o),

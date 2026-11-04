@@ -1038,3 +1038,21 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .wheelmenu .m3-chip { height: 54px; font-size: 21px; padding: 0 24px; border-radius: 14px; }
 .wheelmenu .m3-chip svg { width: 22px; height: 22px; }
 .menu3d.wheelmenu > .wh-stage { position: absolute; inset: 0; }
+/* wstęp do sygnalizacji nocnej/dziennej */
+.handbook .li-kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.handbook .li-kind { display: flex; gap: 12px; align-items: center; background: #fff; border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 12px; padding: 10px 12px; }
+.handbook .li-kind b, .handbook .li-combo b { font-size: 17.5px; color: #2f4468; }
+.handbook .li-kind p, .handbook .li-combo p, .handbook .li-aspect p { font-size: 16px; line-height: 1.45; margin: 4px 0 0; }
+.handbook .li-sec svg { width: 96px; height: 96px; display: block; }
+.handbook .li-sectorbig { display: flex; gap: 20px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+.handbook .li-sectorbig svg { width: 320px; height: auto; border-radius: 12px; display: block; }
+.handbook .li-sectorbig p { font-size: 18px; max-width: 520px; font-weight: 700; color: #2f4468; }
+.handbook .li-aspects { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.handbook .li-aspect { background: #141b2b; color: #eef2f8; border-radius: 12px; padding: 14px 16px; }
+.handbook .li-aspect b { color: #ffd9a0; font-size: 17px; }
+.handbook .li-aspect p { color: #dfe6f2; }
+.handbook .li-dots { display: flex; gap: 10px; height: 26px; align-items: center; margin-bottom: 8px; }
+.handbook .li-dots span { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+.handbook .li-combos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.handbook .li-combo { display: flex; gap: 14px; align-items: center; background: #fff; border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 12px; padding: 10px 12px; }
+.handbook .li-stack svg { display: block; }
