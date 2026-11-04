@@ -9,6 +9,7 @@ import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors
 import { buildHelpContent } from './help.js';
 import { t, sideLetters } from '../i18n.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, worldToLocal, tensionColor } from '../math.js';
+import { saveSettings } from '../settings.js';
 
 export class SimScreen {
   constructor(root, config, callbacks) {
@@ -98,6 +99,15 @@ export class SimScreen {
     for (const [k, n] of [['iso', 'Izo'], ['close', 'Blisko'], ['top', 'Z góry'], ['helm', 'Za rufą'], ['fpv', '👁 Kapitan']]) top.appendChild(h('button.btn.sm', { onclick: () => this.view.setView(k) }, n));
     this.soundBtn = h('button.btn.sm', { onclick: () => { this.sound.enabled = !this.sound.enabled; this.soundBtn.textContent = this.sound.enabled ? '🔊' : '🔇'; } }, '🔊');
     top.appendChild(this.soundBtn);
+    // chorągiewki wiatru na wodzie: pokaż / ukryj (zapamiętane w ustawieniach)
+    const barbs = this.view.windStreaks;
+    const barbBtn = h('button.btn.sm', { class: barbs && barbs.visible ? 'on' : '', title: 'Chorągiewki wiatru na wodzie: pokaż / ukryj', onclick: () => {
+      if (!barbs) return;
+      barbs.visible = !barbs.visible;
+      barbBtn.classList.toggle('on', barbs.visible);
+      saveSettings({ windBarbs: barbs.visible });
+    } }, '🚩 Wiatr');
+    top.appendChild(barbBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));

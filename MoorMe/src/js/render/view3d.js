@@ -323,13 +323,23 @@ export class View3D {
     const x0 = thrust >= 0 ? Math.min(b.xProp, xs + 0.6) : b.xProp; // naprzód: wybija spod rufy
     const len = (1.6 + 4 * Math.abs(thrust)) * (thrust >= 0 ? 1 : 0.7);
     const pa = W.geo.attributes.position.array;
+    // naprzód: płetwa sterowa odchyla strumień zgodnie z wychyleniem (ster na prawo – woda na prawą burtę);
+    // przy dwóch płetwach poza osią śruby odchylenie słabsze; na wstecznym ster strumienia nie kieruje
+    const defl = thrust >= 0 ? b.rudder * (this.world.equip.rudders === 'single' ? 1.0 : 0.75) : 0;
+    let cx = x0, cy = 0;
+    const ds = len / (W.R - 1);
     for (let i = 0; i < W.R; i++) {
-      const v = i / (W.R - 1), lx = x0 + dir * len * v;
+      const v = i / (W.R - 1);
+      if (i > 0) {
+        const a = defl * Math.min(1, v / 0.22); // strumień skręca tuż za płetwą
+        cx += dir * Math.cos(a) * ds; cy += Math.sin(a) * ds;
+      }
+      const a = defl * Math.min(1, v / 0.22), nx = Math.sin(a), ny = Math.cos(a); // poprzecznie do strumienia
       // na wstecznym strumień rozdziela się po obu stronach kadłuba
       const width = 0.25 + v * (thrust >= 0 ? 1.3 : 0.9) + (thrust < 0 ? spec.beam * 0.45 * Math.min(1, v * 2) : 0);
       for (let j = 0; j < W.C; j++) {
         const u = j / (W.C - 1) * 2 - 1;
-        const ly = u * width;
+        const lx = cx + nx * u * width, ly = cy + ny * u * width;
         const p = localToWorld(b.x, b.z, b.th, lx, ly);
         const o = (i * W.C + j) * 3;
         pa[o] = p.x; pa[o + 2] = p.z; pa[o + 1] = this.water.surfaceY(p.x, p.z, windKn, windDir) + 0.13;
@@ -409,11 +419,17 @@ export class View3D {
 
   makeWindStreaks() {
     // chorągiewki wiatru jak na mapach synoptycznych: drzewce + pierzaste kreski (5/10 kn) i trójkąty (50 kn)
-    const N = 100, SEG = 9; // siatka 10 × 10
+    // w porcie: siatka na całą mapę (osie wzdłuż i w poprzek wiatru); na otwartym morzu: wokół kamery
+    const B = !this.passage && this.world.H && this.world.H.bounds;
+    const GS = B ? 14 : 11;
+    const n = B ? Math.ceil(Math.hypot(B.maxX - B.minX, B.maxZ - B.minZ) / GS) + 3 : 12;
+    const N = n * n, SEG = 9;
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * SEG * 6), 3));
     const m = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
     m.frustumCulled = false;
+    m.userData = { B, GS, n, N, phase: 0 };
+    m.visible = getSettings().windBarbs !== false;
     return m;
   }
 
@@ -1022,44 +1038,56 @@ export class View3D {
     P.geo.attributes.position.needsUpdate = true;
     P.geo.attributes.alpha.needsUpdate = true;
 
-    // chorągiewki wiatru: stała siatka zaczepiona w świecie, leżą płasko na powierzchni wody
-    const wv = w.env.windVec();
-    const ws = this.windStreaks, wp = ws.geometry.attributes.position.array;
-    const SEG = 9, SH = 2.3, BL = 0.7, BS = 0.3, GS = 11, GN = 10;
-    const wn = Math.hypot(wv.x, wv.z) || 1, ux = -wv.x / wn, uz = -wv.z / wn; // ku nawietrznej
-    const px = -uz, pz = ux; // kreski na jedną stronę drzewca
-    let r5 = Math.round(windKn / 5);
-    const pen = Math.floor(r5 / 10); r5 -= pen * 10;
-    const full = Math.min(4, Math.floor(r5 / 2)), half5 = r5 % 2;
-    const gx0 = Math.round(this.cam.tx / GS) - GN / 2, gz0 = Math.round(this.cam.tz / GS) - GN / 2;
-    const sy = (x, z) => this.water.surfaceY(x, z, windKn, windDir) + 0.06;
-    for (let i = 0; i < GN * GN; i++) {
-      // środek drzewca w węźle siatki; czoło z wiatrem, kreski na końcu nawietrznym
-      const cx = (gx0 + (i % GN)) * GS, cz = (gz0 + Math.floor(i / GN)) * GS;
-      const hx = cx - ux * SH / 2, hz = cz - uz * SH / 2;
-      const tx = hx + ux * SH, tz = hz + uz * SH;
-      let o = i * SEG * 6, k = 0;
-      const seg = (x1, z1, x2, z2) => { if (k >= SEG) return; wp[o++] = x1; wp[o++] = sy(x1, z1); wp[o++] = z1; wp[o++] = x2; wp[o++] = sy(x2, z2); wp[o++] = z2; k++; };
-      seg(hx, hz, tx, tz);
-      let d = 0;
-      // kreska wyrasta z drzewca d metrów od nawietrznego końca i odchyla się ku wiatrowi (jak na mapach)
-      const tip = (s, l) => { const bx = tx - ux * s, bz = tz - uz * s; return [bx, bz, bx + (px + ux * 0.45) * l, bz + (pz + uz * 0.45) * l]; };
-      for (let j = 0; j < pen; j++) {
-        const [bx, bz, ex, ez] = tip(d, BL);
-        seg(bx, bz, ex, ez);
-        seg(ex, ez, bx - ux * BS * 1.3, bz - uz * BS * 1.3);
-        d += BS * 1.6;
+    // chorągiewki wiatru: siatka wzdłuż i w poprzek wiatru, płasko na wodzie; przesuwają się z wiatrem bazowym (bez porywów)
+    const ws = this.windStreaks;
+    if (ws.visible) {
+      const wp = ws.geometry.attributes.position.array, U = ws.userData;
+      const baseKn = Math.min(w.env.w.windKn || 0, w.env.w.maxKn ?? Infinity);
+      const bth = (w.env.w.windFrom + 180) * DEG; // kierunek „do” wiatru bazowego
+      const ax = Math.sin(bth), az = -Math.cos(bth); // z wiatrem
+      const ux = -ax, uz = -az; // ku nawietrznej
+      const px = -uz, pz = ux; // kreski na jedną stronę drzewca
+      const SEG = 9, SH = 2.3, BL = 0.7, BS = 0.3, GS = U.GS, n = U.n;
+      U.phase = (U.phase + dt * baseKn * 0.5144 * 0.3) % GS; // tempo proporcjonalne do wiatru
+      let r5 = Math.round(baseKn / 5);
+      const pen = Math.floor(r5 / 10); r5 -= pen * 10;
+      const full = Math.min(4, Math.floor(r5 / 2)), half5 = r5 % 2;
+      // obszar: cała mapa portu albo kwadrat wokół kamery
+      const B = U.B || { minX: this.cam.tx - 60, maxX: this.cam.tx + 60, minZ: this.cam.tz - 60, maxZ: this.cam.tz + 60 };
+      const mx = (B.minX + B.maxX) / 2, mz = (B.minZ + B.maxZ) / 2;
+      // współrzędne węzłów w osiach wiatru zakotwiczone w świecie (linie się nie przesuwają przy ruchu kamery)
+      const a0 = Math.floor((mx * ax + mz * az) / GS) - Math.floor(n / 2), p0 = Math.floor((mx * px + mz * pz) / GS) - Math.floor(n / 2);
+      const sy = (x, z) => this.water.surfaceY(x, z, windKn, windDir) + 0.06;
+      for (let i = 0; i < n * n; i++) {
+        const ia = a0 + (i % n), ip = p0 + Math.floor(i / n);
+        const sa = ia * GS + U.phase, sp = ip * GS + (ia & 1) * GS * 0.5; // co drugi rząd przesunięty – mniej „kratki”
+        const cx = ax * sa + px * sp, cz = az * sa + pz * sp;
+        let o = i * SEG * 6, k = 0;
+        if (cx < B.minX || cx > B.maxX || cz < B.minZ || cz > B.maxZ) { wp.fill(-60, o, o + SEG * 6); continue; } // poza mapą – schowane pod dnem
+        const hx = cx - ux * SH / 2, hz = cz - uz * SH / 2;
+        const tx = hx + ux * SH, tz = hz + uz * SH;
+        const yh = sy(hx, hz), yt = sy(tx, tz);
+        const seg = (x1, z1, x2, z2, y1 = yt, y2 = yt) => { if (k >= SEG) return; wp[o++] = x1; wp[o++] = y1; wp[o++] = z1; wp[o++] = x2; wp[o++] = y2; wp[o++] = z2; k++; };
+        seg(hx, hz, tx, tz, yh, yt);
+        let d = 0;
+        // kreska wyrasta z drzewca d metrów od nawietrznego końca i odchyla się ku wiatrowi (jak na mapach)
+        const tip = (s0, l) => { const bx = tx - ux * s0, bz = tz - uz * s0; return [bx, bz, bx + (px + ux * 0.45) * l, bz + (pz + uz * 0.45) * l]; };
+        for (let j = 0; j < pen; j++) {
+          const [bx, bz, ex, ez] = tip(d, BL);
+          seg(bx, bz, ex, ez);
+          seg(ex, ez, bx - ux * BS * 1.3, bz - uz * BS * 1.3);
+          d += BS * 1.6;
+        }
+        for (let j = 0; j < full; j++) { const [bx, bz, ex, ez] = tip(d, BL); seg(bx, bz, ex, ez); d += BS; }
+        if (half5) { if (!pen && !full) d += BS; const [bx, bz, ex, ez] = tip(d, BL * 0.55); seg(bx, bz, ex, ez); }
+        while (k < SEG) { wp[o++] = hx; wp[o++] = yh; wp[o++] = hz; wp[o++] = hx; wp[o++] = yh; wp[o++] = hz; k++; }
       }
-      for (let j = 0; j < full; j++) { const [bx, bz, ex, ez] = tip(d, BL); seg(bx, bz, ex, ez); d += BS; }
-      if (half5) { if (!pen && !full) d += BS; const [bx, bz, ex, ez] = tip(d, BL * 0.55); seg(bx, bz, ex, ez); }
-      const y0 = wp[i * SEG * 6 + 1];
-      while (k < SEG) { wp[o++] = hx; wp[o++] = y0; wp[o++] = hz; wp[o++] = hx; wp[o++] = y0; wp[o++] = hz; k++; }
+      ws.geometry.attributes.position.needsUpdate = true;
+      // po zmroku chorągiewki gasną – na ciemnej wodzie wyglądałyby jak jasne kreski
+      const dark = this.atmo ? this.atmo.night || 0 : 0;
+      ws.material.opacity = clamp(baseKn / 30, 0.04, 0.3) * (1 - 0.85 * dark);
+      ws.material.color.setRGB(0.78, 0.88, 0.94).multiplyScalar(1 - 0.55 * dark);
     }
-    ws.geometry.attributes.position.needsUpdate = true;
-    // po zmroku smugi gasną – na ciemnym niebie wyglądałyby jak jasne kreski gwiazd
-    const dark = this.atmo ? this.atmo.night || 0 : 0;
-    ws.material.opacity = clamp(windKn / 30, 0.04, 0.3) * (1 - 0.85 * dark);
-    ws.material.color.setRGB(0.78, 0.88, 0.94).multiplyScalar(1 - 0.55 * dark);
 
     // kamera
     const cam = this.cam;

@@ -166,6 +166,7 @@ export const EN = {
   'Wróć': 'Back',
   'Cumowanie': 'Mooring', 'Odcumowanie': 'Unmooring', 'Jacht zatrzymany': 'Yacht stopped', 'Wszystkie liny oddane': 'All lines released', 'Załoga na pokładzie': 'Crew aboard',
   'Jacht wypłynął za główki portu – zawracam do portu': 'The yacht left the harbour entrance – turning back into port', 'Jacht z powrotem w porcie – przejmij ster': 'Back inside the harbour – you have the helm',
+  '🚩 Wiatr': '🚩 Wind', 'Chorągiewki wiatru na wodzie: pokaż / ukryj': 'Wind barbs on the water: show / hide',
   '⬆ Wybierz luz': '⬆ Take up slack', 'Załoga wybiera luz na wszystkich założonych linach, aż się napną, i knaguje': 'The crew takes up slack on all attached lines until taut, then makes them fast',
   'Wszystkie liny są już napięte': 'All lines are already taut', 'Załoga wybiera luz na wszystkich linach': 'The crew is taking up slack on all lines',
   '⬇ Opuść platformę': '⬇ Lower platform', '⬆ Podnieś platformę': '⬆ Raise platform', 'Opuść / podnieś platformę na pawęży': 'Lower / raise the transom platform',

@@ -371,7 +371,7 @@ export function createNamePlate(spec, name, sub, split = false) {
   const { xs } = hullExtents(spec);
   const w = spec.beam * (split ? 0.6 : 0.55);
   const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(name, sub, split), transparent: true, depthWrite: false }));
-  plate.position.set(xs - 0.012, sheerHeight(spec, xs) * 0.62, 0);
+  plate.position.set(xs - 0.062, sheerHeight(spec, xs) * 0.62, 0); // na zewnętrznej stronie (zamkniętej) platformy rufowej
   plate.rotation.y = -Math.PI / 2;
   plate.userData.keep = true;
   return plate;
@@ -773,7 +773,17 @@ function addBoatDetails(heel, root, spec, d) {
   addDeckDetail(heel, spec, d);
   // nazwa na pawęży
   const nm = d.name || BOAT_NAMES[0];
-  if (!d.noPlate) heel.add(createNamePlate(spec, nm, d.sub ?? 'Gdynia', d.split));
+  if (!d.noPlate) {
+    // tabliczka na zewnętrznej stronie opuszczanej platformy – widoczna z zewnątrz i opuszcza się razem z nią
+    const plate = createNamePlate(spec, nm, d.sub ?? 'Gdynia', d.split);
+    const pu = root.userData.platform && root.userData.platform.userData;
+    if (pu && pu.pivot) {
+      plate.position.set(-0.056, plate.position.y - pu.y0, 0);
+      const pw = plate.geometry.parameters.width, k = Math.min(1, (pu.hw * 2 - 0.16) / pw); // mieści się na płycie
+      plate.scale.set(k, k, 1);
+      pu.pivot.add(plate);
+    } else heel.add(plate);
+  }
   // fały wzdłuż masztu
   const hp = [];
   for (const dz of [-0.06, 0.06]) hp.push(d.mastX + 0.1, d.topY + 1.2, dz, d.mastX + 0.1, d.mtop - 0.3, dz);
