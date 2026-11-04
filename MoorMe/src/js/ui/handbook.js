@@ -44,7 +44,7 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
   const X = (x) => W / 2 + (x - (x0 + x1) / 2) * sx, Y = (y) => H - 14 - y * sc;
   let g = `<rect width="${W}" height="${H}" fill="#0b1220"/><rect y="${H - 14}" width="${W}" height="14" fill="#0f1c2e"/>`;
   // zarys kadłuba (bardzo ciemny – nocą widać tylko światła)
-  const hullCol = '#202c40', edge = `stroke="#6f86a8" stroke-width="1" stroke-linejoin="round"`; // wyraźny zarys kadłuba – światła widać na sylwetce
+  const hullCol = '#1d2635', edge = ''; // kadłub jak cień – nocą widać głównie światła
   if (view.kind === 'side') {
     const s = view.rel > 0 ? 1 : -1, a = X(-s * Lm / 2), b = X(s * Lm / 2), hh = Math.max(1.2, Lm * 0.05) * sc;
     g += `<polygon points="${a},${Y(0)} ${b - s * 6},${Y(0)} ${b},${Y(0) - hh} ${a},${Y(0) - hh}" fill="${hullCol}" ${edge}/>`;
@@ -63,7 +63,7 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
     const bx0 = Math.min(...towed.map((l) => l.x)), bx1 = Math.max(...towed.map((l) => l.x)) + 3, bh = Math.max(1.2, Lm * 0.04) * sc;
     if (view.kind === 'side') {
       const a1 = X(view.ax({ x: bx0, z: 0 })), b1 = X(view.ax({ x: bx1, z: 0 })), t0 = X(view.ax({ x: -Lm / 2, z: 0 }));
-      g += `<line x1="${t0}" y1="${Y(0) - bh * 0.9}" x2="${b1}" y2="${Y(0) - bh * 0.6}" stroke="#6f86a8" stroke-width="1"/>`;
+      g += `<line x1="${t0}" y1="${Y(0) - bh * 0.9}" x2="${b1}" y2="${Y(0) - bh * 0.6}" stroke="#3a4558" stroke-width="1"/>`;
       g += `<rect x="${Math.min(a1, b1)}" y="${Y(0) - bh}" width="${Math.abs(b1 - a1)}" height="${bh}" fill="#1a2231" ${edge}/>`;
     } else {
       const bb = Math.max(...towed.map((l) => Math.abs(l.z))) * sx;
@@ -79,7 +79,7 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
       const k = Math.round(cx / 3);
       cols.set(k, Math.min(cols.get(k) ?? Infinity, cy));
     }
-    for (const [k, top] of cols) g += `<line x1="${k * 3}" y1="${deckY}" x2="${k * 3}" y2="${top}" stroke="#6f86a8" stroke-width="1.6" stroke-linecap="round"/>`;
+    for (const [k, top] of cols) g += `<line x1="${k * 3}" y1="${deckY}" x2="${k * 3}" y2="${top}" stroke="#273246" stroke-width="1.6" stroke-linecap="round"/>`;
   }
   for (const l of vis) {
     const cx = X(view.ax(l)), cy = Y(l.y), c = LCOL[l.c];
