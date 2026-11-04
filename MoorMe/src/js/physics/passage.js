@@ -217,6 +217,7 @@ export class PassageWorld extends World {
     this.time += dt;
     const b = this.boat;
     this.env.update(dt);
+    this.sea = this.env.seaMotion();
     this.runAutopilot();
     this.computeContacts(dt);
     b.step(dt, this.env);

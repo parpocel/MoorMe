@@ -126,7 +126,10 @@ export class World {
   leadWorld(line) {
     const l = this.leadLocal(line);
     const w = localToWorld(this.boat.x, this.boat.z, this.boat.th, l.x, l.y);
-    return { x: w.x, y: this.deckHeight(l.x) + 0.1, z: w.z, lx: l.x, ly: l.y };
+    // kołysanie na fali podnosi i opuszcza punkt mocowania liny – zmienia jej długość i naciąg
+    const sm = this.sea;
+    const dy = sm ? sm.heave - l.y * Math.sin(sm.roll) + l.x * Math.sin(sm.pitch) : 0;
+    return { x: w.x, y: this.deckHeight(l.x) + 0.1 + dy, z: w.z, lx: l.x, ly: l.y };
   }
   // ---------- Prowadzenie liny wokół kadłuba ----------
   // Lina nie przenika przez jacht: jeśli prosty odcinek od kluzy do polera przechodzi przez obrys,
@@ -967,6 +970,7 @@ export class World {
     this.time += dt;
     const b = this.boat;
     this.env.update(dt);
+    this.sea = this.env.seaMotion();
 
     if (this.engineDead) { b.throttle = 0; }
 

@@ -846,13 +846,14 @@ export class View3D {
     this.water.update(dt, windKn, windDir, b.x, b.z);
 
     // jacht
-    const bob = this.water.heightAt(b.x, b.z, windKn, windDir) * 0.6;
-    this.boat.position.set(b.x, bob, b.z);
+    // kołysanie z fizyki (to samo, które zmienia naciąg cum)
+    const sea = w.sea || { heave: this.water.heightAt(b.x, b.z, windKn, windDir) * 0.6, roll: 0, pitch: 0 };
+    this.boat.position.set(b.x, sea.heave, b.z);
     this.boat.rotation.y = -b.th;
     const heel = this.boat.userData.heel;
     const t = performance.now() / 1000;
-    heel.rotation.x = b.heelAngle() + Math.sin(t * 1.3) * 0.006 * (1 + windKn / 10);
-    heel.rotation.z = Math.sin(t * 0.9 + 1) * 0.004 * (1 + windKn / 10);
+    heel.rotation.x = b.heelAngle() + sea.roll;
+    heel.rotation.z = sea.pitch;
     this.selRing.material.opacity = 0.16 + 0.07 * Math.sin(t * 2.5); // delikatny obrys
     // obrys dna kadłuba tylko w pobliżu keji (do 0,2 nm = 370 m)
     const bq = this.world.H.berth;

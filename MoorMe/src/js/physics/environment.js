@@ -44,6 +44,17 @@ export class Environment {
     this.dirOffset = g * 9 * this.nDir(this.t * 0.12) * DEG; // powolne, nieregularne skręty wiatru
   }
 
+  // kołysanie jachtu na fali (wspólne dla fizyki lin i obrazu): unoszenie [m], przechył i przegłębienie [rad]
+  seaMotion() {
+    const kn = Math.min(this.w.windKn ?? 0, 35) * Math.min(1.3, this.gustFactor), t = this.t;
+    const A = (0.03 + kn * 0.0032) * 1.3 * (this.w.exposed ? 2 : 1);
+    return {
+      heave: A * (0.6 * Math.sin(t * 1.05) + 0.4 * Math.sin(t * 1.63 + 1.3)),
+      roll: (0.004 + kn * 0.0006) * (0.7 * Math.sin(t * 0.9 + 1) + 0.3 * Math.sin(t * 1.7)),
+      pitch: (0.003 + kn * 0.0004) * Math.sin(t * 1.3 + 0.4)
+    };
+  }
+
   // aktualny kierunek "z którego wieje" w stopniach
   get windFromDeg() {
     return this.w.windFrom + this.dirOffset / DEG;
