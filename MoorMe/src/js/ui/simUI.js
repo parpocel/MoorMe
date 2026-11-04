@@ -4,7 +4,7 @@ import { World } from '../physics/world.js';
 import { LINE_STATE_LABEL, TENDING_LABEL } from '../physics/lines.js';
 import { View3D } from '../render/view3d.js';
 import { Sound } from '../audio.js';
-import { BOATS, hullOutline, hullExtents } from '../data/boats.js';
+import { BOATS, hullOutline, hullExtents, fenderGeom, fenderRadiusOf, sternFenderY } from '../data/boats.js';
 import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors.js';
 import { buildHelpContent } from './help.js';
 import { t, sideLetters } from '../i18n.js';
@@ -312,7 +312,7 @@ export class SimScreen {
     const { xs, xb } = hullExtents(spec);
     // jacht pionowo, dziób do góry (lewa burta po lewej) – sam obrys kadłuba
     const H = 380, s = (H - 70) / spec.loa, W = Math.round(spec.beam * s + 150);
-    const P = this.planGeo = { W, H, s, toPx: (x, y) => [W / 2 + y * s, H / 2 - (x - (xs + xb) / 2) * s] };
+    const P = this.planGeo = { W, H, s, toPx: (x, y) => [W / 2 + y * s, H / 2 - (x - (xs + xb) / 2) * s], toLocal: (px, py) => ({ x: (xs + xb) / 2 - (py - H / 2) / s, y: (px - W / 2) / s }) };
     const NS = 'http://www.w3.org/2000/svg';
     const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
     const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'plan-svg' });
@@ -322,6 +322,28 @@ export class SimScreen {
     const lbl = (x, y, txt, anchor) => { const tx = el('text', { x, y, class: 'plan-lbl', 'text-anchor': anchor }, svg); tx.textContent = t(txt); };
     lbl(W / 2, 12, 'DZIÓB', 'middle'); lbl(6, H / 2, 'L', 'start'); lbl(W - 6, H / 2, 'P', 'end');
     this.planLinesG = el('g', {}, svg);
+    // odbijacze: przeciąganie wzdłuż burty (albo na pawęż) w trakcie manewru
+    this.fenderG = el('g', { class: 'plan-fenders' }, svg);
+    this.fenderEls = new Map();
+    const eq = w.equip;
+    for (const f of eq.fenders) {
+      const m = f.ball ? el('circle', { r: 5.5, class: 'pl-fender' }, this.fenderG) : el('ellipse', { rx: 3.2, ry: 7, class: 'pl-fender' }, this.fenderG);
+      const tt = el('title', {}, m); tt.textContent = t('Odbijacz – przeciągnij wzdłuż burty');
+      this.fenderEls.set(f.id, m);
+      m.addEventListener('pointerdown', (ev) => {
+        ev.stopPropagation(); ev.preventDefault(); m.setPointerCapture(ev.pointerId); m._drag = true; m.classList.add('drag');
+      });
+      m.addEventListener('pointermove', (ev) => {
+        if (!m._drag) return;
+        const rect = svg.getBoundingClientRect();
+        const loc = P.toLocal((ev.clientX - rect.left) * (W / rect.width), (ev.clientY - rect.top) * (H / rect.height));
+        f.side = loc.y < 0 ? -1 : 1;
+        if (loc.x < xs + 0.3) { f.stern = true; f.x = xs; f.y = +sternFenderY(spec, { ...f, y: loc.y }, fenderRadiusOf(f, eq.fenderRadius)).toFixed(2); }
+        else { delete f.stern; delete f.y; f.x = +Math.max(xs + 0.3, Math.min(xb - 0.12, loc.x)).toFixed(2); }
+      });
+      const up = () => { m._drag = false; m.classList.remove('drag'); };
+      m.addEventListener('pointerup', up); m.addEventListener('pointercancel', up);
+    }
     this.planLineEls = new Map();
     this.plan.innerHTML = '';
     this.plan.style.aspectRatio = `${W} / ${H}`;
@@ -413,6 +435,16 @@ export class SimScreen {
       e.g.setAttribute('class', `plan-line${attached ? ' live' : ''}`);
     }
     for (const [id, e] of this.planLineEls) if (!seen.has(id)) { e.g.remove(); this.planLineEls.delete(id); }
+    // odbijacze na rzucie (pozycja i to, czy są wystawione)
+    if (this.fenderEls) for (const f of w.equip.fenders) {
+      const m = this.fenderEls.get(f.id); if (!m) continue;
+      const g = fenderGeom(w.spec, f, w.equip.fenderRadius);
+      const [fx, fy] = P.toPx(g.x, g.y);
+      const out = f.stern ? w.fenderOut.stern : f.side < 0 ? w.fenderOut.port : w.fenderOut.starboard;
+      if (m.tagName === 'circle') { m.setAttribute('cx', fx); m.setAttribute('cy', fy); }
+      else { m.setAttribute('cx', fx); m.setAttribute('cy', fy); m.setAttribute('rx', f.stern ? 7 : 3.2); m.setAttribute('ry', f.stern ? 3.2 : 7); }
+      m.classList.toggle('in', !out);
+    }
     if (this.hoverLine && !seen.has(this.hoverLine.id)) this.hoverLine = null;
     this.updatePlanTip();
   }

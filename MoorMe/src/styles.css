@@ -166,6 +166,9 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .plan-line.live .pl-hit, .plan-line.live .pl-end { cursor: grab; }
 .plan-line .pl-vis { pointer-events: none; }
 .plan-tip { white-space: normal; max-width: 300px; line-height: 1.45; }
+.pl-fender { fill: #f4f4f1; stroke: #1d3557; stroke-width: 1.4; cursor: grab; pointer-events: all; }
+.pl-fender.in { opacity: 0.35; }
+.pl-fender.drag { fill: #ffd166; cursor: grabbing; }
 .plan-lbl { font-size: 11px; font-weight: 700; fill: var(--muted); }
 .cleat-dot { position: absolute; transform: translate(-50%, -50%); min-width: 24px; height: 24px; padding: 0 4px; border-radius: 12px; border: 3px solid #8796ab; background: #fff; color: #2f4468; font: 800 11px/18px 'Nunito', 'Segoe UI', sans-serif; cursor: pointer; box-shadow: 0 2px 6px rgba(20, 30, 60, 0.35); transition: transform 0.12s; z-index: 2; }
 .cleat-dot:hover { transform: translate(-50%, -50%) scale(1.15); }
