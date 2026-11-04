@@ -41,6 +41,7 @@ function svgScenery() {
 function sceneryEl() {
   try {
     if (!menuGL || menuGL._disposed) menuGL = new MenuScene(h('div.m3-gl'));
+    menuGL.refreshIdentity();
     const host = h('div.scenery.scenery3d', {}, menuGL.el);
     requestAnimationFrame(() => menuGL && menuGL.resize());
     return host;
@@ -164,6 +165,7 @@ function menuBackdrop() {
       const holder = h('div.m3-gl');
       menuGL = new MenuScene(holder);
     }
+    menuGL.refreshIdentity();
     host.appendChild(menuGL.el);
     requestAnimationFrame(() => menuGL && menuGL.resize());
   } catch (e) {

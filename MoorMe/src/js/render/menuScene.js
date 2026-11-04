@@ -183,10 +183,7 @@ export class MenuScene {
 
     // jacht
     const spec = BOATS.C46;
-    const boat = this.boat = buildBoat(spec, { color: 0xffffff, stripe: 0x2f4468, ...boatIdentity(), split: true });
-    boat.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-    boat.rotation.y = -0.35;
-    scene.add(boat);
+    this.makeBoat();
 
     // otoczenie
     const add = (o, x, z, ry = 0) => { o.position.set(x, 0, z); o.rotation.y = ry; scene.add(o); return o; };
@@ -227,8 +224,26 @@ export class MenuScene {
     requestAnimationFrame(loop);
   }
 
+  // jacht z nazwą, portem i banderą z ustawień
+  makeBoat() {
+    const id = boatIdentity();
+    this._idKey = JSON.stringify(id);
+    const boat = this.boat = buildBoat(BOATS.C46, { color: 0xffffff, stripe: 0x2f4468, ...id, split: true });
+    boat.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    boat.rotation.y = -0.35;
+    this.scene.add(boat);
+  }
+
+  // po zmianie bandery / nazwy w ustawieniach – przebudowa jachtu w menu
+  refreshIdentity() {
+    if (!this.boat || JSON.stringify(boatIdentity()) === this._idKey) return;
+    this.scene.remove(this.boat);
+    this.boat.traverse((o) => { if (o.geometry) o.geometry.dispose(); });
+    this.makeBoat();
+  }
+
   wave(x, z, t) {
-    return Math.sin(x * 0.045 + t * 0.9) * 0.55 + Math.sin(z * 0.06 - t * 1.1) * 0.45 + Math.sin((x + z) * 0.11 + t * 1.7) * 0.18;
+    return Math.sin(x * 0.045 + t * 0.9) * 0.36 + Math.sin(z * 0.06 - t * 1.1) * 0.3 + Math.sin((x + z) * 0.11 + t * 1.7) * 0.12; // spokojne morze
   }
 
   frame(t) {
@@ -242,7 +257,7 @@ export class MenuScene {
 
     const bt = this.boat;
     bt.position.y = this.wave(0, 0, t) * 0.7 - 0.2;
-    bt.rotation.z = Math.sin(t * 0.8) * 0.035;
+    bt.rotation.z = Math.sin(t * 0.8) * 0.024;
     bt.rotation.x = Math.sin(t * 0.6 + 1) * 0.02;
     this.buoys.forEach((o, i) => { o.position.y = this.wave(o.position.x, o.position.z, t) - 0.3; o.rotation.z = Math.sin(t * 1.3 + i) * 0.12; });
     this.clouds.forEach((c, i) => { c.position.x += 0.02 + i * 0.004; if (c.position.x > 700) c.position.x = -700; });

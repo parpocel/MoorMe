@@ -1134,16 +1134,17 @@ function backdropHills(group, H, rects, r) {
     const hgt = med ? 22 + r() * 48 + (d > 450 ? 25 : 0) : 9 + r() * 18;
     const geo = new THREE.ConeGeometry(R, hgt, 9, 3);
     const pos = geo.attributes.position;
+    // nieregularność: to samo przesunięcie dla wierzchołków w tym samym miejscu (szew stożka, szczyt) – bez szczelin
+    const offs = new Map(), k = med ? 0.18 : 0.12;
     for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
       if (y < -hgt / 2 + 0.01) continue; // podstawa zostaje okrągła
-      const k = med ? 0.18 : 0.12;
-      pos.setX(i, pos.getX(i) * (1 + (r() - 0.5) * k * 2));
-      pos.setZ(i, pos.getZ(i) * (1 + (r() - 0.5) * k * 2));
-      pos.setY(i, y + (r() - 0.5) * hgt * 0.12);
+      const key = `${x.toFixed(2)},${y.toFixed(2)},${z.toFixed(2)}`;
+      if (!offs.has(key)) offs.set(key, [1 + (r() - 0.5) * k * 2, 1 + (r() - 0.5) * k * 2, (r() - 0.5) * hgt * 0.12]);
+      const [sx, sz, dy] = offs.get(key);
+      const top = y > hgt / 2 - 0.01; // zaokrąglony wierzchołek (kopuła zamiast ostrego szczytu)
+      pos.setXYZ(i, x * sx, top ? hgt / 2 - hgt * 0.18 : y + dy, z * sz);
     }
-    // zaokrąglony wierzchołek (low-poly kopuła zamiast ostrego szczytu)
-    for (let i = 0; i < pos.count; i++) if (pos.getY(i) > hgt / 2 - 0.01) pos.setY(i, hgt / 2 - hgt * 0.18);
     geo.computeVertexNormals();
     const m = new THREE.Mesh(geo, mat(hillCols[Math.floor(r() * hillCols.length)], { rough: 1 }));
     m.scale.set(1, 1, 0.7 + r() * 0.6);

@@ -370,8 +370,8 @@ export function waveFlag(flag, t, windKn = 8, phase = 0) {
 export function createNamePlate(spec, name, sub, split = false) {
   const { xs } = hullExtents(spec);
   const w = spec.beam * (split ? 0.6 : 0.55);
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(name, sub, split), transparent: true, depthWrite: false }));
-  plate.position.set(xs - 0.062, sheerHeight(spec, xs) * 0.62, 0); // na zewnętrznej stronie (zamkniętej) platformy rufowej
+  const plate = new THREE.Mesh(new THREE.PlaneGeometry(w, w * 96 / 512), new THREE.MeshBasicMaterial({ map: nameTexture(name, sub, split), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -8 }));
+  plate.position.set(xs - 0.075, sheerHeight(spec, xs) * 0.62, 0); // na zewnętrznej stronie (zamkniętej) platformy rufowej
   plate.rotation.y = -Math.PI / 2;
   plate.userData.keep = true;
   return plate;
@@ -778,7 +778,7 @@ function addBoatDetails(heel, root, spec, d) {
     const plate = createNamePlate(spec, nm, d.sub ?? 'Gdynia', d.split);
     const pu = root.userData.platform && root.userData.platform.userData;
     if (pu && pu.pivot) {
-      plate.position.set(-0.056, plate.position.y - pu.y0, 0);
+      plate.position.set(-0.07, plate.position.y - pu.y0, 0);
       const pw = plate.geometry.parameters.width, k = Math.min(1, (pu.hw * 2 - 0.16) / pw); // mieści się na płycie
       plate.scale.set(k, k, 1);
       pu.pivot.add(plate);
