@@ -373,11 +373,11 @@ function showModeSelect() {
 
 // ---------- Trening albo nauka (podręczniki) ----------
 // Trening albo nauka – w stylu menu głównego (scena 3D, kafle)
-function trainOrLearn({ kicker, glyph: g, color, trainTag, learnTag, train, learn, onTrain, onLearn, self }) {
+function trainOrLearn({ kicker, glyph: g, color, trainTitle = 'Trening w symulacji', trainTag, learnTag, train, learn, onTrain, onLearn, self }) {
   menuScreen({
     kicker, back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: self,
     items: [
-      { glyph: g, color, title: 'Trening w symulacji', tag: trainTag, desc: train, go: onTrain },
+      { glyph: g, color, title: trainTitle, tag: trainTag, desc: train, go: onTrain },
       { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: learnTag, desc: learn, go: onLearn }
     ]
   });
@@ -435,11 +435,11 @@ function startMeteo(kind) {
 }
 function showNavIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Zadania nawigacyjne', glyph: 'compass', color: '#4f9d5c', trainTag: 'kursy, namiary, pozycja', learnTag: 'przeliczanie kursów i namiary', train: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', learn: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); }, onLearn: () => showNavBook(), self: () => showNavIntro() });
+  trainOrLearn({ kicker: 'Zadania nawigacyjne', glyph: 'compass', color: '#4f9d5c', trainTitle: 'Zadania', trainTag: 'kursy, namiary, pozycja', learnTag: 'przeliczanie kursów i namiary', train: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', learn: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); }, onLearn: () => showNavBook(), self: () => showNavIntro() });
 }
 function showNavBook() {
   menuMusic.start();
-  showHandbook(app, { title: 'podręcznik – zadania nawigacyjne', sections: navBook(), sceneryEl, onExit: () => showNavIntro(), onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } });
+  showHandbook(app, { title: 'podręcznik – zadania nawigacyjne', sections: navBook(), sceneryEl, trainLabel: '🎯 Przejdź do zadań', onExit: () => showNavIntro(), onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } });
 }
 function showMarksBook() {
   menuMusic.start();

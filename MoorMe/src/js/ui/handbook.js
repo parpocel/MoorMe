@@ -720,7 +720,7 @@ export function marksBook() {
 }
 
 // ---------- ekran podręcznika ----------
-export function showHandbook(app, { title, sections, onExit, onTrain, sceneryEl, tools = null }) {
+export function showHandbook(app, { title, sections, onExit, onTrain, sceneryEl, tools = null, trainLabel }) {
   app.innerHTML = '';
   // animowane lampy tylko z bieżącego podręcznika
   LAMPS.clear();
@@ -731,7 +731,7 @@ export function showHandbook(app, { title, sections, onExit, onTrain, sceneryEl,
   const root = h('div.screen.handbook', {}, sceneryEl ? sceneryEl() : null,
     h('div.screen-header', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, title)),
     h('div.hb-body', {}, nav, main),
-    h('div.screen-footer', {}, h('button.btn', { onclick: () => onExit() }, '← Wstecz'), tools ? tools() : null, onTrain ? h('button.btn.primary', { onclick: () => onTrain() }, '🎯 Przejdź do treningu') : h('span')));
+    h('div.screen-footer', {}, h('button.btn', { onclick: () => onExit() }, '← Wstecz'), tools ? tools() : null, onTrain ? h('button.btn.primary', { onclick: () => onTrain() }, trainLabel || '🎯 Przejdź do treningu') : h('span')));
   app.appendChild(root);
   const render = () => {
     nav.innerHTML = '';

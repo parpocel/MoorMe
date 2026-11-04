@@ -7,7 +7,7 @@ import { HarbourLife } from './life.js';
 import { buildSea } from './seaModel.js';
 import { Atmosphere } from './atmosphere.js';
 import { wheelClassifier } from './wheel.js';
-import { hullExtents, hullOutline, halfBeamAt, hullNormalAt, fenderGeom, fenderRadiusOf } from '../data/boats.js';
+import { hullExtents, hullOutline, halfBeamAt, hullNormalAt, fenderGeom, fenderRadiusOf, sternFenderY } from '../data/boats.js';
 import { localToWorld, DEG, clamp, tensionColor, pointInConvex } from '../math.js';
 import { TARGET_DY } from '../physics/world.js';
 import { getSettings, boatIdentity, crewNames } from '../settings.js';
@@ -207,6 +207,7 @@ export class View3D {
 
     // wskaźnik kursu (strzałka na wodzie)
     this.raycaster = new THREE.Raycaster();
+    if (typeof window !== "undefined") window.__view3d = this; // do testów w przeglądarce
     this.mouse = new THREE.Vector2();
 
     // kamera
@@ -437,14 +438,21 @@ export class View3D {
     const el = this.renderer.domElement;
     let drag = null;
     el.addEventListener('contextmenu', (e) => e.preventDefault());
+    let fdrag = null; // przeciąganie odbijacza bezpośrednio na jachcie
     el.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch' && e.isPrimary === false) return; // drugi palec – gest (niżej)
+      if (e.button === 0 && !e.shiftKey && !e.altKey) {
+        this.updateMouse(e);
+        const fh = this.pickFender();
+        if (fh) { fdrag = fh; el.setPointerCapture(e.pointerId); el.style.cursor = 'grabbing'; return; }
+      }
       drag = { x: e.clientX, y: e.clientY, button: e.button, moved: false };
       el.setPointerCapture(e.pointerId);
     });
     el.addEventListener('pointermove', (e) => {
       this.updateMouse(e);
-      if (!drag) { if (this.onHover) this.onHover(this.pick()); return; }
+      if (fdrag) { this.dragFender(fdrag); return; }
+      if (!drag) { el.style.cursor = this.pickFender() ? 'grab' : ''; if (this.onHover) this.onHover(this.pick()); return; }
       const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
       if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
       drag.x = e.clientX; drag.y = e.clientY;
@@ -463,6 +471,7 @@ export class View3D {
       }
     });
     el.addEventListener('pointerup', (e) => {
+      if (fdrag) { fdrag = null; el.style.cursor = 'grab'; return; }
       if (drag && !drag.moved && drag.button === 0 && this.onClick) {
         this.updateMouse(e);
         this.onClick(this.pick());
@@ -548,6 +557,31 @@ export class View3D {
     if (best == null) return null;
     const line = this.world.lines.find((l) => l.id === best);
     return line ? { line, d: bd } : null;
+  }
+
+  // odbijacz pod kursorem (tylko wywieszony) – { f, mesh, y } z wysokością punktu chwytu w świecie
+  pickFender() {
+    if (!this.fenders || !this.fenders.size) return null;
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const vis = [...this.fenders.values()].filter((o) => o.mesh.visible);
+    if (!vis.length) return null;
+    const hits = this.raycaster.intersectObjects(vis.map((o) => o.mesh), true);
+    if (!hits.length) return null;
+    let o = hits[0].object;
+    const rec = vis.find((v) => { let q = o; while (q) { if (q === v.mesh) return true; q = q.parent; } return false; });
+    return rec ? { f: rec.f, y: hits[0].point.y } : null;
+  }
+  // przesuwanie odbijacza: punkt na poziomej płaszczyźnie na wysokości chwytu → pozycja wzdłuż burty (albo na pawęży)
+  dragFender(fd) {
+    const w = this.world, spec = w.spec, eq = w.equip, { xs, xb } = hullExtents(spec);
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -fd.y), hit = new THREE.Vector3();
+    if (!this.raycaster.ray.intersectPlane(plane, hit)) return;
+    const loc = this.boat.userData.heel.worldToLocal(hit.clone());
+    const f = fd.f;
+    f.side = loc.z < 0 ? -1 : 1;
+    if (loc.x < xs + 0.3) { f.stern = true; f.x = xs; f.y = +sternFenderY(spec, { ...f, y: loc.z }, fenderRadiusOf(f, eq.fenderRadius)).toFixed(2); }
+    else { delete f.stern; delete f.y; f.x = +Math.max(xs + 0.3, Math.min(xb - 0.12, loc.x)).toFixed(2); }
   }
 
   pickBollard() {

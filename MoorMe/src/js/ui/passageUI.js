@@ -75,7 +75,11 @@ export class PassageScreen extends SimScreen {
     this.pauseBtn = h('button.btn.sm', { onclick: () => this.togglePause(), title: 'Pauza (P)' }, '⏸ Pauza');
     top.appendChild(this.pauseBtn);
     // rozwijane przyciski „Czas” i „Kamera” – opcje po najechaniu (jak w cumowaniu)
-    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items); return { el: h('div.hud-drop', {}, btn, menu), btn }; };
+    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items);
+      // po wybraniu opcji menu się zwija (do ponownego najechania)
+      const el = h('div.hud-drop', { onmouseleave: () => el.classList.remove('closed') }, btn, menu);
+      menu.addEventListener('click', (e) => { if (e.target.closest('button')) { el.classList.add('closed'); if (document.activeElement) document.activeElement.blur(); } });
+      return { el, btn }; };
     this.speedBtns = [1, 2, 4, 8].map((s) => h('button.btn.sm', { class: s === 1 ? 'on' : '', onclick: () => this.setSpeed(s) }, `${s}×`));
     this.timeDrop = drop('⏱ Czas 1×', this.speedBtns);
     top.appendChild(this.timeDrop.el);

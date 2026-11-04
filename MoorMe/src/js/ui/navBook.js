@@ -4,10 +4,21 @@ import { h } from './dom.js';
 import { getLang } from '../i18n.js';
 
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
-const svgBox = (w, hh, inner) => { const d = document.createElement('div'); d.className = 'hb-svg nb-fig'; d.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" font-family="Nunito, sans-serif">${inner}</svg>`; return d; };
+const svgBox = (w, hh, inner, wide = false) => { const d = document.createElement('div'); d.className = 'hb-svg nb-fig' + (wide ? ' nb-wide' : ''); d.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" font-family="Nunito, sans-serif">${inner}</svg>`; return d; };
 const P = (...t) => h('p', {}, ...t);
 const B = (t) => h('b', {}, t);
-const entry = (title, ...kids) => h('div.hb-entry.hb-card', {}, title ? h('h3', {}, title) : null, ...kids);
+// lekcja na pełną szerokość: tekst po lewej, rysunek po prawej (rysunek „szeroki” – nad tekstem)
+const isFig = (k) => k && k.classList && k.classList.contains('nb-fig');
+const entry = (title, ...kids) => {
+  kids = kids.filter(Boolean);
+  const wide = kids.filter((k) => isFig(k) && k.classList.contains('nb-wide')), figs = kids.filter((k) => isFig(k) && !wide.includes(k)), text = kids.filter((k) => !isFig(k));
+  return h('section.nb-lesson', {}, title ? h('h3', {}, title) : null, ...wide,
+    h('div.nb-cols', { class: figs.length ? 'has-fig' : '' }, h('div.nb-text', {}, ...text), figs.length ? h('div.nb-figcol', {}, ...figs) : null));
+};
+// ramka z przykładem i z uwagą
+const ex = (...t) => h('div.nb-example', {}, h('div.nb-tag', {}, L('Przykład', 'Example')), h('p', {}, ...t));
+const note = (...t) => h('div.nb-note', {}, h('div.nb-tag', {}, L('Uwaga', 'Note')), h('p', {}, ...t));
+const steps = (...li) => h('ol.nb-steps', {}, ...li.map((x) => h('li', {}, ...(Array.isArray(x) ? x : [x]))));
 const table = (head, rows) => h('div.hb-ct-wrap', {}, h('table.hb-ctable', {}, h('tr', {}, ...head.map((x) => h('th', {}, x))), ...rows.map((r) => h('tr', {}, ...r.map((c) => h('td', {}, c))))));
 const formula = (...lines) => h('div.nb-formula', {}, ...lines.map((l) => h('div', {}, l)));
 
@@ -27,18 +38,24 @@ function chainSVG() {
     }
   });
   g += `<text x="20" y="24" fill="#c2410c" font-size="13" font-weight="700">${L('w prawo: dodajemy poprawki', 'to the right: add the corrections')}</text><text x="20" y="136" fill="#4a7c59" font-size="13" font-weight="700">${L('w lewo: odejmujemy poprawki', 'to the left: subtract the corrections')}</text>`;
-  return svgBox(W, 150, `<defs><marker id="nbA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#c2410c"/></marker><marker id="nbB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4a7c59"/></marker></defs>${g}`);
+  return svgBox(W, 150, `<defs><marker id="nbA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#c2410c"/></marker><marker id="nbB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#4a7c59"/></marker></defs>${g}`, true);
 }
 
 // kierunki północy: rzeczywista, magnetyczna, kompasowa i poprawki między nimi
 function northsSVG() {
-  const cx = 160, cy = 190, R = 150, ray = (deg, col, lbl, dash = '') => { const a = (deg * Math.PI) / 180, x = cx + Math.sin(a) * R, y = cy - Math.cos(a) * R; return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${col}" stroke-width="2.5" ${dash}/><text x="${x + 4}" y="${y - 4}" fill="${col}" font-size="13" font-weight="800">${lbl}</text>`; };
-  let g = `<rect width="420" height="220" rx="12" fill="#f6f1e1"/>`;
-  g += ray(0, '#1b1f24', 'Nr') + ray(10, '#2563eb', 'Nm') + ray(16, '#c2410c', 'Nk') + ray(62, '#2f4468', L('dziób', 'bow'), 'stroke-dasharray="6 4"');
-  g += `<path d="M${cx} ${cy - 120} A120 120 0 0 1 ${cx + Math.sin(0.1745) * 120} ${cy - Math.cos(0.1745) * 120}" fill="none" stroke="#2563eb" stroke-width="2"/><text x="${cx + 4}" y="${cy - 124}" fill="#2563eb" font-size="12">d</text>`;
-  g += `<path d="M${cx + Math.sin(0.1745) * 100} ${cy - Math.cos(0.1745) * 100} A100 100 0 0 1 ${cx + Math.sin(0.279) * 100} ${cy - Math.cos(0.279) * 100}" fill="none" stroke="#c2410c" stroke-width="2"/><text x="${cx + 24}" y="${cy - 100}" fill="#c2410c" font-size="12">δ</text>`;
-  g += `<text x="250" y="60" fill="#1b1f24" font-size="12">${L('Nr – północ rzeczywista (geograficzna)', 'Nt – true north')}</text><text x="250" y="80" fill="#2563eb" font-size="12">${L('Nm – północ magnetyczna', 'Nm – magnetic north')}</text><text x="250" y="100" fill="#c2410c" font-size="12">${L('Nk – północ kompasowa', 'Nc – compass north')}</text><text x="250" y="130" fill="#2563eb" font-size="12">${L('d – deklinacja (Nr→Nm)', 'd – variation (Nt→Nm)')}</text><text x="250" y="150" fill="#c2410c" font-size="12">${L('δ – dewiacja (Nm→Nk)', 'δ – deviation (Nm→Nc)')}</text><text x="250" y="178" fill="#2f4468" font-size="12">${L('E / w prawo = dodatnie (+)', 'E / to the right = positive (+)')}</text><text x="250" y="196" fill="#2f4468" font-size="12">${L('W / w lewo = ujemne (−)', 'W / to the left = negative (−)')}</text>`;
-  return svgBox(420, 220, g);
+  const cx = 120, cy = 250, R = 210;
+  const pt = (deg, r) => [cx + Math.sin((deg * Math.PI) / 180) * r, cy - Math.cos((deg * Math.PI) / 180) * r];
+  const ray = (deg, col, lbl, dash = '', rr = R) => { const [x, y] = pt(deg, rr); return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${col}" stroke-width="3" ${dash}/><text x="${x}" y="${y - 8}" fill="${col}" font-size="16" font-weight="800" text-anchor="middle">${lbl}</text>`; };
+  const arc = (a0, a1, r, col, lbl) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r), [lx, ly] = pt((a0 + a1) / 2, r + 14); return `<path d="M${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1}" fill="none" stroke="${col}" stroke-width="2.5"/><text x="${lx}" y="${ly + 5}" fill="${col}" font-size="16" font-weight="800" text-anchor="middle">${lbl}</text>`; };
+  let g = `<rect width="560" height="270" rx="12" fill="#f6f1e1"/>`;
+  g += ray(0, '#1b1f24', 'Nr') + ray(14, '#2563eb', 'Nm') + ray(28, '#c2410c', 'Nk') + ray(58, '#2f4468', L('dziób', 'bow'), 'stroke-dasharray="7 5"', 175);
+  g += arc(0, 14, 150, '#2563eb', 'd') + arc(14, 28, 115, '#c2410c', 'δ');
+  const leg = [['#1b1f24', L('Nr – północ rzeczywista', 'Nt – true north')], ['#2563eb', L('Nm – północ magnetyczna', 'Nm – magnetic north')], ['#c2410c', L('Nk – północ kompasowa', 'Nc – compass north')], null,
+    ['#2563eb', L('d – deklinacja (od Nr do Nm)', 'd – variation (Nt to Nm)')], ['#c2410c', L('δ – dewiacja (od Nm do Nk)', 'δ – deviation (Nm to Nc)')], null,
+    ['#2f4468', L('E / w prawo = dodatnie (+)', 'E / to the right = positive (+)')], ['#2f4468', L('W / w lewo = ujemne (−)', 'W / to the left = negative (−)')]];
+  let y = 46;
+  for (const it of leg) { if (!it) { y += 12; continue; } g += `<text x="318" y="${y}" fill="${it[0]}" font-size="15">${it[1]}</text>`; y += 24; }
+  return svgBox(560, 270, g);
 }
 
 // trójkąt prędkości: KR/V po wodzie + prąd = KDd/SOG nad dnem
@@ -48,8 +65,8 @@ function currentSVG() {
   const mk = (col) => `<marker id="nbC${col.slice(1)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${col}"/></marker>`;
   let g = `<defs>${mk('#2f4468')}${mk('#2563eb')}${mk('#c2410c')}</defs><rect width="420" height="250" rx="12" fill="#f6f1e1"/>`;
   g += arrow(A, Bp, '#2f4468') + arrow(Bp, C, '#2563eb') + arrow(A, C, '#c2410c', 3.5);
-  g += `<text x="${(A[0] + Bp[0]) / 2 - 80}" y="${(A[1] + Bp[1]) / 2}" fill="#2f4468" font-size="13" font-weight="800">${L('KDw, V (po wodzie)', 'CTW, STW (through water)')}</text>`;
-  g += `<text x="${Bp[0] + 18}" y="${Bp[1] + 8}" fill="#2563eb" font-size="13" font-weight="800">${L('prąd: kierunek, prędkość', 'current: set, rate')}</text>`;
+  g += `<text x="${(A[0] + Bp[0]) / 2 - 14}" y="${(A[1] + Bp[1]) / 2 - 6}" fill="#2f4468" font-size="13" font-weight="800" text-anchor="end">${L('KDw, V (po wodzie)', 'CTW, STW (through water)')}</text>`;
+  g += `<text x="${Bp[0] - 10}" y="${Bp[1] - 16}" fill="#2563eb" font-size="13" font-weight="800">${L('prąd: kierunek, prędkość', 'current: set, rate')}</text>`;
   g += `<text x="${(A[0] + C[0]) / 2 + 10}" y="${(A[1] + C[1]) / 2 + 30}" fill="#c2410c" font-size="13" font-weight="800">${L('KDd, SOG (nad dnem)', 'COG, SOG (over ground)')}</text>`;
   g += `<circle cx="${A[0]}" cy="${A[1]}" r="4" fill="#1b1f24"/><text x="${A[0] - 6}" y="${A[1] + 20}" font-size="12">${L('pozycja wyjściowa', 'start')}</text>`;
   return svgBox(420, 250, g);
@@ -59,8 +76,8 @@ function currentSVG() {
 function fixSVG() {
   let g = `<rect width="420" height="250" rx="12" fill="#eef5fa"/>`;
   g += `<path d="M20 30 Q60 20 90 50 T140 40 L150 0 L0 0 L0 60 Z" fill="#f2e2b0" stroke="#5b4a2c"/><path d="M300 0 L420 0 L420 90 Q380 70 350 80 T300 40 Z" fill="#f2e2b0" stroke="#5b4a2c"/>`;
-  g += `<g fill="#1b1f24"><path d="M96 46 l5 -12 l5 12 z"/></g><text x="110" y="40" font-size="12">${L('latarnia A', 'light A')}</text>`;
-  g += `<g fill="#1b1f24"><path d="M344 70 l5 -12 l5 12 z"/></g><text x="300" y="98" font-size="12">${L('cypel B', 'point B')}</text>`;
+  g += `<g fill="#1b1f24"><path d="M96 46 l5 -12 l5 12 z"/></g><text x="90" y="64" font-size="12" text-anchor="end">${L('latarnia A', 'light A')}</text>`;
+  g += `<g fill="#1b1f24"><path d="M344 70 l5 -12 l5 12 z"/></g><text x="362" y="100" font-size="12">${L('cypel B', 'point B')}</text>`;
   g += `<line x1="101" y1="44" x2="250" y2="236" stroke="#2f4468" stroke-width="2"/><line x1="349" y1="68" x2="160" y2="236" stroke="#2f4468" stroke-width="2"/>`;
   g += `<circle cx="214" cy="190" r="6" fill="none" stroke="#c2410c" stroke-width="2.5"/><circle cx="214" cy="190" r="2" fill="#c2410c"/><text x="226" y="194" fill="#c2410c" font-size="13" font-weight="800">${L('pozycja obserwowana', 'observed fix')}</text>`;
   g += `<text x="20" y="150" fill="#2f4468" font-size="12">${L('NR na A = 145°', 'TB of A = 145°')}</text><text x="300" y="160" fill="#2f4468" font-size="12">${L('NR na B = 222°', 'TB of B = 222°')}</text>`;
@@ -70,7 +87,7 @@ function fixSVG() {
 // namiar podwójny: kąt kursowy 45° i 90° (namiar czteropunktowy)
 function doubleSVG() {
   let g = `<rect width="420" height="220" rx="12" fill="#eef5fa"/>`;
-  g += `<line x1="30" y1="180" x2="390" y2="180" stroke="#2f4468" stroke-width="2.5" stroke-dasharray="8 5"/><text x="330" y="200" fill="#2f4468" font-size="12">${L('kurs', 'course')}</text>`;
+  g += `<line x1="30" y1="180" x2="390" y2="180" stroke="#2f4468" stroke-width="2.5" stroke-dasharray="8 5"/><text x="392" y="170" fill="#2f4468" font-size="12" text-anchor="end">${L('kurs', 'course')}</text>`;
   g += `<g fill="#1b1f24"><path d="M255 50 l6 -14 l6 14 z"/></g><text x="272" y="46" font-size="12">${L('obiekt', 'object')}</text>`;
   g += `<line x1="131" y1="180" x2="261" y2="50" stroke="#c2410c" stroke-width="2"/><line x1="261" y1="180" x2="261" y2="50" stroke="#c2410c" stroke-width="2"/>`;
   g += `<circle cx="131" cy="180" r="5" fill="#1b1f24"/><circle cx="261" cy="180" r="5" fill="#1b1f24"/>`;
@@ -105,19 +122,19 @@ export function navBook() {
         chainSVG(),
         formula('KM = KK + δ', 'KR = KM + d = KK + p', 'KDw = KR + β', L('KDd = KDw „+” prąd (dodawanie wektorów – trójkąt prędkości)', 'COG = CTW “+” current (vector addition – the velocity triangle)')),
         P(L('Idąc w prawo dodajemy poprawki z ich znakami. Wynik zawsze sprowadzamy do zakresu 000°–359° (np. 365° → 005°, −4° → 356°).', 'Going to the right, add the corrections with their signs. Always bring the result into 000°–359° (e.g. 365° → 005°, −4° → 356°).')),
-        P(B(L('Przykład: ', 'Example: ')), L('KK = 090°, δ = +2°, d = 4°E (+4°), wiatr z lewej burty znosi o 5° w prawo (β = +5°) → KM = 092°, KR = 096°, KDw = 101°.', 'CC = 090°, δ = +2°, d = 4°E (+4°), wind from port pushes 5° to starboard (β = +5°) → MC = 092°, TC = 096°, CTW = 101°.'))),
+        ex(L('KK = 090°, δ = +2°, d = 4°E (+4°), wiatr z lewej burty znosi o 5° w prawo (β = +5°) → KM = 092°, KR = 096°, KDw = 101°.', 'CC = 090°, δ = +2°, d = 4°E (+4°), wind from port pushes 5° to starboard (β = +5°) → MC = 092°, TC = 096°, CTW = 101°.'))),
       entry(L('Od mapy do kompasu: KDd → KK', 'From the chart to the compass: COG → CC'),
         P(L('Gdy chcesz popłynąć wyznaczoną na mapie linią, idziesz łańcuchem w lewo i ', 'To follow a track drawn on the chart, go along the chain to the left and '), B(L('odejmujesz', 'subtract')), L(' poprawki:', ' the corrections:')),
         formula(L('KDw – z trójkąta prądu (kurs z poprawką na prąd)', 'CTW – from the current triangle (course to steer)'), 'KR = KDw − β', 'KM = KR − d', 'KK = KM − δ'),
-        P(B(L('Przykład: ', 'Example: ')), L('Na mapie KDw = 220°, wiatr z prawej burty znosi o 4° w lewo (β = −4°), d = 3°W (−3°), δ dla tego kursu = −1° → KR = 220° − (−4°) = 224°, KM = 224° − (−3°) = 227°, KK = 227° − (−1°) = 228°. Sterujesz 228° według kompasu.', 'On the chart CTW = 220°, wind from starboard pushes 4° to port (β = −4°), d = 3°W (−3°), δ for this heading = −1° → TC = 220° − (−4°) = 224°, MC = 224° − (−3°) = 227°, CC = 227° − (−1°) = 228°. You steer 228° by the compass.')),
-        P(L('Uwaga: dewiację odczytuje się z tabeli dla kursu, którym jacht płynie. Przy przeliczaniu od mapy znasz najpierw KM, więc wejdź do tabeli z kursem magnetycznym (jeśli tabela jest dla KK – sprawdź wynik jeszcze raz dla otrzymanego KK).', 'Note: deviation is read from the table for the heading the yacht is on. Working from the chart you know MC first, so enter the table with the magnetic course (if the table is for CC, check again with the CC you got).'))),
+        ex(L('Na mapie KDw = 220°, wiatr z prawej burty znosi o 4° w lewo (β = −4°), d = 3°W (−3°), δ dla tego kursu = −1° → KR = 220° − (−4°) = 224°, KM = 224° − (−3°) = 227°, KK = 227° − (−1°) = 228°. Sterujesz 228° według kompasu.', 'On the chart CTW = 220°, wind from starboard pushes 4° to port (β = −4°), d = 3°W (−3°), δ for this heading = −1° → TC = 220° − (−4°) = 224°, MC = 224° − (−3°) = 227°, CC = 227° − (−1°) = 228°. You steer 228° by the compass.')),
+        note(L('Dewiację odczytuje się z tabeli dla kursu, którym jacht płynie. Przy przeliczaniu od mapy znasz najpierw KM, więc wejdź do tabeli z kursem magnetycznym (jeśli tabela jest dla KK – sprawdź wynik jeszcze raz dla otrzymanego KK).', 'Deviation is read from the table for the heading the yacht is on. Working from the chart you know MC first, so enter the table with the magnetic course (if the table is for CC, check again with the CC you got).'))),
       entry(L('Deklinacja z mapy', 'Variation from the chart'),
         P(L('Na róży kompasowej mapy podana jest deklinacja z rokiem odniesienia i roczną zmianą, np. „3°40′E 2015 (8′E)”. Deklinację na bieżący rok liczysz tak:', 'The chart’s compass rose gives the variation with a reference year and an annual change, e.g. “3°40′E 2015 (8′E)”. For the current year:')),
         formula(L('d = d(rok mapy) + zmiana roczna × liczba lat', 'd = d(chart year) + annual change × years')),
-        P(L('Przykład dla 2025: 3°40′E + 10 × 8′E = 3°40′ + 1°20′ = 5°00′E, czyli d = +5°.', 'Example for 2025: 3°40′E + 10 × 8′E = 3°40′ + 1°20′ = 5°00′E, i.e. d = +5°.'))),
+        ex(L('Dla roku 2025: 3°40′E + 10 × 8′E = 3°40′ + 1°20′ = 5°00′E, czyli d = +5°. Zmiana roczna W jest ujemna – wtedy deklinacja maleje.', 'For 2025: 3°40′E + 10 × 8′E = 3°40′ + 1°20′ = 5°00′E, i.e. d = +5°. An annual change W is negative – the variation then decreases.'))),
       entry(L('Dewiacja i tabela dewiacji', 'Deviation and the deviation table'),
         P(L('Dewiacja zależy od kursu, bo żelazo na jachcie obraca się razem z nim względem pola Ziemi. Tabela dewiacji podaje δ co 15°–45° kursu; dla kursów pośrednich interpolujesz liniowo.', 'Deviation depends on the heading, because the iron on board turns with the yacht relative to the Earth’s field. The deviation table gives δ every 15°–45°; interpolate linearly in between.')),
-        P(B(L('Przykład interpolacji: ', 'Interpolation example: ')), L('δ(090°) = +2°, δ(135°) = −1°. Dla KK = 120° (2/3 drogi od 090° do 135°): δ = +2° + (−3°) · 2/3 = 0°.', 'δ(090°) = +2°, δ(135°) = −1°. For CC = 120° (2/3 of the way from 090° to 135°): δ = +2° + (−3°) · 2/3 = 0°.')),
+        ex(L('δ(090°) = +2°, δ(135°) = −1°. Dla KK = 120° (2/3 drogi od 090° do 135°): δ = +2° + (−3°) · 2/3 = 0°.', 'δ(090°) = +2°, δ(135°) = −1°. For CC = 120° (2/3 of the way from 090° to 135°): δ = +2° + (−3°) · 2/3 = 0°.')),
         P(L('Dewiację na danym kursie sprawdzisz też na nabieżniku: KR nabieżnika z mapy, NK z kompasu → p = NR − NK, δ = p − d.', 'You can also check deviation on a transit: TB of the transit from the chart, CB from the compass → p = TB − CB, δ = p − d.'))),
       entry(L('Dryf', 'Leeway'),
         P(L('Wiatr spycha jacht na zawietrzną: kurs drogi nad wodą (kilwater) odchyla się od osi jachtu w stronę, w którą wieje wiatr.', 'The wind pushes the yacht to leeward: the course through the water (the wake) diverges from the yacht’s heading towards where the wind blows.')),
@@ -149,7 +166,7 @@ export function navBook() {
         h('ol', {}, h('li', {}, L('Przelicz namiar na rzeczywisty (NR).', 'Convert the bearing to true (TB).')),
           h('li', {}, L('Przyłóż trójkąt nawigacyjny środkiem do obiektu na mapie, ustaw kąt NR względem południków (albo przenieś kierunek z róży linijką równoległą).', 'Put the plotter’s centre on the object, set TB relative to the meridians (or transfer it from the rose with a parallel ruler).')),
           h('li', {}, L('Narysuj linię przez obiekt w kierunku NR ± 180° – po stronie, z której patrzysz. Jacht leży gdzieś na tej linii: to ', 'Draw a line through the object in the direction TB ± 180° – on your side of it. The yacht is somewhere on that line: a '), B(L('linia pozycyjna', 'position line')), '.')),
-        P(L('Przykład: latarnia w namiarze NR = 045° → jacht jest na linii biegnącej od latarni w kierunku 225°.', 'Example: a light bearing TB = 045° → the yacht lies on a line running from the light towards 225°.')))
+        ex(L('Latarnia w namiarze NR = 045° → jacht jest na linii biegnącej od latarni w kierunku 225°.', 'A light bearing TB = 045° → the yacht lies on a line running from the light towards 225°.')))
     ] },
     { id: 'lop', name: L('Linie pozycyjne i pozycja', 'Position lines and fixes'), entries: [
       entry(L('Linie pozycyjne', 'Position lines'),
@@ -184,7 +201,7 @@ export function navBook() {
       entry(L('Zasięg geograficzny i nominalny', 'Geographic and nominal range'),
         formula(L('Dg = 2,08 · (√h + √H)   [Mm, h i H w metrach]', 'Dg = 2.08 · (√h + √H)   [NM, h and H in metres]')),
         P(L('h – wysokość światła nad wodą (z mapy lub spisu świateł), H – wysokość oka obserwatora. Zasięg nominalny (siła światła) podaje mapa, np. „15M”. Światło zobaczysz z mniejszej z tych dwóch odległości.', 'h – height of the light above the water (from the chart or list of lights), H – height of the observer’s eye. The nominal range (the light’s power) is on the chart, e.g. “15M”. You will see the light at the smaller of the two distances.')),
-        P(B(L('Przykład: ', 'Example: ')), L('h = 36 m, H = 2,25 m: Dg = 2,08 · (6 + 1,5) = 15,6 Mm; zasięg nominalny 18 Mm → światło pojawi się na horyzoncie w odległości ok. 15,6 Mm. To daje linię pozycyjną (okrąg) – razem z namiarem: pozycję.', 'h = 36 m, H = 2.25 m: Dg = 2.08 · (6 + 1.5) = 15.6 NM; nominal range 18 NM → the light rises over the horizon at about 15.6 NM. That gives a position circle – with its bearing, a fix.')))
+        ex(L('h = 36 m, H = 2,25 m: Dg = 2,08 · (6 + 1,5) = 15,6 Mm; zasięg nominalny 18 Mm → światło pojawi się na horyzoncie w odległości ok. 15,6 Mm. To daje linię pozycyjną (okrąg) – razem z namiarem: pozycję.', 'h = 36 m, H = 2.25 m: Dg = 2.08 · (6 + 1.5) = 15.6 NM; nominal range 18 NM → the light rises over the horizon at about 15.6 NM. That gives a position circle – with its bearing, a fix.')))
     ] }
   ];
 }

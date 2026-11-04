@@ -166,7 +166,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .plan-line.live .pl-hit, .plan-line.live .pl-end { cursor: grab; }
 .plan-line .pl-vis { pointer-events: none; }
 .plan-tip { white-space: normal; max-width: 300px; line-height: 1.45; }
-.pl-fender { fill: #f4f4f1; stroke: #1d3557; stroke-width: 1.4; cursor: grab; pointer-events: all; }
+.pl-fender { fill: #f4f4f1; stroke: #1d3557; stroke-width: 1.8; cursor: grab; pointer-events: all; }
 .pl-fender.in { opacity: 0.35; }
 .pl-fender.drag { fill: #ffd166; cursor: grabbing; }
 .plan-lbl { font-size: 11px; font-weight: 700; fill: var(--muted); }
@@ -954,3 +954,26 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .modal .help-grid kbd { font-size: 13.5px; }
 .modal .help-h { font-size: 15.5px; }
 .modal .hint { font-size: 14.5px; }
+/* podręcznik nawigacji: lekcje na pełną szerokość – tekst po lewej, rysunek po prawej */
+.handbook .nb-lesson { background: rgba(255, 255, 255, 0.72); border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 14px; padding: 18px 24px 16px; margin: 0 0 16px; }
+.handbook .nb-lesson > h3 { color: #2f4468; font-size: 23px; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 2px solid rgba(210, 105, 95, 0.35); }
+.handbook .nb-cols { display: block; }
+.handbook .nb-cols.has-fig { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 480px); gap: 28px; align-items: start; }
+@media (max-width: 1100px) { .handbook .nb-cols.has-fig { grid-template-columns: 1fr; } }
+.handbook .nb-text { max-width: 900px; }
+.handbook .nb-text > p, .handbook .nb-text li { font-size: 18px; line-height: 1.6; margin: 8px 0; }
+.handbook .nb-text ol, .handbook .nb-text ul { margin: 8px 0; padding-left: 26px; }
+.handbook .nb-text ol li::marker { color: #d2695f; font-weight: 800; }
+.handbook .nb-figcol .nb-fig svg { width: 100%; max-width: 480px; height: auto; margin: 0; }
+.handbook .nb-lesson > .nb-wide { margin: 4px 0 14px; }
+.handbook .nb-lesson > .nb-wide svg { width: 100%; max-width: 860px; height: auto; margin: 0; }
+.handbook .nb-lesson .nb-formula { font-size: 18px; margin: 12px 0; max-width: 760px; }
+.handbook .nb-example, .handbook .nb-note { border-radius: 10px; padding: 10px 16px; margin: 12px 0; max-width: 900px; }
+.handbook .nb-example { background: #fff3df; border-left: 5px solid #e3a23b; }
+.handbook .nb-note { background: #eaf1fb; border-left: 5px solid #5b78d6; }
+.handbook .nb-tag { font-size: 13px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #b9761a; margin-bottom: 2px; }
+.handbook .nb-note .nb-tag { color: #3d5bb8; }
+.handbook .nb-example p, .handbook .nb-note p { font-size: 17.5px; line-height: 1.55; margin: 0; }
+.handbook .nb-text .hb-ctable { font-size: 17px; }
+.handbook .nb-text .hb-ctable td:first-child { font-weight: 800; color: #2f4468; white-space: nowrap; }
+.hud-drop.closed .hud-dropmenu { display: none; }

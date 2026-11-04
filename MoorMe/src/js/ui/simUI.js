@@ -92,7 +92,11 @@ export class SimScreen {
     this.pauseBtn = h('button.btn.sm', { onclick: () => this.togglePause(), title: 'Pauza (P)' }, '⏸ Pauza');
     top.appendChild(this.pauseBtn);
     // rozwijane przyciski: „Czas” (tempo symulacji) i „Kamera” (śledzenie i widoki) – opcje pojawiają się po najechaniu
-    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items); return { el: h('div.hud-drop', {}, btn, menu), btn }; };
+    const drop = (label, items) => { const btn = h('button.btn.sm.hud-dropbtn', {}, label); const menu = h('div.hud-dropmenu', {}, ...items);
+      // po wybraniu opcji menu się zwija (do ponownego najechania)
+      const el = h('div.hud-drop', { onmouseleave: () => el.classList.remove('closed') }, btn, menu);
+      menu.addEventListener('click', (e) => { if (e.target.closest('button')) { el.classList.add('closed'); if (document.activeElement) document.activeElement.blur(); } });
+      return { el, btn }; };
     this.speedBtns = [0.5, 1, 2, 4].map((s) => h('button.btn.sm', { class: s === 1 ? 'on' : '', onclick: () => this.setSpeed(s) }, `${s}×`));
     this.timeDrop = drop('⏱ Czas 1×', this.speedBtns);
     top.appendChild(this.timeDrop.el);
@@ -368,7 +372,8 @@ export class SimScreen {
     this.fenderEls = new Map();
     const eq = w.equip;
     for (const f of eq.fenders) {
-      const m = f.ball ? el('circle', { r: 5.5, class: 'pl-fender' }, this.fenderG) : el('ellipse', { rx: 3.2, ry: 7, class: 'pl-fender' }, this.fenderG);
+      // z góry odbijacz (walec wiszący pionowo albo kula) to okrąg; kula większa
+      const m = el('circle', { r: f.ball ? 8.5 : 6.5, class: 'pl-fender' }, this.fenderG);
       const tt = el('title', {}, m); tt.textContent = t('Odbijacz – przeciągnij wzdłuż burty');
       this.fenderEls.set(f.id, m);
       m.addEventListener('pointerdown', (ev) => {
@@ -482,8 +487,7 @@ export class SimScreen {
       const g = fenderGeom(w.spec, f, w.equip.fenderRadius);
       const [fx, fy] = P.toPx(g.x, g.y);
       const out = f.stern ? w.fenderOut.stern : f.side < 0 ? w.fenderOut.port : w.fenderOut.starboard;
-      if (m.tagName === 'circle') { m.setAttribute('cx', fx); m.setAttribute('cy', fy); }
-      else { m.setAttribute('cx', fx); m.setAttribute('cy', fy); m.setAttribute('rx', f.stern ? 7 : 3.2); m.setAttribute('ry', f.stern ? 3.2 : 7); }
+      m.setAttribute('cx', fx); m.setAttribute('cy', fy);
       m.classList.toggle('in', !out);
     }
     if (this.hoverLine && !seen.has(this.hoverLine.id)) this.hoverLine = null;
