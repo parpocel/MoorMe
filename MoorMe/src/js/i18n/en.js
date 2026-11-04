@@ -73,10 +73,10 @@ export const EN = {
   'Przy przejściu między dalbami zakładasz cumy rufowe na pale, dziób do pomostu.': 'Passing between the piles you put the stern lines on the piles, bow to the pontoon.',
   'Cofanie między dalbami, cumy dziobowe na pale, rufowe na pomost.': 'Reverse between the piles, bow lines on the piles, stern lines to the pontoon.',
   // porty
-  'Adriatyk – marina i riva (Dalmacja)': 'Adriatic – marina and waterfront (Dalmatia)',
+  'Adriatyk': 'Adriatic',
   'Zatoka w dalmatyńskim miasteczku: kamienna riva z cumowaniem rufą na muringach, betonowe pomosty mariny, falochron z keją do cumowania burtą. Wejście od południa między czerwonym a zielonym światłem.':
     'A bay in a Dalmatian town: a stone waterfront with stern-to mooring on lazy lines, concrete marina pontoons and a breakwater quay for alongside mooring. Entrance from the south between the red and green lights.',
-  'Ystad – Småbåtshamn (Bałtyk)': 'Ystad – Småbåtshamn (Baltic)',
+  'Bałtyk': 'Baltic',
   'Szwedzka marina na wzór Ystad: drewniane pomosty z dalbami i Y-bomami, długi pomost wzdłuż zachodniego falochronu do cumowania burtą, muringi przy kei północnej. Obok mola promowego; podejście od południa kursem ~19°.':
     'A Swedish marina modelled on Ystad: wooden pontoons with piles and Y-booms, a long pontoon along the western breakwater for alongside mooring, lazy lines at the north quay. Next to the ferry pier; approach from the south on a heading of ~19°.',
   'Riva – kamienne nabrzeże miejskie': 'Waterfront – stone town quay', 'Pomost A (strona wschodnia)': 'Pontoon A (east side)',

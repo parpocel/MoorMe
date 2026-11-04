@@ -29,7 +29,7 @@ const R4 = (x0, z0, x1, z1) => [[x0, z0], [x1, z0], [x1, z1], [x0, z1]];
 export const PORTS = {
   med: {
     id: 'med',
-    name: 'Adriatyk – marina i riva (Dalmacja)',
+    name: 'Adriatyk',
     desc: 'Zatoka w dalmatyńskim miasteczku: kamienna riva z cumowaniem rufą na muringach, betonowe pomosty mariny, falochron z keją do cumowania burtą. Wejście od południa między czerwonym a zielonym światłem.',
     style: 'med',
     bounds: { minX: -175, maxX: 200, minZ: -45, maxZ: 255 },
@@ -65,7 +65,7 @@ export const PORTS = {
   },
   ystad: {
     id: 'ystad',
-    name: 'Ystad – Småbåtshamn (Bałtyk)',
+    name: 'Bałtyk',
     desc: 'Szwedzka marina na wzór Ystad: drewniane pomosty z dalbami i Y-bomami, długi pomost wzdłuż zachodniego falochronu do cumowania burtą, muringi przy kei północnej. Obok mola promowego; podejście od południa kursem ~19°.',
     style: 'baltic',
     bounds: { minX: -175, maxX: 160, minZ: -45, maxZ: 260 },
