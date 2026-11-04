@@ -358,7 +358,7 @@ function showModeSelect() {
     kicker: 'Szkolenie żeglarskie', sel: modeSel,
     items: [
       { glyph: 'anchor', color: '#e0705f', title: 'Manewry portowe', desc: 'Cumowanie i odcumowywanie łodzi.', go: keep(0, () => showTitle()) },
-      { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Pławy, stawy oraz światła elementów nawigacyjnych.', go: keep(1, () => showSailIntro()) },
+      { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Zbiór pław, staw oraz znaków umożliwiających bezpieczne poruszanie się po akwenie.', go: keep(1, () => showSailIntro()) },
       { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja nocna/dzienna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
