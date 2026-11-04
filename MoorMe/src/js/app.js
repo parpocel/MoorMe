@@ -755,7 +755,7 @@ function stepHarbor() {
     sideField,
     widthField,
     h('div.field', {}, h('label', {}, 'Inne jachty w porcie'),
-      seg([{ value: false, label: 'Są' }, { value: true, label: 'Pusty port' }], !!config.emptyHarbor, (v) => { config.emptyHarbor = v; drawMap(); })),
+      seg([{ value: false, label: 'Port z jachtami' }, { value: true, label: 'Pusty port' }], !!config.emptyHarbor, (v) => { config.emptyHarbor = v; drawMap(); })),
     h('h3', {}, 'Zadanie'),
     seg([{ value: 'moor', label: 'Cumowanie (podejście do kei)' }, { value: 'unmoor', label: 'Odcumowanie (wyjście)' }, { value: 'free', label: 'Swobodne manewrowanie (bez zadania)' }], config.scenario, (v) => { config.scenario = v; }),
     h('div.small.muted', { style: { marginTop: '6px' } }, 'Przy odcumowaniu startujesz zacumowany – liny założone na biegowo, jedna osoba na kei.'),
