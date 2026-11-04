@@ -942,3 +942,15 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .wh-g:hover, .wh-g.on { transform: scale(1.05); }
 .wh-lbl { transition: transform 0.18s ease; }
 .wh-lbl.on { transform: translate(-50%, -50%) scale(1.05); }
+/* przykłady przejść pod mostami – rysunek w powiększeniu, żeby znaki były czytelne */
+.handbook .hb-svg.hb-big svg { width: 200px; height: auto; }
+/* pomoc (sterowanie i cumowanie): tytuł granatowy zamiast białego, większa czcionka */
+.screen .help-card > h2, .screen:has(> .scenery3d) .screen-body > .help-card > h2 { color: #2f4468; text-shadow: none; font-size: 30px; }
+.help-card .help-h { font-size: 17px; }
+.help-card .help-grid { grid-template-columns: 220px 1fr; gap: 7px 14px; font-size: 16.5px; }
+.help-card .help-grid kbd { font-size: 15px; padding: 2px 8px; }
+.help-card .hint { font-size: 16px; }
+.modal .help-grid { font-size: 15px; grid-template-columns: 180px 1fr; gap: 6px 12px; }
+.modal .help-grid kbd { font-size: 13.5px; }
+.modal .help-h { font-size: 15.5px; }
+.modal .hint { font-size: 14.5px; }

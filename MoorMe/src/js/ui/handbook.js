@@ -596,8 +596,8 @@ const sg = {
 // most łukowy z trzema przęsłami: n = 1 – jeden żółty romb, 2 – dwa romby, 0 – romb nad przęsłem żeglownym i tablice A.1 nad zamkniętymi
 function bridgePic(n) {
   const W = 120, H = 170, sky = '#e3f0f7', stone = '#b9b2a6', dark = '#8d867b';
-  const dia = (cx, cy) => `<polygon points="${cx},${cy - 6} ${cx + 6},${cy} ${cx},${cy + 6} ${cx - 6},${cy}" fill="#f2c230" stroke="#1b1f24"/>`;
-  const a1 = (cx, cy) => `<rect x="${cx - 11}" y="${cy - 5}" width="22" height="10" fill="#fff" stroke="#1b1f24" stroke-width="0.8"/><rect x="${cx - 11}" y="${cy - 5}" width="22" height="3.3" fill="#d62828"/><rect x="${cx - 11}" y="${cy + 1.7}" width="22" height="3.3" fill="#d62828"/>`;
+  const dia = (cx, cy, r = 10) => `<polygon points="${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}" fill="#f2c230" stroke="#1b1f24" stroke-width="1.2"/>`; // znaki powiększone dla czytelności
+  const a1 = (cx, cy) => `<rect x="${cx - 13}" y="${cy - 7.5}" width="26" height="15" fill="#fff" stroke="#1b1f24" stroke-width="1"/><rect x="${cx - 13}" y="${cy - 7.5}" width="26" height="5" fill="#d62828"/><rect x="${cx - 13}" y="${cy + 2.5}" width="26" height="5" fill="#d62828"/>`;
   const arch = (x0, x1, top) => { const r = (x1 - x0) / 2; return `<path d="M${x0} 124 V${top + r * 0.55} A${r} ${r * 0.55} 0 0 1 ${x1} ${top + r * 0.55} V124 Z" fill="${sky}"/>`; };
   let g = `<rect width="${W}" height="${H}" fill="${sky}"/>`;
   g += `<rect x="0" y="44" width="${W}" height="80" fill="${stone}"/>`; // przyczółki, filary i przęsła
@@ -606,23 +606,23 @@ function bridgePic(n) {
   g += `<path d="M0 36 H${W}" stroke="#5b6168" stroke-width="1.5"/>` + Array.from({ length: 13 }, (_, k) => `<path d="M${k * 10} 36 V44" stroke="#5b6168" stroke-width="1"/>`).join(''); // balustrada
   g += `<rect y="120" width="${W}" height="50" fill="#8fc3dc"/>`;
   g += `<path d="M6 132 q6 -3 12 0 t12 0 M84 140 q6 -3 12 0 t12 0" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.7"/>`;
-  if (n === 1) g += dia(60, 64);
-  if (n === 2) g += dia(60, 62) + dia(60, 76);
-  if (n === 0) g += dia(60, 64) + a1(19, 66) + a1(101, 66);
+  if (n === 1) g += dia(60, 68);
+  if (n === 2) g += dia(60, 66, 9) + dia(60, 86, 9);
+  if (n === 0) g += dia(60, 68) + a1(19, 74) + a1(101, 74);
   // D.2 (3) / A.10 (4): romby pół zielone/czerwone, pół białe na filarach przęsła żeglownego – kolorowa połowa do środka przejścia
   if (n === 3 || n === 4) {
     const c = n === 3 ? '#2a9d4a' : '#d62828';
-    const hd = (cx, cy, inner) => `<polygon points="${cx},${cy - 7} ${cx + 7},${cy} ${cx},${cy + 7} ${cx - 7},${cy}" fill="#fff" stroke="#1b1f24"/><polygon points="${cx},${cy - 7} ${cx + inner * 7},${cy} ${cx},${cy + 7}" fill="${c}"/>`;
+    const hd = (cx, cy, inner, r = 11) => `<polygon points="${cx},${cy - r} ${cx + inner * r},${cy} ${cx},${cy + r}" fill="${c}"/><polygon points="${cx},${cy - r} ${cx - inner * r},${cy} ${cx},${cy + r}" fill="#fff"/><polygon points="${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}" fill="none" stroke="#1b1f24" stroke-width="1.2"/>`;
     g += hd(38, 72, 1) + hd(82, 72, -1);
-    g += `<path d="M46 100 H74 M51 96 L45 100 L51 104 M69 96 L75 100 L69 104" stroke="#16181c" stroke-width="1.6" fill="none"/>`;
+    g += `<path d="M48 104 H72 M53 99 L47 104 L53 109 M67 99 L73 104 L67 109" stroke="#16181c" stroke-width="2" fill="none"/>`;
   }
-  return g;
+  return { big: g }; // rysunek mostu wyświetlany w powiększeniu (czytelne znaki)
 }
 for (const k of ['propeller', 'sport', 'skier', 'rowboat', 'windsurf', 'slipway', 'jetski', 'vhf', 'uturn']) sg[k + 'W'] = sg[k].replace(/#16181c/g, '#fff');
 function marksBookRaw() {
   const lc = lateralColors(), P = hex(lc.port), S = hex(lc.stbd), B = '#16181c', Y = '#f2c230', R = '#d62828', W = '#ffffff', IG = '#2a9d4a';
   const reg = IALA.region;
-  const e = (title, pic, rows, char) => animLamps(h('div.hb-entry.hb-mark', { class: pic && pic.img ? 'hb-sign' : '' }, pic && pic.img ? h('div.hb-signimg', {}, h('img', { src: pic.img, alt: title, decoding: 'async' })) : svgEl(120, 170, pic), h('div', {}, h('h3', {}, title), ...rows.map((r) => (typeof r === 'string' ? h('p', {}, r) : h('p', {}, h('b', {}, r[0] + ': '), r[1]))),
+  const e = (title, pic, rows, char) => animLamps(h('div.hb-entry.hb-mark', { class: pic && pic.img ? 'hb-sign' : '' }, pic && pic.img ? h('div.hb-signimg', {}, h('img', { src: pic.img, alt: title, decoding: 'async' })) : pic && pic.big ? svgEl(120, 140, `<g transform="translate(0,-30)">${pic.big}</g>`, 'hb-big') : svgEl(120, 170, pic), h('div', {}, h('h3', {}, title), ...rows.map((r) => (typeof r === 'string' ? h('p', {}, r) : h('p', {}, h('b', {}, r[0] + ': '), r[1]))),
     char ? h('div.hb-rhythm', {}, h('span.muted', {}, `${L('Światło nocą', 'Light at night')} – ${char}:`), h('div.hb-rhythm-row', {}, nightLamp(char, 46), svgEl(300, 50, timelineSvg(char), 'hb-tl'))) : null)));
   // znaki żeglugowe – rysunki i określenia dokładnie z załącznika nr 7 (Dz.U. 2003 nr 212 poz. 2072)
   const officialSigns = () => [
