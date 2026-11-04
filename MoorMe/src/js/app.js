@@ -9,6 +9,7 @@ import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
 import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
+import { navBook } from './ui/navBook.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
 import { LightsScreen } from './ui/lightsUI.js';
@@ -361,7 +362,7 @@ function showModeSelect() {
       { glyph: 'sail', color: '#2aa39a', title: 'Locja', desc: 'Zbiór pław, staw oraz znaków umożliwiających bezpieczne poruszanie się po akwenie.', go: keep(1, () => showSailIntro()) },
       { glyph: 'lights', color: '#6a6fd6', title: 'Sygnalizacja nocna/dzienna', desc: 'Rozpoznaj statek po jego światłach lub znakach dziennych.', go: keep(2, () => showLightsIntro()) },
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
-      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showModeSelect() }); }) },
+      { glyph: 'compass', color: '#4f9d5c', title: 'Zadania nawigacyjne', desc: 'Trenuj obliczanie i przeliczanie kursów, obliczanie pozycji z namiarów itp.', go: keep(4, () => showNavIntro()) },
       { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
       { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.', go: keep(6, () => showMeteoIntro()) }
     ]
@@ -429,6 +430,14 @@ function showMeteoSetup() {
 function startMeteo(kind) {
   menuMusic.stop();
   showMeteoTraining(app, { kind, sceneryEl, onExit: () => showMeteoSetup() });
+}
+function showNavIntro() {
+  menuMusic.start();
+  trainOrLearn({ kicker: 'Zadania nawigacyjne', glyph: 'compass', color: '#4f9d5c', trainTag: 'kursy, namiary, pozycja', learnTag: 'przeliczanie kursów i namiary', train: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', learn: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); }, onLearn: () => showNavBook(), self: () => showNavIntro() });
+}
+function showNavBook() {
+  menuMusic.start();
+  showHandbook(app, { title: 'podręcznik – zadania nawigacyjne', sections: navBook(), sceneryEl, onExit: () => showNavIntro(), onTrain: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } });
 }
 function showMarksBook() {
   menuMusic.start();

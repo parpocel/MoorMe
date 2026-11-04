@@ -925,3 +925,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 /* płatki: miękka, delikatna krawędź (szkło jak w nowym iOS) */
 .wh-g .wh-seg, .wh-g:hover .wh-seg { stroke: rgba(255, 255, 255, 0.32); stroke-width: 0.6; stroke-linejoin: round; }
 .wh-g.on .wh-seg { stroke: rgba(255, 255, 255, 0.7); stroke-width: 0.8; }
+/* podręcznik nawigacji: wzory i rysunki */
+.handbook .nb-formula { margin: 8px 0; padding: 10px 14px; border-radius: 10px; background: #2f4468; color: #fff7f1; font: 700 17px Consolas, 'Courier New', monospace; display: grid; gap: 4px; }
+.handbook .nb-fig svg { max-width: 100%; height: auto; display: block; margin: 8px 0; }
+.handbook .hb-card ol, .handbook .hb-card ul { margin: 6px 0 6px 22px; line-height: 1.5; }
