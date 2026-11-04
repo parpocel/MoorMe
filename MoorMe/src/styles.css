@@ -733,3 +733,4 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-charx .hb-play { margin-left: auto; }
 .handbook .hb-charx p { font-size: 14px; }
 @media (max-width: 560px) { .handbook .hb-charx-grid { grid-template-columns: 1fr; } }
+.handbook .hb-charx-use { color: #4a5a7d; font-size: 13.5px; }

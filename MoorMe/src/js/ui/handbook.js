@@ -388,6 +388,33 @@ const CHAR_LIVE = {
   'Al.WR': [null, L('Al – alternating (zmiennobarwne)', 'Al – alternating'), L('Światło zmienia kolor w kolejnych fazach, np. Al.WR – białe i czerwone. Al.Bu.Y – niebieskie i żółte na znaku nowego niebezpieczeństwa (wraku).', 'The light changes colour in successive phases, e.g. Al.WR – white and red. Al.Bu.Y – blue and yellow on a new-danger (wreck) mark.')]
 };
 
+// przykład stosowania każdej charakterystyki
+const CHAR_USE = {
+  F: L('Światła główek portowych i nabrzeży, światła nabieżników, oświetlenie przeszkód (np. czerwone F R na kominach i masztach).', 'Pier-head and quay lights, leading lights, obstruction lights (e.g. F R on chimneys and masts).'),
+  FFl: L('Latarnie morskie i światła wejściowe, które mają być widoczne stale, a jednocześnie łatwe do rozpoznania.', 'Lighthouses and entrance lights that must show continuously yet be easy to identify.'),
+  'FFl(2)': L('Latarnie morskie – grupa rozbłysków odróżnia je od sąsiednich świateł na tym samym wybrzeżu.', 'Lighthouses – the group of flashes distinguishes them from neighbouring lights on the same coast.'),
+  Oc: L('Światła nabieżników i sektorowe światła wejściowe do portów; także znak wody bezpiecznej (Oc W).', 'Leading lights and sectored harbour-entrance lights; also safe-water marks (Oc W).'),
+  'Oc(2)': L('Latarnie i światła sektorowe, np. Oc(2) WRG 6s na wejściu do portu.', 'Lighthouses and sector lights, e.g. Oc(2) WRG 6s at a harbour entrance.'),
+  'Oc(2+1)': L('Rzadziej spotykane latarnie, którym trzeba nadać rytm odróżniający je od sąsiednich.', 'Less common lighthouses that need a rhythm distinct from their neighbours.'),
+  Iso: L('Znak wody bezpiecznej (Iso W), światła nabieżników i sektorowe światła kierunkowe.', 'Safe-water marks (Iso W), leading lights and directional sector lights.'),
+  LFl: L('Znak wody bezpiecznej LFl 10s (pława podejściowa, środek toru).', 'Safe-water mark LFl 10s (landfall buoy, mid-channel).'),
+  'LFl(2)': L('Latarnie morskie, np. LFl(2) W 15s.', 'Lighthouses, e.g. LFl(2) W 15s.'),
+  'LFl(2+1)': L('Latarnie morskie o złożonym rytmie, łatwym do odróżnienia z daleka.', 'Lighthouses with a composite rhythm that is easy to tell apart from afar.'),
+  Fl: L('Znaki boczne (Fl R / Fl G), znaki specjalne (Fl Y), latarnie i główki portowe.', 'Lateral marks (Fl R / Fl G), special marks (Fl Y), lighthouses and pier heads.'),
+  'Fl(3)': L('Znaki boczne z rytmem grupowym, np. Fl(3) G 10s; Fl(2) – znak odosobnionego niebezpieczeństwa.', 'Lateral marks with a group rhythm, e.g. Fl(3) G 10s; Fl(2) – isolated danger mark.'),
+  'Fl(2+1)': L('Znaki rozwidlenia toru (zmodyfikowane znaki boczne), np. Fl(2+1) R 10s.', 'Preferred-channel marks (modified lateral marks), e.g. Fl(2+1) R 10s.'),
+  Q: L('Znak kardynalny północny (Q); także znaki boczne przy ostrych zakrętach toru.', 'North cardinal mark (Q); also lateral marks at sharp bends of a channel.'),
+  'Q(3)': L('Znak kardynalny wschodni Q(3) 10s; Q(9) 15s – zachodni.', 'East cardinal mark Q(3) 10s; Q(9) 15s – west.'),
+  'Q(6)+LFl': L('Znak kardynalny południowy Q(6)+LFl 15s.', 'South cardinal mark Q(6)+LFl 15s.'),
+  VQ: L('Znak kardynalny północny (VQ), zwykle tam, gdzie znaki stoją blisko siebie.', 'North cardinal mark (VQ), usually where marks stand close together.'),
+  'VQ(3)': L('Znak kardynalny wschodni VQ(3) 5s; VQ(9) 10s – zachodni.', 'East cardinal mark VQ(3) 5s; VQ(9) 10s – west.'),
+  'VQ(6)+LFl': L('Znak kardynalny południowy VQ(6)+LFl 10s.', 'South cardinal mark VQ(6)+LFl 10s.'),
+  IVQ: L('Rzadkie – światła na konstrukcjach i przeszkodach, które muszą się wyróżniać spośród innych świateł migających.', 'Rare – lights on structures and obstructions that must stand out from other quick lights.'),
+  UQ: L('Platformy i konstrukcje morskie, oznakowanie wraków i przeszkód w strefach intensywnego ruchu.', 'Offshore platforms and structures, marking of wrecks and obstructions in busy waters.'),
+  'Mo(A)': L('Znak wody bezpiecznej (pława podejściowa); Mo(U) – platformy wiertnicze.', 'Safe-water mark (landfall buoy); Mo(U) – offshore oil and gas platforms.'),
+  'Al.WR': L('Latarnie i światła sektorowe; Al.Bu.Y – znak nowego niebezpieczeństwa (świeży wrak).', 'Lighthouses and sector lights; Al.Bu.Y – emergency wreck marking buoy.')
+};
+
 // jedna charakterystyka: u góry nazwa, skrót, definicja i obraz graficzny; pod spodem lampa na żywo, wykres czasowy i opis
 function charCard(abbr, code, name, def) {
   const live = CHAR_LIVE[abbr];
@@ -403,6 +430,7 @@ function charCard(abbr, code, name, def) {
   const card = animLamps(h('div.hb-charx', {},
     h('div.hb-charx-head', {}, h('h3', {}, name), h('span.hb-ct-abbr', {}, abbr), btn),
     h('p', {}, def),
+    CHAR_USE[abbr] ? h('p.hb-charx-use', {}, h('b', {}, L('Przykład stosowania: ', 'Example of use: ')), CHAR_USE[abbr]) : null,
     h('div.hb-charx-strip', {}, svgEl(320, 40, stripSvg(code, 320))),
     h('div.hb-char.hb-charx-live', {},
       nightLamp(lc),
