@@ -316,8 +316,13 @@ export function waveFlag(flag, t, windKn = 8, phase = 0) {
   const m = flag && flag.userData.cloth;
   if (!m) return;
   const pos = m.geometry.attributes.position, a = pos.array, base = m.userData.base;
-  const wk = Math.min(1, windKn / 14), amp = 0.03 + 0.06 * wk, droop = 0.28 * (1 - wk) * (1 - wk);
-  const w = 4 + 8 * wk;
+  // wiatr wygładzony (porywy nie szarpią banderą), spokojniejsza fala materiału
+  const ud = flag.userData, dt = ud.lastT === undefined ? 0 : Math.min(0.1, Math.max(0, t - ud.lastT));
+  ud.lastT = t;
+  const target = Math.min(1, windKn / 16);
+  ud.wk = ud.wk === undefined ? target : ud.wk + (target - ud.wk) * Math.min(1, dt * 0.4);
+  const wk = ud.wk, amp = 0.02 + 0.035 * wk, droop = 0.28 * (1 - wk) * (1 - wk);
+  const w = 3 + 4 * wk;
   for (let i = 0; i < a.length; i += 3) {
     const z0 = base[i + 2], y0 = base[i + 1], u = Math.min(1, -z0 / 0.6);
     a[i] = base[i] + Math.sin(u * 7 - t * w + phase) * amp * u + Math.sin(u * 13 - t * w * 1.7 + y0 * 6) * amp * 0.25 * u;
