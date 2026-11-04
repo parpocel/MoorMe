@@ -312,7 +312,7 @@ function showSoundsBook() {
 }
 function showSailIntro() {
   menuMusic.start();
-  trainOrLearn({ kicker: 'Locja', glyph: 'sail', color: '#2aa39a', trainTag: 'rejs wzdłuż wybrzeża', learnTag: 'znaki IALA, charakterystyki świateł', train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik oznakowania IALA: znaki boczne, kardynalne, odosobnionego niebezpieczeństwa, wody bezpiecznej, specjalne i wraki – kształty, znaki szczytowe i światła oraz charakterystyki świateł (Fl, Q, VQ, Iso, Oc, LFl, Mo) z animacją.', onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), self: () => showSailIntro() });
+  trainOrLearn({ kicker: 'Locja', glyph: 'sail', color: '#2aa39a', trainTag: 'rejs wzdłuż wybrzeża', learnTag: 'znaki i światła nawigacyjne', train: 'Płyń wzdłuż wybrzeża do portu: rozpoznawaj znaki nawigacyjne i mijaj je z właściwej strony, w dzień i w nocy.', learn: 'Podręcznik: czym jest locja i gdzie jej szukać, znaki nawigacyjne na morzu i na wodach śródlądowych oraz rodzaje świateł nawigacyjnych z animacją.', onTrain: () => showPassageSetup(), onLearn: () => showMarksBook(), self: () => showSailIntro() });
 }
 function showMeteoIntro() {
   menuMusic.start();
