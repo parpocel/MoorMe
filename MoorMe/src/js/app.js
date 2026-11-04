@@ -222,7 +222,7 @@ function menuScreenTiles({ kicker, items, sel = 0, back, extra = null, settingsB
       back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('span'),
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
-      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
+      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18)), h('span', {}, 'Wyjdź')) : null),
     hero,
     h('div.m3-tiles', { class: tiles.length >= 7 ? 'many' : '' }, tiles));
   app.appendChild(s);
@@ -318,7 +318,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
       back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('span'),
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
-      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
+      quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18)), h('span', {}, 'Wyjdź')) : null),
     h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center, extra ? h('div.wh-extra', {}, extra) : null)));
   app.appendChild(scr);
   select(cur);
