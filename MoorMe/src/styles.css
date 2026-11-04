@@ -1058,3 +1058,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .li-stack svg { display: block; }
 .handbook .li-aspect .li-dots { height: auto; margin-bottom: 8px; display: block; }
 .handbook .li-aspect .li-dots svg { display: block; width: 90px; height: 50px; }
+/* podręcznik świateł: obracany model 3D */
+.handbook .lv-wrap { position: relative; width: 100%; max-width: 760px; border-radius: 12px; overflow: hidden; cursor: grab; touch-action: pan-y; background: #0b1220; margin: 6px 0 8px; user-select: none; }
+.handbook .lv-wrap.drag { cursor: grabbing; }
+.handbook .lv-wrap canvas { display: block; width: 100%; }
+.handbook .lv-cap { position: absolute; left: 12px; top: 10px; color: #ffd9a0; font-weight: 800; font-size: 15px; text-shadow: 0 1px 4px #000; pointer-events: none; }
+.handbook .lv-hint { position: absolute; right: 12px; bottom: 10px; color: #c8d3e8; font-size: 13px; opacity: 0.85; transition: opacity 0.4s; pointer-events: none; }
+.handbook .hb-card-grid.wide:has(.lv-wrap) { grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); }

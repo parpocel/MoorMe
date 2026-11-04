@@ -203,7 +203,7 @@ function hullGeom(L, B, H, bowK = 0.2) {
   geo.rotateX(-Math.PI / 2); // kształt w płaszczyźnie XZ, wysokość w górę (y)
   return geo;
 }
-function hullMesh(type, L, moving) {
+export function hullMesh(type, L, moving) {
   const g = new THREE.Group();
   const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, flatShading: true });
   const hullC = M(0x858c95), deckC = M(0x9aa1a9), supC = M(0xb4bac1), winC = M(0x4a5059), detC = M(0x6c737b), redC = M(0x8f6a66);

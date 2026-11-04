@@ -7,6 +7,7 @@ import { lateralColors, IALA } from '../data/passage.js';
 import { lightSequence, lightAt, LIGHT_COLORS } from '../data/lightChar.js';
 import { getLang, t } from '../i18n.js';
 import { SIGN_GROUPS, AUX_SIGNS, signImage } from '../data/inlandSigns.js';
+import { lightsViewer } from '../render/lightsViewer.js';
 
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
 const NS = 'http://www.w3.org/2000/svg';
@@ -90,8 +91,11 @@ function lightView(v, view, W = 200, H = 120, sc = vesselScale(v, W, H)) {
   return g;
 }
 function lightsEntry(v) {
+  // obracany model 3D (sylwetka z opisanymi burtami); bez WebGL – cztery rzuty jak dotąd
+  const { Lm, lights } = vesselLights(v);
+  const live = lightsViewer(v, lights, Lm);
   const sc = vesselScale(v);
-  const views = h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
+  const views = live || h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
   return h('div.hb-entry.hb-card.hb-card-wide', {}, h('h3', {}, v.name), views, h('p', {}, v.explain));
 }
 
