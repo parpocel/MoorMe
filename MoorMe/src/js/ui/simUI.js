@@ -1166,7 +1166,7 @@ export class SimScreen {
       ctx.fillStyle = '#3ddc84';
       ctx.beginPath(); ctx.arc(cx + sx * R, cy + sy * R, 5, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.fillStyle = '#cfe6f5'; ctx.font = '10px Segoe UI';
+    ctx.fillStyle = '#cfe6f5'; ctx.font = '11.5px Segoe UI';
     ctx.fillText(t(`wiatr ${(w.env.windSpeed / KN).toFixed(0)} kn`), cx, cy + R * 0.45);
   }
 

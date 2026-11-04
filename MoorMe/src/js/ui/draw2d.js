@@ -469,7 +469,7 @@ export function drawHarborMap(ctx, H, T, opts = {}) {
     ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.beginPath(); ctx.arc(rx, ry, 17, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#d62828'; ctx.beginPath(); ctx.moveTo(rx, ry - 14); ctx.lineTo(rx + 5, ry + 2); ctx.lineTo(rx - 5, ry + 2); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#23384b'; ctx.beginPath(); ctx.moveTo(rx, ry + 14); ctx.lineTo(rx + 5, ry + 2); ctx.lineTo(rx - 5, ry + 2); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('N', rx, ry - 17 + 0);
+    ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 10.5px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('N', rx, ry - 17 + 0);
     const opt = [5, 10, 20, 50, 100, 200];
     let len = opt[0];
     for (const v of opt) if (v * T.s <= c.width * 0.22) len = v;

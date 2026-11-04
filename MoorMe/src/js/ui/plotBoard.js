@@ -599,7 +599,7 @@ export class PlotBoard {
     }
     for (const l of this.lands) { path(l.poly); ctx.fillStyle = '#f2e2b0'; ctx.fill(); ctx.strokeStyle = '#5b4a2c'; ctx.lineWidth = 1.3; ctx.stroke(); }
     // głębokości
-    ctx.fillStyle = 'rgba(40,60,90,0.8)'; ctx.font = 'italic 10px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(40,60,90,0.8)'; ctx.font = 'italic 11px Segoe UI, sans-serif'; ctx.textAlign = 'center';
     for (const s of this.sound) { const q = this.px(s); if (Math.hypot(q.x - this.rose.x, q.y - this.rose.y) < PlotBoard.ROSE_R + 16) continue; ctx.fillText(String(s.d), q.x, q.y + 3); }
     ctx.textAlign = 'left';
     this.drawRose(ctx, this.rose.x, this.rose.y, PlotBoard.ROSE_R);
@@ -631,7 +631,7 @@ export class PlotBoard {
     if (rose) {
       ctx.fillText(`${dmS(rose.base)} ${rose.y0}`, x, y + 16);
       const cm = Math.round(Math.abs(rose.ch) * 60);
-      ctx.font = '10px Segoe UI, sans-serif';
+      ctx.font = '11px Segoe UI, sans-serif';
       ctx.fillText(`(${cm}'${rose.ch >= 0 ? 'E' : 'W'} ${tr('rocznie')})`, x, y + 29);
     } else ctx.fillText(`Var ${dmS(v)}`, x, y + 16);
     ctx.restore();
@@ -664,7 +664,7 @@ export class PlotBoard {
     for (let s = -Lp; s <= Lp; s += 6) { const a = P(s, 0), b = P(s, s % 30 === 0 ? 8 : 4); ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); }
     // kątomierz: łuk ze stopniami ustawionymi względem północy mapy (jak obrotowa róża trójkąta)
     const R = 62;
-    ctx.fillStyle = 'rgba(30,50,80,0.9)'; ctx.font = '8px Segoe UI, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(30,50,80,0.9)'; ctx.font = '10px Segoe UI, sans-serif'; ctx.textAlign = 'center';
     for (let a = 0; a < 360; a += 5) {
       const t = a * D2R, dir = { x: Math.sin(t), y: -Math.cos(t) };
       if (dir.x * v.x + dir.y * v.y < 0.02) continue; // tylko po stronie korpusu
@@ -675,7 +675,7 @@ export class PlotBoard {
     // środek, uchwyt i odczyt
     ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(c.x - 6, c.y); ctx.lineTo(c.x + 6, c.y); ctx.moveTo(c.x, c.y - 6); ctx.lineTo(c.x, c.y + 6); ctx.stroke();
     ctx.fillStyle = 'rgba(31,147,201,0.85)'; ctx.beginPath(); ctx.arc(g.handle.x, g.handle.y, 8, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 9px Segoe UI'; ctx.fillText('⟳', g.handle.x, g.handle.y + 3);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 10.5px Segoe UI'; ctx.fillText('⟳', g.handle.x, g.handle.y + 3);
     ctx.restore();
     const t = P(Lp * 0.45, Wd * 0.72);
     this.label(ctx, t.x - 16, t.y + 4, `${deg3(this.plotter.ang)} / ${deg3(this.plotter.ang + 180)}`);
@@ -743,7 +743,7 @@ export class PlotBoard {
       }
     }
     ctx.textAlign = 'left';
-    ctx.font = 'bold 10px Segoe UI, sans-serif'; ctx.fillStyle = '#5a6b80';
+    ctx.font = 'bold 11px Segoe UI, sans-serif'; ctx.fillStyle = '#5a6b80';
     ctx.fillText(tr('szer. N'), 4, M - 16); ctx.fillText(tr('dł. E'), this.W - M + 12, this.H - 6);
     ctx.fillText(tr('Głębokości w metrach'), M, this.H - 6);
     ctx.restore();

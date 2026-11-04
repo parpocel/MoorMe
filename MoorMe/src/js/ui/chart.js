@@ -96,7 +96,7 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.fillStyle = N ? 'rgba(40,96,120,0.95)' : 'rgba(84,170,196,0.95)'; ctx.fill();
     ctx.setLineDash([4, 3]); ctx.strokeStyle = '#2b6f86'; ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]);
     const mx = sh.poly.reduce((a, p) => a + p[0], 0) / sh.poly.length, mz = sh.poly.reduce((a, p) => a + p[1], 0) / sh.poly.length;
-    if (s > 0.02) { ctx.fillStyle = '#17506a'; ctx.font = '10px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(`${sh.depth.toFixed(1)}`, X(mx, mz), Y(mx, mz) + 3); }
+    if (s > 0.02) { ctx.fillStyle = '#17506a'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(`${sh.depth.toFixed(1)}`, X(mx, mz), Y(mx, mz) + 3); }
   }
   // ląd
   for (const q of lands) {
@@ -145,7 +145,7 @@ export function drawChart(ctx, W, Hh, opts) {
   // znaki – zawsze na mapie (jak na prawdziwej mapie nawigacyjnej); nazwy i oceny tylko z pełną pomocą
   {
   const rs = Math.max(5, Math.min(9, 150 * s + 4));
-  ctx.font = '10px Segoe UI'; ctx.textAlign = 'left';
+  ctx.font = '11px Segoe UI'; ctx.textAlign = 'left';
   for (const m of w.marks) {
     const x = X(m.x, m.z), y = Y(m.x, m.z);
     if (x < -20 || y < -20 || x > W + 20 || y > Hh + 20) continue;
@@ -170,7 +170,7 @@ export function drawChart(ctx, W, Hh, opts) {
     ctx.beginPath(); ctx.arc(x, y, i === nx ? 6 : 4, 0, Math.PI * 2);
     ctx.fillStyle = i < nx ? 'rgba(120,120,120,0.6)' : i === nx ? '#d223aa' : 'rgba(255,255,255,0.9)';
     ctx.fill(); ctx.strokeStyle = '#d223aa'; ctx.lineWidth = 1.2; ctx.stroke();
-    if (i === nx || i === R.length - 1) { ctx.fillStyle = i === nx ? '#fff' : '#a0187f'; ctx.font = 'bold 8px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(i === R.length - 1 ? 'M' : String(i), x, y + 3); }
+    if (i === nx || i === R.length - 1) { ctx.fillStyle = i === nx ? '#fff' : '#a0187f'; ctx.font = 'bold 9.5px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText(i === R.length - 1 ? 'M' : String(i), x, y + 3); }
     ctx.globalAlpha = 1;
   });
 
@@ -206,7 +206,7 @@ export function drawChart(ctx, W, Hh, opts) {
   ctx.translate(W - 24, 26); ctx.rotate(-phi);
   ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#d62828'; ctx.beginPath(); ctx.moveTo(0, -13); ctx.lineTo(5, 3); ctx.lineTo(-5, 3); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 9px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('N', 0, 13);
+  ctx.fillStyle = '#1b1f24'; ctx.font = 'bold 10.5px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('N', 0, 13);
   ctx.restore();
   ctx.restore();
 }
