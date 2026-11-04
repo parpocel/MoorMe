@@ -114,7 +114,7 @@ export function navBook() {
           ['β', L('dryf', 'leeway'), L('kąt, o który wiatr znosi jacht z kursu', 'angle the wind pushes the yacht off its heading')],
           ['NK, NM, NR', L('namiar kompasowy, magnetyczny, rzeczywisty', 'compass, magnetic, true bearing'), L('kierunek na obiekt mierzony od odpowiedniej północy', 'direction to an object measured from the matching north')]
         ]),
-        P(B(L('Zasada znaków: ', 'Sign rule: ')), L('poprawki na wschód (E) i w prawo są dodatnie (+), na zachód (W) i w lewo – ujemne (−).', 'corrections to the east (E) and to the right are positive (+), to the west (W) and to the left negative (−).')),
+        P(B(L('Zasada znaków: ', 'Sign rule: ')), L('poprawki na wschód (E) i w prawo są dodatnie (+), na zachód (W) i w lewo są ujemne (−).', 'corrections to the east (E) and to the right are positive (+), to the west (W) and to the left negative (−).')),
         northsSVG())
     ] },
     { id: 'courses', name: L('Przeliczanie kursów', 'Converting courses'), entries: [
