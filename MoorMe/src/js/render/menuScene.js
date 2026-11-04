@@ -263,10 +263,10 @@ export class MenuScene {
     this.clouds.forEach((c, i) => { c.position.x += 0.02 + i * 0.004; if (c.position.x > 700) c.position.x = -700; });
 
     // kamera krąży powoli wokół jachtu (niezależnie od myszy); punkt patrzenia przesunięty w lewo, żeby jacht stał po prawej stronie kadru
-    const az = 1.05 + Math.sin(t * 0.04) * 0.1, d = 60, el = 0.13;
+    const az = 1.05 + Math.sin(t * 0.04) * 0.1, d = 66, el = 0.13;
     const cam = this.camera.position.set(Math.cos(az) * Math.cos(el) * d, 5 + Math.sin(el) * d, Math.sin(az) * Math.cos(el) * d);
     const dx = -cam.x, dz = -cam.z, n = Math.hypot(dx, dz);
-    const shift = this.camera.aspect > 1.2 ? 11 : 0;
+    const shift = this.camera.aspect > 1.2 ? 16 : 0;
     this.camera.lookAt(-(-dz / n) * shift, 5.5, -(dx / n) * shift);
     this.renderer.render(this.scene, this.camera);
   }

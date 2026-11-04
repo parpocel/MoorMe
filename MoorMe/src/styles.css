@@ -816,3 +816,17 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .wh-go { height: 44px; font-size: 18px; }
 .wh-center.swap > .wh-title, .wh-center.swap > .wh-desc { animation: m3-swap 0.28s ease-out; }
 .wheelmenu .m3-hint { justify-self: center; }
+/* koło w 1/3 szerokości od lewej (jacht zostaje widoczny po prawej) */
+.wh-stage { place-items: center start; }
+.wh-wheel { width: min(80vh, 60vw, 820px); margin-left: max(0px, calc(33.3vw - min(80vh, 60vw, 820px) / 2 - clamp(18px, 3.4vw, 56px))); }
+.wheelmenu .wh-shade { background: radial-gradient(circle at 33% 52%, rgba(16, 22, 44, 0.55) 0%, rgba(16, 22, 44, 0.3) 32%, rgba(16, 22, 44, 0.04) 62%); }
+@media (max-width: 900px) { .wh-stage { place-items: center; } .wh-wheel { width: min(84vh, 94vw); margin-left: 0; } }
+/* wycinki koła w 3D */
+.wh-g { cursor: pointer; transition: transform 0.2s ease, filter 0.2s ease; filter: saturate(0.82) brightness(0.86); }
+.wh-g .wh-seg, .wh-g:hover .wh-seg, .wh-g.on .wh-seg { transform: none; stroke: rgba(255, 255, 255, 0.45); stroke-width: 0.6; }
+.wh-g .wh-depth { stroke: rgba(0, 0, 0, 0.25); stroke-width: 0.4; }
+.wh-g .wh-shine { pointer-events: none; }
+.wh-g:hover, .wh-g.on { transform: translate(var(--dx), calc(var(--dy) - 3px)); filter: saturate(1.05) brightness(1.04) drop-shadow(0 6px 6px rgba(8, 12, 32, 0.45)); }
+.wh-g.on .wh-seg { stroke: rgba(255, 255, 255, 0.9); stroke-width: 0.9; }
+.wh-center { box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -10px 24px rgba(10, 14, 40, 0.35), 0 10px 0 rgba(10, 14, 40, 0.35), 0 26px 50px rgba(15, 20, 50, 0.4); }
+.wh-lbl .wh-ic { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 3px 0 rgba(10, 14, 40, 0.35), 0 8px 16px rgba(10, 14, 40, 0.35); }

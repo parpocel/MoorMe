@@ -222,8 +222,7 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
     hero,
-    h('div.m3-tiles', { class: tiles.length >= 7 ? 'many' : '' }, tiles),
-    h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
+    h('div.m3-tiles', { class: tiles.length >= 7 ? 'many' : '' }, tiles));
   app.appendChild(s);
   select(cur);
   // Opis rezerwuje wysokość najdłuższego tekstu z ekranu – wyśrodkowany panel (i napis MoorMe) nie skacze przy zmianie kafla
@@ -255,19 +254,30 @@ function wheelMenu({ kicker, items, sel = 0 }) {
   const svg = document.createElementNS(NS, 'svg');
   svg.setAttribute('viewBox', '-112 -112 224 224');
   svg.classList.add('wh-svg');
+  const defs = document.createElementNS(NS, 'defs');
+  defs.innerHTML = `<radialGradient id="whshine" cx="0.5" cy="0.08" r="0.75"><stop offset="0" stop-color="#fff" stop-opacity="0.38"/><stop offset="0.55" stop-color="#fff" stop-opacity="0.08"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`;
+  svg.appendChild(defs);
   const labels = [];
   const segs = items.map((it, i) => {
     const s0 = a0 + i * step, s1 = s0 + step, mid = (s0 + s1) / 2;
     const g0 = GAP / R, g1 = GAP / R0; // stała szczelina między wycinkami
     const [x1, y1] = pt(R, s0 + g0), [x2, y2] = pt(R, s1 - g0), [x3, y3] = pt(R0, s1 - g1), [x4, y4] = pt(R0, s0 + g1);
-    const path = document.createElementNS(NS, 'path');
-    path.setAttribute('d', `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${R0} ${R0} 0 0 0 ${x4} ${y4} Z`);
-    path.classList.add('wh-seg');
-    path.style.setProperty('--c', it.color);
-    path.style.setProperty('--dx', `${Math.cos(mid) * 4}px`); path.style.setProperty('--dy', `${Math.sin(mid) * 4}px`);
-    path.addEventListener('mouseenter', () => select(i));
-    path.addEventListener('click', () => activate(i));
-    svg.appendChild(path);
+    const d = `M${x1} ${y1} A${R} ${R} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${R0} ${R0} 0 0 0 ${x4} ${y4} Z`;
+    // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
+    const grad = document.createElementNS(NS, 'linearGradient');
+    grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');
+    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 62%, #fff)"/><stop offset="0.55" style="stop-color: ${it.color}"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 70%, #000)"/>`;
+    defs.appendChild(grad);
+    const g = document.createElementNS(NS, 'g');
+    g.classList.add('wh-g');
+    g.style.setProperty('--dx', `${Math.cos(mid) * 4}px`); g.style.setProperty('--dy', `${Math.sin(mid) * 4}px`);
+    const mk = (cls, extra = {}) => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', d); e.classList.add(cls); for (const [k, v] of Object.entries(extra)) e.setAttribute(k, v); g.appendChild(e); return e; };
+    mk('wh-depth', { transform: 'translate(0 5)', style: `fill: color-mix(in srgb, ${it.color} 45%, #0b1024)` });
+    const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
+    mk('wh-shine', { style: 'fill: url(#whshine)' });
+    g.addEventListener('mouseenter', () => select(i));
+    g.addEventListener('click', () => activate(i));
+    svg.appendChild(g);
     // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
     const [lx, ly] = pt((R + R0) / 2, mid);
     const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
@@ -285,7 +295,7 @@ function wheelMenu({ kicker, items, sel = 0 }) {
   function select(i) {
     cur = i;
     const it = items[i];
-    segs.forEach((p, k) => p.classList.toggle('on', k === i));
+    segs.forEach((p, k) => p.parentNode.classList.toggle('on', k === i));
     labels.forEach((l, k) => l.classList.toggle('on', k === i));
     cTitle.textContent = t(it.title); cDesc.textContent = t(it.desc);
     goBtn.style.setProperty('--c', it.color);
@@ -306,8 +316,7 @@ function wheelMenu({ kicker, items, sel = 0 }) {
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => showModeSelect()); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
-    h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center)),
-    h('div.m3-hint', {}, h('kbd', {}, '←'), h('kbd', {}, '→'), h('span', {}, 'wybór'), h('kbd', {}, 'Enter'), h('span', {}, 'start')));
+    h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center)));
   app.appendChild(scr);
   select(cur);
   return scr;
