@@ -728,3 +728,8 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-charx-strip { margin: 4px 0 10px; }
 .handbook .hb-charx-live { margin-top: 6px; padding: 10px 12px; border-radius: 8px; background: rgba(47, 68, 104, 0.06); }
 .handbook .hb-charx-live h4 { color: #2f4468; font-size: 14.5px; margin: 0 0 4px; }
+.handbook .hb-charx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(430px, 1fr)); gap: 14px; margin: 10px 0 6px; }
+.handbook .hb-charx { background: rgba(255, 255, 255, 0.55); border: 1px solid rgba(47, 68, 104, 0.14); border-radius: 10px; padding: 12px 14px; }
+.handbook .hb-charx .hb-play { margin-left: auto; }
+.handbook .hb-charx p { font-size: 14px; }
+@media (max-width: 560px) { .handbook .hb-charx-grid { grid-template-columns: 1fr; } }

@@ -263,11 +263,11 @@ const LAMP_OFF = '#3a3f47';
 const lampSvg = (code, cx, cy, r = 6) => `<g data-lc="${code}"><circle class="lh" cx="${cx}" cy="${cy}" r="${r * 2.8}" fill="#fff" opacity="0"/><circle class="lc" cx="${cx}" cy="${cy}" r="${r}" fill="${LAMP_OFF}" stroke="#1b1f24" stroke-width="0.8"/></g>`;
 // wykres czasowy: kilka okresów (co najmniej ~6 s), podziałka co 1 s, przesuwający się znacznik czasu
 function timelineSvg(code, W = 300) {
-  const seq = lightSequence(code), span = Math.max(seq.period, Math.ceil(6 / seq.period) * seq.period), H = 46, x0 = 10, w = W - 20, k = w / span;
+  const seq = lightSequence(code), span = Math.max(seq.period, Math.ceil(6 / seq.period) * seq.period), H = 50, x0 = 12, w = W - 28, k = w / span;
   let g = `<rect width="${W}" height="${H}" rx="6" fill="#0b1220"/><line x1="${x0}" y1="18" x2="${x0 + w}" y2="18" stroke="#2b3547" stroke-width="2"/>`;
   for (const r of litRuns(seq, span)) { const hh = r.b < 1 ? 7 : 18; g += `<rect x="${(x0 + r.t * k).toFixed(2)}" y="${27 - hh}" width="${Math.max(1.2, r.d * k).toFixed(2)}" height="${hh}" rx="1.5" fill="${LIGHT_COLORS[r.c] || LIGHT_COLORS.W}"/>`; }
   const step = span > 16 ? 2 : 1;
-  for (let t = 0; t <= span + 1e-9; t += step) g += `<line x1="${x0 + t * k}" y1="29" x2="${x0 + t * k}" y2="${t % (step * 2) === 0 ? 33 : 31}" stroke="#7a8290"/>` + (t % (step * 2) === 0 ? `<text x="${x0 + t * k}" y="${H - 3}" font-size="9" fill="#9aa3b2" text-anchor="middle" font-family="sans-serif">${t} s</text>` : '');
+  for (let t = 0; t <= span + 1e-9; t += step) g += `<line x1="${x0 + t * k}" y1="29" x2="${x0 + t * k}" y2="${t % (step * 2) === 0 ? 33 : 31}" stroke="#7a8290"/>` + (t % (step * 2) === 0 ? `<text x="${x0 + t * k}" y="${H - 3}" font-size="12" fill="#b4bccb" text-anchor="middle" font-family="sans-serif">${t} s</text>` : '');
   for (let t = seq.period; t < span - 1e-9; t += seq.period) g += `<line x1="${x0 + t * k}" y1="5" x2="${x0 + t * k}" y2="29" stroke="#ffffff" stroke-opacity="0.25" stroke-dasharray="2 2"/>`;
   g += `<line data-lt="${code}" data-span="${span}" data-x0="${x0}" data-w="${w}" x1="${x0}" y1="5" x2="${x0}" y2="29" stroke="#ff5a5a" stroke-width="1.5"/>`;
   return g;
@@ -275,11 +275,16 @@ function timelineSvg(code, W = 300) {
 const LAMPS = new Set();
 let lampRaf = 0;
 function lampTick(now) {
-  const t = now / 1000;
   let live = 0;
   for (const el of LAMPS) {
     if (!el.isConnected) continue; // np. inna zakładka podręcznika – wraca po przełączeniu
     live++;
+    const paused = el.__on === false, t = el.__t0 !== undefined ? (now - el.__t0) / 1000 : now / 1000;
+    if (paused) {
+      if (el.__lamp) { el.__core.setAttribute('fill', LAMP_OFF); el.__core.setAttribute('fill-opacity', '1'); el.__halo.setAttribute('opacity', '0'); }
+      else { el.setAttribute('x1', el.__x0); el.setAttribute('x2', el.__x0); }
+      continue;
+    }
     if (el.__lamp) {
       const s = lightAt(el.__seq, t), col = s.on ? (LIGHT_COLORS[s.c] || LIGHT_COLORS.W) : null;
       const br = s.on ? (s.b ?? 1) : 0;
@@ -314,12 +319,12 @@ function animLamps(root) {
 const nightLamp = (code, sz = 64) => svgEl(sz, sz, `<rect width="${sz}" height="${sz}" rx="10" fill="#0b1220"/>${lampSvg(code, sz / 2, sz / 2, sz / 8)}`);
 
 // pasek „obrazu graficznego” do tabeli: kilka okresów, światło jasne na ciemnym tle, klamra „okres” pod pierwszym
-function stripSvg(code, W = 210, H = 34) {
+function stripSvg(code, W = 210, H = 40) {
   const seq = lightSequence(code), span = Math.max(2 * seq.period, Math.ceil(9 / seq.period) * seq.period), x0 = 4, w = W - 8, k = w / span;
   let g = `<rect x="${x0}" y="2" width="${w}" height="16" fill="#0b1220"/>`;
   for (const r of litRuns(seq, span)) { const hh = r.b < 1 ? 4 : 10; g += `<rect x="${(x0 + r.t * k).toFixed(2)}" y="${15 - hh}" width="${Math.max(1, r.d * k).toFixed(2)}" height="${hh}" fill="${LIGHT_COLORS[r.c] || LIGHT_COLORS.W}"/>`; }
   const pw = seq.period * k;
-  g += `<path d="M${x0} 21 V25 H${x0 + pw} V21" fill="none" stroke="#2f4468" stroke-width="1"/>${pw < 60 ? `<text x="${x0 + pw + 4}" y="27" font-size="8" fill="#2f4468" font-family="sans-serif">` : `<text x="${x0 + pw / 2}" y="${H - 1}" font-size="8" fill="#2f4468" text-anchor="middle" font-family="sans-serif">`}${L('okres', 'period')} ${String(seq.period).replace('.', ',')} s</text>`;
+  g += `<path d="M${x0} 21 V25 H${x0 + pw} V21" fill="none" stroke="#2f4468" stroke-width="1"/>${pw < 90 ? `<text x="${x0 + pw + 5}" y="30" font-size="12" fill="#2f4468" font-family="sans-serif">` : `<text x="${x0 + pw / 2}" y="${H - 1}" font-size="12" fill="#2f4468" text-anchor="middle" font-family="sans-serif">`}${L('okres', 'period')} ${String(seq.period).replace('.', ',')} s</text>`;
   return g;
 }
 // zestawienie charakterystyk (nazwa, skrót, definicja, obraz graficzny, lampa na żywo)
@@ -350,8 +355,7 @@ const CHAR_TABLE = [
   [L('Quick – Q (migające)', 'Quick (Q)'), [
     ['Q', 'Q', L('Quick (migające)', 'Quick'), L('Jednakowe błyski bez przerw, od 50 do 79 na minutę (zwykle 60).', 'Equal flashes without a break, 50 to 79 per minute (usually 60).')],
     ['Q(3)', 'Q(3) 10s', L('Group quick (migające grupowe)', 'Group quick'), L('Grupa błysków migających, po niej dłuższa przerwa.', 'A group of quick flashes followed by a longer eclipse.')],
-    ['Q(6)+LFl', 'Q(6)+LFl 15s', L('Group quick with long flash (migające złożone)', 'Group quick with long flash'), L('Grupa błysków migających zakończona jednym blaskiem.', 'A group of quick flashes ending with one long flash.')],
-    ['IQ', 'IQ 13s', L('Interrupted quick (migające przerywane)', 'Interrupted quick'), L('Miga jak Q, ale po serii co najmniej ośmiu błysków robi przerwę trwającą 3 s lub dłużej.', 'Flashes like Q, but after a run of at least eight flashes there is an eclipse of 3 s or more.')]
+    ['Q(6)+LFl', 'Q(6)+LFl 15s', L('Group quick with long flash (migające złożone)', 'Group quick with long flash'), L('Grupa błysków migających zakończona jednym blaskiem.', 'A group of quick flashes ending with one long flash.')]
   ]],
   [L('Very quick – VQ (szybko migające)', 'Very quick (VQ)'), [
     ['VQ', 'VQ', L('Very quick (szybko migające)', 'Very quick'), L('Jednakowe błyski bez przerw, od 80 do 159 na minutę (zwykle 120).', 'Equal flashes without a break, 80 to 159 per minute (usually 120).')],
@@ -388,25 +392,36 @@ const CHAR_LIVE = {
 function charCard(abbr, code, name, def) {
   const live = CHAR_LIVE[abbr];
   const lc = (live && live[0]) || code;
-  return animLamps(h('div.hb-entry.hb-charx', {},
-    h('div.hb-charx-head', {}, h('h3', {}, name), h('span.hb-ct-abbr', {}, abbr)),
+  // animacja startuje dopiero po ▶ (od początku okresu); ponowne kliknięcie zatrzymuje
+  const btn = h('button.btn.sm.hb-play', { onclick: () => {
+    const on = !card.__playing; card.__playing = on;
+    const now = performance.now();
+    for (const el of card.querySelectorAll('[data-lc], [data-lt]')) { el.__on = on; el.__t0 = now; }
+    btn.textContent = on ? L('⏸ Pauza', '⏸ Pause') : L('▶ Odtwórz', '▶ Play');
+    kickLamps();
+  } }, L('▶ Odtwórz', '▶ Play'));
+  const card = animLamps(h('div.hb-charx', {},
+    h('div.hb-charx-head', {}, h('h3', {}, name), h('span.hb-ct-abbr', {}, abbr), btn),
     h('p', {}, def),
-    h('div.hb-charx-strip', {}, svgEl(320, 34, stripSvg(code, 320))),
+    h('div.hb-charx-strip', {}, svgEl(320, 40, stripSvg(code, 320))),
     h('div.hb-char.hb-charx-live', {},
       nightLamp(lc),
-      h('div.hb-char-body', {}, live ? h('h4', {}, live[1]) : null, h('div.hb-char-code', {}, lc), svgEl(320, 46, timelineSvg(lc, 320)), live ? h('p', {}, live[2]) : null))));
+      h('div.hb-char-body', {}, live ? h('h4', {}, live[1]) : null, h('div.hb-char-code', {}, lc), svgEl(320, 50, timelineSvg(lc, 320)), live ? h('p', {}, live[2]) : null))));
+  for (const el of card.querySelectorAll('[data-lc], [data-lt]')) el.__on = false;
+  return card;
 }
 
 function charsSection() {
   const out = [
     h('div.hb-entry', {}, h('h3', {}, L('Jak czytać opis światła na mapie', 'How to read a light description on the chart')),
       h('p', {}, h('b', {}, 'Fl(3) G 10s 12m 5M'), ' – ', L('charakterystyka Fl(3) (trzy błyski w grupie), kolor zielony (G), okres 10 s (po tylu sekundach cały rytm się powtarza), wysokość światła 12 m nad poziomem wody, zasięg nominalny 5 Mm. Brak litery koloru oznacza światło białe.', 'character Fl(3) (a group of three flashes), green (G), period 10 s (the whole rhythm repeats every 10 s), light 12 m above sea level, nominal range 5 NM. No colour letter means a white light.')),
-      h('p', {}, L('Przy każdej charakterystyce najpierw jest jej definicja i obraz graficzny: jasne pola to czas świecenia, ciemne – zaciemnienia; cienka linia oznacza słabsze światło stałe, na którym pojawiają się rozbłyski, a klamra pokazuje jeden okres. Pod spodem ta sama charakterystyka na żywo: animowana lampa i wykres czasowy – przerywane pionowe linie oddzielają kolejne okresy, a czerwona kreska przesuwa się w takt lampy.', 'Each light character starts with its definition and pattern: the bright parts show the light and the dark parts the eclipses; a thin line is the weaker steady light on which the flashes appear, and the bracket shows one period. Below it the same character live: an animated lamp and a timeline – the dashed vertical lines separate the periods and the red marker moves in step with the lamp.')),
+      h('p', {}, L('Przy każdej charakterystyce najpierw jest jej definicja i obraz graficzny: jasne pola to czas świecenia, ciemne – zaciemnienia; cienka linia oznacza słabsze światło stałe, na którym pojawiają się rozbłyski, a klamra pokazuje jeden okres. Pod spodem ta sama charakterystyka na żywo – przyciskiem ▶ uruchamiasz animowaną lampę i wykres czasowy – przerywane pionowe linie oddzielają kolejne okresy, a czerwona kreska przesuwa się w takt lampy.', 'Each light character starts with its definition and pattern: the bright parts show the light and the dark parts the eclipses; a thin line is the weaker steady light on which the flashes appear, and the bracket shows one period. Below it the same character live – press ▶ to run the animated lamp and the timeline – the dashed vertical lines separate the periods and the red marker moves in step with the lamp.')),
       h('p', {}, L('Zasada ogólna: światło błyskowe świeci krócej, niż trwają przerwy; przerywane – dłużej niż przerwy; izofazowe – tyle samo.', 'General rule: a flashing light is on for less time than it is off; an occulting light is on for longer than it is off; an isophase light is on and off for equal times.')))
   ];
+  // każda grupa jako siatka kart
   for (const [grp, list] of CHAR_TABLE) {
     out.push(h('div.hb-charx-grp', {}, grp));
-    for (const [abbr, code, name, def] of list) out.push(charCard(abbr, code, name, def));
+    out.push(h('div.hb-charx-grid', {}, ...list.map(([abbr, code, name, def]) => charCard(abbr, code, name, def))));
   }
   return out;
 }
