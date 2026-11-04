@@ -665,9 +665,7 @@ function stepEquipment() {
     opt(`Rufowy (${Math.round(spec.sternThrusterN / 9.81)} kgf)`, seg([{ value: false, label: 'Brak' }, { value: true, label: 'Zamontowany' }], eq.sternThruster, (v) => { eq.sternThruster = v; editor.render(); }), 'Stery strumieniowe tracą skuteczność powyżej ~2 kn i przegrzewają się przy długiej pracy.'),
     h('h3', {}, 'Kabestany i odbijacze'),
     opt('Kabestany', seg([{ value: false, label: 'Ręczne' }, { value: true, label: 'Elektryczne' }], eq.electricWinch, (v) => { eq.electricWinch = v; })),
-    opt('Rozmiar odbijaczy', seg([{ value: 0.09, label: 'Małe' }, { value: 0.11, label: 'Średnie' }, { value: 0.13, label: 'Duże' }, { value: 0.16, label: 'XL' }], eq.fenderRadius, (v) => { eq.fenderRadius = v; editor.render(); })),
-    h('h3', {}, 'Elementy pokładu'),
-    editor.list);
+    opt('Rozmiar odbijaczy', seg([{ value: 0.09, label: 'Małe' }, { value: 0.11, label: 'Średnie' }, { value: 0.13, label: 'Duże' }, { value: 0.16, label: 'XL' }], eq.fenderRadius, (v) => { eq.fenderRadius = v; editor.render(); })));
   const body = h('div.two-col', {}, left, right);
   screen(1, body, () => showStep(2));
 }
