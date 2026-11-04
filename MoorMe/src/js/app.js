@@ -217,7 +217,7 @@ function menuScreen({ kicker, items, sel = 0, back, extra = null, settingsBack =
     h('div.m3-card', {}, h('div.m3-head', {}, heroGlyph, heroTitle), heroDesc, extra ? h('div.m3-extra', {}, extra) : null, goBtn));
   const s = h('div.screen.menu3d', {}, menuBackdrop(), h('div.m3-shade'),
     h('div.m3-top', {},
-      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('div.m3-flags', {}, raw(signalFlagsHTML())),
+      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('span'),
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
@@ -312,7 +312,7 @@ function wheelMenu({ kicker, items, sel = 0 }) {
   const quit = window.moorme && window.moorme.quit;
   const scr = h('div.screen.menu3d.wheelmenu', {}, menuBackdrop(), h('div.m3-shade.wh-shade'),
     h('div.m3-top', {},
-      h('div.m3-flags', {}, raw(signalFlagsHTML())),
+      h('span'),
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(() => showModeSelect()); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18))) : null),
