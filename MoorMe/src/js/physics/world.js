@@ -930,12 +930,13 @@ export class World {
     const fps = this.fenderPoints();
     for (const f of fps) {
       const p = localToWorld(b.x, b.z, b.th, f.lx, f.ly);
-      let comp = 0;
+      let comp = 0, gap = 9;
       for (let j = 0; j < near.length; j++) {
         const o = near[j];
-        if (p.x < o.box.minX - f.r || p.x > o.box.maxX + f.r || p.z < o.box.minZ - f.r || p.z > o.box.maxZ + f.r) continue;
+        if (p.x < o.box.minX - f.r - 0.6 || p.x > o.box.maxX + f.r + 0.6 || p.z < o.box.minZ - f.r - 0.6 || p.z > o.box.maxZ + f.r + 0.6) continue;
         if (o.kind === 'shallow') continue;
         const r = distToPoly(o.poly, p.x, p.z);
+        gap = Math.min(gap, r.dist - f.r); // odstęp od przeszkody (do wygaszania kołysania w 3D)
         if (r.dist < f.r) {
           const depth = f.r - r.dist;
           comp = Math.max(comp, depth / f.r);
@@ -944,6 +945,7 @@ export class World {
         }
       }
       this.fenderState[f.id] = comp;
+      (this.fenderGap || (this.fenderGap = {}))[f.id] = gap;
     }
     this.prevContact = newContact;
     this.contacts = contacts;

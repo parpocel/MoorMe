@@ -191,6 +191,8 @@ export class View3D {
     // piana / bąble
     this.wake = this.makeWake();
     scene.add(this.wake.mesh);
+    this.wash = this.makePropWash();
+    scene.add(this.wash.mesh);
     this.particles = this.makeParticles();
     scene.add(this.particles.points);
     // smugi wiatru
@@ -275,6 +277,68 @@ export class View3D {
     const mesh = new THREE.Mesh(geo, mat2);
     mesh.frustumCulled = false; mesh.renderOrder = 3;
     return { mesh, geo, mat: mat2, hist: [], N };
+  }
+
+  // strumień zaśrubowy: kotłująca się, spieniona woda wybijająca spod rufy (naprzód – do tyłu, wstecz – do przodu wzdłuż kadłuba)
+  makePropWash() {
+    const R = 14, C = 7, geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(R * C * 3), uv = new Float32Array(R * C * 2), idx = [];
+    for (let i = 0; i < R - 1; i++) for (let j = 0; j < C - 1; j++) { const a = i * C + j, b2 = a + 1, c = a + C, d = c + 1; idx.push(a, c, b2, b2, c, d); }
+    for (let i = 0; i < R; i++) for (let j = 0; j < C; j++) { uv[(i * C + j) * 2] = j / (C - 1) * 2 - 1; uv[(i * C + j) * 2 + 1] = i / (R - 1); }
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    const mat2 = new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false,
+      uniforms: { uT: { value: 0 }, uA: { value: 0 }, uDark: { value: 0 } },
+      vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+      fragmentShader: `varying vec2 vUv; uniform float uT; uniform float uA; uniform float uDark;
+        float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float n(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.0-2.0*f); return mix(mix(h(i), h(i+vec2(1,0)), f.x), mix(h(i+vec2(0,1)), h(i+vec2(1,1)), f.x), f.y); }
+        void main(){
+          float v = vUv.y, u = vUv.x;
+          float body = (1.0 - smoothstep(0.55, 1.0, abs(u))) * smoothstep(0.0, 0.12, v) * (1.0 - smoothstep(0.55, 1.0, v));
+          // wiry: szum przesuwany wzdłuż strumienia i skręcany (obrót śruby)
+          vec2 q = vec2(u * 3.0 + sin(v * 6.0 - uT * 2.0) * 0.6, v * 7.0 - uT * 3.2);
+          float boil = n(q) * 0.6 + n(q * 2.3 + 7.0) * 0.4;
+          float foam = smoothstep(0.42, 0.8, boil);
+          float a = uA * body * (0.35 + 0.75 * foam);
+          gl_FragColor = vec4(mix(vec3(0.55, 0.78, 0.8), vec3(0.95, 0.98, 1.0), foam) * (1.0 - 0.75 * uDark), a * 0.9);
+        }`
+    });
+    const mesh = new THREE.Mesh(geo, mat2);
+    mesh.frustumCulled = false; mesh.renderOrder = 4;
+    return { mesh, geo, mat: mat2, R, C, a: 0 };
+  }
+
+  updatePropWash(dt, t, windKn, windDir) {
+    const W = this.wash, b = this.world.boat, spec = this.world.spec;
+    if (!W) return;
+    const thrust = this.world.engineDead ? 0 : b.gear * Math.max(0, b.rpm);
+    W.a += (Math.min(1, Math.abs(thrust) * 1.4) - W.a) * Math.min(1, dt * 2.5);
+    W.mesh.visible = W.a > 0.02;
+    if (!W.mesh.visible) return;
+    const dir = thrust >= 0 ? -1 : 1; // kierunek strumienia w układzie jachtu (oś x)
+    const { xs } = hullExtents(spec);
+    const x0 = thrust >= 0 ? Math.min(b.xProp, xs + 0.6) : b.xProp; // naprzód: wybija spod rufy
+    const len = (2 + 6 * Math.abs(thrust)) * (thrust >= 0 ? 1 : 0.7);
+    const pa = W.geo.attributes.position.array;
+    for (let i = 0; i < W.R; i++) {
+      const v = i / (W.R - 1), lx = x0 + dir * len * v;
+      // na wstecznym strumień rozdziela się po obu stronach kadłuba
+      const width = 0.25 + v * (thrust >= 0 ? 1.3 : 0.9) + (thrust < 0 ? spec.beam * 0.45 * Math.min(1, v * 2) : 0);
+      for (let j = 0; j < W.C; j++) {
+        const u = j / (W.C - 1) * 2 - 1;
+        const ly = u * width;
+        const p = localToWorld(b.x, b.z, b.th, lx, ly);
+        const o = (i * W.C + j) * 3;
+        pa[o] = p.x; pa[o + 2] = p.z; pa[o + 1] = this.water.surfaceY(p.x, p.z, windKn, windDir) + 0.06;
+      }
+    }
+    W.geo.attributes.position.needsUpdate = true;
+    W.mat.uniforms.uT.value = t * (0.6 + Math.abs(thrust));
+    W.mat.uniforms.uA.value = W.a;
+    W.mat.uniforms.uDark.value = this.atmo && this.atmo.night ? this.atmo.night : 0;
   }
 
   updateWake(dt, t, windKn, windDir) {
@@ -822,15 +886,17 @@ export class View3D {
         continue;
       }
       mesh.visible = true;
-      const comp = w.fenderState[f.id] || 0;
+      // ściśnięcie: odbijacz mieści się między burtą a przeszkodą (najwyżej do 40% grubości)
+      const comp = clamp(w.fenderState[f.id] || 0, 0, 1.2);
       const g = fenderGeom(spec, f, rf);
-      const k = 1 - comp * 0.5;
+      const k = Math.max(0.4, 1 - comp * 0.5);
       const hy = f.ball ? Math.max(g.r + 0.05, 0.45 + spec.freeboard * 0.1) : f.stern ? 0.55 : 0.5 + spec.freeboard * 0.15;
       // kołysanie na lince jak wahadło (zawieszenie u góry); dociśnięty do kei – nieruchomy
       if (mesh.userData.ph === undefined) { let hh = 0; for (const ch of String(f.id)) hh = (hh * 31 + ch.charCodeAt(0)) % 997; mesh.userData.ph = hh / 997 * 6.28; }
-      const free = clamp(1 - comp * 4, 0, 1), ph = mesh.userData.ph;
+      const gapF = w.fenderGap ? (w.fenderGap[f.id] ?? 9) : 9;
+      const free = clamp(1 - comp * 4, 0, 1) * clamp((gapF - 0.03) / 0.35, 0, 1), ph = mesh.userData.ph; // przy kei kołysanie wygasa
       const swA = free * (0.07 + Math.min(0.06, (w.env.windVec ? Math.hypot(w.env.windVec().x, w.env.windVec().z) : 4) * 0.006)) * Math.sin(t * 1.5 + ph) + free * 0.025 * Math.sin(t * 2.7 + ph * 1.7);
-      const swB = free * 0.035 * Math.sin(t * 1.15 + ph * 0.6) + 0.04 * free; // lekko od burty
+      const swB = free * 0.03 * Math.sin(t * 1.15 + ph * 0.6) + 0.02 * free; // lekko od burty
       const hh2 = f.ball ? g.r + 0.25 : rf * 2.2; // odległość od środka do punktu zawieszenia
       const ry = f.stern ? 0 : -Math.atan2(g.n.y, g.n.x);
       const tx = f.stern ? 0 : -g.n.y, tz = f.stern ? 1 : g.n.x; // styczna do burty w układzie jachtu
@@ -848,7 +914,7 @@ export class View3D {
         arr[o2] = top.x; arr[o2 + 1] = top.y; arr[o2 + 2] = top.z;
         arr[o2 + 3] = ax; arr[o2 + 4] = sheerHeight(spec, ax) + 0.04; arr[o2 + 5] = az;
       }
-      mesh.scale.set(1 - comp * 0.5, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
+      mesh.scale.set(k, 1, 1); // ściśnięcie wzdłuż normalnej (lokalna oś x po obrocie)
     }
 
     if (this.fenderRopes) this.fenderRopes.geometry.attributes.position.needsUpdate = true;
@@ -897,7 +963,7 @@ export class View3D {
       const pp = localToWorld(b.x, b.z, b.th, b.xProp - 0.4, 0);
       const dir = -b.gear;
       const sp = 1.5 + b.rpm * 3;
-      for (let k = 0; k < 2; k++) this.spawn(pp.x, pp.z, c * dir * sp + b.vx, s * dir * sp + b.vz, 1.2 + b.rpm);
+      if (Math.random() < 0.5) this.spawn(pp.x, pp.z, c * dir * sp + b.vx, s * dir * sp + b.vz, 1.0 + b.rpm);
     }
     for (const [kind, x] of [['bow', b.xBow], ['stern', b.xStern]]) {
       const out = b[kind + 'Out'];
@@ -910,6 +976,7 @@ export class View3D {
       }
     }
     this.updateWake(dt, t, w.env.windSpeed / 0.5144, (w.env.windFromDeg + 180) * DEG);
+    this.updatePropWash(dt, t, w.env.windSpeed / 0.5144, (w.env.windFromDeg + 180) * DEG);
     // fala dziobowa (delikatna)
     const spd = b.speed;
     if (spd > 0.8 && Math.random() < spd * 0.2) {
