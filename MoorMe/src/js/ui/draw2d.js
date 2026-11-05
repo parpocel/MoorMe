@@ -296,10 +296,7 @@ function harborBackground(H, T, w, h) {
     const xs = q.poly.map((p) => p[0]), zs = q.poly.map((p) => p[1]);
     return { poly: q.poly, minX: Math.min(...xs), maxX: Math.max(...xs), minZ: Math.min(...zs), maxZ: Math.max(...zs) };
   });
-  // woda: przy kei jaśniejsza (płycej), dalej ciemny błękit; siatka w niskiej rozdzielczości rozmyta przy powiększeniu
-  const step = 5, gw = Math.ceil(w / step), gh = Math.ceil(h / step);
-  const lo = document.createElement('canvas'); lo.width = gw; lo.height = gh;
-  const lg = lo.getContext('2d'), img = lg.createImageData(gw, gh);
+  // woda: jednolita, w kolorze wody z widoku 3D (bez rozjaśnienia przy kejach)
   const R = 45;
   const distAt = (x, z) => {
     let d = R;
@@ -309,18 +306,7 @@ function harborBackground(H, T, w, h) {
     }
     return d;
   };
-  for (let j = 0; j < gh; j++) {
-    for (let i = 0; i < gw; i++) {
-      const [x, z] = T.toWorld(i * step + step / 2, j * step + step / 2);
-      const t = Math.pow(distAt(x, z) / R, 0.7);
-      const c = lerpHex(0x63bccb, 0x17588c, t);
-      const k = (j * gw + i) * 4;
-      img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
-    }
-  }
-  lg.putImageData(img, 0, 0);
-  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
-  g.drawImage(lo, 0, 0, gw * step, gh * step);
+  { const wg = g.createLinearGradient(0, 0, 0, h); wg.addColorStop(0, '#225a80'); wg.addColorStop(1, '#1d5178'); g.fillStyle = wg; g.fillRect(0, 0, w, h); }
   // zmarszczki na wodzie
   const r = rng(11);
   g.strokeStyle = 'rgba(255,255,255,0.13)'; g.lineWidth = 1;
@@ -331,9 +317,20 @@ function harborBackground(H, T, w, h) {
     g.beginPath(); g.moveTo(px - L, py); g.quadraticCurveTo(px, py - 2.5, px + L, py); g.stroke();
   }
   const path = (poly, dx = 0, dy = 0) => { g.beginPath(); poly.forEach(([x, z], i) => { const [a, b] = T.toPx(x, z); i ? g.lineTo(a + dx, b + dy) : g.moveTo(a + dx, b + dy); }); g.closePath(); };
-  const colors = { quay: '#a9a69c', pontoon: '#d6d2c8', pier: '#a4784c', land: '#76a252', breakwater: '#8e8c84', boom: '#c9d0d6', pile: '#5a4632', shallow: '#c2b381' };
-  const styles = { stone: '#d9cdb2', wood: '#a4784c', rock: '#a9a293', sand: '#ddcd9c', port: '#a09f98', concrete: '#aeaca4' };
-  const fillOf = (q) => ((q.kind !== 'land' || q.style) && styles[q.style] && q.kind !== 'pier' ? styles[q.style] : colors[q.kind] || '#999');
+  // kolory i faktury takie jak materiały modelu 3D (harborModel: surf())
+  const fillOf = (q) => {
+    const st = q.style || q.kind;
+    if (st === 'wood' || q.kind === 'pier') return '#a8805a';
+    if (st === 'stone') return '#b4ac97';
+    if (q.kind === 'pontoon') return '#aaa89f';
+    if (st === 'rock') return '#a9a293';
+    if (st === 'sand') return '#d9c99a';
+    if (st === 'port') return '#9a9a94';
+    if (q.kind === 'land') return '#6f9a4c';
+    if (q.kind === 'boom') return '#c9d0d6';
+    if (q.kind === 'pile') return '#5a4632';
+    return '#b0afa8'; // beton
+  };
   // cienie nabrzeży i pomostów na wodzie
   g.fillStyle = 'rgba(8,30,50,0.28)';
   for (const q of H.structures) if (q.poly && q.kind !== 'land') { path(q.poly, 2, 3); g.fill(); }
@@ -343,16 +340,16 @@ function harborBackground(H, T, w, h) {
     path(q.poly); g.fillStyle = fillOf(q); g.fill();
     g.save(); path(q.poly); g.clip();
     const xs = q.poly.map((p) => T.toPx(p[0], p[1])), minX = Math.min(...xs.map((p) => p[0])), maxX = Math.max(...xs.map((p) => p[0])), minY = Math.min(...xs.map((p) => p[1])), maxY = Math.max(...xs.map((p) => p[1]));
-    const wood = q.kind === 'pier' || q.style === 'wood' || q.kind === 'pontoon';
+    const wood = q.kind === 'pier' || q.style === 'wood';
     if (wood) {
       // deski w poprzek dłuższego boku
       const horiz = maxX - minX > maxY - minY, gap = Math.max(2.5, 0.7 * sc);
-      g.strokeStyle = q.kind === 'pontoon' && q.style !== 'wood' ? 'rgba(0,0,0,0.08)' : 'rgba(60,35,15,0.35)'; g.lineWidth = 1;
+      g.strokeStyle = 'rgba(60,35,15,0.35)'; g.lineWidth = 1;
       g.beginPath();
       if (horiz) for (let x = minX; x < maxX; x += gap) { g.moveTo(x, minY); g.lineTo(x, maxY); }
       else for (let y = minY; y < maxY; y += gap) { g.moveTo(minX, y); g.lineTo(maxX, y); }
       g.stroke();
-    } else if (q.kind === 'quay' || q.kind === 'breakwater' || q.style === 'stone' || q.style === 'concrete') {
+    } else if (q.kind === 'quay' || q.kind === 'breakwater' || q.kind === 'pontoon' || q.style === 'stone' || q.style === 'concrete') {
       // płyty nabrzeża / kamienie falochronu
       if (q.kind === 'breakwater' || q.style === 'rock') {
         const rr = rng(Math.round(minX * 7 + minY * 13));
@@ -361,8 +358,8 @@ function harborBackground(H, T, w, h) {
           g.beginPath(); g.arc(minX + rr() * (maxX - minX), minY + rr() * (maxY - minY), 1 + rr() * Math.max(1.5, 0.6 * sc), 0, Math.PI * 2); g.fill();
         }
       } else {
-        const tile = Math.max(5, 2.5 * sc);
-        g.strokeStyle = 'rgba(0,0,0,0.07)'; g.lineWidth = 1; g.beginPath();
+        const tile = Math.max(5, 4 * sc); // płyty jak na teksturze betonu (co ok. 4 m)
+        g.strokeStyle = 'rgba(0,0,0,0.16)'; g.lineWidth = 1; g.beginPath();
         for (let x = minX - ((minX % tile) + tile) % tile; x < maxX; x += tile) { g.moveTo(x, minY); g.lineTo(x, maxY); }
         for (let y = minY - ((minY % tile) + tile) % tile; y < maxY; y += tile) { g.moveTo(minX, y); g.lineTo(maxX, y); }
         g.stroke();
@@ -480,6 +477,22 @@ export function drawHarborMap(ctx, H, T, opts = {}) {
     ctx.fillStyle = '#1b1f24'; ctx.font = '11px Segoe UI'; ctx.textAlign = 'left'; ctx.fillText(`${len} m`, sx + len * T.s + 6, sy - 1);
     ctx.restore();
   }
+}
+
+// chorągiewka wiatrowa: maszt (kropka) i trójkątny proporzec powiewający z wiatrem; ang – kierunek, DOKĄD wieje
+export function drawWindFlag(ctx, x, y, ang, kn, s = 1) {
+  ctx.save();
+  ctx.translate(x, y);
+  const len = (22 + Math.min(18, kn * 0.9)) * s, wv = Math.min(1, kn / 12);
+  ctx.rotate(ang);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.moveTo(2, 3); ctx.quadraticCurveTo(len * 0.5 + 2, 3 - 3 * wv, len + 2, 3 + 2); ctx.lineTo(2, 3 + 9 * s); ctx.closePath(); ctx.fill();
+  const gr = ctx.createLinearGradient(0, 0, len, 0); gr.addColorStop(0, '#e63946'); gr.addColorStop(1, '#ff7b6b');
+  ctx.fillStyle = gr; ctx.strokeStyle = '#7a1c22'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, -5 * s); ctx.quadraticCurveTo(len * 0.5, -5 * s - 4 * wv * s, len, 0); ctx.quadraticCurveTo(len * 0.5, 5 * s + 2 * wv * s, 0, 5 * s); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.fillRect(len * 0.32, -4 * s, 2.5 * s, 8 * s);
+  ctx.restore();
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#1b2a3a'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(x, y, 3.2 * s, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
 }
 
 export function drawArrow(ctx, x, y, ang, len, color, width = 3) {

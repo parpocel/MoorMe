@@ -3,7 +3,7 @@ import { h, seg } from './ui/dom.js';
 import { BOATS, defaultEquipment } from './data/boats.js';
 import { QUAYS, METHODS, PORTS, generateHarbor, harborOpts, slotKind, slotClearFor, berthOptions, normalizeBerth } from './data/harbors.js';
 import { createDeckEditor, relabel } from './ui/deckEditor.js';
-import { drawBoatTop, drawBoatCard, drawHarborMap, mapTransform, drawArrow } from './ui/draw2d.js';
+import { drawBoatTop, drawBoatCard, drawHarborMap, mapTransform, drawArrow, drawWindFlag } from './ui/draw2d.js';
 import { SimScreen } from './ui/simUI.js';
 import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
@@ -532,8 +532,8 @@ function showLightsSetup() {
   menuScreen({
     kicker: 'Sygnalizacja nocna/dzienna · trening', back: { label: 'Wstecz', go: () => showLightsIntro() }, settingsBack: () => showLightsSetup(),
     items: [
-      { glyph: 'moon', color: '#6a6fd6', title: 'Noc – światła', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => showLightsScope(false) },
-      { glyph: 'sun', color: '#e0a33a', title: 'Dzień – znaki dzienne', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => showLightsScope(true) }
+      { glyph: 'moon', color: '#6a6fd6', title: 'Noc', tag: 'masztowe, burtowe, dookólne', desc: 'Światła masztowe, burtowe, rufowe i dookólne: rozpoznaj typ statku, co robi, którą stronę widzisz i z której strony ma sieci.', go: () => showLightsScope(false) },
+      { glyph: 'sun', color: '#e0a33a', title: 'Dzień', tag: 'kule, stożki, romby, walce', desc: 'Czarne kule, stożki, romby i walec na masztach statków widocznych jako ciemne sylwetki.', go: () => showLightsScope(true) }
     ]
   });
 }
@@ -548,7 +548,7 @@ function showLightsScope(day) {
     items: [
       { glyph: 'wave', color: '#2aa39a', title: 'Morze', tag: 'MPZZM / COLREG', desc: 'Statki na morzu – przepisy MPZZM (COLREG).', go: go('sea') },
       { glyph: 'river', color: '#4f9d5c', title: 'Śródlądzie', tag: 'CEVNI', desc: 'Statki na rzekach, kanałach i jeziorach – przepisy żeglugowe na śródlądowych drogach wodnych (CEVNI).', go: go('inland') },
-      { glyph: 'horn', color: '#e0a33a', title: 'Oba naraz', tag: 'morze i śródlądzie', desc: 'Statki z morza i z dróg śródlądowych na zmianę.', go: go('all') }
+      { glyph: 'horn', color: '#e0a33a', title: 'Wszystkie', tag: 'morze i śródlądzie', desc: 'Statki z morza i z dróg śródlądowych na zmianę.', go: go('all') }
     ]
   });
 }
@@ -960,7 +960,7 @@ function stepWeather() {
     drawHarborMap(ctx, H, T, { spec, bollards: false });
     // wiatr
     const wd = compassVec(w.windFrom + 180);
-    for (let i = 0; i < 5; i++) drawArrow(ctx, 90 + i * 200, 60, Math.atan2(wd.z, wd.x), 60, 'rgba(94,200,255,0.8)', 3);
+    for (let i = 0; i < 3; i++) drawWindFlag(ctx, 110 + i * 300, 48, Math.atan2(wd.z, wd.x), w.windKn ?? 10, 1.2);
     if (w.currentKn > 0) { const cd = compassVec(w.currentTo); drawArrow(ctx, 110, mapCv.height - 50, Math.atan2(cd.z, cd.x), 50, 'rgba(255,209,102,0.9)', 3); }
     if (config.scenario !== 'unmoor') {
       const [px, pz] = T.toPx(st.x, st.z);
@@ -1146,7 +1146,7 @@ function showRandom(cfg = randomConfig()) {
   const ctx = mapCv.getContext('2d');
   drawHarborMap(ctx, H, T, { spec, bollards: false });
   const wd = compassVec(w.windFrom + 180);
-  for (let i = 0; i < 4; i++) drawArrow(ctx, 80 + i * 180, 50, Math.atan2(wd.z, wd.x), 50, 'rgba(94,200,255,0.85)', 3);
+  for (let i = 0; i < 3; i++) drawWindFlag(ctx, 100 + i * 240, 46, Math.atan2(wd.z, wd.x), w.windKn ?? 10, 1.2);
   if (cfg.scenario !== 'unmoor') {
     const [px, pz] = T.toPx(cfg.start.x, cfg.start.z);
     drawBoatTop(ctx, spec, px, pz, T.s * 1.4, (cfg.start.compass - 90) * DEG, { simple: true, hull: '#ffd166', stroke: '#fff' });
