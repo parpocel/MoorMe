@@ -201,29 +201,29 @@ function roundedRect(w, d, r) {
   return sh;
 }
 function epirb() {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(0.085, 0.062, 0.022), { depth: 0.2, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.005, bevelSegments: 3, curveSegments: 8 }), std(0xffcf14, { rough: 0.45 }));
-  body.rotation.x = -Math.PI / 2; body.position.y = 0.006; body.castShadow = true; g.add(body);
-  // spód i nasadka z gumy
-  const cap = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(0.08, 0.058, 0.02), { depth: 0.035, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 2 }), std(0x1c1d20, { rough: 0.7 }));
-  cap.rotation.x = -Math.PI / 2; cap.position.y = 0.205; g.add(cap);
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.018, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { transparent: true, opacity: 0.55, rough: 0.1, emissive: 0xffffff, ei: 0.15 }));
-  dome.position.set(0.012, 0.245, 0.006); g.add(dome);
-  cyl(0.004, 0.006, 0.2, std(0x111111), -0.022, 0.345, -0.008, g, 8); // antenka
-  cyl(0.009, 0.009, 0.012, std(0x111111), -0.022, 0.248, -0.008, g, 10);
-  // panel czołowy z napisem i przyciskiem ON pod przesuwną osłoną
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.07, 0.12), std(0xffffff, { map: textTex(140, 240, (c, W, H) => {
+  // radiopława EPIRB: korpus o okrągłym przekroju (żółty walec z kołnierzem wypornościowym), czarna głowica z lampą błyskową i anteną
+  const g = new THREE.Group(), Y = std(0xffcf14, { rough: 0.45 }), K = std(0x1c1d20, { rough: 0.7 });
+  const r = 0.038;
+  const base = cyl(r * 0.92, r * 0.8, 0.03, K, 0, 0.015, 0, g, 28); // gumowa stopa
+  const body = cyl(r, r * 0.95, 0.2, Y, 0, 0.13, 0, g, 32); body.castShadow = true;
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(r * 1.05, 0.009, 10, 32), Y); collar.rotation.x = Math.PI / 2; collar.position.y = 0.17; g.add(collar);
+  cyl(r * 0.92, r * 0.7, 0.04, K, 0, 0.25, 0, g, 28); // głowica
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(r * 0.62, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { transparent: true, opacity: 0.6, rough: 0.1, emissive: 0xffffff, ei: 0.15 }));
+  dome.position.set(0, 0.27, 0); g.add(dome);
+  cyl(0.0035, 0.0055, 0.22, std(0x111111), 0, 0.38, 0, g, 8); // antena
+  // naklejka na obwodzie korpusu (wycinek walca) z napisem i przyciskiem ON
+  const lbl = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004 * 0.98, 0.12, 24, 1, true, -0.9, 1.8), std(0xffffff, { map: textTex(240, 240, (c, W, H) => {
     c.fillStyle = '#1c1d20'; c.fillRect(0, 0, W, H); c.textAlign = 'center';
-    c.fillStyle = '#ffcf14'; c.font = 'bold 30px Arial'; c.fillText('EPIRB', W / 2, 44);
-    c.fillStyle = '#ffffff'; c.font = 'bold 17px Arial'; c.fillText('406 MHz', W / 2, 72); c.font = '13px Arial'; c.fillText('GPS · 121.5 MHz', W / 2, 92);
-    c.fillStyle = '#d8352a'; c.fillRect(20, 112, W - 40, 34); c.fillStyle = '#fff'; c.font = 'bold 14px Arial'; c.fillText('ON', W / 2, 135);
-    c.fillStyle = '#ffffff'; c.font = '11px Arial'; c.fillText('1. ANTENNA UP', W / 2, 172); c.fillText('2. SLIDE & PRESS ON', W / 2, 190); c.fillText('TEST ▼', W / 2, 222);
+    c.fillStyle = '#ffcf14'; c.font = 'bold 40px Arial'; c.fillText('EPIRB', W / 2, 50);
+    c.fillStyle = '#ffffff'; c.font = 'bold 24px Arial'; c.fillText('406 MHz', W / 2, 86); c.font = '18px Arial'; c.fillText('GPS · 121.5 MHz', W / 2, 112);
+    c.fillStyle = '#d8352a'; c.fillRect(50, 132, W - 100, 44); c.fillStyle = '#fff'; c.font = 'bold 22px Arial'; c.fillText('ON', W / 2, 162);
+    c.fillStyle = '#ffffff'; c.font = '15px Arial'; c.fillText('ANTENNA UP · PRESS ON', W / 2, 205);
   }) }));
-  panel.position.set(0, 0.1, 0.0375); g.add(panel);
-  box(0.026, 0.01, 0.008, std(0x2a2a2a), 0, 0.03, 0.038, g); // TEST
+  lbl.position.y = 0.11; lbl.rotation.y = Math.PI / 2; g.add(lbl);
   // linka (lanyard) zwinięta obok
-  const pts = []; for (let k = 0; k <= 60; k++) { const t = k / 60, a = t * Math.PI * 5; pts.push(new THREE.Vector3(0.07 + Math.cos(a) * 0.03, 0.004 + t * 0.004, 0.02 + Math.sin(a) * 0.022)); }
+  const pts = []; for (let k = 0; k <= 60; k++) { const t = k / 60, a = t * Math.PI * 5; pts.push(new THREE.Vector3(0.08 + Math.cos(a) * 0.03, 0.004 + t * 0.004, 0.02 + Math.sin(a) * 0.022)); }
   g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0025, 5), std(0xffffff)));
+  void base;
   return g;
 }
 
@@ -537,6 +537,17 @@ export class SaloonView {
     let p = pos();
     const outside = (q) => q.x < -2.1 || q.x > 1.5 || q.y > 1.85 || q.y < 0.1 || Math.abs(q.z) > Math.min(1.3, innerHalf(this.B, q.x, q.y) - 0.22);
     for (let i = 0; i < 30 && outside(p); i++) { d *= 0.92; p = pos(); }
+    // kolizja: filar, szafka czy ściana między celem a kamerą – kamera staje tuż przed przeszkodą (nic nie wchodzi w obiektyw)
+    if (this.occluders && this.occluders.length) {
+      const tg = new THREE.Vector3(c.tx, c.ty, c.tz), dir = p.clone().sub(tg), len = dir.length();
+      if (len > 0.3) {
+        dir.normalize();
+        this._colRay = this._colRay || new THREE.Raycaster();
+        this._colRay.set(tg, dir); this._colRay.near = 0.25; this._colRay.far = len + 0.2;
+        const hit = this._colRay.intersectObjects(this.occluders, false)[0];
+        if (hit && hit.distance < len + 0.2) { d = Math.max(0.3, Math.min(d, hit.distance - 0.2)); p = pos(); }
+      }
+    }
     this.camera.position.copy(p);
     this.camera.lookAt(c.tx, c.ty, c.tz);
     this.fadeOccluders(p, new THREE.Vector3(c.tx, c.ty, c.tz), dt);

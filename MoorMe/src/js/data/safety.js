@@ -140,7 +140,7 @@ export function procedureCard(kind) {
         L('Alarm DSC: podnieś osłonę i przytrzymaj DISTRESS ok. 5 s (jeśli zdążysz – najpierw wybierz rodzaj zagrożenia). Radio przejdzie na kanał 16.', 'DSC alert: lift the cover and hold DISTRESS for about 5 s (if there is time – select the nature of distress first). The radio switches to channel 16.'),
         L('Kanał 16, pełna moc (25 W). Naciśnij PTT, mów powoli i wyraźnie:', 'Channel 16, high power (25 W). Press PTT and speak slowly and clearly:')
       ],
-      lines: ['MAYDAY, MAYDAY, MAYDAY', 'THIS IS [YACHT ×3], [CALL SIGN], MMSI [9 DIGITS]', 'MAYDAY [YACHT], [CALL SIGN], MMSI', 'MY POSITION [LAT / LONG or bearing and distance from a landmark]', 'NATURE OF DISTRESS [e.g. SINKING / FIRE]', 'I REQUIRE IMMEDIATE ASSISTANCE', '[N] PERSONS ON BOARD', '[OTHER INFORMATION: abandoning to liferaft, EPIRB activated…]', 'OVER'],
+      lines: ['MAYDAY, MAYDAY, MAYDAY', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'THIS IS [YACHT ×3], [CALL SIGN], MMSI [9 DIGITS]', 'MAYDAY [YACHT], [CALL SIGN], MMSI', 'MY POSITION [LAT / LONG or bearing and distance from a landmark]', 'NATURE OF DISTRESS [e.g. SINKING / FIRE]', 'I REQUIRE IMMEDIATE ASSISTANCE', '[N] PERSONS ON BOARD', '[OTHER INFORMATION: abandoning to liferaft, EPIRB activated…]', 'OVER'],
       after: L('Czekaj na odpowiedź MRCC lub stacji brzegowej; bez odpowiedzi – powtarzaj. Jeśli nie możesz zostać przy radiu, zostaw je włączone na kanale 16. Fałszywy alarm odwołaj od razu na kanale 16: „ALL STATIONS ×3, THIS IS [jacht ×3], [znak], MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [data, czas UTC]”.', 'Wait for the MRCC or a coast station to answer; if there is no answer – repeat. If you cannot stay at the radio, leave it on channel 16. Cancel a false alert straight away on channel 16: “ALL STATIONS ×3, THIS IS [yacht ×3], [call sign], MMSI …, POSITION …, CANCEL MY DISTRESS ALERT OF [date, time UTC]”.')
     },
     pan: {
@@ -211,8 +211,8 @@ export function makeRadioTask(r, ship, only, variant) {
         kind: 'mayday',
         text: L(`${sc.pl} Pozycja ${pos}, na pokładzie ${pob} osób. Wezwij pomoc.`, `${sc.en} Position ${pos}, ${pob} persons on board. Call for help.`),
         steps: [step({ channels: [16], power: 25, dsc: true,
-          lines: ['MAYDAY, MAYDAY, MAYDAY', ID, `MAYDAY ${N}, ${ship.call}, MMSI ${ship.mmsi}`, `MY POSITION ${pos}`, sc.nat, 'I REQUIRE IMMEDIATE ASSISTANCE', `${pob} PERSONS ON BOARD`, sc.other, 'OVER'],
-          distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', 'OUT'] })],
+          lines: ['MAYDAY, MAYDAY, MAYDAY', 'ALL STATIONS, ALL STATIONS, ALL STATIONS', ID, `MAYDAY ${N}, ${ship.call}, MMSI ${ship.mmsi}`, `MY POSITION ${pos}`, sc.nat, 'I REQUIRE IMMEDIATE ASSISTANCE', `${pob} PERSONS ON BOARD`, sc.other, 'OVER'],
+          distractors: ['PAN-PAN, PAN-PAN, PAN-PAN', 'SÉCURITÉ, SÉCURITÉ, SÉCURITÉ', 'OUT'] })],
         explain: L('Zagrożenie życia → MAYDAY: najpierw alarm DSC (DISTRESS), potem głos na kanale 16 z pełną mocą 25 W; kończysz „OVER”.', 'Danger to life → MAYDAY: first the DSC alert (DISTRESS), then voice on channel 16 at full power (25 W); end with “OVER”.')
       };
     },

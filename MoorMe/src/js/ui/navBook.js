@@ -121,6 +121,22 @@ function fixSVG() {
   return svgBox(W, H, g);
 }
 
+// izobata jako linia pozycyjna: izobaty 5/10/20 m, linia namiaru, pozycja na przecięciu
+function contourSVG() {
+  const W = 520, H = 300;
+  let g = SEA(W, H) + NORTH(W - 28, H - 40);
+  g += LAND('M0 0 H520 V40 Q440 70 360 52 Q280 34 200 60 Q120 86 0 64 Z');
+  g += `<path d="M0 96 Q120 118 200 92 Q280 66 360 84 Q440 102 520 74" fill="none" stroke="#5f8fb8" stroke-width="1.6" stroke-dasharray="2 4"/>`;
+  g += `<path d="M0 150 Q130 172 210 146 Q290 120 370 140 Q450 160 520 130" fill="none" stroke="#2563eb" stroke-width="3"/>`;
+  g += `<path d="M0 220 Q140 242 220 214 Q300 186 380 206 Q460 226 520 196" fill="none" stroke="#5f8fb8" stroke-width="1.6" stroke-dasharray="8 4 2 4"/>`;
+  g += PILL(40, 88, '5 m', '#5f8fb8', 12) + PILL(60, 168, L('10 m – z echosondy', '10 m – echo sounder'), '#2563eb', 12) + PILL(40, 236, '20 m', '#5f8fb8', 12);
+  const Lh = [430, 40], P = [300, 128];
+  g += `<line x1="${Lh[0]}" y1="${Lh[1]}" x2="${P[0] - (Lh[0] - P[0]) * 0.9}" y2="${P[1] - (Lh[1] - P[1]) * 0.9}" stroke="#2f4468" stroke-width="2.4"/>`;
+  g += LIGHTHOUSE(Lh[0], Lh[1] + 8, '') + PILL(392, 92, L('NR = 060°', 'TB = 060°'), '#2f4468', 12);
+  g += `<circle cx="${P[0]}" cy="${P[1]}" r="9" fill="none" stroke="#c2410c" stroke-width="2.5"/><circle cx="${P[0]}" cy="${P[1]}" r="2.4" fill="#c2410c"/>` + PILL(P[0] - 40, P[1] + 40, L('pozycja', 'fix'), '#c2410c', 13);
+  return svgBox(W, H, g);
+}
+
 // namiar podwójny: kąt kursowy 45° i 90° (namiar czteropunktowy)
 function doubleSVG() {
   // namiar podwójny (czteropunktowy): kąt kursowy 45° w punkcie 1 i 90° w punkcie 2 – droga s = odległość od obiektu
@@ -231,6 +247,11 @@ export function navBook() {
         doubleSVG(),
         P(L('Jeden obiekt namierzony dwa razy przy stałym kursie. Gdy kąt kursowy się podwoi (np. 30° → 60°, 45° → 90°), odległość od obiektu w chwili drugiego namiaru równa się drodze przebytej między namiarami. Przy 45° i 90° (namiar czteropunktowy) to od razu odległość mijania obiektu na trawersie.', 'One object observed twice on a steady course. When the relative bearing doubles (e.g. 30° → 60°, 45° → 90°), the distance off at the second bearing equals the distance run between them. With 45° and 90° (the four-point bearing) it is directly the distance off when abeam.')),
         P(L('Między namiarami trzeba uwzględnić prąd – jeśli jest, użyj drogi nad dnem.', 'Allow for current between the bearings – if there is one, use the distance over the ground.'))),
+      entry(L('Izobata jako linia pozycyjna', 'A depth contour as a position line'),
+        contourSVG(),
+        P(L('Izobata to linia na mapie łącząca miejsca o tej samej głębokości. Gdy echosonda pokazuje głębokość równą jednej z izobat (po odjęciu zanurzenia przetwornika i poprawce na pływ), jacht leży gdzieś na tej izobacie – to też linia pozycyjna.', 'A depth contour joins points of equal depth on the chart. When the echo sounder shows a depth equal to one of the contours (corrected for transducer depth and tide), the yacht lies somewhere on that contour – it is a position line too.')),
+        P(L('Sama izobata rzadko wystarcza, ale razem z namiarem daje pozycję: punkt, w którym linia namiaru przecina izobatę. Najlepiej działa przy wyraźnym, stromym spadku dna; na płaskim dnie jest mało dokładna.', 'A contour alone is rarely enough, but together with a bearing it gives a fix: the point where the bearing line crosses the contour. It works best where the bottom slopes clearly; over a flat bottom it is not very accurate.')),
+        ex(L('Echosonda: 10,4 m, przetwornik 0,4 m pod wodą, pływ ≈ 0 → głębokość z mapy 10,8 m ≈ izobata 10 m. Namiar latarni NR = 060° przecina izobatę 10 m w jednym punkcie – to pozycja.', 'Echo sounder: 10.4 m, transducer 0.4 m below the surface, tide ≈ 0 → charted depth 10.8 m ≈ the 10 m contour. The light’s bearing TB = 060° crosses the 10 m contour at one point – that is the fix.'))),
       entry(L('Namiar i odległość', 'Bearing and distance'),
         P(L('Gdy znasz odległość od obiektu (radar, zasięg światła na granicy widoczności), zatocz cyrklem okrąg o tym promieniu wokół obiektu; pozycja to przecięcie okręgu z linią namiaru.', 'When you know the distance (radar, a light just rising), swing a circle of that radius round the object; the fix is where it meets the bearing line.')))
     ] },
