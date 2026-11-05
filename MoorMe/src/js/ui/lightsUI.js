@@ -207,6 +207,8 @@ export function hullMesh(type, L, moving) {
   const g = new THREE.Group();
   const M = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, flatShading: true });
   const hullC = M(0x858c95), deckC = M(0x9aa1a9), supC = M(0xb4bac1), winC = M(0x4a5059), detC = M(0x6c737b), redC = M(0x8f6a66);
+  // elementy nakładane na bryłę (okna, pas wodnicy, opaska komina) – przesunięte w głębi, żeby z daleka nie migotały (z-fighting)
+  for (const m of [winC, redC]) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; }
   const box = (w, hh, d, x, y, z = 0, m = supC) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, hh, d), m); b.position.set(x, y, z); g.add(b); return b; };
   const cyl = (r1, r2, hh, x, y, z = 0, m = detC) => { const c = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, hh, 10), m); c.position.set(x, y, z); g.add(c); return c; };
   const B = type === 'yacht' ? 3.4 : Math.max(5, L * 0.16);
@@ -221,7 +223,7 @@ export function hullMesh(type, L, moving) {
   } else {
     hull(L, B, 3, type === 'ship' ? 0.16 : 0.25, -0.4, hullC);
     // linia wodna (pas antyporostowy) i nadburcie
-    hull(L * 1.002, B * 1.01, 0.5, type === 'ship' ? 0.16 : 0.25, -0.45, redC);
+    hull(L * 1.015, B * 1.04, 0.5, type === 'ship' ? 0.16 : 0.25, -0.47, redC);
     if (type === 'ship') {
       box(L * 0.12, 1.4, B * 0.95, L * 0.4, 3.2, 0, hullC); // podniesiony dziób (bak)
       cyl(0.25, 0.3, 12, L * 0.36, 9, 0); box(0.3, 0.3, B * 0.8, L * 0.36, 11.5, 0, detC); // maszt przedni z salingiem
@@ -231,13 +233,13 @@ export function hullMesh(type, L, moving) {
       // nadbudówka rufowa z mostkiem i skrzydłami, komin
       box(L * 0.14, 9, B * 0.8, -L * 0.36, 7, 0, supC);
       box(L * 0.15, 0.9, B * 1.02, -L * 0.33, 11.2, 0, supC); // mostek ze skrzydłami
-      box(L * 0.151, 0.5, B * 0.78, -L * 0.33, 11.1, 0, winC); // okna mostka
-      for (let k = 0; k < 3; k++) box(L * 0.141, 0.35, B * 0.81, -L * 0.36, 4.6 + k * 2.2, 0, winC);
-      box(L * 0.07, 4, B * 0.32, -L * 0.42, 13.5, 0, detC); box(L * 0.071, 0.8, B * 0.321, -L * 0.42, 14.6, 0, M(0x5f656c));
+      box(L * 0.156, 0.5, B * 0.78, -L * 0.33, 11.1, 0, winC); // okna mostka
+      for (let k = 0; k < 3; k++) box(L * 0.146, 0.35, B * 0.83, -L * 0.36, 4.6 + k * 2.2, 0, winC);
+      box(L * 0.07, 4, B * 0.32, -L * 0.42, 13.5, 0, detC); box(L * 0.074, 0.8, B * 0.335, -L * 0.42, 14.6, 0, M(0x5f656c));
     } else if (type === 'trawler') {
       box(L * 0.18, 1.2, B * 0.9, L * 0.38, 3.0, 0, hullC); // wysoki dziób
       box(L * 0.24, 3.2, B * 0.62, L * 0.17, 4.2, 0, supC); // sterówka z przodu
-      box(L * 0.245, 0.7, B * 0.63, L * 0.17, 5.2, 0, winC);
+      box(L * 0.25, 0.7, B * 0.645, L * 0.17, 5.2, 0, winC);
       cyl(0.18, 0.22, 9, L * 0.3, 7.5, 0); // maszt
       // brama rufowa (A-frame) i bęben włoka
       for (const z of [-B * 0.4, B * 0.4]) { const leg = cyl(0.2, 0.25, 7, -L * 0.42, 5.5, z); leg.rotation.z = -0.25; }
@@ -247,7 +249,7 @@ export function hullMesh(type, L, moving) {
       box(L * 0.2, 1, B * 0.95, L * 0.36, 2.9, 0, hullC); // wyższy dziób
       box(L * 0.3, 3.2, B * 0.7, L * 0.12, 4.2, 0, supC);
       box(L * 0.2, 2.2, B * 0.6, L * 0.14, 6.9, 0, supC); // sterówka
-      box(L * 0.201, 0.8, B * 0.61, L * 0.14, 7.4, 0, winC);
+      box(L * 0.206, 0.8, B * 0.625, L * 0.14, 7.4, 0, winC);
       cyl(0.7, 0.8, 3.5, -L * 0.04, 6.8, 0); // komin
       box(1, 1.2, 1, -L * 0.2, 3.2, 0, detC); // hak holowniczy
       for (let k = 0; k < 4; k++) { const f = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.3, 6, 10), M(0x3f4449)); f.position.set(L * 0.44 - k * 0.2, 1.6, (k % 2 ? 1 : -1) * B * 0.25); f.rotation.y = Math.PI / 2; g.add(f); }
