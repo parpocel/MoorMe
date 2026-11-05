@@ -191,7 +191,12 @@ function dayView(v, W = 300, H = dayH(v)) {
   if (!shapes.length) g += `<text x="${W / 2}" y="22" text-anchor="middle" font-size="13" font-family="sans-serif" fill="#2f4468">${t('brak znaków')}</text>`;
   return g;
 }
-const dayEntry = (v) => h('div.hb-entry.hb-card', {}, h('h3', {}, v.name), svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
+const dayEntry = (v) => {
+  // obracany model 3D na dziennym tle; bez WebGL – rysunek jak dotąd
+  const Lm = (v.L[0] + v.L[1]) / 2, shapes = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' });
+  const live = lightsViewer(v, [], Lm, { day: true, shapes });
+  return h('div.hb-entry.hb-card.hb-card-wide', {}, h('h3', {}, v.name), live || svgEl(300, dayH(v), dayView(v)), h('p', {}, v.explain));
+};
 
 // wstęp do sygnalizacji: rodzaje świateł, co widzisz → jak płynie statek, najczęstsze kombinacje świateł dookólnych
 const LC = { W: '#fff7d6', R: '#ff3b2f', G: '#29e05a', Y: '#ffd166' };
@@ -217,6 +222,8 @@ function lightsIntro() {
   const card = (title, ...kids) => h('section.sb-card', {}, h('h3', {}, title), ...kids);
   const kind = (fig, name, txt) => h('div.li-kind', {}, fig, h('div', {}, h('b', {}, name), h('p', {}, txt)));
   const combo = (cols, name, txt) => h('div.li-combo', {}, lampStack(cols), h('div', {}, h('b', {}, name), h('p', {}, txt)));
+  // znaki dzienne w pionie na tle nieba
+  const dcombo = (ks, name, txt) => { const H = 18 + ks.length * 28; let g = `<rect width="70" height="${H}" rx="10" fill="#cfe6f4"/><rect x="34" y="6" width="2" height="${H - 12}" fill="#5b6470"/>`; ks.forEach((k, i) => { g += shape(k, 35, 22 + i * 28, 16); }); return h('div.li-combo', {}, svgEl(70, H, g, 'li-stack'), h('div', {}, h('b', {}, name), h('p', {}, txt))); };
   // lampy w układzie jak na statku: masztowe (górne) nad burtowymi, rufowe nisko; pts: [[kolor, x (−1..1), poziom 0 – góra, 1 – dół]]
   const aspect = (pts, see, means) => {
     let g = '';
@@ -250,16 +257,54 @@ function lightsIntro() {
         combo(['R', 'W', 'R'], L('Ograniczona zdolność manewrowa', 'Restricted in ability to manoeuvre'), L('Czerwone–białe–czerwone – np. pogłębiarka, kładzenie kabla.', 'Red–white–red – e.g. dredging, cable laying.')),
         combo(['R', 'R', 'R'], L('Ograniczony zanurzeniem', 'Constrained by draught'), L('Trzy czerwone – głęboki statek trzyma się toru.', 'Three reds – a deep vessel keeping to the channel.')),
         combo(['R', 'G'], L('Żaglowiec (opcjonalnie)', 'Sailing vessel (optional)'), L('Czerwone nad zielonym na topie masztu.', 'Red over green at the masthead.')))),
+    card(L('Najczęstsze znaki dzienne – ściąga', 'Common day shapes – cheat sheet'),
+      h('p', {}, L('W dzień zamiast świateł dookólnych statki wywieszają czarne znaki: kule, stożki, romby i walce – w pionie, w miejscu dobrze widocznym.', 'By day, instead of all-round lights, vessels hoist black shapes – balls, cones, diamonds and cylinders – in a vertical line where they can best be seen.')),
+      h('div.li-combos', {},
+        dcombo(['ball'], L('Na kotwicy', 'At anchor'), L('Jedna kula w przedniej części statku.', 'One ball in the forward part of the vessel.')),
+        dcombo(['ball', 'ball'], L('Nie odpowiada za swoje ruchy', 'Not under command'), L('Dwie kule w pionie.', 'Two balls in a vertical line.')),
+        dcombo(['ball', 'diamond', 'ball'], L('Ograniczona zdolność manewrowa', 'Restricted in ability to manoeuvre'), L('Kula – romb – kula.', 'Ball – diamond – ball.')),
+        dcombo(['ball', 'ball', 'ball'], L('Na mieliźnie', 'Aground'), L('Trzy kule w pionie.', 'Three balls in a vertical line.')),
+        dcombo(['cylinder'], L('Ograniczony zanurzeniem', 'Constrained by draught'), L('Czarny walec.', 'A black cylinder.')),
+        dcombo(['hourglass'], L('Statek zajęty połowem', 'Vessel engaged in fishing'), L('Dwa stożki połączone wierzchołkami (klepsydra).', 'Two cones with apexes together (hourglass).')),
+        dcombo(['diamond'], L('Holowanie powyżej 200 m', 'Tow longer than 200 m'), L('Romb na holowniku i na holowanym.', 'A diamond on the tug and on the tow.')),
+        dcombo(['coneDown'], L('Jacht żaglowy na silniku', 'Sailing yacht under engine'), L('Stożek wierzchołkiem w dół.', 'A cone apex downwards.')))),
     h('p.small.muted.sb-legend', {}, L('Szczegóły każdej jednostki – z czterech stron i w dzień – znajdziesz w kolejnych rozdziałach.', 'Details of each vessel – from four sides and by day – are in the following chapters.'))
   ];
 }
+// światła nocne w grupach: żaglowe i małe, z napędem mechanicznym (także holujące), zajęte połowem, pozostałe
+function nightEntries() {
+  const sea = VESSELS.filter((v) => !v.inland), byId = new Map(sea.map((v) => [v.id, v]));
+  const sail = byId.get('sailing');
+  const extra = {
+    sailRG: sail && { ...sail, id: 'sailingRG', name: L('Jednostka żaglowa w drodze – czerwone nad zielonym', 'Sailing vessel underway – red over green'), lights: (Lm, r, o) => sail.lights(Lm, () => 0.9, o),
+      explain: L('Oprócz świateł burtowych i rufowego jednostka żaglowa może nieść na topie masztu dwa światła dookólne w pionie: czerwone nad zielonym („czerwone nad zielonym – żeglarz”). Nie wolno ich łączyć z latarnią trójsektorową. Nie myl ich z czerwonym nad białym (rybak) ani zielonym nad białym (trawler).', 'In addition to the sidelights and sternlight a sailing vessel may show at the masthead two all-round lights in a vertical line: red over green (“red over green, sailing machine”). They must not be combined with a tricolour lantern. Do not confuse them with red over white (fishing) or green over white (trawling).') },
+    small: { id: 'smallBoat', name: L('Łódź wiosłowa lub mała jednostka żaglowa (< 7 m)', 'Rowing boat or small sailing vessel (< 7 m)'), L: [4, 6],
+      lights: () => [{ x: 0, y: 1.3, z: 0, c: 'white', s: 'all' }],
+      explain: L('Mała jednostka żaglowa albo łódź wiosłowa może zamiast świateł burtowych i rufowego mieć pod ręką latarkę lub zapaloną latarnię z białym światłem i pokazać ją na czas, żeby uniknąć zderzenia. Widzisz wtedy jedno białe światło – bez kolorów.', 'A small sailing vessel or a rowing boat may, instead of sidelights and a sternlight, have ready at hand an electric torch or lighted lantern showing a white light, shown in time to prevent collision. You then see a single white light – no colours.') },
+    pair: byId.get('trawling') && { ...byId.get('trawling'), id: 'pairTrawl', pair: true, name: L('Dwa statki trałujące w parze', 'Two vessels pair trawling'),
+      explain: L('Każdy z pary nosi światła statku trałującego (zielone nad białym, burtowe i rufowe), a wspólny włok ciągną za rufami. Dodatkowo mogą kierować reflektory do przodu i w stronę drugiego statku – tak poznasz, że to para i że między nimi rozciągnięta jest sieć. Nie przepływaj między nimi!', 'Each vessel of the pair shows the lights of a vessel trawling (green over white, sidelights and sternlight) and they tow one net astern between them. They may also direct searchlights forward and towards each other – that tells you it is a pair with a net stretched between them. Never pass between them!') }
+  };
+  const groups = [
+    [L('Jednostki żaglowe i małe łodzie', 'Sailing vessels and small boats'), ['sailing', 'sailRG', 'small']],
+    [L('Statki o napędzie mechanicznym', 'Power-driven vessels'), ['power', 'powerLarge', 'towing', 'towingLong', 'towingBig', 'towingBigLong']],
+    [L('Statki zajęte połowem', 'Vessels engaged in fishing'), ['trawling', 'pair', 'fishing', 'fishingGear']],
+    [L('Pozostałe', 'Others'), null]
+  ];
+  const used = new Set(), out = [];
+  const get = (id) => extra[id] || byId.get(id);
+  for (const [title, ids] of groups) {
+    const list = ids ? ids.map(get).filter(Boolean) : sea.filter((v) => !used.has(v.id));
+    if (!list.length) continue;
+    out.push(h('div.hb-charx-grp', {}, title));
+    for (const v of list) { used.add(v.id); out.push(lightsEntry(v)); }
+  }
+  return out;
+}
+
 export function lightsBook() {
   return [
     { id: 'intro', name: L('Wstęp', 'Introduction'), entries: lightsIntro() },
-    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: VESSELS.filter((v) => !v.inland).flatMap((v) => (v.id !== 'sailing' ? [lightsEntry(v)] : [lightsEntry(v),
-      // wariant jachtu: dodatkowe czerwone nad zielonym na topie masztu
-      lightsEntry({ ...v, name: L('Jednostka żaglowa w drodze – czerwone nad zielonym', 'Sailing vessel underway – red over green'), lights: (Lm, r, o) => v.lights(Lm, () => 0.9, o),
-        explain: L('Oprócz świateł burtowych i rufowego jednostka żaglowa może nieść na topie masztu dwa światła dookólne w pionie: czerwone nad zielonym („czerwone nad zielonym – żeglarz”). Nie wolno ich łączyć z latarnią trójsektorową. Nie myl ich z czerwonym nad białym (rybak) ani zielonym nad białym (trawler).', 'In addition to the sidelights and sternlight a sailing vessel may show at the masthead two all-round lights in a vertical line: red over green (“red over green, sailing machine”). They must not be combined with a tricolour lantern. Do not confuse them with red over white (fishing) or green over white (trawling).') })])) },
+    { id: 'night', name: L('Światła nocne', 'Night lights'), entries: nightEntries() },
     { id: 'day', name: L('Znaki dzienne', 'Day shapes'), entries: DAY_VESSELS.filter((v) => !v.inland).map(dayEntry) },
     { id: 'inland', name: L('Drogi śródlądowe (CEVNI)', 'Inland waterways (CEVNI)'), entries: [
       h('div.hb-entry', {}, h('h3', {}, L('Inne przepisy niż na morzu', 'Different rules from the sea')),
@@ -274,12 +319,11 @@ function sectorDiagram() {
   const W = 420, H = 360, cx = 210, cy = 182;
   const p = (a, r) => [cx + Math.sin((a * Math.PI) / 180) * r, cy - Math.cos((a * Math.PI) / 180) * r];
   const lab = (a, r, txt, col, fs = 14, b = 800) => { const [x, y] = p(a, r); return `<text x="${x.toFixed(1)}" y="${(y + 5).toFixed(1)}" font-size="${fs}" font-family="Nunito, sans-serif" font-weight="${b}" fill="${col}" text-anchor="middle">${txt}</text>`; };
-  // granice sektorów: 22,5° za trawersem
   let extra = '';
-  for (const a of [112.5, -112.5]) { const [x, y] = p(a, 150); extra += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#c8d3e8" stroke-width="1.2" stroke-dasharray="5 4"/>`; }
+
   { const [x1, y1] = p(-90, 150), [x2, y2] = p(90, 150); extra += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#c8d3e8" stroke-opacity="0.35" stroke-width="1"/>`; }
   extra += lab(0, 160, `${t('masztowe')} 225°`, '#fffbe8', 15) + lab(40, 58, '112,5°', '#0f1626', 13) + lab(-40, 58, '112,5°', '#fff', 13) + lab(180, 112, `${t('rufowe')} 135°`, '#fffbe8', 14);
-  extra += lab(72, 70, t('zielone'), '#0f1626', 14) + lab(-72, 72, t('czerwone'), '#fff', 14) + lab(112.5, 172, '22,5°', '#c8d3e8', 11, 700) + lab(-112.5, 172, '22,5°', '#c8d3e8', 11, 700);
+  extra += lab(72, 70, t('zielone'), '#0f1626', 14) + lab(-72, 72, t('czerwone'), '#fff', 14);
   return nightSectors(W, H, cx, cy, [[-112.5, 112.5, 'W', 145], [0, 112.5, 'G', 90], [-112.5, 0, 'R', 90], [112.5, 247.5, 'W', 90]], 66, extra);
 }
 

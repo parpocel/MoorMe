@@ -153,37 +153,37 @@ export const VESSELS = [
   // drogi śródlądowe (CEVNI / przepisy żeglugowe na śródlądowych drogach wodnych) – inne zasady niż na morzu
   {
     id: 'iTowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
-    explain: 'Przepisy śródlądowe: dwa białe światła masztowe jedno nad drugim (ok. 1 m odstępu) w przedniej części, światła burtowe i ŻÓŁTE światło rufowe zamiast białego. Każdy statek zestawu holowanego niesie jasne białe światło widoczne ze wszystkich stron, a ostatni – także białe rufowe.',
+    explain: 'Dwa białe światła masztowe jedno nad drugim (ok. 1 m odstępu) w przedniej części, światła burtowe i ŻÓŁTE światło rufowe zamiast białego. Każdy statek zestawu holowanego niesie jasne białe światło widoczne ze wszystkich stron, a ostatni – także białe rufowe.',
     lights: (L) => iConvoy(L, false)
   },
   {
     id: 'iTowingDangerous', inland: true, name: 'Zestaw holowany z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true,
-    explain: 'Przepisy śródlądowe: holownik jak zwykle (dwa białe masztowe w pionie, burtowe, żółte rufowe), a każdy holowany statek z materiałami niebezpiecznymi palnymi niesie – oprócz białego światła dookólnego – niebieskie światło widoczne ze wszystkich stron. Sam holownik niebieskiego nie pokazuje, jeśli nie wiezie takiego ładunku.',
+    explain: 'Holownik jak zwykle (dwa białe masztowe w pionie, burtowe, żółte rufowe), a każdy holowany statek z materiałami niebezpiecznymi palnymi niesie – oprócz białego światła dookólnego – niebieskie światło widoczne ze wszystkich stron. Sam holownik niebieskiego nie pokazuje, jeśli nie wiezie takiego ładunku.',
     lights: (L) => iConvoy(L, true)
   },
   {
     id: 'iDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true,
-    explain: 'Przepisy śródlądowe: oprócz zwykłych świateł statku w drodze (masztowe, burtowe, rufowe) – jedno niebieskie światło widoczne ze wszystkich stron. Niebieski kolor oznacza ładunek niebezpieczny: jedno światło – materiały palne (dwa – szkodliwe dla zdrowia, trzy – wybuchowe).',
+    explain: 'Oprócz zwykłych świateł statku w drodze (masztowe, burtowe, rufowe) – jedno niebieskie światło widoczne ze wszystkich stron. Niebieski kolor oznacza ładunek niebezpieczny: jedno światło – materiały palne (dwa – szkodliwe dla zdrowia, trzy – wybuchowe).',
     lights: (L) => [...mast1(L, 8), ...sides(L, 4.5), ...stern(L, 3.5), { x: L * 0.05, y: 6.5, z: 0, c: 'blue', s: 'all' }]
   },
   {
     id: 'iFerryPriority', inland: true, name: 'Prom swobodnie przemieszczający się z pierwszeństwem przejścia – drogi śródlądowe', L: [30, 60], speed: [4, 8], moving: true,
-    explain: 'Przepisy śródlądowe: dwa zielone nad białym (dookólne, w pionie), światła burtowe i rufowe – bez masztowego. Zwykły prom przemieszczający się swobodnie ma jedno zielone nad białym; drugie zielone oznacza pierwszeństwo przejścia.',
+    explain: 'Dwa zielone nad białym (dookólne, w pionie), światła burtowe i rufowe – bez masztowego. Zwykły prom przemieszczający się swobodnie ma jedno zielone nad białym; drugie zielone oznacza pierwszeństwo przejścia.',
     lights: (L) => [...column(L * 0.1, 8, ['green', 'green', 'white']), ...sides(L, 4.5), ...stern(L, 3.5)]
   },
   {
     id: 'iWork', inland: true, clear: true, name: 'Urządzenie pływające przy pracy lub statek wykonujący prace na drodze wodnej – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false,
-    explain: 'Przepisy śródlądowe: od strony, z której szlak jest wolny – dwa zielone dookólne w pionie; od strony zamkniętej – czerwone dookólne na wysokości górnego zielonego. Przechodź po stronie zielonych! Strony widać, patrząc wzdłuż statku – z boku światła są w jednej linii.',
+    explain: 'Od strony, z której szlak jest wolny – dwa zielone dookólne w pionie; od strony zamkniętej – czerwone dookólne na wysokości górnego zielonego. Przechodź po stronie zielonych! Strony widać, patrząc wzdłuż statku – z boku światła są w jednej linii.',
     lights: (L, r, o) => iWorkLights(o, ['green', 'green'])
   },
   {
     id: 'iWorkWash', inland: true, clear: true, name: 'Prace na drodze wodnej z ochroną przed falowaniem albo statek na mieliźnie lub zatopiony – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false,
-    explain: 'Przepisy śródlądowe: od strony wolnej – czerwone nad białym (dookólne, w pionie, ok. 1 m), od strony zamkniętej – czerwone dookólne. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie czerwonego nad białym, zwolnij i nie rób fali.',
+    explain: 'Od strony wolnej – czerwone nad białym (dookólne, w pionie, ok. 1 m), od strony zamkniętej – czerwone dookólne. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie czerwonego nad białym, zwolnij i nie rób fali.',
     lights: (L, r, o) => iWorkLights(o, ['red', 'white'])
   },
   {
     id: 'iSmall', inland: true, name: 'Mała łódź bez napędu mechanicznego lub mały żaglowy (< 7 m) – drogi śródlądowe', L: [4, 7], speed: [0, 0], moving: false,
-    explain: 'Przepisy śródlądowe: jedno białe światło widoczne ze wszystkich stron (np. łódź wiosłowa) – kierunku ruchu po nim nie ocenisz. Mały statek żaglowy krótszy niż 7 m może nieść tylko takie światło, a przy zbliżaniu się innych statków pokazuje drugie białe. Tak samo łódź z wyposażenia statku pracująca w jego pobliżu – gdy zbliżają się inne statki.',
+    explain: 'Jedno białe światło widoczne ze wszystkich stron (np. łódź wiosłowa) – kierunku ruchu po nim nie ocenisz. Mały statek żaglowy krótszy niż 7 m może nieść tylko takie światło, a przy zbliżaniu się innych statków pokazuje drugie białe. Tak samo łódź z wyposażenia statku pracująca w jego pobliżu – gdy zbliżają się inne statki.',
     lights: () => [{ x: 0, y: 1.6, z: 0, c: 'white', s: 'all' }]
   },
   {
@@ -241,25 +241,25 @@ export const DAY_VESSELS = [
     explain: 'Trzy czarne kule: jedna przy szczycie przedniego masztu i po jednej na każdym końcu rei. Nie zbliżaj się na mniej niż 1000 m!',
     shapes: () => [{ x: 0, y: 10.4, z: 0, k: 'ball' }, { x: 0, y: 9.2, z: 0, k: 'yard' }, { x: 0, y: 8.6, z: -3, k: 'ball' }, { x: 0, y: 8.6, z: 3, k: 'ball' }] },
   { id: 'dITowing', inland: true, name: 'Holownik z zestawem holowanym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
-    explain: 'Przepisy śródlądowe: na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
+    explain: 'Na holowniku żółty walec z czarnym i białym pasem u góry i u dołu (białe pasy na samych końcach), na każdym statku zestawu holowanego – żółta kula.',
     shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, { x: -L / 2 - 60, y: 6, z: 0, k: 'ballY' }, { x: -L / 2 - 140, y: 6, z: 0, k: 'ballY' }] },
   { id: 'dITowingDangerous', inland: true, name: 'Zestaw holowany z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [20, 35], speed: [4, 7], moving: true, hull: 'tug',
-    explain: 'Przepisy śródlądowe: na holowniku żółty walec w pasy, na każdym statku zestawu holowanego żółta kula, a na statkach z materiałami niebezpiecznymi palnymi – dodatkowo niebieski stożek wierzchołkiem w dół.',
+    explain: 'Na holowniku żółty walec w pasy, na każdym statku zestawu holowanego żółta kula, a na statkach z materiałami niebezpiecznymi palnymi – dodatkowo niebieski stożek wierzchołkiem w dół.',
     shapes: (L) => [{ x: L * 0.25, y: 8, z: 0, k: 'cylYB' }, ...[-L / 2 - 60, -L / 2 - 140].flatMap((x) => [{ x, y: 6, z: 0, k: 'ballY' }, { x, y: 8, z: 0, k: 'coneDownB' }])] },
   { id: 'dIDangerous', inland: true, name: 'Statek z ładunkiem niebezpiecznym palnym – drogi śródlądowe', L: [60, 110], speed: [6, 10], moving: true, hull: 'ship',
-    explain: 'Przepisy śródlądowe: niebieski stożek wierzchołkiem w dół – ładunek niebezpieczny palny (dwa stożki – szkodliwy dla zdrowia, trzy – wybuchowy). Niesie go także każdy statek zestawu holowanego z takim ładunkiem.',
+    explain: 'Niebieski stożek wierzchołkiem w dół – ładunek niebezpieczny palny (dwa stożki – szkodliwy dla zdrowia, trzy – wybuchowy). Niesie go także każdy statek zestawu holowanego z takim ładunkiem.',
     shapes: () => [{ x: 0, y: 9, z: 0, k: 'coneDownB' }] },
   { id: 'dIFerryPriority', inland: true, name: 'Prom swobodnie przemieszczający się z pierwszeństwem przejścia – drogi śródlądowe', L: [30, 60], speed: [4, 8], moving: true, hull: 'ship',
-    explain: 'Przepisy śródlądowe: zielona kula, a około 1 m pod nią biały walec. Sama zielona kula oznacza zwykły prom przemieszczający się swobodnie; biały walec – pierwszeństwo przejścia.',
+    explain: 'Zielona kula, a około 1 m pod nią biały walec. Sama zielona kula oznacza zwykły prom przemieszczający się swobodnie; biały walec – pierwszeństwo przejścia.',
     shapes: (L) => col(L * 0.1, 9, ['ballG', 'cylW']) },
   { id: 'dIPriority', inland: true, name: 'Statek z pierwszeństwem przejścia – drogi śródlądowe', L: [40, 90], speed: [6, 10], moving: true, hull: 'ship',
-    explain: 'Przepisy śródlądowe: czerwony trójkątny proporzec w przedniej części statku – pierwszeństwo przejścia nadane przez dyrektora urzędu żeglugi w miejscach z ustaloną kolejnością przejścia (np. śluzy). Oprócz niego statek niesie inne wymagane znaki.',
+    explain: 'Czerwony trójkątny proporzec w przedniej części statku – pierwszeństwo przejścia nadane przez dyrektora urzędu żeglugi w miejscach z ustaloną kolejnością przejścia (np. śluzy). Oprócz niego statek niesie inne wymagane znaki.',
     shapes: (L) => [{ x: L * 0.42, y: 5, z: 0, k: 'pennantR' }] },
   { id: 'dIWork', inland: true, clear: true, name: 'Urządzenie pływające przy pracy lub statek wykonujący prace na drodze wodnej – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false, hull: 'barge',
-    explain: 'Przepisy śródlądowe: od strony, z której szlak jest wolny – dwa zielone podwójne stożki (romby) w pionie; od strony zamkniętej – czerwona kula na wysokości górnego rombu. Przechodź po stronie zielonych rombów. Te znaki pokazuje też urządzenie lub statek wymagający ochrony przed falowaniem.',
+    explain: 'Od strony, z której szlak jest wolny – dwa zielone podwójne stożki (romby) w pionie; od strony zamkniętej – czerwona kula na wysokości górnego rombu. Przechodź po stronie zielonych rombów. Te znaki pokazuje też urządzenie lub statek wymagający ochrony przed falowaniem.',
     shapes: (L, r, o) => [{ x: 0, y: 8.9, z: 0, k: 'yard' }, { x: 0, y: 8, z: sideZ(o, false), k: 'diamondG' }, { x: 0, y: 6.4, z: sideZ(o, false), k: 'diamondG' }, { x: 0, y: 8, z: sideZ(o, true), k: 'ballR' }] },
   { id: 'dIWorkWash', inland: true, clear: true, name: 'Prace na drodze wodnej z ochroną przed falowaniem albo statek na mieliźnie lub zatopiony – drogi śródlądowe', L: [25, 45], speed: [0, 0], moving: false, hull: 'barge',
-    explain: 'Przepisy śródlądowe: od strony wolnej – flaga czerwono-biała (albo dwie flagi w pionie: czerwona nad białą), od strony zamkniętej – flaga czerwona. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie flagi czerwono-białej i nie rób fali.',
+    explain: 'Od strony wolnej – flaga czerwono-biała (albo dwie flagi w pionie: czerwona nad białą), od strony zamkniętej – flaga czerwona. Tak oznacza się prace wymagające ochrony przed falowaniem oraz statek osiadły na mieliźnie lub zatopiony. Przechodź po stronie flagi czerwono-białej i nie rób fali.',
     shapes: (L, r, o) => [{ x: 0, y: 8.9, z: 0, k: 'yard' }, { x: 0, y: 8, z: sideZ(o, false), k: 'flagRW' }, { x: 0, y: 8, z: sideZ(o, true), k: 'flagR' }] },
   { id: 'dMotorSail', name: 'Jacht żaglowy idący na silniku', L: [9, 16], speed: [5, 7], moving: true, hull: 'yacht',
     explain: 'Stożek wierzchołkiem w dół na przedniej części – jacht pod żaglami, ale z pracującym silnikiem jest statkiem o napędzie mechanicznym.',

@@ -157,7 +157,7 @@ const WHITE = new THREE.MeshBasicMaterial({ color: 0xf4f4f0 });
 const GREEN = new THREE.MeshBasicMaterial({ color: 0x1fa64a });
 const RED = new THREE.MeshBasicMaterial({ color: 0xd62a1e, side: THREE.DoubleSide });
 const WHITE2 = new THREE.MeshBasicMaterial({ color: 0xf4f4f0, side: THREE.DoubleSide });
-function shapeMesh(k) {
+export function shapeMesh(k) {
   const g = new THREE.Group();
   const cone = (up, y) => { const m = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.6, 14), BLACK); m.position.y = y; if (!up) m.rotation.z = Math.PI; return m; };
   if (k === 'ball') g.add(new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), BLACK));
