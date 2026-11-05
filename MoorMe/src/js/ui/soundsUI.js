@@ -1,7 +1,7 @@
 // Moduł „Sygnały dźwiękowe”: z łodzi wiosłowej słychać buczek, dzwon albo gong statku – trzeba rozpoznać znaczenie sygnału.
 import { h } from './dom.js';
 import { LightsScreen } from './lightsUI.js';
-import { SIGNALS, SIGNAL_BY_ID, CONTEXTS, notation, schedule, signalOptions, makeSignalDeck } from '../data/soundSignals.js';
+import { SIGNALS, SIGNAL_BY_ID, CONTEXTS, notation, notationNode, GONG_SVG, schedule, signalOptions, makeSignalDeck } from '../data/soundSignals.js';
 import { spawnVessel } from '../data/shipLights.js';
 
 // Głośność sygnałów (0–1.5, wspólna dla treningu i podręcznika, zapamiętywana; zmiana od razu słychać w trakcie odtwarzania)
@@ -232,7 +232,7 @@ export class SoundsScreen extends LightsScreen {
     const r = q.result;
     el.appendChild(h('div.quiz-verdict', { class: r.ok ? 'ok' : 'bad' }, r.ok ? '✓ Dobrze!' : '✗ Źle'));
     if (!r.ok) el.appendChild(h('div.small', { style: { marginTop: '4px' } }, h('span.muted', {}, 'Poprawna odpowiedź:'), ' ', h('b', {}, q.signal.name)));
-    el.appendChild(h('div.small', { style: { marginTop: '4px', fontSize: '15px', letterSpacing: '2px' } }, notation(q.signal.p)));
+    el.appendChild(h('div.small', { style: { marginTop: '4px', fontSize: '15px', letterSpacing: '2px' } }, notationNode(q.signal.p)));
     el.appendChild(h('button.btn.primary', { style: { marginTop: '10px' }, onclick: () => this.next() }, 'Następny sygnał →'));
   }
 
@@ -250,7 +250,7 @@ export class SoundsScreen extends LightsScreen {
       h('h2', {}, 'Ściąga – sygnały dźwiękowe'),
       h('p.small', {}, '• – krótki dźwięk (ok. 1 s), — – długi dźwięk (4–6 s), · – bardzo krótki (ok. ¼ s), ━ – ciągły, 🔔 – dzwon, ◎ – gong.'),
       ...['sight', 'fog', 'inland'].map((c) => h('div', {}, h('h3', {}, CONTEXTS[c]),
-        h('table.spec-table', {}, ...SIGNALS.filter((s) => s.ctx === c).map((s) => h('tr', {}, h('td', { style: { width: '22%', letterSpacing: '2px', fontWeight: 700 } }, notation(s.p)), h('td', {}, s.name)))))),
+        h('table.spec-table', {}, ...SIGNALS.filter((s) => s.ctx === c).map((s) => h('tr', {}, h('td', { style: { width: '22%', letterSpacing: '2px', fontWeight: 700 } }, notationNode(s.p)), h('td', {}, s.name)))))),
       h('div', { style: { textAlign: 'right', marginTop: '10px' } }, h('button.btn.primary', { onclick: () => back.remove() }, 'OK')));
     back.appendChild(m);
     this.sim.appendChild(back);

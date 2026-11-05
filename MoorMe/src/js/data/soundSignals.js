@@ -84,6 +84,16 @@ export function notation(p) {
   return [...p].map((c) => ({ S: '•', L: '—', C: '━━━━━━', v: '·', B: '🔔🔔🔔', b: '🔔', G: '◎ gong', p: '\u2003' }[c])).join(' ');
 }
 
+// ikona gongu w stylu emoji (jak 🔔): złota tarcza z wypukłym środkiem na ramie z linkami
+export const GONG_SVG = '<svg viewBox="0 0 36 36" width="1.15em" height="1.15em" style="vertical-align:-0.2em" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="gongG" cx="0.38" cy="0.35" r="0.75"><stop offset="0" stop-color="#ffe9a3"/><stop offset="0.45" stop-color="#f4b93a"/><stop offset="1" stop-color="#b9761a"/></radialGradient><radialGradient id="gongB" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff4c9"/><stop offset="1" stop-color="#d8962a"/></radialGradient></defs><path d="M4 4 H32 M7 4 V33 M29 4 V33" stroke="#7a4b2a" stroke-width="2.6" stroke-linecap="round"/><path d="M13 4 L15 9 M23 4 L21 9" stroke="#5a3a20" stroke-width="1.4"/><circle cx="18" cy="20" r="11" fill="url(#gongG)" stroke="#8a5a14" stroke-width="1.6"/><circle cx="18" cy="20" r="4.6" fill="url(#gongB)" stroke="#a8721e" stroke-width="1"/><path d="M11 15 Q14 11 19 11" fill="none" stroke="#fff6d6" stroke-width="1.4" stroke-linecap="round" opacity="0.8"/></svg>';
+// zapis jako węzeł DOM (gong jako ikona zamiast tekstu)
+export function notationNode(p) {
+  const span = document.createElement('span');
+  const parts = notation(p).split('◎ gong');
+  parts.forEach((t, i) => { if (i) { const g = document.createElement('span'); g.className = 'gong-ic'; g.innerHTML = GONG_SVG; span.appendChild(g); } span.appendChild(document.createTextNode(t)); });
+  return span;
+}
+
 // Plan odtwarzania: [{ kind: 'horn'|'bell'|'stroke'|'gong', t0, dur }]
 export const DUR = { S: 1.0, L: 4.5, v: 0.25, C: 9.0, B: 5.0, b: 0.6, G: 5.0 };
 export function schedule(p) {

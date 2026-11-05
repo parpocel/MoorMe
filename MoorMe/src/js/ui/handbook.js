@@ -2,7 +2,7 @@
 // Ilustracje są generowane z tych samych danych, z których korzysta symulacja – podręcznik zawsze zgadza się z treningiem.
 import { h } from './dom.js';
 import { VESSELS, DAY_VESSELS, visibleLights } from '../data/shipLights.js';
-import { SIGNALS, CONTEXTS, notation, schedule } from '../data/soundSignals.js';
+import { SIGNALS, CONTEXTS, notation, notationNode, GONG_SVG, schedule } from '../data/soundSignals.js';
 import { lateralColors, IALA } from '../data/passage.js';
 import { lightSequence, lightAt, LIGHT_COLORS } from '../data/lightChar.js';
 import { getLang, t } from '../i18n.js';
@@ -358,7 +358,7 @@ function soundsIntro(play) {
         tile('L', '—', L('długi', 'prolonged'), L('4–6 s', '4–6 s')),
         tile('vvvvvvvv', '· · ·', L('bardzo krótkie', 'very short'), L('ok. ¼ s każdy', 'about ¼ s each'), L('tylko na drogach śródlądowych', 'inland waterways only')),
         tile('B', '🔔', L('dzwon', 'bell'), L('szybkie dzwonienie ok. 5 s', 'rapid ringing about 5 s')),
-        tile('G', '◎', L('gong', 'gong'), L('ok. 5 s', 'about 5 s'), L('statki ≥ 100 m na kotwicy', 'vessels ≥ 100 m at anchor')))),
+        tile('G', (() => { const d = document.createElement('span'); d.innerHTML = GONG_SVG; return d; })(), L('gong', 'gong'), L('ok. 5 s', 'about 5 s'), L('statki ≥ 100 m na kotwicy', 'vessels ≥ 100 m at anchor')))),
     h('div.sb-two', {},
       card(L('☀ Statki się widzą', '☀ Vessels in sight'),
         h('ul', {},
@@ -391,7 +391,7 @@ function soundsIntro(play) {
 export function soundsBook(play) {
   const entry = (s) => h('div.hb-entry.hb-sound', {},
     h('div.hb-sound-h', {}, h('button.btn.sm.primary', { onclick: () => play(s.p) }, '▶'), h('h3', {}, s.name)),
-    h('div.hb-notation', {}, notation(s.p)), timeline(s.p), h('p', {}, s.desc));
+    h('div.hb-notation', {}, notationNode(s.p)), timeline(s.p), h('p', {}, s.desc));
   const ctxSec = (id, name) => ({ id, name, entries: [h('p.hb-ctx', {}, CONTEXTS[id]), ...SIGNALS.filter((s) => s.ctx === id).map(entry)] });
   return [
     { id: 'intro', name: L('Wstęp', 'Introduction'), entries: soundsIntro(play) },
