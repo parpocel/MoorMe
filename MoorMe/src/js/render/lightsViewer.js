@@ -196,7 +196,7 @@ export function lightsViewer(v, lights0, Lm, opts = {}) {
   const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
   const cap = document.createElement('div'); cap.className = 'lv-cap';
   const wrap = document.createElement('div'); wrap.className = day ? 'lv-wrap day' : 'lv-wrap';
-  const hint = document.createElement('div'); hint.className = 'lv-hint'; hint.textContent = t('⟲ obrót · ✋ przesuwanie · kółko lub ＋/－ – przybliżenie');
+  const hint = document.createElement('div'); hint.className = 'lv-hint'; hint.textContent = t('⟲ obrót · ✋ przesuwanie · ＋/－ przybliżenie');
   const zb = document.createElement('div'); zb.className = 'lv-zoom';
   const zbtn = (txt, f) => { const b = document.createElement('button'); b.textContent = txt; b.addEventListener('pointerdown', (e) => e.stopPropagation()); b.addEventListener('click', (e) => { e.stopPropagation(); f(); req(); }); zb.appendChild(b); };
   let hand = false;
@@ -226,9 +226,14 @@ export function lightsViewer(v, lights0, Lm, opts = {}) {
     // światła o stałej wielkości na ekranie – po przybliżeniu bliskie światła (np. holownika) się rozdzielają
     for (const it of sprites) it.sp.scale.setScalar(it.sp.position.distanceTo(cam.position) * (it.l.c === 'deck' ? 0.006 : 0.022));
     // kąt obserwatora od dziobu (+ w prawo) – decyduje, które światła widać
-    const rel = (Math.atan2(Math.sin(st.az), Math.cos(st.az)) * 180) / Math.PI; // kierunek, z którego patrzymy (nie zależy od przesunięcia kadru)
-    const vis = new Set(visibleLights(lights, rel));
-    for (const { l, sp } of sprites) sp.visible = l.beam || vis.has(l);
+    // kierunek obserwatora względem samego statku (jego środka), nie środka kadru
+    const rel = (Math.atan2(cam.position.z, cam.position.x) * 180) / Math.PI;
+    // widoczność liczona z miejsca każdego światła (przy długim zestawie środek kadru leży daleko od holownika)
+    for (const { l, sp } of sprites) {
+      if (l.beam) { sp.visible = true; continue; }
+      const a = (Math.atan2(cam.position.z - l.z, cam.position.x - l.x) * 180) / Math.PI;
+      sp.visible = visibleLights([l], a).length > 0;
+    }
     r.render(scene, cam);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(r.domElement, 0, 0, canvas.width, canvas.height);
@@ -249,21 +254,7 @@ export function lightsViewer(v, lights0, Lm, opts = {}) {
     } else { st.az += dx * 0.012; st.el = Math.max(0.03, Math.min(1.3, st.el + dy * 0.006)); }
     drag = { ...drag, x: e.clientX, y: e.clientY }; req();
   });
-  // kółko myszy: przybliżanie (strona nie przewija się, gdy kursor jest nad podglądem)
-  const ray = new THREE.Raycaster();
-  wrap.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const z0 = st.zoom, z1 = Math.max(0.06, Math.min(2.5, z0 * Math.exp(e.deltaY * 0.0015)));
-    // przybliżanie w stronę punktu pod kursorem (na poziomie celu kamery)
-    const r = wrap.getBoundingClientRect(), nd = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(nd, cam);
-    // płaszczyzna przez cel kamery, prostopadła do kierunku patrzenia – punkt pod kursorem leży „na głębokości” statku
-    const tgt = lastTgt.clone(), nrm = cam.position.clone().sub(tgt).normalize(), hit = new THREE.Vector3();
-    if (ray.ray.intersectPlane(new THREE.Plane().setFromNormalAndCoplanarPoint(nrm, tgt), hit)) {
-      const k = 1 - z1 / z0; st.tx += (hit.x - tgt.x) * k; st.tz += (hit.z - tgt.z) * k; st.ty += (hit.y - tgt.y) * k;
-    }
-    st.zoom = z1; hint.style.opacity = '0'; req();
-  }, { passive: false });
+  // kółko myszy nie przybliża – przewija stronę; przybliżanie przyciskami ＋/－
   const up = () => { drag = null; wrap.classList.remove('drag'); };
   wrap.addEventListener('pointerup', up); wrap.addEventListener('pointercancel', up);
   // pierwszy rysunek, gdy podgląd pojawi się na ekranie (i przy zmianie szerokości)

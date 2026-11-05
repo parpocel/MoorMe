@@ -83,6 +83,32 @@ const LIGHTHOUSE = (x, y, lbl) => `<g transform="translate(${x} ${y})"><path d="
 const YACHT = (x, y, rot, s = 1) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})"><path d="M0 -14 C6 -6 6 6 4 12 L-4 12 C-6 6 -6 -6 0 -14 Z" fill="#fff" stroke="#2f4468" stroke-width="1.8"/><line x1="0" y1="-4" x2="0" y2="7" stroke="#2f4468" stroke-width="1.3"/></g>`;
 const LAND = (d) => `<path d="${d}" fill="#f2e2b0" stroke="#8a7346" stroke-width="1.6"/><path d="${d}" fill="none" stroke="#bcd8c0" stroke-width="7" opacity="0.35"/>`;
 
+// namiary: NK od Nk, NM od Nm, NR od Nr – kierunek z jachtu na latarnię; kąt kursowy KĄT od dziobu
+function bearingsSVG() {
+  const W = 760, H = 340, cx = 170, cy = 300, R = 255;
+  const pt = (deg, r) => [cx + Math.sin((deg * Math.PI) / 180) * r, cy - Math.cos((deg * Math.PI) / 180) * r];
+  const f = (v) => v.toFixed(1);
+  const NR = 0, NM = 10, NK = 20, HD = -25, OBJ = 58;
+  const mk = (id, c) => `<marker id="nbB${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${c}"/></marker>`;
+  const ray = (deg, col, lbl, o = {}) => { const [x, y] = pt(deg, o.r || R); return `<line x1="${cx}" y1="${cy}" x2="${f(x)}" y2="${f(y)}" stroke="${col}" stroke-width="${o.w || 2.2}" ${o.dash ? `stroke-dasharray="${o.dash}"` : ''} stroke-linecap="round" ${o.m ? `marker-end="url(#nbB${o.m})"` : ''}/>${lbl ? `<text x="${f(x + (o.dx || 0))}" y="${f(y - 9)}" fill="${col}" font-size="15" font-weight="800" text-anchor="middle">${lbl}</text>` : ''}`; };
+  const arc = (a0, a1, r, col, lbl) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r), [lx, ly] = pt((a0 + a1) / 2, r + 14); return `<path d="M${f(x0)} ${f(y0)} A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)}" fill="none" stroke="${col}" stroke-width="2.2"/><text x="${f(lx)}" y="${f(ly + 5)}" fill="${col}" font-size="13" font-weight="800" text-anchor="middle">${lbl}</text>`; };
+  let g = `<defs>${mk('k', '#1b1f24')}${mk('b', '#2563eb')}${mk('o', '#c2410c')}${mk('g', '#0f8a5f')}</defs>` + SEA(W, H);
+  g += ray(NR, '#1b1f24', 'Nr', { m: 'k', dx: -8 }) + ray(NM, '#2563eb', 'Nm', { m: 'b' }) + ray(NK, '#c2410c', 'Nk', { m: 'o', dx: 6 });
+  g += ray(HD, '#2f4468', L('dziób', 'bow'), { r: 150, dash: '7 5', w: 2 });
+  // linia namiaru do latarni
+  const [lx, ly] = pt(OBJ, R - 20);
+  g += ray(OBJ, '#0f8a5f', '', { r: R - 34, w: 3, m: 'g' }) + LIGHTHOUSE(lx + 14, ly - 4, '') + PILL(lx + 22, ly + 22, L('latarnia', 'light'), '#2f4468', 12);
+  g += arc(NK, OBJ, 200, '#c2410c', 'NK') + arc(NM, OBJ, 168, '#2563eb', 'NM') + arc(NR, OBJ, 136, '#1b1f24', 'NR');
+  g += arc(HD, OBJ, 100, '#0f8a5f', L('KĄT', 'RB'));
+  g += arc(NR, NM, 228, '#2563eb', 'd') + arc(NM, NK, 228, '#c2410c', 'δ');
+  g += YACHT(cx, cy, HD, 1.15);
+  const leg = [['#c2410c', 'NK', L('namiar kompasowy – od Nk', 'compass bearing – from Nc')], ['#2563eb', 'NM', L('namiar magnetyczny – od Nm', 'magnetic bearing – from Nm')], ['#1b1f24', 'NR', L('namiar rzeczywisty – od Nr', 'true bearing – from Nt')], ['#0f8a5f', L('KĄT', 'RB'), L('kąt kursowy – od dziobu', 'relative bearing – from the bow')], ['#2563eb', 'd', L('deklinacja Nr→Nm', 'variation Nt→Nm')], ['#c2410c', 'δ', L('dewiacja dla kursu jachtu', 'deviation for the heading')]];
+  let y = 40;
+  g += `<rect x="470" y="18" width="274" height="${leg.length * 30 + 14}" rx="10" fill="#ffffff" fill-opacity="0.85" stroke="#cfdbe6"/>`;
+  for (const [c, k2, txt] of leg) { g += `<text x="484" y="${y + 6}" fill="${c}" font-size="15" font-weight="800">${k2}</text><text x="534" y="${y + 6}" fill="#2f4468" font-size="13">${txt}</text>`; y += 30; }
+  return svgBox(W, H, g, true);
+}
+
 // trójkąt prędkości: KR/V po wodzie + prąd = KDd/SOG nad dnem
 function currentSVG() {
   // trójkąt prędkości: KDw/V (po wodzie, 1 h) + prąd = KDd/SOG (nad dnem)
@@ -220,6 +246,7 @@ export function navBook() {
     ] },
     { id: 'bearings', name: L('Namiary', 'Bearings'), entries: [
       entry(L('Namiar i jego przeliczanie', 'A bearing and its conversion'),
+        bearingsSVG(),
         P(L('Namiar to kierunek z jachtu na obiekt (latarnię, cypel, wieżę), mierzony kompasem namiarowym albo przez kompas sterowy. Przeliczasz go tak samo jak kurs – ale ', 'A bearing is the direction from the yacht to an object (light, headland, tower), taken with a hand-bearing compass or over the steering compass. You convert it like a course – but '), B(L('dewiację bierzesz dla kursu jachtu', 'deviation is taken for the yacht’s heading')), L(', nie dla namiaru (bo to od kursu zależy, jak żelazo jachtu działa na kompas).', ', not for the bearing (the heading decides how the yacht’s iron acts on the compass).')),
         formula('NM = NK + δ(KK)', 'NR = NM + d = NK + p'),
         P(L('Kompas ręczny trzymany z dala od żelaza ma zwykle δ ≈ 0, wtedy NR = NK + d.', 'A hand-bearing compass held away from iron usually has δ ≈ 0, so TB = CB + d.')),

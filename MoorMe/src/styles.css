@@ -1082,3 +1082,5 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .nb-cols:not(.has-fig) .nb-text, .handbook .nb-cols:not(.has-fig) .nb-example, .handbook .nb-cols:not(.has-fig) .nb-note { max-width: none; }
 /* wzory: czcionka 1,25× */
 .handbook .nb-lesson .nb-formula { font-size: 22.5px; width: fit-content; max-width: 100%; padding: 12px 18px; }
+/* nazwa modułu przy logo MoorMe zawsze wielkimi literami */
+.logo + .sub, .logo + .muted, .logo + .mt-sub, .logo + .sf-sub { text-transform: uppercase; letter-spacing: 0.06em; }
