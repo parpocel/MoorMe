@@ -2,7 +2,7 @@
 
 export const EN = {
   // ---- Test (egzamin) ----
-  'Test': 'Test', 'Odpowiedz na pytania jednokrotnego wyboru oraz rozwiąż zadanie nawigacyjne.': 'Answer single-choice questions and solve a navigation task.',
+  'Menu główne': 'Main menu', 'Test': 'Test', 'Odpowiedz na pytania jednokrotnego wyboru oraz rozwiąż zadanie nawigacyjne.': 'Answer single-choice questions and solve a navigation task.',
   'Wstecz': 'Back', 'Wróć do poprzedniego ekranu.': 'Go back to the previous screen.',
   '75 losowych pytań (60 min): prawo drogi MPZZM, światła i znaki dzienne, sygnały dźwiękowe, oznakowanie IALA, mapa morska, nawigacja, meteorologia, bezpieczeństwo i łączność. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).': '75 random questions (60 min): COLREGs, lights and day shapes, sound signals, IALA buoyage, the nautical chart, navigation, meteorology, safety and radio. Pass mark 65 correct answers, then a navigation task (30 min).',
   '75 losowych pytań (60 min): przepisy żeglugowe na śródlądowych drogach wodnych, znaki żeglugowe, światła i znaki dzienne, sygnały dźwiękowe, budowa jachtu, meteorologia i bezpieczeństwo. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).': '75 random questions (60 min): inland navigation regulations, waterway signs, lights and day shapes, sound signals, the yacht, meteorology and safety. Pass mark 65 correct answers, then a navigation task (30 min).',

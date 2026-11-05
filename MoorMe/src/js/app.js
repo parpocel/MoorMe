@@ -335,7 +335,8 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
   const quit = window.moorme && window.moorme.quit;
   const scr = h('div.screen.menu3d.wheelmenu', {}, menuBackdrop(), h('div.m3-shade.wh-shade'),
     h('div.m3-top', {},
-      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); back.go(); } }, raw(glyph('back', 18)), h('span', {}, back.label)) : h('span'),
+      // w podmenu: przycisk „Menu główne” (o jeden ekran wstecz cofa kafel „Wstecz” w kole)
+      back ? h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showModeSelect(); } }, raw(glyph('back', 18)), h('span', {}, 'Menu główne')) : h('span'),
       h('div.m3-sp'),
       h('button.m3-chip', { onclick: () => { document.removeEventListener('keydown', onKey); showSettings(settingsBack || (() => (back ? showTitle() : showModeSelect()))); } }, raw(glyph('gear', 18)), h('span', {}, 'Ustawienia')),
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18)), h('span', {}, 'Wyjdź')) : null),

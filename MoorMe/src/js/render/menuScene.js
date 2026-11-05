@@ -316,6 +316,10 @@ export class MenuScene {
     this.sunL.color.copy(mix3(0xc4d2f2, 0xff9a55, 0xfff4e2)); this.sunL.intensity = night ? 1.1 + (1 - night) * 2.5 : 3.6 - day * 0.8;
     this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.19, Math.sin(SUN_AZ - 0.12)).normalize() : sunDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
     this.rim.intensity = 0.9 * (1 - night * 0.6);
+    // cień jachtu słabnie, gdy słońce schodzi nisko (bardzo długi klin przez całe morze), po zachodzie znika
+    const sh = THREE.MathUtils.smoothstep(elev, 0.06, 0.26);
+    this.shadowPlane.material.opacity = 0.32 * sh;
+    this.shadowPlane.visible = this.sunL.castShadow = sh > 0.01;
     this.sea.material.color.copy(mix3(0x1f4a6e, 0x3d86ad, 0x24689a)); // za dnia nieco ciemniejsza woda
     CLOUD_M.color.copy(mix3(0x3a4566, 0xffc2a8, 0xffffff)); CLOUD_M.emissive.copy(mix3(0x0e1426, 0xff7a5a, 0x9fb2c4)); CLOUD_M.emissiveIntensity = 0.35 - day * 0.1 - night * 0.2;
     // słońce, księżyc, gwiazdy
