@@ -313,14 +313,16 @@ export class MenuScene {
     this.scene.fog.color.copy(mix3(0x1b2a4a, FOG, 0xb9d6ea));
     this.hemi.color.copy(mix3(0x5a6c9a, 0xffb08f, 0xe8f2ff)); this.hemi.groundColor.copy(mix3(0x0c1428, 0x3a5f8f, 0x4f7fa8));
     this.hemi.intensity = 1.5 - night * 0.9;
-    this.sunL.color.copy(mix3(0xc4d2f2, 0xff9a55, 0xfff4e2)); this.sunL.intensity = night ? 1.1 + (1 - night) * 2.5 : 3.6 - day * 0.8;
-    this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.19, Math.sin(SUN_AZ - 0.12)).normalize() : sunDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
+    this.sunL.color.copy(mix3(0xc4d2f2, 0xff9a55, 0xfff4e2)); this.sunL.intensity = night ? 0.45 + (1 - night) * 2.5 : 3.6 - day * 0.8; // księżyc świeci słabiej niż słońce
+    this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.3, Math.sin(SUN_AZ - 0.12)).normalize() : sunDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
     this.rim.intensity = 0.9 * (1 - night * 0.6);
     // cień jachtu słabnie, gdy słońce schodzi nisko (bardzo długi klin przez całe morze), po zachodzie znika
-    const sh = THREE.MathUtils.smoothstep(elev, 0.06, 0.26);
-    this.shadowPlane.material.opacity = 0.32 * sh;
-    this.shadowPlane.visible = this.sunL.castShadow = sh > 0.01;
+    // nocą słabszy cień od księżyca
+    const sh = THREE.MathUtils.smoothstep(elev, 0.06, 0.26), shMoon = night > 0.5 ? THREE.MathUtils.smoothstep(night, 0.5, 0.9) : 0;
+    this.shadowPlane.material.opacity = 0.32 * sh + 0.2 * shMoon;
+    this.shadowPlane.visible = this.sunL.castShadow = sh + shMoon > 0.01;
     this.sea.material.color.copy(mix3(0x1f4a6e, 0x3d86ad, 0x24689a)); // za dnia nieco ciemniejsza woda
+    this.sea.material.roughness = 0.3 + night * 0.25; // nocą słabszy, bardziej rozmyty odblask księżyca
     CLOUD_M.color.copy(mix3(0x3a4566, 0xffc2a8, 0xffffff)); CLOUD_M.emissive.copy(mix3(0x0e1426, 0xff7a5a, 0x9fb2c4)); CLOUD_M.emissiveIntensity = 0.35 - day * 0.1 - night * 0.2;
     // słońce, księżyc, gwiazdy
     const sunPos = sunDir.clone().multiplyScalar(1300);
@@ -332,7 +334,7 @@ export class MenuScene {
     // nocą księżyc w kadrze (po stronie zachodu słońca, nieco wyżej)
     if (night > 0.3) moonPos.set(Math.cos(SUN_AZ - 0.12) * 1200, 230, Math.sin(SUN_AZ - 0.12) * 1200);
     this.moon.position.copy(moonPos); this.moonHalo.position.copy(moonPos).multiplyScalar(1.01);
-    this.moon.visible = this.moonHalo.visible = night > 0.05; this.moon.material.opacity = this.moonHalo.material.opacity = night;
+    this.moon.visible = this.moonHalo.visible = night > 0.05; this.moon.material.opacity = night * 0.9; this.moonHalo.material.opacity = night * 0.55;
     this.stars.material.opacity = night * 0.9;
     this.renderer.toneMappingExposure = 1.0 - night * 0.15;
     this.isNight = night > 0.5;
