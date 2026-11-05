@@ -201,29 +201,32 @@ function roundedRect(w, d, r) {
   return sh;
 }
 function epirb() {
-  // radiopława EPIRB: korpus o okrągłym przekroju (żółty walec z kołnierzem wypornościowym), czarna głowica z lampą błyskową i anteną
-  const g = new THREE.Group(), Y = std(0xffcf14, { rough: 0.45 }), K = std(0x1c1d20, { rough: 0.7 });
-  const r = 0.038;
-  const base = cyl(r * 0.92, r * 0.8, 0.03, K, 0, 0.015, 0, g, 28); // gumowa stopa
-  const body = cyl(r, r * 0.95, 0.2, Y, 0, 0.13, 0, g, 32); body.castShadow = true;
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(r * 1.05, 0.009, 10, 32), Y); collar.rotation.x = Math.PI / 2; collar.position.y = 0.17; g.add(collar);
-  cyl(r * 0.92, r * 0.7, 0.04, K, 0, 0.25, 0, g, 28); // głowica
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(r * 0.62, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), std(0xffffff, { transparent: true, opacity: 0.6, rough: 0.1, emissive: 0xffffff, ei: 0.15 }));
-  dome.position.set(0, 0.27, 0); g.add(dome);
-  cyl(0.0035, 0.0055, 0.22, std(0x111111), 0, 0.38, 0, g, 8); // antena
-  // naklejka na obwodzie korpusu (wycinek walca) z napisem i przyciskiem ON
-  const lbl = new THREE.Mesh(new THREE.CylinderGeometry(r * 1.004, r * 1.004 * 0.98, 0.12, 24, 1, true, -0.9, 1.8), std(0xffffff, { map: textTex(240, 240, (c, W, H) => {
-    c.fillStyle = '#1c1d20'; c.fillRect(0, 0, W, H); c.textAlign = 'center';
-    c.fillStyle = '#ffcf14'; c.font = 'bold 40px Arial'; c.fillText('EPIRB', W / 2, 50);
-    c.fillStyle = '#ffffff'; c.font = 'bold 24px Arial'; c.fillText('406 MHz', W / 2, 86); c.font = '18px Arial'; c.fillText('GPS · 121.5 MHz', W / 2, 112);
-    c.fillStyle = '#d8352a'; c.fillRect(50, 132, W - 100, 44); c.fillStyle = '#fff'; c.font = 'bold 22px Arial'; c.fillText('ON', W / 2, 162);
-    c.fillStyle = '#ffffff'; c.font = '15px Arial'; c.fillText('ANTENNA UP · PRESS ON', W / 2, 205);
+  // radiopława EPIRB: żółty korpus o okrągłym przekroju rozszerzający się ku górze, czarny pas z przyciskami,
+  // żółta kopuła, biała odblaskowa obudowa anteny z czerwoną nasadką, niebieski panel z instrukcją, czarny uchwyt z boku
+  const g = new THREE.Group(), Y = std(0xf2b51c, { rough: 0.45 }), K = std(0x1f2124, { rough: 0.65 }), Rd = std(0xd8352a, { rough: 0.5 });
+  const prof = [[0.0, 0], [0.04, 0], [0.043, 0.01], [0.047, 0.05], [0.055, 0.1], [0.06, 0.125], [0.06, 0.13], [0, 0.13]].map(([x, y]) => new THREE.Vector2(x, y));
+  const body = new THREE.Mesh(new THREE.LatheGeometry(prof, 40), Y); body.castShadow = true; g.add(body);
+  cyl(0.063, 0.063, 0.028, K, 0, 0.144, 0, g, 40); // pas z przyciskami
+  const domeP = [[0.06, 0], [0.058, 0.012], [0.05, 0.026], [0.036, 0.036], [0, 0.04]].map(([x, y]) => new THREE.Vector2(x, y));
+  const dome = new THREE.Mesh(new THREE.LatheGeometry(domeP, 40), Y); dome.position.y = 0.158; g.add(dome);
+  // obudowa anteny: biała, odblaskowa, z czerwoną nasadką
+  const refl = box(0.028, 0.06, 0.03, std(0xf4f6f8, { rough: 0.3, emissive: 0x9aa4ae, ei: 0.25 }), 0, 0.225, 0, g);
+  void refl;
+  cyl(0.012, 0.016, 0.03, Rd, 0, 0.27, 0, g, 16);
+  // przyciski na pasie i na kopule
+  box(0.022, 0.012, 0.012, Rd, 0, 0.165, 0.045, g);
+  for (const a of [-0.7, 0.7]) { const b = cyl(0.007, 0.007, 0.006, std(0x6b7280), Math.sin(a) * 0.063, 0.145, Math.cos(a) * 0.063, g, 10); b.rotation.x = Math.PI / 2; b.rotation.z = -a; }
+  // uchwyt z boku
+  const hd = new THREE.Mesh(new THREE.TorusGeometry(0.022, 0.006, 8, 16, Math.PI), K); hd.position.set(0, 0.105, -0.058); hd.rotation.set(0, 0, Math.PI / 2); // uchwyt z tyłu (panel z przodu odsłonięty) g.add(hd);
+  // panel z instrukcją (wycinek walca na froncie)
+  const lbl = new THREE.Mesh(new THREE.CylinderGeometry(0.0556, 0.0486, 0.075, 24, 1, true, -0.75, 1.5), std(0xffffff, { map: textTex(240, 200, (c, W, H) => {
+    c.fillStyle = '#1d3a6b'; c.fillRect(0, 0, W, H); c.textAlign = 'center';
+    c.fillStyle = '#ffffff'; c.font = 'bold 32px Arial'; c.fillText('EPIRB', W / 2, 40);
+    c.font = '18px Arial'; c.fillText('406 MHz · GPS', W / 2, 66);
+    c.textAlign = 'left'; c.font = 'bold 16px Arial';
+    ['1  ANTENNA UP', '2  PRESS ON', '3  STROBE FLASHES'].forEach((t2, k) => { c.fillStyle = '#ffcf14'; c.beginPath(); c.arc(30, 100 + k * 32, 11, 0, 7); c.fill(); c.fillStyle = '#fff'; c.fillText(t2, 50, 106 + k * 32); });
   }) }));
-  lbl.position.y = 0.11; lbl.rotation.y = Math.PI / 2; g.add(lbl);
-  // linka (lanyard) zwinięta obok
-  const pts = []; for (let k = 0; k <= 60; k++) { const t = k / 60, a = t * Math.PI * 5; pts.push(new THREE.Vector3(0.08 + Math.cos(a) * 0.03, 0.004 + t * 0.004, 0.02 + Math.sin(a) * 0.022)); }
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.0025, 5), std(0xffffff)));
-  void base;
+  lbl.position.y = 0.075; lbl.rotation.y = Math.PI / 2; g.add(lbl);
   return g;
 }
 
