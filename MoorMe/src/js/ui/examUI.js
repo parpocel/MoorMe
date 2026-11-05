@@ -11,6 +11,12 @@ import { showNavTasks } from './navTasksUI.js';
 const HIST_KEY = 'moorme.examHist';
 function loadHist() { try { return JSON.parse(localStorage.getItem(HIST_KEY) || 'null') || { n: 0, ids: {} }; } catch (e) { return { n: 0, ids: {} }; } }
 function saveHist(hs) { try { localStorage.setItem(HIST_KEY, JSON.stringify(hs)); } catch (e) { /* bez zapisu */ } }
+// odpowiedź tekstowa albo obrazek („@svg:…” – rysunek, „@img:…” – plik)
+function optNode(o) {
+  if (o.startsWith('@svg:')) { const d = h('span.ex-optpic'); d.innerHTML = o.slice(5); return d; }
+  if (o.startsWith('@img:')) return h('span.ex-optpic', {}, h('img', { src: o.slice(5), alt: '', decoding: 'async' }));
+  return h('span', {}, o);
+}
 const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 export function showExam(app, { scope, onExit, sceneryEl }) {
@@ -76,13 +82,14 @@ export function showExam(app, { scope, onExit, sceneryEl }) {
     if (done) { renderResult(); return; }
     const q = qs[idx];
     const n = answers.filter((a) => a !== null).length;
-    const opts = q.options.map((o, i) => h('button.btn.cq-opt.ex-opt', { class: answers[idx] === i ? 'sel' : '', onclick: () => { answers[idx] = i; render(); } },
-      h('span.ex-letter', {}, 'ABC'[i]), h('span', {}, o)));
+    const pics = q.options.some((o) => o.startsWith('@'));
+    const opts = q.options.map((o, i) => h('button.btn.cq-opt.ex-opt', { class: (answers[idx] === i ? 'sel' : '') + (pics ? ' pic' : ''), onclick: () => { answers[idx] = i; render(); } },
+      h('span.ex-letter', {}, 'ABC'[i]), optNode(o)));
     const md = media(q.media);
     body.appendChild(h('div.cq-card.ex-card', {},
       h('div.ex-top', {}, h('div.cq-count', {}, `${t('Pytanie')} ${idx + 1} / ${qs.length}`), h('div.ex-topic', {}, topicName(q.topic))),
       h('h2.ex-q', {}, q.q),
-      h('div', { class: md ? 'ex-main has-media' : 'ex-main' }, md, h('div.cq-opts', {}, ...opts)),
+      h('div', { class: md ? 'ex-main has-media' : 'ex-main' }, md, h('div.cq-opts', { class: pics ? 'ex-picopts' : '' }, ...opts)),
       h('div.ex-nav', {},
         h('button.btn', { disabled: idx === 0, onclick: () => go(idx - 1) }, '← Poprzednie'),
         h('span.ex-done', {}, `${t('Odpowiedzi')}: ${n} / ${qs.length}`),
@@ -126,8 +133,8 @@ export function showExam(app, { scope, onExit, sceneryEl }) {
       wrong.length ? h('details.ex-review', {}, h('summary', {}, `${t('Błędne odpowiedzi')} (${wrong.length})`),
         ...wrong.map(([q, i]) => h('div.ex-rv', {},
           h('div.ex-rq', {}, `${i + 1}. ${q.q}`),
-          answers[i] !== null ? h('div.ex-ry', {}, `✗ ${q.options[answers[i]]}`) : h('div.ex-ry', {}, t('✗ brak odpowiedzi')),
-          h('div.ex-rc', {}, `✓ ${q.options[q.answer]}`),
+          answers[i] !== null ? h('div.ex-ry', {}, '✗ ', optNode(q.options[answers[i]])) : h('div.ex-ry', {}, t('✗ brak odpowiedzi')),
+          h('div.ex-rc', {}, '✓ ', optNode(q.options[q.answer])),
           q.explain ? h('p.small.muted', {}, q.explain) : null))) : null));
     footL.append(
       h('button.btn', { onclick: () => quit() }, '← Wróć do wyboru testu'),

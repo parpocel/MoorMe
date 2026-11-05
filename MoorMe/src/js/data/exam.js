@@ -45,7 +45,7 @@ function mk(r, topic, q, good, bad, extra = {}) {
   return { topic, q, options: opts, answer: opts.indexOf(good), ...extra };
 }
 // dwie błędne odpowiedzi z puli (różne od poprawnej i od siebie)
-const others = (r, pool, good, key = (x) => x) => shuffle(r, pool.filter((x) => key(x) !== key(good))).filter((x, i, a) => a.findIndex((y) => key(y) === key(x)) === i).slice(0, 2);
+const others = (r, pool, good, key = (x) => x) => shuffle(r, pool.filter((x) => key(x) !== key(good))).filter((x, i, a) => a.findIndex((y) => key(y) === key(x)) === i);
 
 // ---------------- bank pytań pisanych ręcznie ----------------
 // [zakres: 'sea' | 'inland' | 'both', temat, pytanie [pl, en], poprawna [pl, en], błędna, błędna, wyjaśnienie?]
@@ -217,7 +217,107 @@ const BANK = [
   ['sea', 'nav', ['Co mierzy echosonda?', 'What does an echo sounder measure?'], ['Głębokość wody pod jachtem', 'The depth of water under the yacht'], ['Prędkość nad dnem', 'Speed over the ground'], ['Odległość do brzegu', 'Distance to the shore']],
   ['sea', 'nav', ['Jaką linią na mapie Merkatora jest kurs stały (loksodroma)?', 'How does a constant course (rhumb line) appear on a Mercator chart?'], ['Linią prostą', 'As a straight line'], ['Łukiem okręgu', 'As an arc of a circle'], ['Linią falistą', 'As a wavy line']],
   ['sea', 'nav', ['Jak zmienia się szerokość geograficzna?', 'How is latitude measured?'], ['Od 0° na równiku do 90° N lub S na biegunach', 'From 0° at the equator to 90° N or S at the poles'], ['Od 0° w Greenwich do 180° E lub W', 'From 0° at Greenwich to 180° E or W'], ['Od 0° do 360° w prawo', 'From 0° to 360° clockwise']],
-  ['sea', 'nav', ['Skąd odczytasz deklinację dla danego miejsca?', 'Where do you find the variation for a place?'], ['Z róży kompasowej na mapie (wartość z roku wydania i roczna zmiana)', 'From the compass rose on the chart (value for the year and annual change)'], ['Z tabeli dewiacji jachtu', 'From the yacht’s deviation card'], ['Z logu', 'From the log']]
+  ['sea', 'nav', ['Skąd odczytasz deklinację dla danego miejsca?', 'Where do you find the variation for a place?'], ['Z róży kompasowej na mapie (wartość z roku wydania i roczna zmiana)', 'From the compass rose on the chart (value for the year and annual change)'], ['Z tabeli dewiacji jachtu', 'From the yacht’s deviation card'], ['Z logu', 'From the log']],
+  ['sea', 'rules', ['Statek o napędzie mechanicznym widzi jacht żaglowy po swojej lewej burcie na kursie kolizyjnym. Kto ustępuje?', 'A power-driven vessel sees a sailing yacht on her port side on a collision course. Who gives way?'], ['Statek o napędzie mechanicznym', 'The power-driven vessel'], ['Jacht żaglowy', 'The sailing yacht'], ['Ten, który ma drugi po prawej burcie', 'Whichever has the other to starboard']],
+  ['sea', 'rules', ['Czy jacht żaglowy może przeciąć tor ruchu statku w systemie rozgraniczenia ruchu, zmuszając go do manewru?', 'May a sailing yacht cross a traffic lane forcing a ship in the TSS to manoeuvre?'], ['Nie – nie może utrudniać przejścia statku o napędzie mechanicznym płynącego torem', 'No – it must not impede a power-driven vessel following the lane'], ['Tak, bo żaglowiec ma zawsze pierwszeństwo', 'Yes, sail always has right of way'], ['Tak, jeśli płynie szybciej niż 6 kn', 'Yes, if it is faster than 6 kn']],
+  ['sea', 'rules', ['Czego nie wolno robić w strefie rozgraniczenia ruchu?', 'What must not be done in a separation zone?'], ['Wchodzić do niej bez potrzeby (poza przecinaniem, nagłym wypadkiem lub połowem)', 'Enter it unnecessarily (except to cross, in an emergency or to fish)'], ['Płynąć z prędkością poniżej 5 kn', 'Proceed at less than 5 kn'], ['Używać radiotelefonu', 'Use the VHF radio']],
+  ['sea', 'rules', ['Statek wyprzedzający zbliżył się do statku wyprzedzanego. Kiedy kończy się jego obowiązek ustąpienia drogi?', 'When does the overtaking vessel stop being responsible for keeping clear?'], ['Dopiero gdy całkowicie minie i oddali się od statku wyprzedzanego', 'Only when finally past and clear of the overtaken vessel'], ['Gdy znajdzie się na trawersie statku wyprzedzanego', 'As soon as she is abeam of the overtaken vessel'], ['Gdy zmieni kurs o 22,5°', 'When she alters course by 22.5°']],
+  ['sea', 'rules', ['Co oznacza „ograniczona widzialność” w przepisach MPZZM?', 'What is “restricted visibility” under the COLREGs?'], ['Widzialność ograniczona przez mgłę, zamglenie, opady, burze piaskowe itp.', 'Visibility limited by fog, mist, rain, sandstorms and the like'], ['Każda żegluga nocą', 'Any navigation at night'], ['Widzialność poniżej 10 Mm', 'Visibility under 10 NM']],
+  ['sea', 'rules', ['Kiedy statek jest „niezdolny do manewrowania”?', 'When is a vessel “not under command”?'], ['Gdy z powodu wyjątkowych okoliczności nie może manewrować zgodnie z przepisami (np. awaria steru)', 'When, through exceptional circumstances, she cannot manoeuvre as required (e.g. steering failure)'], ['Gdy stoi na kotwicy', 'When she is at anchor'], ['Gdy płynie na autopilocie', 'When she is on autopilot']],
+  ['sea', 'rules', ['Kiedy statek ma „ograniczoną zdolność manewrowania”?', 'When is a vessel “restricted in her ability to manoeuvre”?'], ['Gdy rodzaj wykonywanej pracy (np. kładzenie kabla, pogłębianie) ogranicza jej manewrowanie', 'When the nature of her work (e.g. cable laying, dredging) restricts her manoeuvring'], ['Gdy ma awarię silnika', 'When her engine has failed'], ['Gdy płynie pod żaglami', 'When she is under sail']],
+  ['sea', 'rules', ['Jacht żaglowy spotyka wodnosamolot na wodzie. Kto ustępuje?', 'A sailing yacht meets a seaplane on the water. Who gives way?'], ['Wodnosamolot – powinien trzymać się z dala od wszystkich statków', 'The seaplane – it should keep well clear of all vessels'], ['Jacht żaglowy', 'The sailing yacht'], ['Ten, który jest szybszy', 'The faster one']],
+  ['sea', 'rules', ['Prawidło 8: jaki manewr najlepiej pokazuje zamiar drugiemu statkowi?', 'Rule 8: which action best shows your intention to the other vessel?'], ['Duża, wyraźna zmiana kursu lub prędkości wykonana odpowiednio wcześnie', 'A large, clear alteration of course or speed made in good time'], ['Seria drobnych zmian kursu', 'A series of small course changes'], ['Utrzymanie kursu i włączenie świateł pokładowych', 'Holding course and switching on the deck lights']],
+  ['sea', 'rules', ['Jaki zasięg musi mieć światło burtowe jachtu o długości 12–20 m?', 'What range must the sidelights of a 12–20 m yacht have?'], ['2 Mm', '2 NM'], ['1 Mm', '1 NM'], ['5 Mm', '5 NM']],
+  ['sea', 'rules', ['Jaki zasięg musi mieć światło masztowe statku o długości 12–20 m?', 'What range must the masthead light of a 12–20 m vessel have?'], ['3 Mm', '3 NM'], ['1 Mm', '1 NM'], ['6 Mm', '6 NM']],
+  ['sea', 'rules', ['Od kiedy do kiedy statki muszą pokazywać światła?', 'Between which times must vessels show their lights?'], ['Od zachodu do wschodu słońca i w ograniczonej widzialności', 'From sunset to sunrise and in restricted visibility'], ['Tylko od północy do świtu', 'Only from midnight to dawn'], ['Tylko w porcie', 'Only in harbour']],
+  ['sea', 'rules', ['Gdzie jacht żaglowy może dodatkowo nieść dwa światła dookólne: czerwone nad zielonym?', 'Where may a sailing vessel additionally show red over green all-round lights?'], ['Na topie masztu lub w jego pobliżu, gdy nie używa latarni trójsektorowej', 'At or near the masthead, when not using a tricolour'], ['Na rufie nad światłem rufowym', 'At the stern above the stern light'], ['Na dziobie, na wysokości pokładu', 'At the bow, at deck level']],
+  ['sea', 'rules', ['Jakie światło niesie nocą jacht o długości poniżej 7 m pod żaglami, jeśli nie może nieść świateł burtowych?', 'What light may a sailing vessel under 7 m carry if sidelights are impracticable?'], ['Latarkę elektryczną lub lampę z białym światłem, pokazywaną w porę, by zapobiec zderzeniu', 'A torch or lantern showing a white light, exhibited in time to prevent collision'], ['Czerwone światło dookólne', 'A red all-round light'], ['Nie musi mieć żadnego światła', 'No light at all']],
+  ['sea', 'rules', ['Statek na mieliźnie pokazuje nocą:', 'At night a vessel aground shows:'], ['Światła kotwiczne oraz dwa czerwone dookólne w pionie', 'Anchor lights and two red all-round lights in a vertical line'], ['Trzy białe światła w pionie', 'Three white lights in a vertical line'], ['Zielone nad białym', 'Green over white']],
+  ['sea', 'rules', ['Statek pilotowy w czasie pełnienia służby pokazuje nocą:', 'A pilot vessel on duty shows at night:'], ['Białe nad czerwonym (dookólne)', 'White over red (all-round)'], ['Czerwone nad białym', 'Red over white'], ['Zielone nad białym', 'Green over white']],
+  ['sea', 'rules', ['Co oznaczają dwa czerwone światła dookólne w pionie bez świateł burtowych?', 'What do two red all-round lights in a line, without sidelights, mean?'], ['Statek niezdolny do manewrowania, bez szybkości', 'A vessel not under command, not making way'], ['Statek na kotwicy', 'A vessel at anchor'], ['Statek pilotowy', 'A pilot vessel']],
+  ['sea', 'rules', ['Co oznacza żółte światło holownicze nad światłem rufowym?', 'What does a yellow towing light above the stern light mean?'], ['Statek holuje inną jednostkę za rufą', 'The vessel is towing astern'], ['Statek pcha zestaw przed sobą', 'The vessel is pushing ahead'], ['Statek jest ograniczony zanurzeniem', 'The vessel is constrained by her draught']],
+  ['sea', 'rules', ['Kiedy statek uprzywilejowany musi sam wykonać manewr?', 'When must the stand-on vessel take action herself?'], ['Gdy zderzenia nie da się uniknąć samym manewrem statku ustępującego', 'When collision cannot be avoided by the give-way vessel alone'], ['Nigdy', 'Never'], ['Zawsze, gdy odległość spadnie poniżej 2 Mm', 'Always when the range drops below 2 NM']],
+  ['sea', 'rules', ['Statek uprzywilejowany ma po swojej lewej burcie statek ustępujący, który nie manewruje. Jakiego manewru powinien unikać?', 'The stand-on vessel has the give-way vessel on her port side and it does not act. Which manoeuvre should she avoid?'], ['Zmiany kursu w lewo', 'An alteration to port'], ['Zmniejszenia prędkości', 'Reducing speed'], ['Zmiany kursu w prawo', 'An alteration to starboard']],
+  ['inland', 'inlandRules', ['Jak długo przed wejściem w zakręt rzeki statek daje sygnał „uwaga”?', 'When does a vessel give the “attention” signal before a river bend?'], ['W odpowiedniej odległości przed zakrętem, gdzie widoczność jest ograniczona', 'At a suitable distance before a bend where visibility is limited'], ['Dopiero po minięciu zakrętu', 'Only after passing the bend'], ['Nigdy – na rzekach nie daje się sygnałów', 'Never – no signals are used on rivers']],
+  ['inland', 'inlandRules', ['Co oznacza czerwone światło przy śluzie?', 'What does a red light at a lock mean?'], ['Wejście zabronione', 'Entry prohibited'], ['Wejście dozwolone', 'Entry allowed'], ['Śluza nieczynna – można przepłynąć obok', 'The lock is closed – you may pass beside it']],
+  ['inland', 'inlandRules', ['Co oznacza zielone światło przy śluzie?', 'What does a green light at a lock mean?'], ['Wejście dozwolone', 'Entry allowed'], ['Wejście zabronione', 'Entry prohibited'], ['Przygotuj się do odejścia', 'Prepare to depart']],
+  ['inland', 'inlandRules', ['Czy mała jednostka może wyprzedzać zestaw pchany w wąskim przejściu?', 'May a small craft overtake a pushed convoy in a narrow passage?'], ['Tylko gdy jest to bezpieczne i nie utrudnia to ruchu – a w razie znaku A.2 nie wolno', 'Only when safe and without hindering traffic – and not where sign A.2 applies'], ['Zawsze, bo jest szybsza', 'Always, because it is faster'], ['Tylko z prawej burty zestawu', 'Only on the convoy’s starboard side']],
+  ['inland', 'inlandRules', ['Co robisz, gdy na szlaku zbliża się duży statek, a ty płyniesz małym jachtem?', 'What do you do when a large vessel approaches while you sail a small yacht?'], ['Wcześnie schodzę mu z drogi, zostawiając wolną część szlaku, której potrzebuje', 'I keep clear early, leaving the part of the fairway it needs'], ['Utrzymuję kurs, bo jestem pod żaglami', 'I hold course because I am under sail'], ['Płynę środkiem szlaku, aby mnie widział', 'I keep to the middle so it can see me']],
+  ['inland', 'inlandRules', ['Jak oznakowany jest nocą lewy brzeg szlaku na rzece?', 'How is the left side of the fairway marked at night on a river?'], ['Zielonym światłem (np. błyskowym)', 'With a green light (e.g. flashing)'], ['Czerwonym światłem', 'With a red light'], ['Żółtym światłem stałym', 'With a fixed yellow light']],
+  ['inland', 'inlandRules', ['Jak oznakowany jest nocą prawy brzeg szlaku na rzece?', 'How is the right side of the fairway marked at night on a river?'], ['Czerwonym światłem', 'With a red light'], ['Zielonym światłem', 'With a green light'], ['Białym światłem stałym', 'With a fixed white light']],
+  ['inland', 'inlandRules', ['Jaki dokument uprawnia do prowadzenia jachtu żaglowego powyżej 7,5 m na wodach śródlądowych?', 'Which document entitles you to skipper a sailing yacht over 7.5 m on inland waters?'], ['Patent żeglarza jachtowego (lub wyższy)', 'The yacht sailor certificate (or higher)'], ['Karta pływacka', 'A swimming card'], ['Dowód rejestracyjny jachtu', 'The yacht registration document']],
+  ['inland', 'inlandRules', ['Statki płynące w dół rzeki – co je wyróżnia przy spotkaniu w wąskim przejściu?', 'What distinguishes vessels going downstream in a narrow passage?'], ['Mają pierwszeństwo, bo trudniej im się zatrzymać', 'They have priority because they find it harder to stop'], ['Zawsze muszą się zatrzymać', 'They must always stop'], ['Muszą płynąć przy lewym brzegu', 'They must keep to the left bank']],
+  ['inland', 'inlandRules', ['Do czego służą znaki z grupy E?', 'What are signs in group E for?'], ['Do przekazywania informacji (np. przystań, miejsce postoju, kanał VHF)', 'To give information (e.g. a harbour, berthing place, VHF channel)'], ['Do zakazywania ruchu', 'To prohibit traffic'], ['Do nakazywania określonego manewru', 'To order a manoeuvre']],
+  ['inland', 'inlandRules', ['Do czego służą znaki z grupy A?', 'What are signs in group A for?'], ['Zakazują określonych czynności lub ruchu', 'They prohibit certain actions or traffic'], ['Informują o udogodnieniach', 'They give information about facilities'], ['Zalecają przejście pod przęsłem', 'They recommend a span']],
+  ['inland', 'inlandRules', ['Do czego służą znaki z grupy B?', 'What are signs in group B for?'], ['Nakazują określone działanie (np. kierunek, sygnał, nasłuch)', 'They order a certain action (e.g. direction, signal, listening watch)'], ['Zakazują postoju', 'They prohibit berthing'], ['Informują o miejscu poboru wody', 'They show a water supply point']],
+  ['inland', 'inlandRules', ['Do czego służą znaki z grupy C?', 'What are signs in group C for?'], ['Wskazują ograniczenia (np. głębokość, prześwit, szerokość szlaku)', 'They show restrictions (e.g. depth, clearance, fairway width)'], ['Zakazują wyprzedzania', 'They prohibit overtaking'], ['Zalecają kierunek', 'They recommend a direction']],
+  ['inland', 'inlandRules', ['Do czego służą znaki z grupy D?', 'What are signs in group D for?'], ['Zalecają (np. przejście przęsłem, trzymanie się wskazanego obszaru)', 'They recommend (e.g. a span to use, keeping within an area)'], ['Zakazują przejścia', 'They prohibit passage'], ['Informują o telefonie', 'They show a telephone']],
+  ['inland', 'inlandRules', ['Jacht stoi na kotwicy poza wyznaczonym miejscem postoju w nocy. Jakie światło pokazuje?', 'A yacht is anchored outside a designated berthing area at night. What light does it show?'], ['Białe światło widoczne dookoła', 'A white all-round light'], ['Czerwone nad białym', 'Red over white'], ['Żadnego światła', 'No light']],
+  ['inland', 'inlandRules', ['Czy wolno cumować do znaków nawigacyjnych (pław, tyczek)?', 'May you moor to navigation marks (buoys, spars)?'], ['Nie – nie wolno cumować do znaków ani ich uszkadzać', 'No – you must not moor to marks or damage them'], ['Tak, jeśli to tylko na chwilę', 'Yes, if only briefly'], ['Tak, w dzień', 'Yes, by day']],
+  ['inland', 'inlandRules', ['Statek daje sygnał czterech krótkich dźwięków na drogach śródlądowych. Co to znaczy?', 'A vessel gives four short blasts on an inland waterway. What does it mean?'], ['Nie mogę manewrować', 'I am unable to manoeuvre'], ['Zmieniam kurs w prawo', 'I am altering course to starboard'], ['Uwaga', 'Attention']],
+  ['inland', 'inlandRules', ['Co obowiązuje na akwenie, gdzie stoi znak zakazu ruchu statków o napędzie mechanicznym?', 'What applies where powered vessels are prohibited?'], ['Jacht nie może płynąć na silniku (może na żaglach lub wiosłach)', 'The yacht may not use her engine (sail or oars only)'], ['Wolno płynąć na silniku do 10 kn', 'You may motor up to 10 kn'], ['Zakaz dotyczy tylko statków powyżej 20 m', 'It applies only to vessels over 20 m']],
+  ['both', 'seaman', ['Co to jest kokpit?', 'What is the cockpit?'], ['Zagłębione miejsce na pokładzie dla sternika i załogi', 'The recessed area on deck for the helmsman and crew'], ['Kabina dziobowa', 'The forward cabin'], ['Schowek na kotwicę', 'The anchor locker']],
+  ['both', 'seaman', ['Co to jest mesa?', 'What is the saloon?'], ['Główne pomieszczenie mieszkalne jachtu', 'The main living space of the yacht'], ['Kuchnia jachtowa', 'The galley'], ['Toaleta', 'The heads']],
+  ['both', 'seaman', ['Co to jest kingston?', 'What is a seacock?'], ['Zawór w kadłubie zamykający otwór pod linią wody', 'A valve on a through-hull opening below the waterline'], ['Rodzaj kotwicy', 'A kind of anchor'], ['Lina do mocowania bomu', 'A line for securing the boom']],
+  ['both', 'seaman', ['Co to jest zęza?', 'What is the bilge?'], ['Najniższa część wnętrza kadłuba, gdzie zbiera się woda', 'The lowest part inside the hull where water collects'], ['Schowek na żagle', 'The sail locker'], ['Pokład dziobowy', 'The foredeck']],
+  ['both', 'seaman', ['Do czego służy pompa zęzowa?', 'What is a bilge pump for?'], ['Do usuwania wody z zęzy', 'To pump water out of the bilge'], ['Do pompowania pontonu', 'To inflate the dinghy'], ['Do napełniania zbiornika wody pitnej', 'To fill the fresh-water tank']],
+  ['both', 'seaman', ['Co to jest salingi?', 'What are spreaders?'], ['Poprzeczne rozpórki na maszcie, rozpierające wanty', 'Struts on the mast that spread the shrouds'], ['Liny do refowania', 'Reefing lines'], ['Okucia na relingu', 'Fittings on the guardrail']],
+  ['both', 'seaman', ['Co to jest reling?', 'What is the guardrail?'], ['Barierka z lin lub rur na krawędzi pokładu, zabezpieczająca przed wypadnięciem', 'A rail or wire fence along the deck edge to stop people falling overboard'], ['Lina do podnoszenia żagla', 'A halyard'], ['Prowadnica szotu', 'A sheet lead']],
+  ['both', 'seaman', ['Co to jest kosz dziobowy?', 'What is a pulpit?'], ['Metalowa barierka na dziobie jachtu', 'The metal rail at the bow'], ['Schowek na dziobie', 'A locker in the bow'], ['Rodzaj żagla', 'A kind of sail']],
+  ['both', 'seaman', ['Co to jest pływający podnoszony miecz?', 'What is a lifting centreboard?'], ['Płyta opuszczana przez skrzynkę mieczową, zmniejsza dryf; można ją podnieść na płyciźnie', 'A plate lowered through a case to reduce leeway; it can be raised in shallows'], ['Ster awaryjny', 'An emergency rudder'], ['Część masztu', 'A part of the mast']],
+  ['both', 'seaman', ['Co to jest zanurzenie jachtu?', 'What is draught?'], ['Pionowa odległość od linii wody do najniższego punktu kadłuba lub kilu', 'The vertical distance from the waterline to the lowest point of the hull or keel'], ['Wysokość masztu nad wodą', 'The mast height above water'], ['Długość kadłuba', 'The hull length']],
+  ['both', 'seaman', ['Co to jest wolna burta?', 'What is freeboard?'], ['Wysokość burty od linii wody do pokładu', 'The height of the side from the waterline to the deck'], ['Szerokość jachtu', 'The beam of the yacht'], ['Zanurzenie kilu', 'The keel draught']],
+  ['both', 'seaman', ['Co oznacza „ostrzyć”?', 'What does “luffing up” mean?'], ['Zmniejszać kąt między kursem a kierunkiem wiatru', 'Reducing the angle between the course and the wind'], ['Zwiększać ten kąt', 'Increasing that angle'], ['Zatrzymać jacht rufą do wiatru', 'Stopping stern to wind']],
+  ['both', 'seaman', ['Jak zmienia się przechył jachtu, gdy zluzujesz szot grota przy silnym wietrze?', 'How does heel change when you ease the mainsheet in a strong wind?'], ['Zmniejsza się', 'It decreases'], ['Zwiększa się', 'It increases'], ['Nie zmienia się', 'It does not change']],
+  ['both', 'seaman', ['Co to jest „martwy kąt” (strefa martwa) dla jachtu żaglowego?', 'What is the “no-go zone” for a sailing yacht?'], ['Zakres kursów zbyt ostrych do wiatru, na których nie da się żeglować', 'The range of headings too close to the wind to sail'], ['Kurs z wiatrem dokładnie od rufy', 'Heading dead downwind'], ['Obszar za rufą innego jachtu', 'The area astern of another yacht']],
+  ['both', 'seaman', ['Co to jest wiatr pozorny?', 'What is apparent wind?'], ['Wiatr odczuwany na płynącym jachcie – wypadkowa wiatru rzeczywistego i wiatru biegu', 'The wind felt on a moving yacht – the sum of the true wind and the wind of motion'], ['Wiatr podawany w prognozie', 'The wind in the forecast'], ['Wiatr wiejący przy brzegu', 'The wind near the shore']],
+  ['both', 'seaman', ['Jak zmienia się wiatr pozorny, gdy jacht płynie bajdewindem i przyspiesza?', 'How does apparent wind change on a close-hauled yacht when it speeds up?'], ['Wzmacnia się i przesuwa w kierunku dziobu', 'It strengthens and moves forward'], ['Słabnie i przesuwa się w kierunku rufy', 'It weakens and moves aft'], ['Nie zmienia się', 'It does not change']],
+  ['both', 'seaman', ['Którą cumę zakładasz najpierw przy podchodzeniu burtą do kei przy wietrze odpychającym?', 'Which line goes on first when coming alongside with an offshore wind?'], ['Szpring lub cumę dziobową od strony nawietrznej, by przytrzymać jacht przy kei', 'A spring or bow line to hold the yacht against the quay'], ['Cumę rufową od strony wody', 'A stern line on the outboard side'], ['Żadną – czekam, aż wiatr dopchnie jacht', 'None – I wait for the wind to push me on']],
+  ['both', 'seaman', ['Co to jest „cumowanie longside”?', 'What is mooring “alongside”?'], ['Cumowanie burtą do kei lub innego jachtu', 'Mooring with the side to the quay or another yacht'], ['Cumowanie rufą do kei', 'Mooring stern-to'], ['Postój na kotwicy', 'Lying at anchor']],
+  ['both', 'seaman', ['Jak sprawdzisz, czy kotwica trzyma?', 'How do you check the anchor is holding?'], ['Obserwuję nabieżniki lub namiary na brzegu i łańcuch – jacht nie powinien przesuwać się względem dna', 'Watch transits or bearings ashore and the chain – the yacht should not move over the ground'], ['Patrzę na wskaźnik wiatru', 'Look at the wind indicator'], ['Sprawdzam poziom paliwa', 'Check the fuel level']],
+  ['both', 'seaman', ['Co to jest klar na pokładzie?', 'What does “shipshape” (klar) on deck mean?'], ['Porządek – liny zwinięte, przedmioty zabezpieczone', 'Order – lines coiled, items secured'], ['Rodzaj węzła', 'A type of knot'], ['Lina od kotwicy', 'The anchor line']],
+  ['both', 'seaman', ['Jak klaruje się (zwija) linę na pokładzie?', 'How do you coil a rope on deck?'], ['W równe zwoje, tak by dała się wybrać bez supłów', 'In even coils so it can run out without tangles'], ['Zawiązując ją w kilka węzłów', 'Tying several knots in it'], ['Wrzucając luzem do kokpitu', 'Dropping it loose in the cockpit']],
+  ['both', 'seaman', ['Do czego służy węzeł knagowy?', 'What is a cleat hitch for?'], ['Do zamocowania liny na knadze', 'To make a line fast on a cleat'], ['Do łączenia dwóch lin', 'To join two ropes'], ['Do skracania liny', 'To shorten a rope']],
+  ['both', 'seaman', ['Do czego służy węzeł płaski?', 'What is a reef knot for?'], ['Do łączenia dwóch lin tej samej grubości (np. przy refowaniu)', 'To join two ropes of the same size (e.g. when reefing)'], ['Do mocowania liny do słupka', 'To tie a line to a post'], ['Do zabezpieczenia końca liny', 'To stop the end of a rope']],
+  ['both', 'seaman', ['Do czego służy węzeł szotowy?', 'What is a sheet bend for?'], ['Do łączenia lin różnej grubości', 'To join ropes of different sizes'], ['Do tworzenia stałej pętli', 'To make a fixed loop'], ['Do knagowania', 'To make fast on a cleat']],
+  ['both', 'seaman', ['Co to jest takielunek ruchomy?', 'What is running rigging?'], ['Liny do obsługi żagli: fały, szoty, kontrafały', 'Lines for handling the sails: halyards, sheets, downhauls'], ['Wanty i sztagi', 'Shrouds and stays'], ['Maszt i bom', 'The mast and boom']],
+  ['both', 'seaman', ['Co to jest takielunek stały?', 'What is standing rigging?'], ['Wanty, sztagi i achtersztag utrzymujące maszt', 'Shrouds, forestay and backstay holding up the mast'], ['Szoty i fały', 'Sheets and halyards'], ['Cumy i szpringi', 'Mooring lines and springs']],
+  ['both', 'seaman', ['Po co wybiera się mocniej szot przy kursie ostrym?', 'Why is the sheet trimmed harder when close-hauled?'], ['Żeby żagiel pracował przy małym kącie natarcia wiatru', 'So the sail works at a small angle to the wind'], ['Żeby zmniejszyć prędkość', 'To slow down'], ['Żeby żagiel łopotał', 'To make the sail flap']],
+  ['both', 'seaman', ['Co oznacza komenda „klar do zwrotu”?', 'What does “ready about” mean?'], ['Przygotowanie załogi do zwrotu przez sztag', 'The crew prepares to tack'], ['Zrzucenie żagli', 'Dropping the sails'], ['Przygotowanie do kotwiczenia', 'Preparing to anchor']],
+  ['both', 'seaman', ['Co to jest hals?', 'What is a tack?'], ['Kurs względem wiatru określony burtą, z której wieje wiatr (lewy lub prawy hals)', 'The course relative to the wind named by the side the wind comes from (port or starboard tack)'], ['Rodzaj liny', 'A kind of rope'], ['Część kadłuba', 'A part of the hull']],
+  ['both', 'seaman', ['Jak bezpiecznie przejść z kokpitu na dziób przy fali?', 'How do you go forward safely in a seaway?'], ['Po nawietrznej burcie, przypięty lifeliną, trzymając się jedną ręką', 'Along the windward side, clipped on, one hand for yourself'], ['Po zawietrznej, szybko i bez trzymania się', 'Along the leeward side, quickly, without holding on'], ['Po dachu nadbudówki, bez lifeliny', 'Over the coachroof, unclipped']],
+  ['both', 'safety', ['Jak sprawdzisz kamizelkę pneumatyczną przed rejsem?', 'How do you check an inflatable lifejacket before a passage?'], ['Sprawdzam nabój CO2, mechanizm wyzwalający, termin przeglądu i szczelność', 'Check the CO2 cylinder, firing head, service date and that it holds air'], ['Wystarczy, że jest w szafce', 'It is enough that it is in the locker'], ['Napełniam ją ustami raz w roku', 'Inflate it by mouth once a year']],
+  ['both', 'safety', ['Kiedy należy założyć kamizelkę ratunkową?', 'When should you wear a lifejacket?'], ['Zawsze przy złej pogodzie, nocą, we mgle, na pontonie i gdy nie umiesz pływać – najlepiej cały czas na pokładzie', 'Always in bad weather, at night, in fog, in the dinghy and if you cannot swim – ideally at all times on deck'], ['Tylko gdy jacht tonie', 'Only when the yacht is sinking'], ['Tylko w porcie', 'Only in harbour']],
+  ['both', 'safety', ['Co robisz, gdy na jachcie pojawi się przeciek?', 'What do you do when the yacht starts leaking?'], ['Szukam źródła (kingstony, wał, ster), uszczelniam i pompuję wodę', 'Find the source (seacocks, shaft, rudder), stop it and pump'], ['Natychmiast wsiadam do tratwy', 'Get into the liferaft at once'], ['Ignoruję, dopóki woda nie sięga podłogi', 'Ignore it until water reaches the floor']],
+  ['both', 'safety', ['Do czego służą drewniane kołki (zatyczki) w wyposażeniu jachtu?', 'What are tapered wooden plugs for?'], ['Do zatkania otworu po uszkodzonym kingstonie lub przelotce', 'To plug a failed seacock or through-hull'], ['Do mocowania odbijaczy', 'To fix fenders'], ['Do rozpalania ognia', 'To light a fire']],
+  ['both', 'safety', ['Kto powinien znać rozmieszczenie środków ratunkowych na jachcie?', 'Who should know where the safety equipment is?'], ['Cała załoga – kapitan pokazuje je przed wypłynięciem', 'The whole crew – the skipper shows it before sailing'], ['Tylko kapitan', 'Only the skipper'], ['Tylko osoba z patentem', 'Only a certified person']],
+  ['both', 'safety', ['Jaka jest pierwsza pomoc przy oparzeniu?', 'What is first aid for a burn?'], ['Chłodzić miejsce czystą, chłodną wodą przez kilkanaście minut', 'Cool it with clean, cool water for 10–20 minutes'], ['Posmarować masłem', 'Put butter on it'], ['Przebić pęcherze', 'Burst the blisters']],
+  ['both', 'safety', ['Co robisz przy silnym krwawieniu z rany?', 'What do you do with heavy bleeding?'], ['Uciskam ranę opatrunkiem i unoszę kończynę', 'Press a dressing on the wound and raise the limb'], ['Polewam ranę wódką', 'Pour vodka on it'], ['Czekam, aż samo przestanie', 'Wait for it to stop']],
+  ['both', 'safety', ['Uraz od bomu – załogant jest oszołomiony. Co robisz?', 'A crew member was hit by the boom and is dazed. What do you do?'], ['Zabezpieczam go, obserwuję przytomność i oddech, w razie potrzeby wzywam pomoc medyczną przez radio', 'Secure them, monitor consciousness and breathing, call medical help by radio if needed'], ['Każę mu wrócić do pracy', 'Tell them to carry on'], ['Podaję alkohol', 'Give alcohol']],
+  ['both', 'safety', ['Jak chronić się przed udarem słonecznym na jachcie?', 'How do you prevent heatstroke on a yacht?'], ['Nakrycie głowy, cień, picie wody, unikanie słońca w południe', 'A hat, shade, drinking water, avoiding the midday sun'], ['Picie alkoholu', 'Drinking alcohol'], ['Praca w pełnym słońcu bez przerw', 'Working in full sun without breaks']],
+  ['both', 'safety', ['Gdzie stawia się gaśnicę na jachcie?', 'Where is a fire extinguisher kept on a yacht?'], ['W łatwo dostępnym miejscu, blisko wyjścia i kambuza', 'In an easily reached place near the companionway and galley'], ['Głęboko w schowku na dziobie', 'Deep in the forepeak locker'], ['W zęzie', 'In the bilge']],
+  ['both', 'safety', ['Jak gasisz pożar instalacji elektrycznej?', 'How do you fight an electrical fire?'], ['Odłączam zasilanie i używam gaśnicy proszkowej lub CO2', 'Isolate the power and use a powder or CO2 extinguisher'], ['Polewam wodą', 'Pour water on it'], ['Zakrywam mokrym ręcznikiem przy włączonym prądzie', 'Cover with a wet towel with the power on']],
+  ['both', 'safety', ['Co robisz, gdy wiatr i fala rosną, a jacht ma pełne żagle?', 'The wind and sea are rising and you have full sail up. What do you do?'], ['Refuję wcześnie – zanim będzie to trudne', 'Reef early – before it becomes difficult'], ['Czekam do ostatniej chwili', 'Wait until the last moment'], ['Stawiam spinaker', 'Hoist the spinnaker']],
+  ['sea', 'safety', ['Co robi radiopława EPIRB po uruchomieniu?', 'What does an EPIRB do when activated?'], ['Wysyła przez satelity alarm z identyfikatorem i pozycją', 'Sends a distress alert with ID and position via satellites'], ['Odbiera prognozy pogody', 'Receives weather forecasts'], ['Mierzy głębokość', 'Measures depth']],
+  ['sea', 'safety', ['Do czego służy SART?', 'What is a SART for?'], ['Pokazuje ratownikom dokładne położenie tratwy (na radarze lub AIS)', 'It shows rescuers the exact position of the liferaft (on radar or AIS)'], ['Do łączności głosowej', 'For voice communication'], ['Do oświetlania pokładu', 'To light the deck']],
+  ['sea', 'safety', ['Na jakim kanale VHF nadaje się alarm DSC?', 'On which VHF channel is a DSC alert sent?'], ['70', '70'], ['16', '16'], ['72', '72']],
+  ['sea', 'safety', ['Co oznacza „Seelonce Mayday” w eterze?', 'What does “Seelonce Mayday” mean on the radio?'], ['Nakaz ciszy radiowej na kanale – trwa akcja ratunkowa', 'Radio silence on the channel – a distress is in progress'], ['Koniec akcji ratunkowej', 'The end of the distress'], ['Próba łączności', 'A radio check']],
+  ['sea', 'safety', ['Co oznacza „Seelonce Feenee”?', 'What does “Seelonce Feenee” mean?'], ['Koniec ciszy radiowej – akcja ratunkowa zakończona', 'Radio silence lifted – the distress is over'], ['Początek akcji ratunkowej', 'The start of a distress'], ['Prośba o pilota', 'A request for a pilot']],
+  ['sea', 'safety', ['Jak potwierdza się na kanale 16 odbiór MAYDAY od statku w pobliżu?', 'How do you acknowledge a nearby MAYDAY on channel 16?'], ['„MAYDAY, [nazwa statku w niebezpieczeństwie], this is [mój jacht], RECEIVED MAYDAY”', '“MAYDAY, [distressed vessel], this is [my yacht], RECEIVED MAYDAY”'], ['„Roger, over”', '“Roger, over”'], ['Nie potwierdza się – tylko słucha', 'You never acknowledge – you only listen']],
+  ['sea', 'safety', ['Jaką moc nadawania wybierasz do rozmowy z jachtem w porcie?', 'Which transmitter power do you use to talk to a yacht in harbour?'], ['Niską – 1 W', 'Low – 1 W'], ['Wysoką – 25 W', 'High – 25 W'], ['Nie ma znaczenia', 'It does not matter']],
+  ['sea', 'safety', ['Gdzie znajdziesz godziny nadawania prognoz i ostrzeżeń dla żeglugi?', 'Where do you find the times of forecasts and warnings for shipping?'], ['W spisach radiostacji, locjach i almanachach', 'In lists of radio signals, pilots and almanacs'], ['W dzienniku jachtowym', 'In the logbook'], ['Na mapie morskiej', 'On the chart']],
+  ['both', 'meteo', ['Co oznacza szybki spadek ciśnienia na barometrze?', 'What does a rapid pressure fall mean?'], ['Nadchodzi silny wiatr – zbliża się głęboki niż', 'Strong wind is coming – a deep low is approaching'], ['Nadchodzi wyż i ładna pogoda', 'A high and fair weather are coming'], ['Nic nie zmieni się w pogodzie', 'The weather will not change']],
+  ['both', 'meteo', ['Jak zmienia się wiatr w ciągu dnia przy brzegu w słoneczny dzień?', 'How does the coastal wind change on a sunny day?'], ['Po południu rozwija się bryza morska wiejąca od morza', 'A sea breeze from the sea develops in the afternoon'], ['Wieje stale od lądu', 'It blows constantly offshore'], ['Zawsze jest cisza', 'There is always calm']],
+  ['both', 'meteo', ['Co to jest szkwał?', 'What is a squall?'], ['Nagły, krótkotrwały, silny wzrost wiatru, często z opadem', 'A sudden, short, strong increase in wind, often with rain'], ['Długotrwała cisza', 'A long calm'], ['Mgła nad wodą', 'Fog over the water']],
+  ['both', 'meteo', ['Gdzie powstaje mgła adwekcyjna?', 'Where does advection fog form?'], ['Gdy ciepłe, wilgotne powietrze napływa nad zimną wodę', 'When warm, moist air moves over cold water'], ['Nad ciepłym lądem w południe', 'Over warm land at noon'], ['Tylko w górach', 'Only in the mountains']],
+  ['both', 'meteo', ['Co oznacza „front zokludowany”?', 'What is an occluded front?'], ['Połączenie frontu chłodnego z ciepłym, gdy chłodny dogoni ciepły', 'A front formed when a cold front catches up with a warm front'], ['Front, który się zatrzymał', 'A front that has stopped'], ['Granica wyżu', 'The edge of a high']],
+  ['both', 'meteo', ['Co zapowiadają chmury Cirrus nasuwające się i gęstniejące od zachodu?', 'What does cirrus spreading and thickening from the west foretell?'], ['Pogorszenie pogody za ok. 12–24 h (front ciepły)', 'Deteriorating weather in about 12–24 h (a warm front)'], ['Długotrwałą ładną pogodę', 'Long-lasting fair weather'], ['Natychmiastową burzę', 'An immediate thunderstorm']],
+  ['both', 'meteo', ['W jakiej jednostce podaje się ciśnienie na mapach synoptycznych?', 'In what unit is pressure given on weather maps?'], ['W hektopaskalach (hPa)', 'In hectopascals (hPa)'], ['W węzłach', 'In knots'], ['W stopniach Beauforta', 'In Beaufort force']],
+  ['both', 'meteo', ['Ile wynosi średnie ciśnienie atmosferyczne na poziomie morza?', 'What is the mean sea-level pressure?'], ['Ok. 1013 hPa', 'About 1013 hPa'], ['Ok. 760 hPa', 'About 760 hPa'], ['Ok. 1100 hPa', 'About 1100 hPa']],
+  ['both', 'meteo', ['Skąd na jeziorze spodziewasz się szkwałów przy wietrze od brzegu zalesionego?', 'Where do you expect gusts on a lake with wind off a wooded shore?'], ['Z przerw między drzewami i z dolin – wiatr jest porywisty i zmienny', 'From gaps in the trees and valleys – the wind is gusty and shifty'], ['Wiatr będzie zupełnie równy', 'The wind will be perfectly steady'], ['Szkwały występują tylko na morzu', 'Squalls only occur at sea']],
+  ['both', 'meteo', ['Co oznacza w prognozie „wiatr skręcający”?', 'What does “veering wind” mean in a forecast?'], ['Zmieniający kierunek zgodnie z ruchem wskazówek zegara', 'Changing direction clockwise'], ['Zmieniający kierunek przeciwnie do wskazówek zegara', 'Changing direction anticlockwise'], ['Słabnący do ciszy', 'Dying to calm']],
+  ['both', 'meteo', ['Co oznacza w prognozie „wiatr cofający się”?', 'What does “backing wind” mean in a forecast?'], ['Zmieniający kierunek przeciwnie do ruchu wskazówek zegara', 'Changing direction anticlockwise'], ['Zmieniający kierunek zgodnie ze wskazówkami zegara', 'Changing direction clockwise'], ['Tężejący do sztormu', 'Increasing to a gale']],
+  ['both', 'meteo', ['Na co wskazuje „wał szkwałowy” pod chmurą Cumulonimbus?', 'What does a roll cloud under a cumulonimbus indicate?'], ['Nadejście gwałtownego szkwału', 'An imminent violent squall'], ['Koniec burzy', 'The end of the storm'], ['Mgłę radiacyjną', 'Radiation fog']]
 ];
 
 // ---------------- pula pytań ----------------
@@ -227,6 +327,7 @@ const bankEntry = (b, i) => P(`b${i}`, b[1], (r) => { const [, topic, q, good, b
 
 // prawo drogi – sytuacje z hierarchii prawidła 18 (morze) i przepisów śródlądowych
 const SEA_TYPES = [
+  ['seaplane', ['wodnosamolot na wodzie', 'a seaplane on the water'], -1], ['cbd', ['statek ograniczony zanurzeniem', 'a vessel constrained by her draught'], 2.5],
   ['power', ['statek o napędzie mechanicznym w drodze', 'a power-driven vessel under way'], 0], ['sail', ['jacht żaglowy', 'a sailing yacht'], 1],
   ['fish', ['statek zajęty połowem', 'a vessel engaged in fishing'], 2], ['ram', ['statek o ograniczonej zdolności manewrowania', 'a vessel restricted in her ability to manoeuvre'], 3],
   ['nuc', ['statek niezdolny do manewrowania', 'a vessel not under command'], 3]];
@@ -243,9 +344,9 @@ function situations(scope) {
       const gw = A[2] < B[2] ? A : B, so = gw === A ? B : A;
       return mk(r, g, L(`Kursy jednostek się przecinają: ${tx(A[1])} i ${tx(B[1])}. Kto ustępuje drogi?`, `Their courses cross: ${tx(A[1])} and ${tx(B[1])}. Who gives way?`),
         cap(tx(gw[1])), [cap(tx(so[1])), L('Obie jednostki zmieniają kurs w prawo', 'Both alter course to starboard')],
-        { explain: scope === 'inland' ? L('Na drogach śródlądowych małe jednostki ustępują pozostałym statkom; spośród małych – motorowe ustępują wszystkim, wiosłowe – żaglowym.', 'On inland waterways small craft give way to all other vessels; among small craft motor craft give way to all, rowing boats to sailing craft.') : L('Prawidło 18: statek o napędzie mechanicznym ustępuje żaglowcowi, żaglowiec – statkowi zajętemu połowem, a ten – statkom niezdolnym do manewrowania i o ograniczonej zdolności manewrowania.', 'Rule 18: power gives way to sail, sail to vessels fishing, and these to NUC and RAM vessels.') });
+        { explain: scope === 'inland' ? L('Na drogach śródlądowych małe jednostki ustępują pozostałym statkom; spośród małych – motorowe ustępują wszystkim, wiosłowe – żaglowym.', 'On inland waterways small craft give way to all other vessels; among small craft motor craft give way to all, rowing boats to sailing craft.') : L('Prawidło 18: statek o napędzie mechanicznym ustępuje żaglowcowi, żaglowiec – statkowi zajętemu połowem, a ten – statkom niezdolnym do manewrowania i o ograniczonej zdolności manewrowania; statkowi ograniczonemu zanurzeniem nie utrudnia się przejścia, a wodnosamolot trzyma się z dala od wszystkich.', 'Rule 18: power gives way to sail, sail to vessels fishing, and these to NUC and RAM vessels; a vessel constrained by her draught must not be impeded, and a seaplane keeps clear of all.') });
     }, `sit:${scope}:${[A[0], B[0]].sort().join(':')}`));
-    if (scope === 'sea' && A[0] !== 'nuc' && A[0] !== 'ram') out.push(P(`sit:sea:${A[0]}:${B[0]}:o`, 'rules', (r) => mk(r, 'rules',
+    if (scope === 'sea' && !['nuc', 'ram', 'cbd'].includes(A[0])) out.push(P(`sit:sea:${A[0]}:${B[0]}:o`, 'rules', (r) => mk(r, 'rules',
       L(`${cap(tx(A[1]))} wyprzedza ${tx(B[1])}. Kto ustępuje drogi?`, `${cap(tx(A[1]))} is overtaking ${tx(B[1])}. Who gives way?`),
       L(`${cap(tx(A[1]))} – statek wyprzedzający`, `${cap(tx(A[1]))} – the overtaking vessel`), [L(`${cap(tx(B[1]))} – statek wyprzedzany`, `${cap(tx(B[1]))} – the vessel being overtaken`), L('Ten, który jest niżej w hierarchii prawidła 18', 'Whichever is lower in the Rule 18 hierarchy')],
       { explain: L('Prawidło 13: statek wyprzedzający zawsze ustępuje drogi – niezależnie od rodzaju statków.', 'Rule 13: the overtaking vessel always keeps clear, whatever the types of vessel.') }), `sit:sea:${[A[0], B[0]].sort().join(':')}`));
@@ -259,8 +360,8 @@ const KIND = {
   Fl: [['błyskowe', 'flashing'], ['błysk', 'flash'], ['błyski', 'flashes']], LFl: [['długobłyskowe', 'long-flashing'], ['długi błysk', 'long flash'], ['długie błyski', 'long flashes']],
   Oc: [['przerywane (świecenie dłuższe niż przerwy)', 'occulting (light longer than dark)'], ['przerwa', 'eclipse'], ['przerwy', 'eclipses']], Iso: [['izofazowe (równe okresy świecenia i ciemności)', 'isophase (equal light and dark)']]
 };
-function charDesc(k, n, c, T) {
-  const col = tx(COLN[c]);
+function charDesc(k, n, c, T0) {
+  const col = tx(COLN[c]), T = String(T0).replace('.', L(',', '.'));
   if (k === 'Iso') return L(`${cap(col)}, izofazowe, okres ${T} s`, `${cap(col)}, isophase, period ${T} s`);
   const [name, one, many] = KIND[k];
   return n > 1 ? L(`${cap(col)}, ${tx(name).split(' ')[0]} – grupy po ${n} ${tx(many)}, okres ${T} s`, `${cap(col)}, ${tx(name).split(' ')[0]} – groups of ${n} ${tx(many)}, period ${T} s`)
@@ -268,14 +369,14 @@ function charDesc(k, n, c, T) {
 }
 function lightChars() {
   const out = [], code = (k, n, c, T) => `${k}${n > 1 ? `(${n})` : ''}${c ? ' ' + c : ''} ${T}s`;
-  const sets = [['Fl', [1, 2, 3, 4], [3, 4, 5, 6, 10, 12, 15]], ['Oc', [1, 2, 3], [4, 6, 8, 10, 12]], ['LFl', [1, 2], [6, 8, 10, 12]], ['Iso', [1], [2, 4, 6, 8]]];
+  const sets = [['Fl', [1, 2, 3, 4, 5], [2, 2.5, 3, 4, 5, 6, 7.5, 8, 9, 10, 12, 15, 20]], ['Oc', [1, 2, 3], [3, 4, 5, 6, 8, 10, 12, 15]], ['LFl', [1, 2], [5, 6, 8, 10, 12, 15]], ['Iso', [1], [2, 3, 4, 5, 6, 8, 10]]];
   for (const [k, ns, Ts] of sets) for (const n of ns) for (const c of ['', 'R', 'G', 'Y']) for (const T of Ts) {
     if (n * 1.5 >= T && k !== 'Iso') continue; // grupa musi się zmieścić w okresie
     out.push(P(`lc:${code(k, n, c, T)}`, 'mark', (r) => {
       const good = charDesc(k, n, c, T);
       const altK = k === 'Fl' ? 'Oc' : k === 'Oc' ? 'Fl' : k === 'LFl' ? 'Fl' : 'Oc';
       const altC = pick(r, ['', 'R', 'G', 'Y'].filter((x) => x !== c));
-      const bad = [charDesc(altK, altK === 'Iso' ? 1 : Math.max(1, n), c, T), r() < 0.5 ? charDesc(k, n, altC, T) : charDesc(k, k === 'Iso' ? 1 : n === 1 ? 2 : n - 1, c, T === Ts[0] ? Ts[1] : Ts[0])];
+      const bad = [charDesc(altK, altK === 'Iso' ? 1 : Math.max(1, n), c, T), r() < 0.5 ? charDesc(k, n, altC, T) : charDesc(k, k === 'Iso' ? 1 : n === 1 ? 2 : n - 1, c, T === Ts[Ts.length - 1] ? Ts[Ts.length - 2] : Ts[Ts.length - 1])];
       return mk(r, 'marks', L(`Co oznacza charakterystyka światła „${code(k, n, c, T)}”?`, `What does the light characteristic “${code(k, n, c, T)}” mean?`), good, bad,
         { explain: L('Fl – błysk krótszy od przerwy, LFl – błysk co najmniej 2 s, Oc – przerwy krótsze od świecenia, Iso – równe okresy; brak litery koloru oznacza światło białe; liczba w nawiasie to liczba błysków w grupie, na końcu okres całej sekwencji.', 'Fl – flash shorter than dark, LFl – flash of at least 2 s, Oc – eclipses shorter than light, Iso – equal periods; no colour letter means white; the number in brackets is the group, the last figure the period.') });
     }));
@@ -287,47 +388,32 @@ function lightChars() {
     ['Fl Y 5s', ['Znak specjalny', 'Special mark']], ['Al.Bu.Y 3s', ['Znak nowego niebezpieczeństwa (wrak)', 'Emergency wreck marking buoy']], ['Fl(2+1) R 10s', ['Znak rozwidlenia toru (zmodyfikowany znak boczny)', 'Preferred channel mark']], ['Fl R 4s', ['Znak boczny lewy (IALA A)', 'Port-hand lateral mark (IALA A)']], ['Fl G 4s', ['Znak boczny prawy (IALA A)', 'Starboard-hand lateral mark (IALA A)']]];
   const names = [...new Set(MARK_LIGHTS.map((m) => m[1][0]))].map((pl) => MARK_LIGHTS.find((m) => m[1][0] === pl)[1]);
   for (const [c, n] of MARK_LIGHTS) out.push(P(`ml:${c}`, 'mark', (r) => mk(r, 'marks', L(`Który znak nawigacyjny może mieć światło „${c}”?`, `Which navigation mark may show the light “${c}”?`), tx(n), shuffle(r, names.filter((x) => x[0] !== n[0])).slice(0, 2).map(tx))));
+  // szybkobłyskowe, przemienne i alfabetem Morse'a
+  const QK = { Q: [['szybkobłyskowe', 'quick'], ['ok. 60 błysków na minutę', 'about 60 flashes a minute']], VQ: [['bardzo szybkobłyskowe', 'very quick'], ['ok. 120 błysków na minutę', 'about 120 flashes a minute']] };
+  const qDesc = (k, n, c, T) => { const col = cap(tx(COLN[c])); return n === 1 ? L(`${col}, ${QK[k][0][0]} – ciągłe błyski (${QK[k][1][0]})`, `${col}, ${QK[k][0][1]} – continuous (${QK[k][1][1]})`) : L(`${col}, ${QK[k][0][0]} – grupy po ${n} błyski, okres ${T} s`, `${col}, ${QK[k][0][1]} – groups of ${n} flashes, period ${T} s`); };
+  for (const k of ['Q', 'VQ']) for (const c of ['', 'R', 'G', 'Y']) for (const [n, T] of [[1, 0], [2, 5], [3, 5], [3, 10], [4, 10], [6, 10], [6, 15], [9, 10], [9, 15], [2, 10]]) {
+    if (k === 'Q' && n * 1.2 >= T && n > 1) continue;
+    const cd = `${k}${n > 1 ? `(${n})` : ''}${c ? ' ' + c : ''}${T ? ` ${T}s` : ''}`, other = k === 'Q' ? 'VQ' : 'Q';
+    out.push(P(`lq:${cd}`, 'mark', (r) => mk(r, 'marks', L(`Co oznacza charakterystyka światła „${cd}”?`, `What does the light characteristic “${cd}” mean?`), qDesc(k, n, c, T),
+      [qDesc(other, n, c, T), qDesc(k, n, pick(r, ['', 'R', 'G', 'Y'].filter((x) => x !== c)), T), qDesc(k, n === 1 ? 3 : 1, c, n === 1 ? 10 : 0)])));
+  }
+  const ALN = { WR: ['białe i czerwone', 'white and red'], WG: ['białe i zielone', 'white and green'], RG: ['czerwone i zielone', 'red and green'] };
+  for (const pair of Object.keys(ALN)) for (const T of [3, 4, 5, 6, 8, 10]) {
+    const cd = `Al.${pair} ${T}s`, d = (pp, tt2) => L(`Przemienne – na zmianę ${tx(ALN[pp])}, okres ${tt2} s`, `Alternating – ${tx(ALN[pp])} in turn, period ${tt2} s`);
+    out.push(P(`la:${cd}`, 'mark', (r) => mk(r, 'marks', L(`Co oznacza charakterystyka światła „${cd}”?`, `What does the light characteristic “${cd}” mean?`), d(pair, T),
+      [d(pick(r, Object.keys(ALN).filter((x) => x !== pair)), T), L(`Stałe ${tx(ALN[pair])} w dwóch sektorach`, `Fixed ${tx(ALN[pair])} in two sectors`), L(`Błyskowe ${tx(COLN[pair[0] === 'W' ? '' : pair[0]])}, okres ${T} s`, `Flashing ${tx(COLN[pair[0] === 'W' ? '' : pair[0]])}, period ${T} s`)])));
+  }
+  for (const ch of ['A', 'U', 'D', 'K', 'N']) for (const T of [6, 8, 10, 12, 15]) {
+    const cd = `Mo(${ch}) ${T}s`;
+    out.push(P(`lm:${cd}`, 'mark', (r) => mk(r, 'marks', L(`Co oznacza charakterystyka światła „${cd}”?`, `What does the light characteristic “${cd}” mean?`), L(`Białe, błyski układające się w literę ${ch} alfabetu Morse'a, okres ${T} s`, `White, flashes forming the Morse letter ${ch}, period ${T} s`),
+      [L(`Białe, ${ch === 'A' ? 'dwa' : 'trzy'} jednakowe błyski w grupie, okres ${T} s`, `White, ${ch === 'A' ? 'two' : 'three'} equal flashes in a group, period ${T} s`), L(`Światło widoczne tylko w sektorze ${ch}, okres ${T} s`, `A light visible only in sector ${ch}, period ${T} s`)])));
+  }
   return out;
 }
 
-// obliczenia nawigacyjne – parametry z ziarna (każde ziarno = inne pytanie)
 const n360 = (a) => ((Math.round(a) % 360) + 360) % 360, d3 = (a) => `${String(n360(a)).padStart(3, '0')}°`;
 const sg = (a) => `${a > 0 ? '+' : a < 0 ? '−' : ''}${String(Math.abs(a)).replace('.', L(',', '.'))}°`;
 const nm = (x, dec = 2) => `${String(Math.round(x * 10 ** dec) / 10 ** dec).replace('.', L(',', '.'))}`;
-function calcs() {
-  const out = [];
-  const par = (seed) => { const r = rng(seed); return { KK: Math.round(r() * 71) * 5 + Math.round(r() * 4), dev: Math.round(r() * 8) - 4 || 2, dec: (Math.round(r() * 12) - 6) / 2 || -1.5 }; };
-  for (let i = 0; i < 220; i++) out.push(P(`kr${i}`, 'calc', (r) => { const { KK, dev, dec } = par(1000 + i), KR = KK + dev + dec;
-    return mk(r, 'nav', L(`KK = ${d3(KK)}, dewiacja δ = ${sg(dev)}, deklinacja d = ${sg(dec)}. Ile wynosi kurs rzeczywisty KR?`, `CC = ${d3(KK)}, deviation δ = ${sg(dev)}, variation d = ${sg(dec)}. What is the true course TC?`),
-      d3(KR), [d3(KK - dev - dec), d3(KK + dev - dec), d3(KK - dev + dec), d3(KR + 5), d3(KR - 5)], { explain: `KR = KK + δ + d = ${d3(KK)} ${sg(dev)} ${sg(dec)} = ${d3(KR)}` }); }));
-  for (let i = 0; i < 220; i++) out.push(P(`kk${i}`, 'calc', (r) => { const { KK: KR, dev, dec } = par(5000 + i), KK = KR - dev - dec;
-    return mk(r, 'nav', L(`Chcesz płynąć kursem rzeczywistym KR = ${d3(KR)}. Deklinacja d = ${sg(dec)}, dewiacja δ = ${sg(dev)}. Jakim kursem kompasowym KK sterujesz?`, `You want to make a true course TC = ${d3(KR)}. Variation d = ${sg(dec)}, deviation δ = ${sg(dev)}. Which compass course CC do you steer?`),
-      d3(KK), [d3(KR + dev + dec), d3(KR - dev + dec), d3(KR + dev - dec), d3(KK + 5), d3(KK - 5)], { explain: `KK = KR − d − δ = ${d3(KK)}` }); }));
-  for (let i = 0; i < 80; i++) out.push(P(`km${i}`, 'calc', (r) => { const { KK, dev } = par(9000 + i), KM = KK + dev;
-    return mk(r, 'nav', L(`Kurs kompasowy KK = ${d3(KK)}, dewiacja δ = ${sg(dev)}. Ile wynosi kurs magnetyczny KM?`, `Compass course CC = ${d3(KK)}, deviation δ = ${sg(dev)}. What is the magnetic course MC?`), d3(KM), [d3(KK - dev), d3(KM + 10), d3(KM - 10)], { explain: `KM = KK + δ = ${d3(KM)}` }); }));
-  for (let i = 0; i < 120; i++) out.push(P(`nr${i}`, 'calc', (r) => { const { KK: NK, dev, dec } = par(13000 + i), NR = NK + dev + dec;
-    return mk(r, 'nav', L(`Namiar kompasowy NK = ${d3(NK)}, poprawka całkowita p = ${sg(dev + dec)}. Ile wynosi namiar rzeczywisty NR?`, `Compass bearing = ${d3(NK)}, total correction = ${sg(dev + dec)}. What is the true bearing?`), d3(NR), [d3(NK - dev - dec), d3(NR + 180), d3(NR + 10)], { explain: `NR = NK + p = ${d3(NR)}` }); }));
-  const V = [3, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8], T = [10, 12, 15, 18, 20, 24, 30, 36, 40, 45, 48, 50, 54, 72, 75, 90, 105, 120];
-  let k = 0;
-  for (const v of V) for (const t of T) {
-    const s = (v * t) / 60, id = k++;
-    if (Math.abs(s * 100 - Math.round(s * 100)) > 1e-9) continue;
-    const f = (x) => `${nm(x)} Mm`, fv = (x) => `${nm(x, 1)} kn`, ft = (x) => `${Math.round(x)} min`;
-    const form = id % 3;
-    out.push(P(`ts${v}:${t}`, 'calc', (r) => form === 0
-      ? mk(r, 'nav', L(`Jacht płynie z prędkością ${nm(v, 1)} kn. Jaką drogę przepłynie w ${t} minut?`, `A yacht makes ${nm(v, 1)} kn. How far does it go in ${t} minutes?`), f(s), [f(s * 1.5), f(s / 2)], { explain: `s = v · t = ${nm(v, 1)} · ${t}/60 = ${f(s)}` })
-      : form === 1 ? mk(r, 'nav', L(`Jacht przepłynął ${nm(s)} Mm w ${t} minut. Jaka była jego prędkość?`, `A yacht covered ${nm(s)} NM in ${t} minutes. What was its speed?`), fv(v), [fv(v * 1.5), fv(v / 2)], { explain: `v = s / t = ${nm(s)} / (${t}/60) = ${fv(v)}` })
-        : mk(r, 'nav', L(`Ile czasu zajmie przepłynięcie ${nm(s)} Mm z prędkością ${nm(v, 1)} kn?`, `How long does it take to cover ${nm(s)} NM at ${nm(v, 1)} kn?`), ft(t), [ft(t * 1.5), ft(t / 2)], { explain: `t = s / v = ${nm(s)} / ${nm(v, 1)} h = ${ft(t)}` })));
-  }
-  for (const hh of [4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144]) for (const H of [1, 2.25, 4, 6.25]) out.push(P(`rg${hh}:${H}`, 'calc', (r) => {
-    const D = 2.08 * (Math.sqrt(hh) + Math.sqrt(H));
-    return mk(r, 'nav', L(`Światło latarni jest ${hh} m nad wodą, oko obserwatora ${nm(H)} m. Jaki jest zasięg geograficzny światła? (Dg = 2,08·(√h + √H))`, `A light is ${hh} m above the water, the observer’s eye ${nm(H)} m. What is its geographic range? (Dg = 2.08·(√h + √H))`),
-      `${nm(D, 1)} Mm`, [`${nm(2.08 * Math.sqrt(hh), 1)} Mm`, `${nm(D * 1.6, 1)} Mm`], { explain: `Dg = 2,08 · (${Math.sqrt(hh)} + ${nm(Math.sqrt(H))}) = ${nm(D, 1)} Mm` });
-  }));
-  for (const kn of [2, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30, 40]) out.push(P(`un${kn}`, 'calc', (r) => mk(r, 'nav', L(`Ile to jest ${kn} węzłów w km/h?`, `How much is ${kn} knots in km/h?`), `${nm(kn * 1.852, 1)} km/h`, [`${nm(kn * 1.609, 1)} km/h`, `${nm(kn, 1)} km/h`], { explain: '1 kn = 1,852 km/h' })));
-  for (const m of [1, 2, 3, 5, 8, 10, 15, 20]) out.push(P(`um${m}`, 'calc', (r) => mk(r, 'nav', L(`Ile kilometrów ma ${m} Mm?`, `How many kilometres are ${m} NM?`), `${nm(m * 1.852, 3)} km`, [`${nm(m * 1.609, 3)} km`, `${m} km`], { explain: '1 Mm = 1852 m' })));
-  return out;
-}
 
 
 // opis świateł widocznych z danego kierunku: kolumny „czerwone nad białym”, pojedyncze z nazwą sektora
@@ -351,13 +437,17 @@ function describeLights(lights, rel) {
   if (deck) out.push(L('oświetlony pokład', 'deck lights'));
   return out.length ? cap(out.join(', ')) : L('Nie widać żadnych świateł', 'No lights visible');
 }
-const ASPECTS = [['bow', 0, ['od dziobu', 'from ahead']], ['stern', 180, ['od rufy', 'from astern']], ['port', -60, ['od lewej burty', 'from the port side']], ['stbd', 60, ['od prawej burty', 'from the starboard side']]];
+const ASPECTS = [['bow', 0, ['od dziobu', 'from ahead']], ['stern', 180, ['od rufy', 'from astern']], ['port', -60, ['od lewej burty', 'from the port side']], ['stbd', 60, ['od prawej burty', 'from the starboard side']],
+  ['bowP', -25, ['z lewej strony, blisko dziobu', 'on the port bow']], ['bowS', 25, ['z prawej strony, blisko dziobu', 'on the starboard bow']],
+  ['qP', -145, ['z lewej strony, od rufy', 'on the port quarter']], ['qS', 145, ['z prawej strony, od rufy', 'on the starboard quarter']]];
 
+const SYMG = { danger: ['Niebezpieczeństwa', 'Dangers'], depth: ['Głębokości i dno', 'Depths and seabed'], tide: ['Pływy i prądy', 'Tides and currents'], area: ['Obszary i granice', 'Areas and limits'],
+  aid: ['Światła i pomoce nawigacyjne', 'Lights and aids'], buoy: ['Pławy i znaki', 'Buoys and beacons'], land: ['Ląd, porty i punkty orientacyjne', 'Land, harbours and landmarks'], note: ['Oznaczenia i skróty', 'Notes and abbreviations'] };
 // marks: rysunki znaków z warstwy UI – [{ scope, name, svg, look }]
 export function buildPool(scope, marks = []) {
   const inScope = (s) => s === 'both' || s === scope;
   const out = [];
-  BANK.forEach((b, i) => { if (inScope(b[0])) out.push(bankEntry(b, i)); });
+  BANK.forEach((b, i) => { if (inScope(b[0]) && b[1] !== 'nav') out.push(bankEntry(b, i)); }); // nawigację sprawdza zadanie nawigacyjne na końcu
   out.push(...situations(scope));
   // jednostki: model 3D → nazwa, nazwa → opis świateł / znaków
   for (const day of [false, true]) {
@@ -382,6 +472,10 @@ export function buildPool(scope, marks = []) {
         const bad = shuffle(r, alts.slice(0, 3)).slice(0, 2);
         return mk(r, 'lights', L(`Nocą widzisz ${tx(an)}: ${tt(v.name)}. Jakie światła widzisz?`, `At night you see ${tx(an)}: ${tt(v.name)}. Which lights do you see?`), good, bad, { explain: tt(v.explain) });
       }, v.id));
+      const twins = list.filter((x) => x !== v && describeLights(lightsOf(x), rel) === good);
+      if (!twins.length && !/Nie widać|No lights/.test(good)) out.push(P(`vr:${v.id}:${ak}`, 'lights', (r) => mk(r, 'lights',
+        L(`Nocą widzisz statek ${tx(an)} i jego światła: ${good.charAt(0).toLowerCase() + good.slice(1)}. Jaki to statek?`, `At night you see a vessel ${tx(an)} showing: ${good.charAt(0).toLowerCase() + good.slice(1)}. What is it?`),
+        tt(v.name), others(r, list, v, (x) => x.name).map((x) => tt(x.name)), { explain: tt(v.explain) }), v.id));
     }
   }
   // sygnały dźwiękowe: zapis → znaczenie, znaczenie → zapis
@@ -395,30 +489,34 @@ export function buildPool(scope, marks = []) {
   if (scope === 'sea') {
     for (const s of CHART_SYMBOLS) {
       const grp = CHART_SYMBOLS.filter((x) => x.grp === s.grp && x !== s), pool = grp.length >= 2 ? grp : CHART_SYMBOLS.filter((x) => x !== s);
-      out.push(P(`cs:${s.id}`, 'chart', (r) => mk(r, 'chart', L('Co oznacza ten symbol na mapie morskiej?', 'What does this chart symbol mean?'), s.name(), shuffle(r, pool).slice(0, 2).map((x) => x.name()), { explain: s.mean(), media: { kind: 'svg', svg: symbolSVG(s, 240, 165) } }), s.id));
-      out.push(P(`cm:${s.id}`, 'chart', (r) => mk(r, 'chart', L(`Co oznacza na mapie: ${s.name()}?`, `What does this chart feature mean: ${s.name()}?`), s.mean(), shuffle(r, pool).slice(0, 2).map((x) => x.mean()), { media: { kind: 'svg', svg: symbolSVG(s, 240, 165) } }), s.id));
+      out.push(P(`cs:${s.id}`, 'chart', (r) => mk(r, 'chart', L('Co oznacza ten symbol na mapie morskiej?', 'What does this chart symbol mean?'), s.name(), shuffle(r, pool).map((x) => x.name()), { explain: s.mean(), media: { kind: 'svg', svg: symbolSVG(s, 240, 165) } }), s.id));
+      out.push(P(`ci:${s.id}`, 'chart', (r) => mk(r, 'chart', L(`Który symbol oznacza na mapie: ${s.name()}?`, `Which chart symbol means: ${s.name()}?`), `@svg:${symbolSVG(s, 160, 110)}`, shuffle(r, pool).map((x) => `@svg:${symbolSVG(x, 160, 110)}`), { explain: s.mean() }), s.id));
+      out.push(P(`cg:${s.id}`, 'chart', (r) => mk(r, 'chart', L(`Do jakiej grupy symboli map należy: ${s.name()}?`, `Which group of chart symbols does this belong to: ${s.name()}?`), tx(SYMG[s.grp]), shuffle(r, Object.keys(SYMG).filter((g) => g !== s.grp)).map((g) => tx(SYMG[g])), { media: { kind: 'svg', svg: symbolSVG(s, 240, 165) } }), s.id));
+      out.push(P(`cm:${s.id}`, 'chart', (r) => mk(r, 'chart', L(`Co oznacza na mapie: ${s.name()}?`, `What does this chart feature mean: ${s.name()}?`), s.mean(), shuffle(r, pool).map((x) => x.mean()), { media: { kind: 'svg', svg: symbolSVG(s, 240, 165) } }), s.id));
     }
     out.push(...lightChars());
-    out.push(...calcs());
     for (const k of ['N', 'E', 'S', 'W']) out.push(P(`mr:${k}`, 'mark', (r) => markRule(r, k)));
   } else {
     for (const gr of SIGN_GROUPS) for (const [code, pl, en] of gr.signs) {
-      out.push(P(`sg:${code}`, 'sign', (r) => mk(r, 'signs', L('Co oznacza ten znak żeglugowy?', 'What does this waterway sign mean?'), L(pl, en), shuffle(r, gr.signs.filter((x) => x[0] !== code && x[1] !== pl)).slice(0, 2).map((x) => L(x[1], x[2])), { explain: `${code}: ${L(pl, en)}`, media: { kind: 'img', src: signImage(code) } }), code));
-      out.push(P(`sk:${code}`, 'sign', (r) => mk(r, 'signs', L('Do której grupy znaków żeglugowych należy ten znak?', 'Which group of waterway signs does this sign belong to?'), L(gr.pl, gr.en), shuffle(r, SIGN_GROUPS.filter((x) => x !== gr)).slice(0, 2).map((x) => L(x.pl, x.en)), { explain: `${code}: ${L(pl, en)}`, media: { kind: 'img', src: signImage(code) } }), code));
+      out.push(P(`sg:${code}`, 'sign', (r) => mk(r, 'signs', L('Co oznacza ten znak żeglugowy?', 'What does this waterway sign mean?'), L(pl, en), shuffle(r, gr.signs.filter((x) => x[0] !== code && x[1] !== pl)).map((x) => L(x[1], x[2])), { explain: `${code}: ${L(pl, en)}`, media: { kind: 'img', src: signImage(code) } }), code));
+      out.push(P(`si:${code}`, 'sign', (r) => mk(r, 'signs', L(`Który znak żeglugowy oznacza: „${pl}”?`, `Which waterway sign means: “${en}”?`), `@img:${signImage(code)}`, shuffle(r, gr.signs.filter((x) => x[0] !== code && x[1] !== pl)).map((x) => `@img:${signImage(x[0])}`), { explain: `${code}: ${L(pl, en)}` }), code));
+      out.push(P(`sk:${code}`, 'sign', (r) => mk(r, 'signs', L('Do której grupy znaków żeglugowych należy ten znak?', 'Which group of waterway signs does this sign belong to?'), L(gr.pl, gr.en), shuffle(r, SIGN_GROUPS.filter((x) => x !== gr)).map((x) => L(x.pl, x.en)), { explain: `${code}: ${L(pl, en)}`, media: { kind: 'img', src: signImage(code) } }), code));
     }
   }
   // znaki nawigacyjne z rysunkami
   const mks = marks.filter((m) => m.scope === scope);
   for (const m of mks) {
     out.push(P(`mk:${m.name}`, 'mark', (r) => mk(r, 'marks', L('Jaki to znak nawigacyjny?', 'What is this navigation mark?'), m.name, others(r, mks, m, (x) => x.name).map((x) => x.name), { explain: m.look || '', media: { kind: 'svg', svg: m.svg } }), m.name));
+    out.push(P(`mi:${m.name}`, 'mark', (r) => mk(r, 'marks', L(`Który rysunek przedstawia: ${m.name}?`, `Which picture shows: ${m.name}?`), `@svg:${m.svg}`, others(r, mks, m, (x) => x.name).map((x) => `@svg:${x.svg}`), { explain: m.look || '' }), m.name));
     if (m.look) out.push(P(`ml2:${m.name}`, 'mark', (r) => mk(r, 'marks', L(`Jak wygląda: ${m.name}?`, `What does it look like: ${m.name}?`), m.look, others(r, mks.filter((x) => x.look), m, (x) => x.look).map((x) => x.look)), m.name));
   }
   // meteorologia
   for (let f = 0; f <= 12; f++) {
     const b = beaufort(f), near = [f - 2, f - 1, f + 1, f + 2].filter((x) => x >= 0 && x <= 12);
-    const nb = (r) => shuffle(r, near).slice(0, 2).map(beaufort);
+    const nb = (r) => shuffle(r, near).map(beaufort);
     out.push(P(`bk${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Jaka prędkość wiatru odpowiada sile ${f}°B?`, `What wind speed corresponds to Beaufort force ${f}?`), `${b.knText} kn`, nb(r).map((x) => `${x.knText} kn`), { explain: `${f}°B – ${b.name}: ${b.knText} kn.` }), `bft${f}`));
     out.push(P(`bs${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Stan morza: „${b.seaText}” Jaka to siła wiatru?`, `Sea state: “${b.seaText}” What is the wind force?`), `${f}°B – ${b.name}`, nb(r).map((x) => `${x.f}°B – ${x.name}`), { explain: `${f}°B – ${b.name} (${b.knText} kn).` }), `bft${f}`));
+    out.push(P(`br${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Wiatr wieje z prędkością ${b.knText} kn. Jaka to siła w skali Beauforta?`, `The wind is ${b.knText} kn. What Beaufort force is it?`), `${f}°B`, nb(r).map((x) => `${x.f}°B`)), `bft${f}`));
     out.push(P(`bn${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Jak nazywa się wiatr o sile ${f}°B?`, `What is Beaufort force ${f} called?`), b.name, nb(r).map((x) => x.name)), `bft${f}`));
     out.push(P(`bm${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Ile metrów na sekundę to wiatr o sile ${f}°B?`, `How many metres per second is Beaufort force ${f}?`), `${b.msText} m/s`, nb(r).map((x) => `${x.msText} m/s`)), `bft${f}`));
     if (f >= 3 && f <= 10) out.push(P(`by${f}`, 'meteo', (r) => mk(r, 'meteo', L(`Co oznacza dla jachtu wiatr ${f}°B (${b.name})?`, `What does Beaufort ${f} (${b.name}) mean for a yacht?`), b.yacht, shuffle(r, [...nb(r), ...[2, 4, 6, 8, 11].map(beaufort)]).map((x) => x.yacht)), `bft${f}`));
@@ -429,6 +527,7 @@ export function buildPool(scope, marks = []) {
     out.push(P(`cl:${c.id}`, 'meteo', (r) => mk(r, 'meteo', L(`Jakie to chmury? ${c.look}`, `Which clouds are these? ${c.look}`), `${c.name} (${c.id})`, others(r, cl, c, (x) => x.id).map((x) => `${x.name} (${x.id})`), { explain: c.weather }), c.id));
     out.push(P(`cv:${c.id}`, 'meteo', (r) => mk(r, 'meteo', L(`Do którego piętra należą chmury „${c.name}” (${c.id})?`, `Which level do ${c.name} (${c.id}) clouds belong to?`), c.levelText, shuffle(r, lv.filter((x) => x !== c.levelText)).slice(0, 2)), c.id));
     out.push(P(`cw:${c.id}`, 'meteo', (r) => mk(r, 'meteo', L(`Co zapowiadają chmury „${c.name}” (${c.id})?`, `What do ${c.name} (${c.id}) clouds indicate?`), c.weather, others(r, cl.filter((x) => x.weather !== c.weather), c, (x) => x.weather).map((x) => x.weather)), c.id));
+    out.push(P(`cr:${c.id}`, 'meteo', (r) => mk(r, 'meteo', L(`Które chmury należą do piętra: ${c.levelText}?`, `Which clouds belong to this level: ${c.levelText}?`), `${c.name} (${c.id})`, shuffle(r, cl.filter((x) => x.levelText !== c.levelText)).map((x) => `${x.name} (${x.id})`)), c.id));
     out.push(P(`cn:${c.id}`, 'meteo', (r) => mk(r, 'meteo', L(`Jaki jest skrót i łacińska nazwa chmur „${c.name}”?`, `What is the abbreviation for ${c.name} clouds?`), `${c.id} – ${c.latin}`, others(r, cl, c, (x) => x.id).map((x) => `${x.id} – ${x.latin}`)), c.id));
   }
   // zjawiska: różne warianty pytań (ziarno → treść)
@@ -437,18 +536,18 @@ export function buildPool(scope, marks = []) {
     const q = makePhenQuestion(7919 * i + sd, i);
     if (seenPh.has(q.prompt)) continue;
     seenPh.add(q.prompt);
-    out.push(P(`ph${i}:${sd}`, 'meteo', (r) => { const good = q.options.find((o) => o.id === q.answer); return mk(r, 'meteo', q.prompt, good.label, shuffle(r, q.options.filter((o) => o.id !== q.answer)).slice(0, 2).map((o) => o.label), { explain: q.explain }); }, `ph${i}`));
+    out.push(P(`ph${i}:${sd}`, 'meteo', (r) => { const good = q.options.find((o) => o.id === q.answer); return mk(r, 'meteo', q.prompt, good.label, shuffle(r, q.options.filter((o) => o.id !== q.answer)).map((o) => o.label), { explain: q.explain }); }, `ph${i}`));
   }
   // bezpieczeństwo: kanały VHF, urządzenia
   const ch = channels().filter((c) => !c.guard);
   for (const c of ch) {
-    out.push(P(`vu${c.ch}`, 'safety', (r) => mk(r, 'safety', L(`Do czego służy kanał ${c.ch} VHF?`, `What is VHF channel ${c.ch} used for?`), c.use, shuffle(r, ch.filter((x) => x.use !== c.use)).slice(0, 2).map((x) => x.use), { explain: `${c.ch} (${c.f} MHz): ${c.use}` }), `ch${c.ch}`));
-    out.push(P(`vc${c.ch}`, 'safety', (r) => mk(r, 'safety', L(`Który kanał VHF: ${c.use}?`, `Which VHF channel: ${c.use}?`), `${L('Kanał', 'Channel')} ${c.ch}`, shuffle(r, ch.filter((x) => x.use !== c.use)).slice(0, 2).map((x) => `${L('Kanał', 'Channel')} ${x.ch}`)), `ch${c.ch}`));
+    out.push(P(`vu${c.ch}`, 'safety', (r) => mk(r, 'safety', L(`Do czego służy kanał ${c.ch} VHF?`, `What is VHF channel ${c.ch} used for?`), c.use, shuffle(r, ch.filter((x) => x.use !== c.use)).map((x) => x.use), { explain: `${c.ch} (${c.f} MHz): ${c.use}` }), `ch${c.ch}`));
+    out.push(P(`vc${c.ch}`, 'safety', (r) => mk(r, 'safety', L(`Który kanał VHF: ${c.use}?`, `Which VHF channel: ${c.use}?`), `${L('Kanał', 'Channel')} ${c.ch}`, shuffle(r, ch.filter((x) => x.use !== c.use)).map((x) => `${L('Kanał', 'Channel')} ${x.ch}`)), `ch${c.ch}`));
   }
   const DEV = ['epirb', 'sart', 'vhf', 'raft', 'jacket', 'harness', 'extinguisher', 'flares', 'firstaid'];
   for (const id of DEV) {
     const d = deviceInfo(id), first = (txt) => txt.split(/(?<=\.)\s/)[0];
-    const bad = (r) => shuffle(r, DEV.filter((x) => x !== id)).slice(0, 2).map((x) => deviceInfo(x).name);
+    const bad = (r) => shuffle(r, DEV.filter((x) => x !== id)).map((x) => deviceInfo(x).name);
     out.push(P(`dv:${id}`, 'safety', (r) => mk(r, 'safety', L(`Które wyposażenie opisuje zdanie: „${first(d.short)}”`, `Which equipment is described: “${first(d.short)}”`), d.name, bad(r), { explain: d.short }), id));
     (d.sections || []).forEach(([title, txt], k) => out.push(P(`ds:${id}:${k}`, 'safety', (r) => mk(r, 'safety', L(`${title} – którego wyposażenia dotyczy informacja: „${first(txt)}”`, `${title} – which equipment does this refer to: “${first(txt)}”`), d.name, bad(r), { explain: txt }), id)));
   }
@@ -463,7 +562,7 @@ function markRule(r, k) {
 
 // Skład egzaminu: liczba pytań z każdej grupy (razem 75)
 const PLAN = {
-  sea: [['rules', 12], ['seaman', 9], ['nav', 2], ['calc', 3], ['safety', 10], ['lights', 9], ['day', 5], ['sound', 7], ['mark', 7], ['chart', 4], ['meteo', 7]],
+  sea: [['rules', 13], ['seaman', 10], ['safety', 10], ['lights', 9], ['day', 5], ['sound', 7], ['mark', 8], ['chart', 5], ['meteo', 8]],
   inland: [['inlandRules', 14], ['rules', 3], ['seaman', 10], ['safety', 9], ['lights', 7], ['day', 5], ['sound', 7], ['sign', 10], ['mark', 3], ['meteo', 7]]
 };
 
