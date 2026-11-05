@@ -9,7 +9,7 @@ import { generateHarbor, harborOpts, ROLE_NAMES, METHODS } from '../data/harbors
 import { buildHelpContent } from './help.js';
 import { t, sideLetters } from '../i18n.js';
 import { DEG, KN, clamp, thetaToCompass, wrapPi, localToWorld, worldToLocal, tensionColor } from '../math.js';
-import { saveSettings } from '../settings.js';
+import { saveSettings, getSettings } from '../settings.js';
 
 export class SimScreen {
   constructor(root, config, callbacks) {
@@ -118,7 +118,8 @@ export class SimScreen {
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));
-    top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Menu'));
+    top.appendChild(h('button.btn.sm', { onclick: () => openSimSettings(this.sim, this.view), title: 'Ustawienia' }, '⚙ Ustawienia'));
+    top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Wyjdź'));
     sim.appendChild(top);
     // --- Kompas ---
     const comp = h('div.hud.glass', { id: 'hud-compass' });
@@ -1224,4 +1225,35 @@ export class SimScreen {
     this.view.dispose();
     this.root.innerHTML = '';
   }
+}
+
+// ---------- Ustawienia w trakcie symulacji (grafika – działa od razu) ----------
+export function openSimSettings(host, view) {
+  const st = getSettings(), g = st.gfx;
+  const back = h('div.modal-back', { onclick: (e) => { if (e.target === back) back.remove(); } });
+  const apply = () => {
+    const G = getSettings().gfx, r = view && view.renderer;
+    if (!r) return;
+    r.setPixelRatio(Math.max(0.4, Math.min(window.devicePixelRatio || 1, 2) * (G.scale || 1)));
+    r.shadowMap.enabled = G.shadows !== 'off';
+    if (view.resize) view.resize();
+  };
+  const seg = (opts, cur, set) => { const w = h('div.seg'); for (const [v, n] of opts) w.appendChild(h('button', { class: String(v) === String(cur) ? 'on' : '', onclick: () => { set(v); back.remove(); openSimSettings(host, view); } }, n)); return w; };
+  const out = h('b', {}, `${Math.round((g.scale || 1) * 100)}%`);
+  const scale = h('input', { type: 'range', min: 0.75, max: 1, step: 0.05, value: g.scale || 1,
+    oninput: (e) => { out.textContent = `${Math.round(e.target.value * 100)}%`; },
+    onchange: (e) => { saveSettings({ gfx: { scale: +e.target.value, preset: 'custom' } }); apply(); } });
+  const row = (label, el) => h('div.set-row', {}, h('span', {}, label), el);
+  const m = h('div.modal.glass.sim-settings', {},
+    h('h2', {}, '⚙ Ustawienia'),
+    row('Rozdzielczość renderowania', h('div.set-range', {}, scale, out)),
+    row('Cienie', seg([['soft', 'Miękkie'], ['basic', 'Proste'], ['off', 'Wyłączone']], g.shadows, (v) => { saveSettings({ gfx: { shadows: v, preset: 'custom' } }); apply(); })),
+    row('Załoga na jachcie', seg([['on', 'Pokaż'], ['off', 'Ukryj']], g.crew === false ? 'off' : 'on', (v) => saveSettings({ gfx: { crew: v === 'on', preset: 'custom' } }))),
+    row('Ptaki, ludzie i koty w porcie', seg([['on', 'Pokaż'], ['off', 'Ukryj']], g.life === false ? 'off' : 'on', (v) => saveSettings({ gfx: { life: v === 'on', preset: 'custom' } }))),
+    row('Limit klatek', seg([[60, '60 kl./s'], [30, '30 kl./s']], g.fps, (v) => saveSettings({ gfx: { fps: +v, preset: 'custom' } }))),
+    row('Licznik FPS', seg([['on', 'Pokaż'], ['off', 'Ukryj']], g.showFps ? 'on' : 'off', (v) => { saveSettings({ gfx: { showFps: v === 'on' } }); const f = document.getElementById('fps-counter'); if (f) f.style.display = v === 'on' ? '' : 'none'; })),
+    h('p.small.muted', {}, 'Rozdzielczość, cienie, limit klatek i załoga działają od razu; ptaki, ludzie i koty w porcie – od następnej symulacji. Wygładzanie krawędzi i szczegóły wody zmienisz w menu głównym.'),
+    h('div', { style: { textAlign: 'right', marginTop: '10px' } }, h('button.btn.primary', { onclick: () => back.remove() }, 'Zamknij')));
+  back.appendChild(m);
+  host.appendChild(back);
 }

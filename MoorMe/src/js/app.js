@@ -61,7 +61,7 @@ const icon = {
   fast: '<svg width="26" height="26" viewBox="0 0 24 24"><path d="M4 5l8 7-8 7zM12 5l8 7-8 7z" fill="#3f8a72"/></svg>',
   help: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M9.5 9.5a2.6 2.6 0 015 .8c0 1.8-2.5 2-2.5 3.7M12 17v.5" fill="none" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
   power: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 3v8" stroke="#b8453b" stroke-width="2.2" stroke-linecap="round"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0" fill="none" stroke="#b8453b" stroke-width="2.2" stroke-linecap="round"/></svg>',
-  gear: '<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2" fill="none" stroke="#2f4468" stroke-width="2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" stroke="#2f4468" stroke-width="2" stroke-linecap="round"/></svg>',
+  gear: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2f4468" stroke-width="1.8" stroke-linejoin="round"><path d="M10.3 2.6h3.4l.5 2.6a7.2 7.2 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.4 7.4 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.2 7.2 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.2 7.2 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.4 7.4 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.2 7.2 0 0 1 1.9-1.1z"/><circle cx="12" cy="12" r="3"/></svg>',
   anchor: '<svg width="34" height="34" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2" fill="none" stroke="#d2695f" stroke-width="2"/><path d="M12 7.5V20M7.5 11h9M4.5 14.5c.6 3.2 3.7 5.5 7.5 5.5s6.9-2.3 7.5-5.5" fill="none" stroke="#d2695f" stroke-width="2" stroke-linecap="round"/></svg>',
   sail: '<svg width="34" height="34" viewBox="0 0 24 24"><path d="M12 3v14M12 4c4 2.5 6 6 6.5 11H12zM11 6C8 8.5 6.5 11.5 6 15h5z" fill="#3f8a72" stroke="#3f8a72" stroke-width="1.2" stroke-linejoin="round"/><path d="M4 18.5h16l-2.2 3H6.2z" fill="#2f4468"/></svg>',
   down: '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6" fill="none" stroke="#4a5a7d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
@@ -135,7 +135,7 @@ const GLYPH = {
   dice: '<rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="8.6" cy="8.6" r="1.1"/><circle cx="15.4" cy="15.4" r="1.1"/><circle cx="15.4" cy="8.6" r="1.1"/><circle cx="8.6" cy="15.4" r="1.1"/><circle cx="12" cy="12" r="1.1"/>',
   fast: '<path d="M4 6l7 6-7 6zM12 6l7 6-7 6z"/>',
   help: '<circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.6a2.5 2.5 0 014.8.8c0 1.8-2.4 2-2.4 3.6M12 16.8v.4"/>',
-  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/>',
+  gear: '<path d="M10.3 2.6h3.4l.5 2.6a7.2 7.2 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.4 7.4 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.2 7.2 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.2 7.2 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.4 7.4 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.2 7.2 0 0 1 1.9-1.1z"/><circle cx="12" cy="12" r="3"/>',
   power: '<path d="M12 3v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
   back: '<path d="M15 5l-7 7 7 7"/>',
   book: '<path d="M4 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/><path d="M12 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/>',
@@ -678,7 +678,7 @@ function showSettings(back = () => showModeSelect()) {
   const g = st.gfx;
   const setG = (patch) => { saveSettings({ gfx: { ...patch, preset: 'custom' } }); rerender(); };
   const scaleOut = h('b', {}, `${Math.round((g.scale || 1) * 100)}%`);
-  const scaleIn = h('input', { type: 'range', min: 0.5, max: 1, step: 0.05, value: g.scale || 1, oninput: (e) => { scaleOut.textContent = `${Math.round(e.target.value * 100)}%`; }, onchange: (e) => setG({ scale: +e.target.value }) });
+  const scaleIn = h('input', { type: 'range', min: 0.75, max: 1, step: 0.05, value: g.scale || 1, oninput: (e) => { scaleOut.textContent = `${Math.round(e.target.value * 100)}%`; }, onchange: (e) => setG({ scale: +e.target.value }) });
   const gfx = h('div.help-card.set-card', {},
     h('h2', {}, 'Grafika'),
     row('Jakość', segRow([['high', 'Wysoka'], ['medium', 'Średnia'], ['low', 'Niska (starsze komputery)'], ['custom', 'Własna']], g.preset, (v) => { if (GFX_PRESETS[v]) setGfxPreset(v); else saveSettings({ gfx: { preset: 'custom' } }); rerender(); })),
@@ -686,6 +686,8 @@ function showSettings(back = () => showModeSelect()) {
     row('Cienie', segRow([['soft', 'Miękkie'], ['basic', 'Proste'], ['off', 'Wyłączone']], g.shadows, (v) => setG({ shadows: v }))),
     row('Wygładzanie krawędzi', segRow([['on', 'Wł.'], ['off', 'Wył.']], g.antialias ? 'on' : 'off', (v) => setG({ antialias: v === 'on' }))),
     row('Szczegóły wody', segRow([['high', 'Wysokie'], ['medium', 'Średnie'], ['low', 'Niskie']], g.water, (v) => setG({ water: v }))),
+    row('Załoga na jachcie', segRow([['on', 'Pokaż'], ['off', 'Ukryj']], g.crew === false ? 'off' : 'on', (v) => setG({ crew: v === 'on' }))),
+    row('Ptaki, ludzie i koty w porcie', segRow([['on', 'Pokaż'], ['off', 'Ukryj']], g.life === false ? 'off' : 'on', (v) => setG({ life: v === 'on' }))),
     row('Limit klatek', segRow([[60, '60 kl./s'], [30, '30 kl./s']], g.fps, (v) => setG({ fps: v }))),
     row('Licznik FPS', segRow([['on', 'Pokaż'], ['off', 'Ukryj']], g.showFps ? 'on' : 'off', (v) => { saveSettings({ gfx: { showFps: v === 'on' } }); rerender(); })),
     h('p.small.muted', {}, 'Na starszym komputerze wybierz „Niska”: mniejsza rozdzielczość, bez cieni i wygładzania, prostsza woda i 30 klatek na sekundę. Zmiany działają od następnej symulacji.'));

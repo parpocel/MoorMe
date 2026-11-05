@@ -187,7 +187,8 @@ export class View3D {
 
     this.seasick = new Seasick(this);
     // życie w porcie: mewy, spacerowicze, motorówka
-    this.life = this.passage ? { update() {}, onCry: null } : new HarbourLife(this);
+    // ptaki, ludzie i zwierzęta w porcie – do wyłączenia w ustawieniach grafiki (słabsze komputery)
+    this.life = this.passage || getSettings().gfx.life === false ? { update() {}, onCry: null } : new HarbourLife(this);
     // pora dnia i pogoda
     this.atmo = new Atmosphere(this, world.cfg.weather || {});
 
@@ -1057,6 +1058,11 @@ export class View3D {
       }
     }
     this.life.update(dt);
+    // załoga ukryta w ustawieniach grafiki (praca na linach działa dalej, tylko bez postaci)
+    if (getSettings().gfx.crew === false) {
+      for (const p of [this.helmsman, this.deckhand, this.mate1, this.mate2, this.shoreCrew]) if (p) p.visible = false;
+      if (this.tags) this.tags.style.display = 'none';
+    } else if (this.tags && this.tags.style.display === 'none') this.tags.style.display = '';
 
     // znacznik stanowiska
     if (this.routeArrow) { this.updateRoute(); this.routeArrow.material.opacity = 0.22 + 0.12 * Math.sin(t * 2.2); }
@@ -1127,7 +1133,9 @@ export class View3D {
       const mx = (B.minX + B.maxX) / 2, mz = (B.minZ + B.maxZ) / 2;
       // współrzędne węzłów w osiach wiatru zakotwiczone w świecie (linie się nie przesuwają przy ruchu kamery)
       const a0 = Math.floor((mx * ax + mz * az) / GS) - Math.floor(n / 2), p0 = Math.floor((mx * px + mz * pz) / GS) - Math.floor(n / 2);
-      const sy = (x, z) => this.water.surfaceY(x, z, windKn, windDir) + 0.06;
+      // nad falą z zapasem rosnącym z wysokością fali (siatka wody między wierzchołkami bywa wyżej niż wynika ze wzoru)
+      const lift = 0.12 + (0.04 + Math.min(windKn, 35) * 0.0045) * (this.water.waveGain || 1.9) * 0.9;
+      const sy = (x, z) => this.water.surfaceY(x, z, windKn, windDir) + lift;
       for (let i = 0; i < n * n; i++) {
         const ia = a0 + (i % n), ip = p0 + Math.floor(i / n);
         const sa = ia * GS + U.phase, sp = ip * GS + (ia & 1) * GS * 0.5; // co drugi rząd przesunięty – mniej „kratki”

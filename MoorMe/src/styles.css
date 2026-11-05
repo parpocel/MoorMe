@@ -1094,3 +1094,9 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .mb-two ul { margin: 4px 0 0; padding-left: 20px; }
 .handbook .mb-two li { font-size: 17px; line-height: 1.5; }
 .handbook .nb-text .hb-ct-wrap { margin: 10px 0; }
+/* ustawienia w trakcie symulacji */
+.sim-settings { width: 620px; }
+.sim-settings .set-row { display: grid; grid-template-columns: 220px 1fr; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid rgba(140, 190, 230, 0.15); }
+.sim-settings .set-row > span { font-weight: 700; }
+.sim-settings .set-range { display: flex; align-items: center; gap: 10px; }
+.sim-settings .set-range input { flex: 1; }

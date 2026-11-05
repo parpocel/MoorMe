@@ -5,7 +5,7 @@ const KEY = 'moorme.settings';
 export const GFX_PRESETS = {
   high: { scale: 1, shadows: 'soft', antialias: true, water: 'high', fps: 60 },
   medium: { scale: 0.85, shadows: 'basic', antialias: true, water: 'medium', fps: 60 },
-  low: { scale: 0.65, shadows: 'off', antialias: false, water: 'low', fps: 30 }
+  low: { scale: 0.75, shadows: 'off', antialias: false, water: 'low', fps: 30 }
 };
 export const CREW_POOL = ['Wojtek', 'Bartek', 'Babcia', 'Piotrek', 'Kinga', 'Dominika', 'Maciej'];
 
@@ -33,6 +33,7 @@ export function getSettings() {
   let saved = {};
   try { saved = JSON.parse(store()?.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
   cache = { ...DEFAULTS, ...saved, gfx: { ...DEFAULTS.gfx, ...(saved.gfx || {}) } };
+  if (cache.gfx.scale < 0.75) cache.gfx.scale = 0.75; // najniższa rozdzielczość renderowania: 75%
   if (!Array.isArray(cache.crew)) cache.crew = [...DEFAULTS.crew];
   while (cache.crew.length < 3) cache.crew.push('');
   return cache;

@@ -92,7 +92,8 @@ export class PassageScreen extends SimScreen {
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.showHelp() }, '❔ Pomoc'));
     top.appendChild(h('button.btn.sm', { onclick: () => this.restart() }, '↺ Od nowa'));
-    top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Menu'));
+    top.appendChild(h('button.btn.sm', { onclick: () => openSimSettings(this.sim, this.view), title: 'Ustawienia' }, '⚙ Ustawienia'));
+    top.appendChild(h('button.btn.sm.danger', { onclick: () => this.exit() }, '✕ Wyjdź'));
     sim.appendChild(top);
 
     // kompas
