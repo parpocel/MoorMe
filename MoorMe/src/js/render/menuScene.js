@@ -314,15 +314,16 @@ export class MenuScene {
     this.hemi.color.copy(mix3(0x5a6c9a, 0xffb08f, 0xe8f2ff)); this.hemi.groundColor.copy(mix3(0x0c1428, 0x3a5f8f, 0x4f7fa8));
     this.hemi.intensity = 1.5 - night * 0.9;
     this.sunL.color.copy(mix3(0xc4d2f2, 0xff9a55, 0xfff4e2)); this.sunL.intensity = night ? 0.45 + (1 - night) * 2.5 : 3.6 - day * 0.8; // księżyc świeci słabiej niż słońce
-    this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.3, Math.sin(SUN_AZ - 0.12)).normalize() : sunDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
+    // przy nisko stojącym słońcu światło (i cień) pada pod kątem co najmniej ~14° – cień jest długi, ale nie ciągnie się przez całe morze
+    const lowEl = 0.25, shDir = elev < lowEl ? new THREE.Vector3(sunDir.x, 0, sunDir.z).normalize().multiplyScalar(Math.cos(lowEl)).setY(Math.sin(lowEl)) : sunDir;
+    this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.3, Math.sin(SUN_AZ - 0.12)).normalize() : shDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
     this.rim.intensity = 0.9 * (1 - night * 0.6);
-    // cień jachtu słabnie, gdy słońce schodzi nisko (bardzo długi klin przez całe morze), po zachodzie znika
+    // cień jachtu: słabnie przy samym zachodzie i znika dopiero, gdy słońce schowa się za horyzont
     // nocą słabszy cień od księżyca
-    const sh = THREE.MathUtils.smoothstep(elev, 0.06, 0.26), shMoon = night > 0.5 ? THREE.MathUtils.smoothstep(night, 0.5, 0.9) : 0;
+    const sh = THREE.MathUtils.smoothstep(elev, -0.04, 0.04) * (1 + 0.45 * golden), shMoon = night > 0.5 ? THREE.MathUtils.smoothstep(night, 0.5, 0.9) : 0;
     this.shadowPlane.material.opacity = 0.32 * sh + 0.2 * shMoon;
     this.shadowPlane.visible = this.sunL.castShadow = sh + shMoon > 0.01;
     this.sea.material.color.copy(mix3(0x1f4a6e, 0x3d86ad, 0x24689a)); // za dnia nieco ciemniejsza woda
-    this.sea.material.roughness = 0.3 + night * 0.25; // nocą słabszy, bardziej rozmyty odblask księżyca
     CLOUD_M.color.copy(mix3(0x3a4566, 0xffc2a8, 0xffffff)); CLOUD_M.emissive.copy(mix3(0x0e1426, 0xff7a5a, 0x9fb2c4)); CLOUD_M.emissiveIntensity = 0.35 - day * 0.1 - night * 0.2;
     // słońce, księżyc, gwiazdy
     const sunPos = sunDir.clone().multiplyScalar(1300);
@@ -338,6 +339,16 @@ export class MenuScene {
     this.stars.material.opacity = night * 0.9;
     this.renderer.toneMappingExposure = 1.0 - night * 0.15;
     this.isNight = night > 0.5;
+    // odbicie nieba w wodzie (mapa otoczenia z kopuły nieba) – za dnia fasety fal łapią jasne niebo, nocą prawie nic
+    try {
+      if (!this.pmrem) { this.pmrem = new THREE.PMREMGenerator(this.renderer); this.skyScene = new THREE.Scene(); this.skyScene.add(new THREE.Mesh(this.sky.geometry, this.sky.material)); }
+      const env = this.pmrem.fromScene(this.skyScene, 0, 1, 5000);
+      if (this.sea.material.envMap) this.sea.material.envMap.dispose();
+      this.sea.material.envMap = env.texture;
+      this.sea.material.envMapIntensity = 0.65 * day + 0.12 * golden + 0.08 * night;
+    } catch (e) { /* bez mapy otoczenia */ }
+    this.sea.material.roughness = 0.3 - day * 0.12 + night * 0.25; // w pełni dnia gładsza woda – więcej odblasków
+    this.sea.material.needsUpdate = true;
   }
 
   frame(t) {
