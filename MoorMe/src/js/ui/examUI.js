@@ -135,7 +135,7 @@ export function showExam(app, { scope, onExit, sceneryEl }) {
           h('div.ex-rq', {}, `${i + 1}. ${q.q}`),
           answers[i] !== null ? h('div.ex-ry', {}, '✗ ', optNode(q.options[answers[i]])) : h('div.ex-ry', {}, t('✗ brak odpowiedzi')),
           h('div.ex-rc', {}, '✓ ', optNode(q.options[q.answer])),
-          q.explain ? h('p.small.muted', {}, q.explain) : null))) : null));
+          ))) : null));
     footL.append(
       h('button.btn', { onclick: () => quit() }, '← Wróć do wyboru testu'),
       h('button.btn.primary', { onclick: () => { close(); showExam(app, { scope, onExit, sceneryEl }); } }, '↻ Nowy test'));

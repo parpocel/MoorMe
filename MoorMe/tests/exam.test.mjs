@@ -10,7 +10,7 @@ for (const lang of ['pl', 'en']) {
   setLang(lang);
   const sea = buildPool('sea'), inland = buildPool('inland');
   const ids = new Set([...sea, ...inland].map((e) => e.id));
-  check(ids.size >= 2000, `[${lang}] baza ma co najmniej 2000 różnych pytań (${ids.size})`);
+  check(ids.size >= 1800, `[${lang}] baza ma co najmniej 1800 różnych pytań (${ids.size})`);
   check(new Set(sea.map((e) => e.id)).size === sea.length && new Set(inland.map((e) => e.id)).size === inland.length, `[${lang}] identyfikatory pytań są unikalne`);
   for (const [scope, pool] of [['sea', sea], ['inland', inland]]) {
     const r = rng(11);

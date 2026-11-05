@@ -132,7 +132,7 @@ function skyDome() {
 export class MenuScene {
   constructor(el) {
     this.el = el;
-    const r = new THREE.WebGLRenderer({ antialias: true });
+    const r = new THREE.WebGLRenderer({ antialias: true, stencil: true });
     r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
@@ -203,10 +203,11 @@ export class MenuScene {
     const seaGeo = new THREE.PlaneGeometry(1600, 1600, 110, 110).toNonIndexed();
     seaGeo.rotateX(-Math.PI / 2);
     this.seaBase = Float32Array.from(seaGeo.attributes.position.array);
-    const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3d86ad, flatShading: true, roughness: 0.3, metalness: 0.1 }));
+    const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3d86ad, flatShading: true, roughness: 0.3, metalness: 0.1,
+      stencilWrite: true, stencilRef: 0, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp })); // woda przed zanurzoną częścią kadłuba kasuje jego znacznik – cień pada też tuż przy burcie
     sea.receiveShadow = false; // cień jachtu nie ugina się na falach – pada na płaską płaszczyznę tuż nad grzbietami
     scene.add(sea);
-    const shadowPlane = this.shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false }));
+    const shadowPlane = this.shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp, stencilZPass: THREE.KeepStencilOp }));
     shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.82; shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
@@ -270,7 +271,12 @@ export class MenuScene {
     const id = boatIdentity();
     this._idKey = JSON.stringify(id);
     const boat = this.boat = buildBoat(BOATS.C46, { color: 0xffffff, stripe: 0x2f4468, ...id, split: true });
-    boat.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    // jacht zaznacza swoje piksele w buforze szablonu – płaszczyzna cienia nad falami nie rysuje się na kadłubie ani żaglach
+    boat.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true; o.receiveShadow = true;
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) Object.assign(m, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+    });
     boat.rotation.y = -0.35;
     this.scene.add(boat);
   }
@@ -338,8 +344,6 @@ export class MenuScene {
 
     const bt = this.boat;
     bt.position.y = this.wave(0, 0, t) * 0.7 - 0.2;
-    // płaszczyzna cienia na linii wody jachtu (porusza się z nim) – inaczej przy opadaniu jachtu przecinała burtę i cień wchodził na kadłub
-    this.shadowPlane.position.y = bt.position.y + 0.22;
     bt.rotation.z = Math.sin(t * 0.8) * 0.024;
     bt.rotation.x = Math.sin(t * 0.6 + 1) * 0.02;
     this.buoys.forEach((o, i) => { o.position.y = this.wave(o.position.x, o.position.z, t) - 0.3; o.rotation.z = Math.sin(t * 1.3 + i) * 0.12; });
