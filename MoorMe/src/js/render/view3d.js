@@ -862,7 +862,7 @@ export class View3D {
         if (gy > 0) y = Math.max(y, gy + 0.09); // leży na powierzchni (promień liny ok. 4 cm + detale krawędzi)
         if (slip && rr) {
           // dwie nitki: przy burcie razem, przy polerze rozchodzą się na szerokość szyjki
-          const o = 0.02 + (rr - 0.02) * t; // jedno długie, wąskie „V”: od kluzy razem, ku polerowi równomiernie się rozchodzą
+          const o = 0.048 + Math.max(0, rr - 0.048) * t; // długie, wąskie „V”; nitki zawsze rozdzielone (odstęp ≥ grubość liny)
           strandA.push(new THREE.Vector3(x + nx * o, y, z + nz * o));
           strandB.push(new THREE.Vector3(x - nx * o, y, z - nz * o));
         } else pts.push(new THREE.Vector3(x, y, z));
@@ -889,7 +889,7 @@ export class View3D {
       if (!this.ropePts) this.ropePts = new Map();
       this.ropePts.set(line.id, pts);
       const curve = new THREE.CatmullRomCurve3(pts, false, 'centripetal');
-      const geo = new THREE.TubeGeometry(curve, Math.min(160, pts.length * 2), line.isMooring ? 0.035 : 0.04, 8, false);
+      const geo = new THREE.TubeGeometry(curve, Math.min(360, pts.length * 3), line.isMooring ? 0.035 : 0.04, 8, false);
       let mesh = this.ropeMeshes.get(line.id);
       if (!mesh) {
         mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7, flatShading: false }));
@@ -901,10 +901,17 @@ export class View3D {
         mesh.geometry = geo;
       }
       mesh.material.color.setHex(line.isMooring && line.state !== 'attached' ? 0x9aa19f : this.ropeColor(line));
+      // cienka linia wzdłuż liny – zawsze co najmniej 1 piksel, więc lina (i obie nitki na biegowo) jest widoczna przy każdej rozdzielczości
+      {
+        const lp = curve.getPoints(Math.min(360, pts.length * 3));
+        if (!mesh.userData.thin) { mesh.userData.thin = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff })); this.scene.add(mesh.userData.thin); }
+        const th = mesh.userData.thin; th.geometry.dispose(); th.geometry = new THREE.BufferGeometry().setFromPoints(lp);
+        th.material.color.copy(mesh.material.color); th.visible = mesh.visible;
+      }
       if (line.selected) mesh.material.emissive.setHex(0x224466); else mesh.material.emissive.setHex(0x000000);
     }
     for (const [id, mesh] of this.ropeMeshes) {
-      if (!alive.has(id)) { this.scene.remove(mesh); mesh.geometry.dispose(); this.ropeMeshes.delete(id); this.ropePts.delete(id); }
+      if (!alive.has(id)) { this.scene.remove(mesh); mesh.geometry.dispose(); if (mesh.userData.thin) { this.scene.remove(mesh.userData.thin); mesh.userData.thin.geometry.dispose(); } this.ropeMeshes.delete(id); this.ropePts.delete(id); }
     }
     // zwoje przygotowanych lin na pokładzie
     const coilAlive = new Set();
