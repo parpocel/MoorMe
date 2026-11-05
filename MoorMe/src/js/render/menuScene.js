@@ -97,8 +97,9 @@ function buoy(color, top) {
   return g;
 }
 
+const CLOUD_M = flat(0xffc2a8, { roughness: 1, emissive: 0xff7a5a, emissiveIntensity: 0.35 }); // jeden materiał – kolor zależny od pory dnia
 function cloud(seed, s) {
-  const R = rng(seed), g = new THREE.Group(), m = flat(0xffc2a8, { roughness: 1, emissive: 0xff7a5a, emissiveIntensity: 0.35 });
+  const R = rng(seed), g = new THREE.Group(), m = CLOUD_M;
   for (let i = 0; i < 5; i++) {
     const b = new THREE.Mesh(jagged(new THREE.IcosahedronGeometry(s * (0.5 + R() * 0.4), 0), s * 0.2, R, false), m);
     b.position.set((i - 2) * s * 0.55 + (R() - 0.5) * s * 0.3, (R() - 0.3) * s * 0.3, (R() - 0.5) * s * 0.4);
@@ -148,8 +149,8 @@ export class MenuScene {
 
     // światło: ciepłe, niskie słońce + niebo/odbicie od morza
     const sunDir = new THREE.Vector3(Math.cos(SUN_AZ), 0.028, Math.sin(SUN_AZ)).normalize();
-    scene.add(new THREE.HemisphereLight(0xffb08f, 0x3a5f8f, 1.5));
-    const sun = new THREE.DirectionalLight(0xff9a55, 3.6);
+    const hemi = this.hemi = new THREE.HemisphereLight(0xffb08f, 0x3a5f8f, 1.5); scene.add(hemi);
+    const sun = this.sunL = new THREE.DirectionalLight(0xff9a55, 3.6);
     sun.position.copy(sunDir).multiplyScalar(160);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -157,11 +158,11 @@ export class MenuScene {
     sun.shadow.bias = -0.0006;
     sun.shadow.normalBias = 0.04;
     scene.add(sun, sun.target);
-    const rim = new THREE.DirectionalLight(0xb48cff, 0.9);
+    const rim = this.rim = new THREE.DirectionalLight(0xb48cff, 0.9);
     rim.position.set(60, 40, 80);
     scene.add(rim);
 
-    const sky = skyDome();
+    const sky = this.sky = skyDome();
     sky.material.uniforms.sunDir.value.copy(sunDir);
     scene.add(sky);
 
@@ -183,6 +184,20 @@ export class MenuScene {
     disc.scale.set(100, 100, 1);
     disc.position.copy(sunPos);
     scene.add(halo, disc);
+    this.halo = halo; this.disc = disc;
+    // nocne niebo: księżyc i gwiazdy
+    const moon = this.moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, '#ffffff'], [0.6, '#f3f1e2'], [0.8, '#e6e2c8'], [0.92, 'rgba(230,226,200,0.25)'], [1, 'rgba(230,226,200,0)']]), fog: false, toneMapped: false }));
+    moon.scale.set(64, 64, 1);
+    const moonHalo = this.moonHalo = new THREE.Sprite(new THREE.SpriteMaterial({ map: radial([[0, 'rgba(210,225,255,0.45)'], [0.4, 'rgba(160,185,240,0.12)'], [1, 'rgba(120,150,220,0)']]), blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false }));
+    moonHalo.scale.set(360, 360, 1);
+    scene.add(moonHalo, moon);
+    {
+      const R2 = rng(77), n = 700, pos = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) { const a = R2() * Math.PI * 2, y = 0.06 + Math.pow(R2(), 0.7) * 0.94, r = Math.sqrt(1 - y * y); pos.set([Math.cos(a) * r * 1300, y * 1300, Math.sin(a) * r * 1300], i * 3); }
+      const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      this.stars = new THREE.Points(g2, new THREE.PointsMaterial({ color: 0xffffff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+      scene.add(this.stars);
+    }
 
     // morze: płaskie fasety z falą
     const seaGeo = new THREE.PlaneGeometry(1600, 1600, 110, 110).toNonIndexed();
@@ -236,7 +251,10 @@ export class MenuScene {
 
     this.alive = true;
     const t0 = performance.now();
+    if (typeof window !== 'undefined') window.__menu = this; // do testów w przeglądarce
+    this.applyTime(); this._tLast = performance.now();
     const loop = (now) => {
+      if (now - this._tLast > 30000) { this._tLast = now; this.applyTime(); } // co pół minuty – pora dnia z zegara komputera
       if (!this.alive || !this.el.isConnected) { this.dispose(); return; }
       this.frame((now - t0) / 1000);
       requestAnimationFrame(loop);
@@ -264,6 +282,46 @@ export class MenuScene {
 
   wave(x, z, t) {
     return Math.sin(x * 0.045 + t * 0.9) * 0.36 + Math.sin(z * 0.06 - t * 1.1) * 0.3 + Math.sin((x + z) * 0.11 + t * 1.7) * 0.12; // spokojne morze
+  }
+
+  // pora dnia z zegara komputera: słońce wędruje po niebie i zachodzi w kierunku SUN_AZ (ok. 19:30), nocą księżyc i gwiazdy
+  applyTime(date = new Date()) {
+    const h = date.getHours() + date.getMinutes() / 60;
+    const rise = 6.5, set = 19.5, dayLen = set - rise;
+    // elewacja: łuk od wschodu do zachodu; nocą słońce pod horyzontem
+    const dayT = (h - rise) / dayLen;
+    const elev = dayT >= 0 && dayT <= 1 ? Math.sin(dayT * Math.PI) * 0.85 : -0.25 * Math.sin(((h < rise ? h + 24 : h) - set) / (24 - dayLen) * Math.PI);
+    const az = SUN_AZ - (1 - Math.min(1, Math.max(0, dayT))) * Math.PI; // rano po przeciwnej stronie, wieczorem w kadrze
+    const sunDir = new THREE.Vector3(Math.cos(az) * Math.cos(elev), Math.sin(Math.max(elev, -0.3)), Math.sin(az) * Math.cos(elev)).normalize();
+    // współczynniki: dzień (1 przy wysokim słońcu), złota godzina (słońce nisko), noc
+    const day = THREE.MathUtils.smoothstep(elev, 0.05, 0.35), golden = Math.max(0, 1 - Math.abs(elev - 0.02) / 0.16), night = THREE.MathUtils.smoothstep(-elev, 0.02, 0.14);
+    const C = (a) => new THREE.Color(a);
+    const mix3 = (n, g, d) => { const c = C(d).lerp(C(g), golden); return c.lerp(C(n), night); };
+    const U = this.sky.material.uniforms;
+    U.top.value.copy(mix3(0x0a1030, 0x2b3a78, 0x2f6fb8)); U.mid.value.copy(mix3(0x16224a, 0xc0577a, 0x7fb6e2)); U.hor.value.copy(mix3(0x24365e, 0xff9a52, 0xcfe6f4));
+    U.sunDir.value.copy(night > 0.5 ? new THREE.Vector3(0, -1, 0) : sunDir);
+    this.scene.fog.color.copy(mix3(0x1b2a4a, FOG, 0xb9d6ea));
+    this.hemi.color.copy(mix3(0x5a6c9a, 0xffb08f, 0xe8f2ff)); this.hemi.groundColor.copy(mix3(0x0c1428, 0x3a5f8f, 0x4f7fa8));
+    this.hemi.intensity = 1.5 - night * 0.9;
+    this.sunL.color.copy(mix3(0xc4d2f2, 0xff9a55, 0xfff4e2)); this.sunL.intensity = night ? 1.1 + (1 - night) * 2.5 : 3.6 - day * 0.8;
+    this.sunL.position.copy(night > 0.5 ? new THREE.Vector3(Math.cos(SUN_AZ - 0.12), 0.19, Math.sin(SUN_AZ - 0.12)).normalize() : sunDir).multiplyScalar(160); // nocą światło od księżyca (srebrny odblask na morzu)
+    this.rim.intensity = 0.9 * (1 - night * 0.6);
+    this.sea.material.color.copy(mix3(0x1f4a6e, 0x3d86ad, 0x2f7fb3));
+    CLOUD_M.color.copy(mix3(0x3a4566, 0xffc2a8, 0xffffff)); CLOUD_M.emissive.copy(mix3(0x0e1426, 0xff7a5a, 0x9fb2c4)); CLOUD_M.emissiveIntensity = 0.35 - day * 0.1 - night * 0.2;
+    // słońce, księżyc, gwiazdy
+    const sunPos = sunDir.clone().multiplyScalar(1300);
+    this.disc.position.copy(sunPos); this.halo.position.copy(sunPos).multiplyScalar(1.01);
+    this.disc.visible = this.halo.visible = elev > -0.06;
+    this.halo.material.opacity = 0.4 + golden * 0.6;
+    const mAz = az + Math.PI * 0.85, mEl = 0.35;
+    const moonPos = new THREE.Vector3(Math.cos(mAz) * Math.cos(mEl), Math.sin(mEl), Math.sin(mAz) * Math.cos(mEl)).multiplyScalar(1250);
+    // nocą księżyc w kadrze (po stronie zachodu słońca, nieco wyżej)
+    if (night > 0.3) moonPos.set(Math.cos(SUN_AZ - 0.12) * 1200, 230, Math.sin(SUN_AZ - 0.12) * 1200);
+    this.moon.position.copy(moonPos); this.moonHalo.position.copy(moonPos).multiplyScalar(1.01);
+    this.moon.visible = this.moonHalo.visible = night > 0.05; this.moon.material.opacity = this.moonHalo.material.opacity = night;
+    this.stars.material.opacity = night * 0.9;
+    this.renderer.toneMappingExposure = 1.0 - night * 0.15;
+    this.isNight = night > 0.5;
   }
 
   frame(t) {
