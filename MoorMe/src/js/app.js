@@ -9,7 +9,6 @@ import { DEG, compassVec, pointInConvex } from './math.js';
 import { sceneryHTML, signalFlagsHTML } from './ui/scenery.js';
 import { buildHelpContent } from './ui/help.js';
 import { Preview3D } from './render/preview.js';
-import { showChartQuiz } from './ui/chartQuizUI.js';
 import { navBook } from './ui/navBook.js';
 import { t, getLang, setLang, hasSavedLang, installDomTranslator, LANGS } from './i18n.js';
 import { PassageScreen } from './ui/passageUI.js';
@@ -442,8 +441,7 @@ function showNavIntro() {
     kicker: 'Nawigacja', back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: () => showNavIntro(),
     items: [
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania', tag: 'kursy, namiary, pozycja', desc: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', go: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } },
-      { glyph: 'map', color: '#b0288c', title: 'Symbole map', tag: 'test z legendy map', desc: 'Test: rozpoznaj symbole z map morskich (wraki, skały, głębokości, obszary, światła, pławy, prądy) i poznaj ich znaczenie. W teście jest też legenda wszystkich symboli.', go: () => showChartQuiz(app, { sceneryEl, onExit: () => showNavIntro() }) },
-      { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: 'przeliczanie kursów i namiary', desc: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł.', go: () => showNavBook() }
+      { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: 'kursy, namiary, symbole map', desc: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł. Na końcu legenda symboli map morskich.', go: () => showNavBook() }
     ]
   });
 }

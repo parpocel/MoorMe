@@ -2,6 +2,7 @@
 // namiary i ich nanoszenie, linie pozycyjne i pozycja z namiarów, zliczenie drogi, czas–prędkość–droga, zasięg świateł.
 import { h } from './dom.js';
 import { getLang } from '../i18n.js';
+import { CHART_SYMBOLS, symbolSVG } from '../data/chartSymbols.js';
 
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
 const svgBox = (w, hh, inner, wide = false) => { const d = document.createElement('div'); d.className = 'hb-svg nb-fig' + (wide ? ' nb-wide' : ''); d.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" font-family="Nunito, sans-serif">${inner}</svg>`; return d; };
@@ -184,9 +185,50 @@ function doubleSVG() {
   return svgBox(W, H, g);
 }
 
+
+// rozdział „Symbole map”: legenda symboli INT 1 pogrupowana tematycznie
+const SYM_GROUPS = [['danger', 'Niebezpieczeństwa', 'Dangers'], ['depth', 'Głębokości i dno', 'Depths and seabed'], ['tide', 'Pływy i prądy', 'Tides and currents'],
+  ['area', 'Obszary i granice', 'Areas and limits'], ['aid', 'Światła i pomoce nawigacyjne', 'Lights and aids'], ['buoy', 'Pławy i znaki', 'Buoys and beacons'],
+  ['land', 'Ląd, porty i punkty orientacyjne', 'Land, harbours and landmarks'], ['note', 'Oznaczenia i skróty', 'Notes and abbreviations']];
+function symbolsChapter() {
+  const grps = SYM_GROUPS.filter(([g]) => CHART_SYMBOLS.some((s) => s.grp === g));
+  const other = CHART_SYMBOLS.filter((s) => !SYM_GROUPS.some(([g]) => g === s.grp));
+  const card = (s) => { const pic = document.createElement('div'); pic.className = 'sym-pic'; pic.innerHTML = symbolSVG(s, 120, 82); return h('div.sym-leg', {}, pic, h('div', {}, h('b', {}, s.name()), h('p', {}, s.mean()))); };
+  return [
+    entry(L('Symbole map morskich', 'Chart symbols'), P(L('Mapy morskie używają wspólnego zestawu symboli i skrótów opisanego w publikacji INT 1 (IHO). Poniżej najważniejsze z nich – rysunki są uproszczone, ale układ i kolory odpowiadają mapom: magenta to światła, granice obszarów i ostrzeżenia, błękit – płytka woda, beż – ląd, zieleń – obszary osychające.', 'Nautical charts use a common set of symbols and abbreviations described in INT 1 (IHO). The most important ones are shown below – the drawings are simplified, but layout and colours follow the charts: magenta for lights, area limits and cautions, blue for shallow water, buff for land, green for drying areas.'))),
+    ...grps.map(([g, pl, en]) => h('section.nb-lesson', {}, h('h3', {}, L(pl, en)), h('div.sym-legend', {}, ...CHART_SYMBOLS.filter((s) => s.grp === g).map(card)))),
+    other.length ? h('section.nb-lesson', {}, h('h3', {}, L('Inne', 'Other')), h('div.sym-legend', {}, ...other.map(card))) : null
+  ].filter(Boolean);
+}
+
 export function navBook() {
   return [
     { id: 'intro', name: L('Wstęp', 'Introduction'), entries: [
+      entry(L('Krótka historia nawigacji', 'A short history of navigation'),
+        P(L('Pierwsi żeglarze pływali wzdłuż brzegów, od przylądka do przylądka, kierując się znanymi punktami na lądzie, głębokością sondowaną ołowianką, kolorem wody i lotem ptaków. Polinezyjczycy i Wikingowie przepływali otwarte morze, czytając gwiazdy, kierunek fal i wiatru.', 'The first seafarers sailed along the coast, from headland to headland, steering by known landmarks, depths sounded with a lead line, the colour of the water and the flight of birds. Polynesians and Vikings crossed open sea by reading the stars, the swell and the wind.')),
+        P(L('Około XII wieku do Europy dotarł kompas magnetyczny, a w XIII–XV wieku pojawiły się mapy portolanowe z siatką kierunków. Szerokość geograficzną mierzono astrolabium, później oktantem i sekstantem (XVIII w.). Długość geograficzną dało się wyznaczać dokładnie dopiero po zbudowaniu chronometru morskiego przez Johna Harrisona (ok. 1760 r.).', 'The magnetic compass reached Europe around the 12th century, and portolan charts with a network of rhumb lines appeared in the 13th–15th centuries. Latitude was measured with an astrolabe, later with the octant and sextant (18th century). Longitude could be found accurately only after John Harrison built the marine chronometer (around 1760).')),
+        P(L('XX wiek przyniósł radionawigację (radionamierniki, Decca, Loran), radar i echosondę, a od lat 90. – nawigację satelitarną GPS, dziś także Galileo, GLONASS i BeiDou, mapy elektroniczne i AIS.', 'The 20th century brought radio navigation (direction finders, Decca, Loran), radar and the echo sounder, and from the 1990s satellite navigation – GPS, today also Galileo, GLONASS and BeiDou – together with electronic charts and AIS.'))),
+      entry(L('Rodzaje nawigacji', 'Types of navigation'),
+        table([L('Rodzaj', 'Type'), L('Na czym polega', 'How it works'), L('Zalety', 'Advantages'), L('Wady', 'Disadvantages')], [
+          [L('Terrestryczna (pilotowa)', 'Terrestrial (pilotage)'), L('pozycja z namiarów i odległości na znane obiekty: latarnie, znaki, punkty na brzegu; nabieżniki, izobaty', 'position from bearings and distances to known objects: lighthouses, marks, landmarks; transits, depth contours'), L('prosta, dokładna blisko brzegu, wymaga tylko kompasu namiarowego i mapy', 'simple, accurate near the coast, needs only a hand-bearing compass and a chart'), L('działa tylko w zasięgu widoczności lądu; mgła i noc ją ograniczają; łatwo pomylić obiekt', 'works only in sight of land; fog and darkness limit it; objects are easy to misidentify')],
+          [L('Zliczeniowa (DR)', 'Dead reckoning (DR)'), L('pozycja wyliczona z kursu, prędkości i czasu od ostatniej pewnej pozycji, z poprawką na dryf i prąd', 'position worked out from course, speed and time since the last reliable fix, corrected for leeway and current'), L('zawsze dostępna, niezależna od zewnętrznych sygnałów; pozwala przewidzieć, gdzie będziesz', 'always available, independent of outside signals; lets you predict where you will be'), L('błędy narastają z czasem (niedokładny log, dryf, prąd) – trzeba ją co jakiś czas potwierdzać', 'errors grow with time (inaccurate log, leeway, current) – it has to be checked regularly')],
+          [L('Astronomiczna', 'Celestial'), L('pozycja z wysokości Słońca, Księżyca, planet i gwiazd mierzonych sekstantem i dokładnego czasu', 'position from the altitudes of the Sun, Moon, planets and stars measured with a sextant, plus accurate time'), L('działa na całym oceanie, bez prądu i elektroniki', 'works anywhere on the ocean, without power or electronics'), L('wymaga wiedzy, tablic i widocznego nieba (horyzont i ciała niebieskie); dokładność ok. 1–2 Mm', 'needs skill, tables and a clear sky (horizon and bodies visible); accuracy about 1–2 NM')],
+          [L('Radionawigacja i radar', 'Radio navigation and radar'), L('namiary radiowe, odległości i namiary z radaru, echosonda', 'radio bearings, radar ranges and bearings, echo sounder'), L('działa w nocy i we mgle; radar pokazuje też inne statki', 'works at night and in fog; radar also shows other vessels'), L('potrzebny prąd i sprzęt; radar wymaga wprawy w interpretacji obrazu', 'needs power and equipment; radar images take practice to interpret')],
+          [L('Satelitarna (GNSS)', 'Satellite (GNSS)'), L('odbiornik GPS/Galileo liczy pozycję z sygnałów satelitów', 'a GPS/Galileo receiver computes position from satellite signals'), L('dokładna (kilka metrów), ciągła, na całym świecie; od razu podaje prędkość i kurs nad dnem', 'accurate (a few metres), continuous, worldwide; gives speed and course over the ground at once'), L('zależy od prądu i sygnału – awaria, zakłócenia (jamming) lub błąd mapy elektronicznej mogą zaskoczyć; uczy ślepego zaufania', 'depends on power and signal – a failure, jamming or a chart error can catch you out; encourages blind trust')]
+        ]),
+        note(L('Dobry nawigator nie polega na jednej metodzie: pozycję z GPS regularnie nanosi na mapę papierową, prowadzi zliczenie i sprawdza je namiarami. Dlatego na egzaminie liczy się kursy i pozycję „ręcznie”.', 'A good navigator never relies on one method: plots the GPS position on the paper chart at regular intervals, keeps a DR and checks it with bearings. That is why courses and positions are worked out by hand in the exam.'))),
+      entry(L('Jednostki w nawigacji', 'Units used in navigation'),
+        table([L('Wielkość', 'Quantity'), L('Jednostka', 'Unit'), L('Ile to jest', 'Value')], [
+          [L('odległość', 'distance'), L('mila morska (Mm, NM)', 'nautical mile (NM)'), L('1852 m = 1′ (minuta) szerokości geograficznej', '1852 m = 1′ (minute) of latitude')],
+          [L('krótka odległość', 'short distance'), L('kabel (kbl)', 'cable'), L('0,1 Mm ≈ 185 m', '0.1 NM ≈ 185 m')],
+          [L('prędkość', 'speed'), L('węzeł (kn, w)', 'knot (kn)'), L('1 Mm/h ≈ 1,852 km/h ≈ 0,514 m/s', '1 NM/h ≈ 1.852 km/h ≈ 0.514 m/s')],
+          [L('głębokość, wysokość', 'depth, height'), L('metr (m); na starszych mapach sążeń i stopa', 'metre (m); on older charts fathoms and feet'), L('1 sążeń = 6 stóp ≈ 1,83 m; 1 stopa ≈ 0,305 m', '1 fathom = 6 feet ≈ 1.83 m; 1 foot ≈ 0.305 m')],
+          [L('kierunek', 'direction'), L('stopień (°), od 000° do 359°, liczony od północy w prawo', 'degree (°), 000° to 359°, measured clockwise from north'), L('kurs i namiar zapisuje się trzema cyframi, np. 045°', 'courses and bearings are written with three digits, e.g. 045°')],
+          [L('pozycja', 'position'), L('szerokość (φ) i długość (λ) geograficzna w stopniach i minutach', 'latitude (φ) and longitude (λ) in degrees and minutes'), L('np. 54°31,2′N 018°33,6′E; 1° = 60′', 'e.g. 54°31.2′N 018°33.6′E; 1° = 60′')],
+          [L('czas', 'time'), L('godziny i minuty (UTC lub czas strefowy)', 'hours and minutes (UTC or zone time)'), L('6 minut = 0,1 h – przy 6 kn to 0,6 Mm', '6 minutes = 0.1 h – at 6 kn that is 0.6 NM')]
+        ]))
+    ] },
+    { id: 'courses', name: L('Przeliczanie kursów', 'Converting courses'), entries: [
       entry(L('Po co przeliczać kursy', 'Why courses are converted'),
         P(L('Kompas na jachcie nie wskazuje północy rzeczywistej: igłę odchyla pole magnetyczne Ziemi (deklinacja) i żelazo oraz elektryka na jachcie (dewiacja). Wiatr spycha jacht z kursu (dryf), a prąd niesie całą wodę razem z jachtem. Mapa jest wykreślona względem północy rzeczywistej, a nad dnem liczy się droga, którą jacht naprawdę przebywa – dlatego kurs odczytany z kompasu trzeba przeliczyć na kurs na mapie i odwrotnie.', 'The ship’s compass does not point to true north: the needle is deflected by the Earth’s magnetic field (variation) and by iron and electrics on board (deviation). The wind pushes the yacht off its heading (leeway) and the current carries the whole body of water with it. The chart is drawn relative to true north and what counts over the ground is the track the yacht really makes – so a compass course has to be converted into a chart course and back.'))),
       entry(L('Oznaczenia', 'Notation'),
@@ -203,9 +245,7 @@ export function navBook() {
           ['NK, NM, NR', L('namiar kompasowy, magnetyczny, rzeczywisty', 'compass, magnetic, true bearing'), L('kierunek na obiekt mierzony od odpowiedniej północy', 'direction to an object measured from the matching north')]
         ]),
         P(B(L('Zasada znaków: ', 'Sign rule: ')), L('poprawki na wschód (E) i w prawo są dodatnie (+), na zachód (W) i w lewo są ujemne (−).', 'corrections to the east (E) and to the right are positive (+), to the west (W) and to the left negative (−).')),
-        northsSVG())
-    ] },
-    { id: 'courses', name: L('Przeliczanie kursów', 'Converting courses'), entries: [
+        northsSVG()),
       entry(L('Od kompasu do mapy: KK → KDd', 'From the compass to the chart: CC → COG'),
         chainSVG(),
         formula('KM = KK + δ', 'KR = KM + d = KK + p', 'KDw = KR + β', L('KDd = KDw „+” prąd (dodawanie wektorów – trójkąt prędkości)', 'COG = CTW “+” current (vector addition – the velocity triangle)')),
@@ -296,6 +336,7 @@ export function navBook() {
         formula(L('Dg = 2,08 · (√h + √H)   [Mm, h i H w metrach]', 'Dg = 2.08 · (√h + √H)   [NM, h and H in metres]')),
         P(L('h – wysokość światła nad wodą (z mapy lub spisu świateł), H – wysokość oka obserwatora. Zasięg nominalny (siła światła) podaje mapa, np. „15M”. Światło zobaczysz z mniejszej z tych dwóch odległości.', 'h – height of the light above the water (from the chart or list of lights), H – height of the observer’s eye. The nominal range (the light’s power) is on the chart, e.g. “15M”. You will see the light at the smaller of the two distances.')),
         ex(L('h = 36 m, H = 2,25 m: Dg = 2,08 · (6 + 1,5) = 15,6 Mm; zasięg nominalny 18 Mm → światło pojawi się na horyzoncie w odległości ok. 15,6 Mm. To daje linię pozycyjną (okrąg) – razem z namiarem: pozycję.', 'h = 36 m, H = 2.25 m: Dg = 2.08 · (6 + 1.5) = 15.6 NM; nominal range 18 NM → the light rises over the horizon at about 15.6 NM. That gives a position circle – with its bearing, a fix.')))
-    ] }
+    ] },
+    { id: 'symbols', name: L('Symbole map', 'Chart symbols'), entries: symbolsChapter() }
   ];
 }
