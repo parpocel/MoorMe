@@ -854,16 +854,23 @@ function marksBookRaw() {
 
 
 // ---------- dla modułu „Test” ----------
-// model 3D jednostki (światła nocą albo znaki dzienne) bez podpisów; bez WebGL – rzuty jak w podręczniku
-export function examVesselView(id) {
-  const v = anyVessel(id), day = !!DAY_BY_ID[id];
+// statyczne rysunki jednostki do testu: nocą widok pod kątem rel (od dziobu, z burty, od rufy – rzut najbliższego z czterech
+// widoków, widoczne światła dokładnie dla rel), w dzień rysunek z boku ze znakami dziennymi
+const viewFor = (rel) => { const n = (((rel % 360) + 540) % 360) - 180; const base = [...VIEWS].sort((a, b) => Math.abs(((n - a.rel + 540) % 360) - 180) - Math.abs(((n - b.rel + 540) % 360) - 180))[0]; return { ...base, rel: n }; };
+export function vesselSVG(id, rel = 0) {
+  const v = anyVessel(id);
+  if (!v) return '';
+  if (DAY_BY_ID[id]) return `<svg xmlns="${NS}" viewBox="0 0 300 ${dayH(v)}" width="300" height="${dayH(v)}">${dayView(v)}</svg>`;
+  // światła nieco większe i z poświatą – w teście mają być dobrze widoczne
+  const g = lightView(v, viewFor(rel), 200, 120, vesselScale(v)).replace(/<circle cx="([\d.\-]+)" cy="([\d.\-]+)" r="4" fill="([^"]+)"\/>/g, (m, x, y, c) => `<circle cx="${x}" cy="${y}" r="7" fill="${c}" opacity="0.28"/><circle cx="${x}" cy="${y}" r="4.6" fill="${c}"/>`);
+  return `<svg xmlns="${NS}" viewBox="0 0 200 120" width="200" height="120">${g}</svg>`;
+}
+export function examVesselView(id, rel = 0, caption = null) {
+  const v = anyVessel(id);
   if (!v) return null;
-  if (day) {
-    const Lm = (v.L[0] + v.L[1]) / 2, shapes = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' });
-    return lightsViewer(v, [], Lm, { day: true, shapes, noGear: true }) || svgEl(300, dayH(v), dayView(v));
-  }
-  const { Lm, lights } = vesselLights(v), sc = vesselScale(v);
-  return lightsViewer(v, lights, Lm, { noGear: true }) || h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
+  const pic = document.createElement('div'); pic.className = 'hb-svg'; pic.innerHTML = vesselSVG(id, rel);
+  const cap = DAY_BY_ID[id] ? null : caption || viewFor(rel).name;
+  return h('figure.ex-fig', { class: DAY_BY_ID[id] ? 'day' : '' }, pic, cap ? h('figcaption', {}, cap) : null);
 }
 // rysunki znaków nawigacyjnych: [{ scope: 'sea'|'inland', name, look, svg }]
 export function examMarks() {

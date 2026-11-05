@@ -1159,3 +1159,10 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .exam .ex-optpic svg, .exam .ex-optpic img { display: block; max-width: 100%; max-height: 190px; height: auto; border-radius: 8px; }
 .exam .ex-rv .ex-optpic { display: inline-block; vertical-align: middle; }
 .exam .ex-rv .ex-optpic svg, .exam .ex-rv .ex-optpic img { max-height: 90px; width: auto; }
+.exam .ex-pic { padding: 8px; }
+.exam .ex-fig { margin: 0; width: 100%; }
+.exam .ex-fig .hb-svg, .exam .ex-fig svg { display: block; width: 100%; height: auto; border-radius: 10px; }
+.exam .ex-fig figcaption { text-align: center; font-weight: 800; color: #2f4468; margin-top: 6px; font-size: 15px; }
+.exam .ex-opt.pic .ex-optpic.ves svg { width: 100%; max-height: 170px; }
+.exam .ex-optpic.ves { display: block; width: 100%; }
+.exam .ex-opt.pic .ex-optpic.ves svg { width: 100%; max-height: none; }

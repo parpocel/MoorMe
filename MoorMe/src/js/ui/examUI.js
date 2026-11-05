@@ -4,7 +4,7 @@ import { t } from '../i18n.js';
 import { rng } from '../math.js';
 import { EXAM, NAV_EXAM_CATS, makeExam, topicName } from '../data/exam.js';
 import { notationNode } from '../data/soundSignals.js';
-import { examMarks, examVesselView } from './handbook.js';
+import { examMarks, examVesselView, vesselSVG } from './handbook.js';
 import { ShipAudio } from './soundsUI.js';
 import { showNavTasks } from './navTasksUI.js';
 
@@ -15,6 +15,7 @@ function saveHist(hs) { try { localStorage.setItem(HIST_KEY, JSON.stringify(hs))
 function optNode(o) {
   if (o.startsWith('@svg:')) { const d = h('span.ex-optpic'); d.innerHTML = o.slice(5); return d; }
   if (o.startsWith('@img:')) return h('span.ex-optpic', {}, h('img', { src: o.slice(5), alt: '', decoding: 'async' }));
+  if (o.startsWith('@ves:')) { const [, id, rel] = o.split(':'); const d = h('span.ex-optpic.ves'); d.innerHTML = vesselSVG(id, Number(rel)); return d; }
   return h('span', {}, o);
 }
 const mmss = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -67,7 +68,7 @@ export function showExam(app, { scope, onExit, sceneryEl }) {
 
   function media(m) {
     if (!m) return null;
-    if (m.kind === 'lights' || m.kind === 'day') return h('div.ex-media.ex-3d', {}, examVesselView(m.id));
+    if (m.kind === 'lights' || m.kind === 'day') return h('div.ex-media.ex-pic', {}, examVesselView(m.id, m.rel || 0, m.caption));
     if (m.kind === 'sound') return h('div.ex-media.ex-sound', {}, h('div.ex-notation', {}, notationNode(m.p)),
       h('button.btn', { onclick: () => audio.play(m.p) }, '▶ Odtwórz sygnał'),
       h('p.small.muted', {}, '• krótki dźwięk, — długi dźwięk'));

@@ -4,7 +4,7 @@
 // media: { kind: 'lights'|'day', id } – model 3D jednostki, { kind: 'sound', p } – sygnał dźwiękowy,
 // { kind: 'svg', svg } – rysunek, { kind: 'img', src } – obraz znaku.
 import { getLang, t as tt } from '../i18n.js';
-import { VESSELS, DAY_VESSELS, visibleLights } from './shipLights.js';
+import { VESSELS, DAY_VESSELS, visibleLights, lightSignature } from './shipLights.js';
 import { SIGNALS, notation } from './soundSignals.js';
 import { rng } from '../math.js';
 import { CHART_SYMBOLS, symbolSVG } from './chartSymbols.js';
@@ -419,6 +419,8 @@ function describeLights(lights, rel) {
   if (deck) out.push(L('oświetlony pokład', 'deck lights'));
   return out.length ? cap(out.join(', ')) : L('Nie widać żadnych świateł', 'No lights visible');
 }
+const litOf = (x) => x.lights((x.L[0] + x.L[1]) / 2, () => 0.5, { gearSide: 'starboard' });
+const ASPECT_NAME = { 0: ['od dziobu', 'from ahead'], 90: ['z prawej burty', 'from the starboard side'], '-90': ['z lewej burty', 'from the port side'] };
 const ASPECTS = [['bow', 0, ['od dziobu', 'from ahead']], ['stern', 180, ['od rufy', 'from astern']], ['port', -60, ['od lewej burty', 'from the port side']], ['stbd', 60, ['od prawej burty', 'from the starboard side']],
   ['bowP', -25, ['z lewej strony, blisko dziobu', 'on the port bow']], ['bowS', 25, ['z prawej strony, blisko dziobu', 'on the starboard bow']],
   ['qP', -145, ['z lewej strony, od rufy', 'on the port quarter']], ['qS', 145, ['z prawej strony, od rufy', 'on the starboard quarter']]];
@@ -526,10 +528,23 @@ export function buildPool(scope, marks = []) {
     const list = (day ? DAY_VESSELS : VESSELS).filter((v) => (scope === 'inland' ? v.inland : !v.inland));
     const g = day ? 'day' : 'lights';
     for (const v of list) {
-      out.push(P(`v3:${v.id}`, g, (r) => mk(r, g, day ? L('Jaki statek nosi takie znaki dzienne?', 'Which vessel shows these day shapes?') : L('Jaki statek pokazuje takie światła nocą?', 'Which vessel shows these lights at night?'),
-        shortName(v.name), simVessel(r, list, v).map((x) => shortName(x.name)), { explain: tt(v.explain), media: { kind: day ? 'day' : 'lights', id: v.id } }), v.id));
-      out.push(P(`vx:${v.id}`, g, (r) => mk(r, g, day ? L(`Jakie znaki dzienne nosi: ${shortName(v.name)}?`, `What day shapes does this vessel show: ${shortName(v.name)}?`) : L(`Jakie światła niesie nocą: ${shortName(v.name)}?`, `What lights does this vessel show at night: ${shortName(v.name)}?`),
-        shortOf(v), simVessel(r, list, v).map(shortOf), { explain: tt(v.explain) }), v.id));
+      // rysunek konkretnej sytuacji: nocą widok od dziobu albo z burty; błędne odpowiedzi nie mogą wyglądać z tej strony tak samo
+      out.push(P(`v3:${v.id}`, g, (r) => {
+        const rel = day ? 0 : pick(r, [0, 90, -90]);
+        const sig = (x) => (day ? '' : lightSignature(x.lights((x.L[0] + x.L[1]) / 2, () => 0.5, { gearSide: 'starboard' }), rel));
+        const cand = simVessel(r, list, v).filter((x) => day || sig(x) !== sig(v));
+        return mk(r, g, day ? L('Jaki statek nosi takie znaki dzienne?', 'Which vessel shows these day shapes?') : L('Jaki statek pokazuje takie światła nocą?', 'Which vessel shows these lights at night?'),
+          shortName(v.name), cand.map((x) => shortName(x.name)), { explain: tt(v.explain), media: { kind: day ? 'day' : 'lights', id: v.id, rel } });
+      }, v.id));
+      // odpowiedzi jako rysunki: ten statek i podobne, widziane z tej samej strony (bez identycznie wyglądających)
+      out.push(P(`vx:${v.id}`, g, (r) => {
+        const rel = day ? 0 : pick(r, [0, 90, -90]);
+        const sig = (x) => (day ? x.id : lightSignature(litOf(x), rel)), seen = new Set([sig(v)]);
+        const cand = simVessel(r, list, v).filter((x) => { const k = sig(x); if (seen.has(k)) return false; seen.add(k); return true; });
+        const side = day ? '' : tx(ASPECT_NAME[rel]);
+        return mk(r, g, day ? L(`Jakie znaki dzienne nosi: ${shortName(v.name)}?`, `What day shapes does this vessel show: ${shortName(v.name)}?`) : L(`Jak wygląda nocą ${side}: ${shortName(v.name)}?`, `What does this vessel look like at night ${side}: ${shortName(v.name)}?`),
+          `@ves:${v.id}:${rel}`, cand.map((x) => `@ves:${x.id}:${rel}`), { explain: tt(v.explain) });
+      }, v.id));
     }
   }
 
@@ -538,16 +553,19 @@ export function buildPool(scope, marks = []) {
     const list = VESSELS.filter((v) => (scope === 'inland' ? v.inland : !v.inland) && v.moving);
     const lightsOf = (v) => v.lights((v.L[0] + v.L[1]) / 2, () => 0.5, { gearSide: 'starboard' });
     for (const v of list) for (const [ak, rel, an] of ASPECTS) {
-      const good = describeLights(lightsOf(v), rel);
+      const good = lightSignature(lightsOf(v), rel);
+      // rysunki: ten sam statek z innych stron i podobne statki z tej strony (każdy obraz inny)
       out.push(P(`va:${v.id}:${ak}`, 'lights', (r) => {
-        // podobne: ten sam statek z innego kierunku i statki z tej samej rodziny z tego kierunku
-        const bad = [...shuffle(r, [...ASPECTS.map((a) => describeLights(lightsOf(v), a[1])), ...simVessel(r, list, v).slice(0, 3).map((x) => describeLights(lightsOf(x), rel))])];
-        return mk(r, 'lights', L(`Nocą widzisz ${tx(an)}: ${shortName(v.name)}. Jakie światła widzisz?`, `At night you see ${tx(an)}: ${shortName(v.name)}. Which lights do you see?`), good, bad, { explain: tt(v.explain) });
+        const seen = new Set([good]), bad = [];
+        for (const [x, rr] of shuffle(r, [...ASPECTS.map((a) => [v, a[1]]), ...simVessel(r, list, v).slice(0, 3).map((x) => [x, rel])])) {
+          const k = lightSignature(lightsOf(x), rr); if (seen.has(k)) continue; seen.add(k); bad.push(`@ves:${x.id}:${rr}`);
+        }
+        return mk(r, 'lights', L(`Nocą widzisz ${tx(an)}: ${shortName(v.name)}. Co widzisz?`, `At night you see ${tx(an)}: ${shortName(v.name)}. What do you see?`), `@ves:${v.id}:${rel}`, bad, { explain: tt(v.explain) });
       }, v.id));
-      const twins = list.filter((x) => x !== v && describeLights(lightsOf(x), rel) === good);
-      if (!twins.length && !/Nie widać|No lights/.test(good)) out.push(P(`vr:${v.id}:${ak}`, 'lights', (r) => mk(r, 'lights',
-        L(`Nocą widzisz statek ${tx(an)} i jego światła: ${good.charAt(0).toLowerCase() + good.slice(1)}. Jaki to statek?`, `At night you see a vessel ${tx(an)} showing: ${good.charAt(0).toLowerCase() + good.slice(1)}. What is it?`),
-        shortName(v.name), simVessel(r, list, v).map((x) => shortName(x.name)), { explain: tt(v.explain) }), v.id));
+      const twins = list.filter((x) => x !== v && lightSignature(lightsOf(x), rel) === good);
+      if (!twins.length && visibleLights(lightsOf(v), rel).length) out.push(P(`vr:${v.id}:${ak}`, 'lights', (r) => mk(r, 'lights',
+        L(`Nocą widzisz statek ${tx(an)}. Jaki to statek?`, `At night you see a vessel ${tx(an)}. What is it?`),
+        shortName(v.name), simVessel(r, list, v).filter((x) => lightSignature(lightsOf(x), rel) !== good).map((x) => shortName(x.name)), { explain: tt(v.explain), media: { kind: 'lights', id: v.id, rel, caption: cap(tx(an)) } }), v.id));
     }
   }
   // sygnały dźwiękowe: zapis → znaczenie, znaczenie → zapis
