@@ -298,7 +298,8 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
     const grad = document.createElementNS(NS, 'linearGradient');
     grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');
-    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.9"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.8"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 86%, #0b1430); stop-opacity: 0.88"/>`;
+    const sc = `color-mix(in srgb, ${it.color} 80%, #1b2340)`; // wycinek nieco ciemniejszy niż ikona
+    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${sc} 72%, #fff); stop-opacity: 0.9"/><stop offset="0.5" style="stop-color: ${sc}; stop-opacity: 0.82"/><stop offset="1" style="stop-color: color-mix(in srgb, ${sc} 86%, #0b1430); stop-opacity: 0.9"/>`;
     defs.appendChild(grad);
     const g = document.createElementNS(NS, 'g');
     g.classList.add('wh-g');
