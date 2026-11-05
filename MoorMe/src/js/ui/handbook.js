@@ -869,7 +869,9 @@ export function examVesselView(id) {
 export function examMarks() {
   const B = '#16181c', Y = '#f2c230', R = '#d62828', W = '#ffffff', G = '#1f9d55', IG = '#2a9d4a', Bu = '#1f5fd1';
   const sv = (g) => `<svg xmlns="${NS}" viewBox="0 0 120 170" width="150" height="212">${g}</svg>`;
-  const m = (scope, name, look, g) => ({ scope, name, look, svg: sv(g) });
+  const FAM = ['lat', 'lat', 'lat', 'lat', 'card', 'card', 'card', 'card', 'oth', 'oth', 'oth', 'oth', 'ib', 'ib', 'ib', 'bk', 'bk', 'bk'];
+  let k = 0;
+  const m = (scope, name, look, g) => ({ scope, name, look, svg: sv(g), fam: FAM[k++] });
   return [
     m('sea', L('Znak boczny lewy (IALA A)', 'Port-hand lateral mark (IALA A)'), L('Czerwony, kształt beczki, znak szczytowy – czerwony walec', 'Red, can shape, topmark – a red cylinder'), buoy([R], tm.can(R))),
     m('sea', L('Znak boczny prawy (IALA A)', 'Starboard-hand lateral mark (IALA A)'), L('Zielony, stożek, znak szczytowy – zielony stożek wierzchołkiem do góry', 'Green, conical, topmark – a green cone point up'), buoy([G], tm.cone(G))),
