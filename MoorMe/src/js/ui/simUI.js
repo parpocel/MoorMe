@@ -112,7 +112,7 @@ export class SimScreen {
       if (!barbs) return;
       barbs.visible = !barbs.visible;
       barbBtn.classList.toggle('on', barbs.visible);
-      saveSettings({ windBarbs: barbs.visible });
+      saveSettings({ windFlags: barbs.visible });
     } }, '🚩 Wiatr');
     top.appendChild(barbBtn);
     top.appendChild(h('button.btn.sm', { onclick: () => this.toggleWeather(), title: 'Pogoda i pora dnia (O)' }, '🌦 Pogoda'));

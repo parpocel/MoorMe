@@ -333,7 +333,7 @@ function genZone(H, Z, own, R, ctx) {
         const vA = (own ? refL : 13) * 1.9 + 1;
         const an = F.toWorld(s.u + (R() - 0.5) * 0.6, vA);
         const pk = F.toWorld(s.u + s.w * 0.22, -0.25);
-        H.murings.push({ id: 'm' + H.murings.length, own: !!s.own, anchor: { x: an.x, z: an.z, depth: 5.5 }, pickup: { x: pk.x, z: pk.z } });
+        H.murings.push({ id: 'm' + H.murings.length, own: !!s.own, taken: !!s.neighbor, anchor: { x: an.x, z: an.z, depth: 5.5 }, pickup: { x: pk.x, z: pk.z } });
       }
     }
     // krawędzie slotów – tam stoją bomy / dalby

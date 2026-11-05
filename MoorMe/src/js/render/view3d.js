@@ -166,6 +166,10 @@ export class View3D {
       this.tagEls.push({ p, el });
     }
 
+    // znacznik muringu do podjęcia (najbliższy wolny) – pulsujący pierścień przy lince pilotowej
+    this.murMarker = new THREE.Mesh(new THREE.RingGeometry(0.45, 0.62, 28), new THREE.MeshBasicMaterial({ color: 0xffd166, transparent: true, opacity: 0.9, depthTest: false, side: THREE.DoubleSide }));
+    this.murMarker.rotation.x = -Math.PI / 2; this.murMarker.renderOrder = 12; this.murMarker.visible = false;
+    scene.add(this.murMarker);
     // znacznik stanowiska
     this.berthMarker = this.makeBerthMarker();
     scene.add(this.berthMarker);
@@ -446,7 +450,7 @@ export class View3D {
     const m = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }));
     m.frustumCulled = false;
     m.userData = { B, GS, n, N, phase: 0 };
-    m.visible = getSettings().windBarbs !== false;
+    m.visible = getSettings().windFlags === true; // chorągiewki wiatru domyślnie wyłączone
     return m;
   }
 
@@ -1072,6 +1076,16 @@ export class View3D {
     } else if (this.tags && this.tags.style.display === 'none') this.tags.style.display = '';
 
     // znacznik stanowiska
+    {
+      const ml = w.lines.find((l) => l.isMooring && l.state === 'onQuay');
+      this.murMarker.visible = !!ml;
+      if (ml) {
+        if ((this._murT = (this._murT || 0) - dt) <= 0) { this._murT = 0.4; w.chooseMooring(ml); }
+        const p = ml.muring.pickup;
+        this.murMarker.position.set(p.x, w.H.quay.height + 0.08, p.z);
+        this.murMarker.scale.setScalar(1 + 0.18 * Math.sin(t * 4));
+      }
+    }
     if (this.routeArrow) { this.updateRoute(); this.routeArrow.material.opacity = 0.22 + 0.12 * Math.sin(t * 2.2); }
     if (this.berthMarker.visible) {
       const ok = w.poseOk;

@@ -1100,3 +1100,5 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .sim-settings .set-row > span { font-weight: 700; }
 .sim-settings .set-range { display: flex; align-items: center; gap: 10px; }
 .sim-settings .set-range input { flex: 1; }
+/* licznik FPS po prawej, tuż pod różą wiatrów */
+#fps-counter { left: auto; right: 12px; top: 212px; transform: none; }

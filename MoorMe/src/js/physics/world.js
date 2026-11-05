@@ -681,9 +681,19 @@ export class World {
     }
   }
 
+  // muring do podjęcia: zawsze najbliższy jachtowi (wolny lub własny – nie ten, na którym stoi sąsiad)
+  chooseMooring(line) {
+    if (!line.isMooring || line.state !== 'onQuay' || !this.H.murings.length) return;
+    const b = this.boat, endX = this.H.berth.bowIn ? b.xb : b.xs, e = localToWorld(b.x, b.z, b.th, endX, 0);
+    let best = line.muring, bd = best ? Math.hypot(e.x - best.pickup.x, e.z - best.pickup.z) - 0.3 : Infinity; // mała histereza
+    for (const m of this.H.murings) { if (m.taken) continue; const d = Math.hypot(e.x - m.pickup.x, e.z - m.pickup.z); if (d < bd) { bd = d; best = m; } }
+    if (best && best !== line.muring) { line.muring = best; line.target = best; }
+  }
+
   pickupMooring(line, quiet = false) {
     if (!line.isMooring || line.state !== 'onQuay') return;
     if (!quiet) line.mooringQueued = true; // załoga podejmie muring sama, gdy jacht podejdzie
+    this.chooseMooring(line);
     const mur = line.muring;
     // koniec jachtu przy kei musi być blisko linki pilotowej
     const b = this.boat;
