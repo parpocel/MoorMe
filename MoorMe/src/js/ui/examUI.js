@@ -111,14 +111,14 @@ export function showExam(app, { scope, onExit, sceneryEl }) {
     qs.forEach((q, i) => { const k = q.topic, b = (byTopic[k] = byTopic[k] || [0, 0]); b[1]++; if (answers[i] === q.answer) b[0]++; });
     const wrong = qs.map((q, i) => [q, i]).filter(([q, i]) => answers[i] !== q.answer);
     const navLine = result.nav === null ? null : h('div.ex-verdict', { class: result.nav ? 'ok' : 'bad' }, result.nav ? '✓ Zadanie nawigacyjne rozwiązane poprawnie' : '✗ Zadanie nawigacyjne rozwiązane błędnie');
-    const all = result.nav === true;
+    const all = pass && result.nav === true; // egzamin zdany tylko przy min. 65 poprawnych i poprawnym zadaniu nawigacyjnym
     body.appendChild(h('div.cq-card.ex-card.cq-end', {},
-      h('h2', {}, result.nav === null ? 'Wynik testu' : 'Wynik egzaminu'),
+      h('h2', {}, result.nav === null && pass ? 'Wynik testu' : 'Wynik egzaminu'),
       timeout ? h('p.muted', {}, 'Czas na test minął.') : null,
       h('div.cq-big', {}, `${good} / ${qs.length}`),
       h('div.ex-verdict', { class: pass ? 'ok' : 'bad' }, pass ? `✓ Test zdany (wymagane min. ${EXAM.pass} poprawnych odpowiedzi)` : `✗ Test niezdany – wymagane min. ${EXAM.pass} poprawnych odpowiedzi`),
       navLine,
-      result.nav !== null ? h('div.ex-final', { class: all ? 'ok' : 'bad' }, all ? '🏅 Egzamin zdany!' : 'Egzamin niezdany') : null,
+      result.nav !== null || !pass ? h('div.ex-final', { class: all ? 'ok' : 'bad' }, all ? '🏅 Egzamin zdany!' : 'Egzamin niezdany') : null,
       h('div.ex-topics', {}, ...Object.entries(byTopic).map(([k, [g, n]]) => h('div.ex-tp', {}, h('span', {}, topicName(k)), h('b', {}, `${g}/${n}`)))),
       pass && result.nav === null ? h('div.ex-next', {},
         h('p', {}, t(`Teraz zadanie nawigacyjne o średnim poziomie trudności – masz na nie ${EXAM.navMin} minut.`)),
