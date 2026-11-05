@@ -207,8 +207,9 @@ export class MenuScene {
       stencilWrite: true, stencilRef: 0, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp })); // woda przed zanurzoną częścią kadłuba kasuje jego znacznik – cień pada też tuż przy burcie
     sea.receiveShadow = false; // cień jachtu nie ugina się na falach – pada na płaską płaszczyznę tuż nad grzbietami
     scene.add(sea);
-    const shadowPlane = this.shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp, stencilZPass: THREE.KeepStencilOp }));
+    const shadowPlane = this.shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false, depthTest: false, stencilWrite: true, stencilRef: 1, stencilFunc: THREE.NotEqualStencilFunc, stencilFail: THREE.KeepStencilOp, stencilZFail: THREE.KeepStencilOp, stencilZPass: THREE.KeepStencilOp }));
     shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.82; shadowPlane.receiveShadow = true;
+    shadowPlane.renderOrder = 10; // na końcu, bez testu głębokości – grzbiety fal nie szarpią krawędzi cienia
     scene.add(shadowPlane);
 
     // jacht
