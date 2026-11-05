@@ -861,9 +861,29 @@ export function vesselSVG(id, rel = 0) {
   const v = anyVessel(id);
   if (!v) return '';
   if (DAY_BY_ID[id]) return `<svg xmlns="${NS}" viewBox="0 0 300 ${dayH(v)}" width="300" height="${dayH(v)}">${dayView(v)}</svg>`;
-  // światła nieco większe i z poświatą – w teście mają być dobrze widoczne
-  const g = lightView(v, viewFor(rel), 200, 120, vesselScale(v)).replace(/<circle cx="([\d.\-]+)" cy="([\d.\-]+)" r="4" fill="([^"]+)"\/>/g, (m, x, y, c) => `<circle cx="${x}" cy="${y}" r="7" fill="${c}" opacity="0.28"/><circle cx="${x}" cy="${y}" r="4.6" fill="${c}"/>`);
-  return `<svg xmlns="${NS}" viewBox="0 0 200 120" width="200" height="120">${g}</svg>`;
+  // nocą same światła (bez sylwetki statku) – wyśrodkowane, większe i z poświatą; rozstaw jak na statku
+  const { Lm, lights } = vesselLights(v), vw = viewFor(rel), vis = visibleLights(lights, vw.rel);
+  const W = 200, { x0, x1 } = viewSpan(vw, Lm, lights);
+  // skala pionowa: światła w jednej kolumnie (np. czerwone nad czerwonym) nie mogą się zlewać
+  let minDy = Infinity;
+  for (const a of vis) for (const b of vis) if (a !== b && Math.abs(vw.ax(a) - vw.ax(b)) < 1.2 && Math.abs(a.y - b.y) > 0.05) minDy = Math.min(minDy, Math.abs(a.y - b.y));
+  const maxY = Math.max(...vis.map((l) => l.y), 6);
+  let r = 4.6;
+  // wysoki statek z gęsto rozmieszczonymi światłami – wyższy obrazek zamiast mniejszych świateł
+  const need = Math.max(vesselScale(v, W, 120), Number.isFinite(minDy) ? (2 * r + 3) / minDy : 0);
+  const H = Math.round(Math.min(240, Math.max(120, maxY * need + 30)));
+  const sc = Math.min((H - 30) / maxY, need);
+  if (Number.isFinite(minDy) && minDy * sc < 2 * r + 2) r = Math.max(2.4, (minDy * sc - 2) / 2);
+  const xs = vis.map((l) => vw.ax(l)), mid = xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : 0;
+  const span = xs.length ? Math.max(...xs) - Math.min(...xs) : 0;
+  const sx = Math.min(sc, (W - 30) / Math.max(1, x1 - x0, span));
+  const X = (x) => W / 2 + (x - mid) * sx, Y = (y) => H - 14 - y * sc;
+  let g = `<rect width="${W}" height="${H}" fill="#0b1220"/><rect y="${H - 14}" width="${W}" height="14" fill="#0f1c2e"/>`;
+  for (const l of vis) {
+    const cx = X(vw.ax(l)).toFixed(1), cy = Y(l.y).toFixed(1), c = LCOL[l.c], rr = l.c === 'deck' ? Math.min(2.4, r) : r;
+    g += `<circle cx="${cx}" cy="${cy}" r="${(rr * 1.5).toFixed(1)}" fill="${c}" opacity="0.28"/><circle cx="${cx}" cy="${cy}" r="${rr.toFixed(1)}" fill="${c}"/>`;
+  }
+  return `<svg xmlns="${NS}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${g}</svg>`;
 }
 export function examVesselView(id, rel = 0, caption = null) {
   const v = anyVessel(id);
