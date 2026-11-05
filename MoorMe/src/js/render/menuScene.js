@@ -38,11 +38,20 @@ function island(r, w, h, seed) {
   const rock = new THREE.Mesh(jagged(new THREE.DodecahedronGeometry(w * 0.32, 0), w * 0.1, R, false), flat(0x9a948a));
   rock.position.set(w * 0.55, h * 0.1, w * 0.25);
   g.add(base, hill, rock);
-  // drzewa
-  for (let i = 0; i < 4 + (seed % 3); i++) {
-    const a = R() * Math.PI * 2, d = w * (0.25 + R() * 0.35);
-    const tree = new THREE.Mesh(new THREE.ConeGeometry(w * 0.09, w * 0.32, 5), flat(0x3f6e3c));
-    tree.position.set(Math.cos(a) * d, h * 0.2 + (1 - d / w) * h * 0.55 + w * 0.16, Math.sin(a) * d);
+  // drzewa: stoją na zboczu wzgórza (wysokość stożka w danym miejscu), pień i trzy piętra korony
+  const trunkM = flat(0x6b4a2f), leafA = flat(0x3f6e3c), leafB = flat(0x4f8346);
+  const nT = 5 + (seed % 4);
+  for (let i = 0; i < nT; i++) {
+    const a = R() * Math.PI * 2, d = w * (0.12 + R() * 0.5);
+    const ground = h * 0.08 + h * Math.max(0, 1 - d / (w * 0.8)) - w * 0.06; // zbocze stożka, lekko zagłębione (poszarpana powierzchnia)
+    const s = w * (0.075 + R() * 0.04), tree = new THREE.Group();
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(s * 0.12, s * 0.18, s * 0.9, 5), trunkM); trunk.position.y = s * 0.45; tree.add(trunk);
+    for (let k = 0; k < 3; k++) {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(s * (0.75 - k * 0.18), s * (1.1 - k * 0.15), 6), k % 2 ? leafB : leafA);
+      c.position.y = s * (1.0 + k * 0.62); c.rotation.y = R() * 2; tree.add(c);
+    }
+    tree.position.set(Math.cos(a) * d, ground, Math.sin(a) * d);
+    tree.rotation.z = (R() - 0.5) * 0.12;
     g.add(tree);
   }
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -193,6 +202,11 @@ export class MenuScene {
     add(island(0, 64, 40, 8), -40, -520, 1.2);
     add(island(0, 26, 16, 13), 150, -175, 2.1);
     add(island(0, 90, 60, 21), -560, -640, 0.7);
+    // więcej wysp po lewej stronie kadru
+    add(island(0, 52, 30, 27), -430, -250, 1.9);
+    add(island(0, 34, 20, 33), -330, -450, 0.4);
+    add(island(0, 70, 44, 41), -760, -420, 2.6);
+    add(island(0, 28, 15, 47), -560, -300, 1.1);
     add(lighthouse(), -10, -230, 0);
     this.buoys = []; // bez pław w scenerii menu
     // pasmo gór na horyzoncie
