@@ -247,16 +247,16 @@ export function phenSVG(fig, reveal = false) {
       if (reveal) s += `<ellipse cx="280" cy="200" rx="170" ry="30" fill="#fff" opacity="0.72"/><ellipse cx="160" cy="176" rx="80" ry="14" fill="#fff" opacity="0.5"/>` + pill(280, 204, L('mgła radiacyjna', 'radiation fog'), '#5a6672', 14);
     }
   } else if (fig.type === 'apparent') {
-    const cx = 200, cy = 170, k = 9;
+    const cx = 200, cy = 196, k = 8;
     s += sky(W, H, '#f4f8fb', '#e4eef6');
     s += `<g transform="translate(${cx},${cy})"><path d="M0,-40 C15,-20 15,20 11,36 L-11,36 C-15,20 -15,-20 0,-40Z" fill="#fff" stroke="#2f4468" stroke-width="2"/><line x1="0" y1="-14" x2="0" y2="26" stroke="#2f4468" stroke-width="1.5"/></g>`;
     const ta = fig.down ? Math.PI : (135 * Math.PI) / 180;
     const tx = Math.sin(ta) * fig.tw * k, ty = -Math.cos(ta) * fig.tw * k;
-    s += arrow(cx - tx, cy - 60 - ty, cx, cy - 60, '#2f6fb0', 4) + pill(cx - tx + 10, cy - 78 - ty, `${L('wiatr rzeczywisty', 'true wind')} ${fig.tw} kn`, '#2f6fb0', 12);
-    s += arrow(cx, cy + 52, cx, cy - 2, '#1b2a3a', 3) + pill(cx + 56, cy + 56, `${L('ruch jachtu', 'boat speed')} ${fig.bs} kn`, '#1b2a3a', 12);
+    s += arrow(cx - tx, cy - 60 - ty, cx, cy - 60, '#2f6fb0', 4) + pill(Math.max(80, cx - tx + 10), Math.max(18, cy - 78 - ty), `${L('wiatr rzeczywisty', 'true wind')} ${fig.tw} kn`, '#2f6fb0', 12);
+    s += arrow(cx, cy + 48, cx, cy - 2, '#1b2a3a', 3) + pill(cx + 60, cy + 52, `${L('ruch jachtu', 'boat speed')} ${fig.bs} kn`, '#1b2a3a', 12);
     if (reveal) {
       const ax = tx, ay = ty + fig.bs * k;
-      s += arrow(cx + 150 - ax, cy - 30 - ay, cx + 150, cy - 30, '#d0453b', 4) + pill(cx + 170, cy - 8, `${L('wiatr pozorny', 'apparent wind')} ≈ ${Math.round(Math.hypot(ax, ay) / k)} kn`, '#d0453b', 12);
+      s += arrow(cx + 150 - ax, cy - 30 - ay, cx + 150, cy - 30, '#d0453b', 4) + pill(Math.min(W - 90, cx + 170), cy - 8, `${L('wiatr pozorny', 'apparent wind')} ≈ ${Math.round(Math.hypot(ax, ay) / k)} kn`, '#d0453b', 12);
     }
   } else if (fig.type === 'circ') {
     const cx = 260, cy = 140, low = fig.low;
