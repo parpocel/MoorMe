@@ -146,17 +146,19 @@ export function lightsViewer(v, lights0, Lm, opts = {}) {
       m.position.z += z0; ship.add(m);
     }
     for (const ln of model.lines) PL(ln, edge, z0);
-    for (const ln of model.nets) { PL(ln, netMat, z0); for (const p of ln) extra.push([p[0], p[2] + z0]); }
-    for (const f of model.floats) { const b = new THREE.Mesh(new THREE.SphereGeometry(Math.max(0.35, Lm * 0.012), 8, 6), new THREE.MeshBasicMaterial({ color: 0x9fb0cf })); b.position.set(f[0], f[1], f[2] + z0); ship.add(b); }
+    if (!opts.noGear) for (const ln of model.nets) { PL(ln, netMat, z0); for (const p of ln) extra.push([p[0], p[2] + z0]); }
+    if (!opts.noGear) for (const f of model.floats) { const b = new THREE.Mesh(new THREE.SphereGeometry(Math.max(0.35, Lm * 0.012), 8, 6), new THREE.MeshBasicMaterial({ color: 0x9fb0cf })); b.position.set(f[0], f[1], f[2] + z0); ship.add(b); }
     for (const l of model.lights) all.push({ ...l, z: l.z + z0 });
   }
   lights = all;
   if (v.pair) {
     // wspólny włok za obiema rufami
     const x0 = -Lm / 2, xe = x0 - 2.2 * Lm;
-    for (const z0 of offs) PL([[x0, 1, z0], [xe, 0.05, z0 * 0.25]], netMat);
-    PL([[xe, 0.05, offs[0] * 0.25], [xe - Lm * 0.6, 0.05, 0], [xe, 0.05, offs[1] * 0.25]], netMat);
-    extra.push([xe - Lm * 0.6, 0]);
+    if (!opts.noGear) {
+      for (const z0 of offs) PL([[x0, 1, z0], [xe, 0.05, z0 * 0.25]], netMat);
+      PL([[xe, 0.05, offs[0] * 0.25], [xe - Lm * 0.6, 0.05, 0], [xe, 0.05, offs[1] * 0.25]], netMat);
+      extra.push([xe - Lm * 0.6, 0]);
+    }
     // reflektory: snop do przodu i w stronę drugiego statku
     for (const z0 of offs) {
       const src = new THREE.Vector3(Lm * 0.15, Math.min(...lights0.filter((l) => l.s === 'port').map((l) => l.y)) + 1.5, z0);

@@ -52,7 +52,8 @@ function drawDiagram(cv, dg) {
   }
 }
 
-export function showNavTasks(app, { onExit }) {
+// exam = { cats, minutes, onFinish(ok) } – tryb egzaminu: jedno zadanie, limit czasu, bez podglądu rozwiązania przed sprawdzeniem
+export function showNavTasks(app, { onExit, exam = null }) {
   const r = rng(1 + Math.floor(Math.random() * 1e9));
   const state = { cat: null, task: null, checked: false, showSol: false, stats: { n: 0, ok: 0 } };
   app.innerHTML = '';
@@ -63,7 +64,22 @@ export function showNavTasks(app, { onExit }) {
   app.appendChild(root);
   let view = null;
   try { view = new SaloonView(viewEl, { mode: 'nav' }); } catch (e) { view = null; } // bez WebGL – samo tło
-  const exit = () => { if (view) view.destroy(); onExit(); };
+  let timer = null;
+  const exit = () => { if (timer) clearInterval(timer); if (view) view.destroy(); onExit(); };
+  const finish = (ok) => { if (timer) clearInterval(timer); if (view) view.destroy(); exam.onFinish(ok); };
+  const deadline = exam ? Date.now() + exam.minutes * 60000 : 0;
+  const clock = h('span.ex-clock');
+  const checkNow = () => { if (state.checked) return; state.checked = true; state.stats.n++; if (state.task.answers.every((a) => checkAnswer(a, state.inputs[a.key]))) state.stats.ok++; render(); };
+  if (exam) {
+    const tick = () => {
+      if (!root.isConnected) { clearInterval(timer); return; }
+      const left = Math.max(0, deadline - Date.now()), m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000);
+      clock.textContent = `⏱ ${m}:${String(sec).padStart(2, '0')}`;
+      clock.classList.toggle('low', left < 5 * 60000);
+      if (left <= 0 && !state.checked) checkNow();
+    };
+    timer = setInterval(tick, 500); tick();
+  }
 
   // mapa do kreślenia zajmuje cały ekran pod paskiem; resztę wysokości zajmują paski narzędzi mapy
   const MAP_OFF = 236;
@@ -71,7 +87,7 @@ export function showNavTasks(app, { onExit }) {
   // karta z zadaniem leży na mapie i można ją przesuwać (pozycja zapamiętana)
   try { state.cardPos = JSON.parse(localStorage.getItem('moorme.ntCard') || 'null'); } catch (e) { state.cardPos = null; }
   const deck = makeTaskDeck(r); // każdy rodzaj zadania raz na cykl – bez powtórek
-  const newTask = () => { state.task = deck.next(state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot, { size: mapSize(), offset: MAP_OFF }) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
+  const newTask = () => { state.task = exam ? deck.next(exam.cats[Math.floor(r() * exam.cats.length)]) : deck.next(state.cat); state.board = state.task.plot ? new PlotBoard(state.task.plot, { size: mapSize(), offset: MAP_OFF }) : null; if (typeof window !== 'undefined') window.__board = state.board; state.checked = false; state.showSol = false; state.inputs = {}; render(); if (typeof window !== 'undefined') window.__navTask = state.task; };
 
   function render() {
     ui.innerHTML = '';
@@ -98,7 +114,7 @@ export function showNavTasks(app, { onExit }) {
     // karta z zadaniem (papier na stole)
     const float = !!state.board;
     const head = h('div.nt-head', {}, float ? h('span.nt-grip', { title: tr('Przeciągnij, aby przesunąć kartę') }, '⠿') : null,
-      h('span.chip', {}, CATEGORIES[t.cat]), h('span.nt-score', {}, h('span.muted', {}, 'Poprawne:'), ' ', h('b', {}, `${state.stats.ok}/${state.stats.n}`)),
+      h('span.chip', {}, CATEGORIES[t.cat]), exam ? null : h('span.nt-score', {}, h('span.muted', {}, 'Poprawne:'), ' ', h('b', {}, `${state.stats.ok}/${state.stats.n}`)),
       float ? h('button.btn.xs.nt-min', { title: tr(state.cardMin ? 'Rozwiń kartę' : 'Zwiń kartę'), onclick: () => { state.cardMin = !state.cardMin; render(); } }, state.cardMin ? '▢' : '–') : null);
     const card = h('div.nt-card.paper', { class: float ? 'float' + (state.cardMin ? ' min' : '') : '' },
       head,
@@ -106,8 +122,11 @@ export function showNavTasks(app, { onExit }) {
       t.table ? h('table.spec-table.nt-table', {}, h('tr', {}, ...t.table.head.map((x) => h('th', {}, x))), ...t.table.rows.map((row) => h('tr', {}, ...row.map((x) => h('td', {}, x))))) : null,
       fields,
       state.checked ? h('div.quiz-verdict', { class: allOk ? 'ok' : 'bad', style: { margin: '6px 0' } }, allOk ? '✓ Dobrze!' : '✗ Źle') : null,
-      h('div.nt-btns', {},
-        state.checked ? null : h('button.btn.primary', { onclick: () => { state.checked = true; state.stats.n++; if (t.answers.every((a) => checkAnswer(a, state.inputs[a.key]))) state.stats.ok++; render(); } }, 'Sprawdź'),
+      exam ? h('div.nt-btns', {},
+        state.checked ? null : h('button.btn.primary', { onclick: () => checkNow() }, 'Zakończ i sprawdź'),
+        state.checked ? h('button.btn', { onclick: () => { state.showSol = !state.showSol; render(); } }, state.showSol ? 'Ukryj rozwiązanie' : 'Pokaż rozwiązanie') : null,
+        state.checked ? h('button.btn.primary', { onclick: () => finish(allOk) }, 'Wynik testu →') : null) : h('div.nt-btns', {},
+        state.checked ? null : h('button.btn.primary', { onclick: () => checkNow() }, 'Sprawdź'),
         h('button.btn', { onclick: () => { state.showSol = !state.showSol; render(); } }, state.showSol ? 'Ukryj rozwiązanie' : 'Pokaż rozwiązanie'),
         h('button.btn.primary', { onclick: () => newTask() }, 'Następne zadanie →')),
       state.showSol ? h('div.nt-sol', {}, h('ol', {}, ...t.steps.map((s) => h('li', {}, s))), t.diagram && !state.board ? (() => { const cv = h('canvas', { width: 330, height: 260 }); drawDiagram(cv, t.diagram); return cv; })() : null) : null,
@@ -116,7 +135,9 @@ export function showNavTasks(app, { onExit }) {
     const chart = state.board ? h('div.nt-plot.chart-sheet', {}, state.board.el) : null;
     if (state.board) state.board.setSolution(state.showSol);
     ui.append(
-      h('div.nt-bar', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'zadania nawigacyjne'), cats, h('button.btn.sm.nt-exit', { onclick: exit }, '← Tryby')),
+      exam ? h('div.nt-bar', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'test – zadanie nawigacyjne'), clock,
+        h('button.btn.sm.nt-exit', { onclick: () => { if (window.confirm(tr('Przerwać test? Wynik nie zostanie zapisany.'))) exit(); } }, '✕ Przerwij test'))
+        : h('div.nt-bar', {}, h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sub', {}, 'zadania nawigacyjne'), cats, h('button.btn.sm.nt-exit', { onclick: exit }, '← Tryby')),
       h('div.nt-desk', { class: chart ? 'full' : '' }, chart, card));
     if (float) placeCard(card, head);
   }

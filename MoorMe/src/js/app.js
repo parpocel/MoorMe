@@ -17,6 +17,7 @@ import { SoundsScreen, ShipAudio, volumeSlider } from './ui/soundsUI.js';
 import { showHandbook, lightsBook, soundsBook, marksBook } from './ui/handbook.js';
 import { showNavTasks } from './ui/navTasksUI.js';
 import { showSafety } from './ui/safetyUI.js';
+import { showExam } from './ui/examUI.js';
 import { showMeteoTraining } from './ui/meteoUI.js';
 import { meteoBook } from './ui/meteoBook.js';
 import { PASSAGES, buildPassage, routeLength } from './data/passage.js';
@@ -137,6 +138,7 @@ const GLYPH = {
   gear: '<path d="M10.3 2.6h3.4l.5 2.6a7.2 7.2 0 0 1 1.9 1.1l2.5-.9 1.7 2.9-2 1.7a7.4 7.4 0 0 1 0 2.2l2 1.7-1.7 2.9-2.5-.9a7.2 7.2 0 0 1-1.9 1.1l-.5 2.6h-3.4l-.5-2.6a7.2 7.2 0 0 1-1.9-1.1l-2.5.9-1.7-2.9 2-1.7a7.4 7.4 0 0 1 0-2.2l-2-1.7 1.7-2.9 2.5.9a7.2 7.2 0 0 1 1.9-1.1z"/><circle cx="12" cy="12" r="3"/>',
   power: '<path d="M12 3v8"/><path d="M7.2 6.3a7.5 7.5 0 1 0 9.6 0"/>',
   back: '<path d="M15 5l-7 7 7 7"/>',
+  exam: '<path d="M10 6h10M10 12h10M10 18h10"/><path d="M3.5 6l1.5 1.5L8 4.5M3.5 12l1.5 1.5L8 10.5M3.5 18l1.5 1.5L8 16.5"/>',
   book: '<path d="M4 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/><path d="M12 5.5c2.6-1.3 5.4-1.3 8 0v13.5c-2.6-1.3-5.4-1.3-8 0z"/>',
   moon: '<path d="M19.5 14.5A8 8 0 019.5 4.5a8 8 0 1010 10z"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/>',
@@ -177,7 +179,11 @@ function menuBackdrop() {
 }
 
 // items: { id, glyph, color, title, tag, desc, go, disabled }
-function menuScreen(opts) { return wheelMenu(opts); }
+// podmenu: dodatkowy kafel „Wstecz” – zawsze cofa o jeden ekran
+function menuScreen(opts) {
+  const items = opts.back ? [...opts.items, { glyph: 'back', color: '#7d8aa3', title: 'Wstecz', desc: 'Wróć do poprzedniego ekranu.', go: opts.back.go }] : opts.items;
+  return wheelMenu({ ...opts, items });
+}
 // poprzedni układ menu (kafle u dołu) – zostawiony do ewentualnego powrotu
 function menuScreenTiles({ kicker, items, sel = 0, back, extra = null, settingsBack = null }) {
   app.innerHTML = '';
@@ -368,7 +374,8 @@ function showModeSelect() {
       { glyph: 'horn', color: '#e0a33a', title: 'Sygnalizacja dźwiękowa', desc: 'Rozpoznaj zamiary statku po dźwiękach, jakie wydaje.', go: keep(3, () => showSoundsIntro()) },
       { glyph: 'compass', color: '#4f9d5c', title: 'Nawigacja', desc: 'Przeliczaj kursy, wyznaczaj pozycję z namiarów i poznaj symbole map morskich.', go: keep(4, () => showNavIntro()) },
       { glyph: 'buoy', color: '#d8484a', title: 'Bezpieczeństwo', desc: 'Elementy mające na celu zapewnienie bezpieczeństwa żeglugi.', go: keep(5, () => { menuMusic.stop(); showSafety(app, { onExit: () => showModeSelect() }); }) },
-      { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.', go: keep(6, () => showMeteoIntro()) }
+      { glyph: 'cloud', color: '#2f9ed8', title: 'Meteorologia', desc: 'Poznaj zjawiska pogodowe, które mogą mieć wpływ na bezpieczeństwo twojego rejsu.', go: keep(6, () => showMeteoIntro()) },
+      { glyph: 'exam', color: '#c9a227', title: 'Test', desc: 'Odpowiedz na pytania jednokrotnego wyboru oraz rozwiąż zadanie nawigacyjne.', go: keep(7, () => showExamIntro()) }
     ]
   });
 }
@@ -442,6 +449,20 @@ function showNavIntro() {
     items: [
       { glyph: 'compass', color: '#4f9d5c', title: 'Zadania', tag: 'kursy, namiary, pozycja', desc: 'Rozwiązuj zadania: przeliczanie kursów, dryf i prąd, namiary, pozycja z namiarów, zliczenie drogi i zasięg świateł – z mapą i narzędziami nawigacyjnymi.', go: () => { menuMusic.stop(); showNavTasks(app, { onExit: () => showNavIntro() }); } },
       { glyph: 'book', color: '#5b78d6', title: 'Nauka', tag: 'kursy, namiary, symbole map', desc: 'Podręcznik: jak przeliczać kurs z KK do KDd i odwrotnie, jak nanosić namiary, wyznaczać linie pozycyjne i pozycję, liczyć drogę i zasięg świateł. Na końcu legenda symboli map morskich.', go: () => showNavBook() }
+    ]
+  });
+}
+// ---------- Test (egzamin) ----------
+let examSel = 0;
+function showExamIntro() {
+  menuMusic.start();
+  const keep = (i, fn) => () => { examSel = i; fn(); };
+  const run = (scope) => { menuMusic.stop(); showExam(app, { scope, sceneryEl, onExit: () => showExamIntro() }); };
+  menuScreen({
+    kicker: 'Test', sel: examSel, back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: () => showExamIntro(),
+    items: [
+      { glyph: 'wave', color: '#2f7fb3', title: 'Morze', desc: '75 losowych pytań (60 min): prawo drogi MPZZM, światła i znaki dzienne, sygnały dźwiękowe, oznakowanie IALA, mapa morska, nawigacja, meteorologia, bezpieczeństwo i łączność. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).', go: keep(0, () => run('sea')) },
+      { glyph: 'river', color: '#3f9a6a', title: 'Śródlądzie', desc: '75 losowych pytań (60 min): przepisy żeglugowe na śródlądowych drogach wodnych, znaki żeglugowe, światła i znaki dzienne, sygnały dźwiękowe, budowa jachtu, meteorologia i bezpieczeństwo. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).', go: keep(1, () => run('inland')) }
     ]
   });
 }

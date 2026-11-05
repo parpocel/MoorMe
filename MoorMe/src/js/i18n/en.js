@@ -1,6 +1,25 @@
 // Słownik PL -> EN (klucz = dokładny polski tekst) oraz reguły dla tekstów z liczbami i nazwami.
 
 export const EN = {
+  // ---- Test (egzamin) ----
+  'Test': 'Test', 'Odpowiedz na pytania jednokrotnego wyboru oraz rozwiąż zadanie nawigacyjne.': 'Answer single-choice questions and solve a navigation task.',
+  'Wstecz': 'Back', 'Wróć do poprzedniego ekranu.': 'Go back to the previous screen.',
+  '75 losowych pytań (60 min): prawo drogi MPZZM, światła i znaki dzienne, sygnały dźwiękowe, oznakowanie IALA, mapa morska, nawigacja, meteorologia, bezpieczeństwo i łączność. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).': '75 random questions (60 min): COLREGs, lights and day shapes, sound signals, IALA buoyage, the nautical chart, navigation, meteorology, safety and radio. Pass mark 65 correct answers, then a navigation task (30 min).',
+  '75 losowych pytań (60 min): przepisy żeglugowe na śródlądowych drogach wodnych, znaki żeglugowe, światła i znaki dzienne, sygnały dźwiękowe, budowa jachtu, meteorologia i bezpieczeństwo. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).': '75 random questions (60 min): inland navigation regulations, waterway signs, lights and day shapes, sound signals, the yacht, meteorology and safety. Pass mark 65 correct answers, then a navigation task (30 min).',
+  'test – morze': 'test – sea', 'test – śródlądzie': 'test – inland', 'test – zadanie nawigacyjne': 'test – navigation task',
+  'Pytanie': 'Question', 'Odpowiedzi': 'Answered', '← Poprzednie': '← Previous', 'Następne →': 'Next →', 'Zakończ test': 'Finish test',
+  '✕ Przerwij test': '✕ Abort test', 'Przerwać test? Wynik nie zostanie zapisany.': 'Abort the test? The result will not be saved.',
+  '▶ Odtwórz sygnał': '▶ Play signal', '• krótki dźwięk, — długi dźwięk': '• short blast, — long blast',
+  'Wynik testu': 'Test result', 'Wynik egzaminu': 'Exam result', 'Czas na test minął.': 'Time for the test is up.',
+  'Przejdź do zadania nawigacyjnego →': 'Go to the navigation task →', 'Błędne odpowiedzi': 'Wrong answers', '✗ brak odpowiedzi': '✗ no answer',
+  '← Wróć do wyboru testu': '← Back to test choice', '↻ Nowy test': '↻ New test',
+  '✓ Zadanie nawigacyjne rozwiązane poprawnie': '✓ Navigation task solved correctly', '✗ Zadanie nawigacyjne rozwiązane błędnie': '✗ Navigation task solved incorrectly',
+  '🏅 Egzamin zdany!': '🏅 Exam passed!', 'Egzamin niezdany': 'Exam failed',
+  'Zakończ i sprawdź': 'Finish and check', 'Wynik testu →': 'Test result →',
+  'Prawo drogi': 'Rules of the road', 'Przepisy śródlądowe': 'Inland regulations', 'Światła statków': 'Vessel lights', 'Znaki dzienne': 'Day shapes',
+  'Sygnały dźwiękowe': 'Sound signals', 'Oznakowanie nawigacyjne': 'Buoyage', 'Znaki żeglugowe': 'Waterway signs', 'Mapa morska': 'Nautical chart',
+  'Nawigacja': 'Navigation', 'Meteorologia': 'Meteorology', 'Bezpieczeństwo i łączność': 'Safety and radio', 'Budowa jachtu i locja': 'Yacht and seamanship',
+  // ---- Nawigacja: nowy wstęp ----
   // ---- Kreator / menu ----
   'Jacht': 'Yacht', 'Wyposażenie': 'Equipment', 'Keja i cumowanie': 'Quay & mooring', 'Pogoda i start': 'Weather & start',
   'Dalej →': 'Next →', '← Wstecz': '← Back', '← Menu': '← Menu',
@@ -597,5 +616,9 @@ export const RULES = [
   R(/^(\d+) waypointów$/, '{1} waypoints'), R(/^(\d+) znaków$/, '{1} marks'),
   R(/^(.+) nm \(trasa: (.+) nm\)$/, '{1} nm (route: {2} nm)'),
   R(/^−(\d+(?:\.\d+)?)$/, '−{1}'),
+  R(/^Bez odpowiedzi: (\d+)\. Zakończyć test\?$/, 'Unanswered: {1}. Finish the test?'),
+  R(/^Teraz zadanie nawigacyjne o średnim poziomie trudności – masz na nie (\d+) minut\.$/, 'Now a navigation task of medium difficulty – you have {1} minutes for it.'),
+  R(/^✓ Test zdany \(wymagane min\. (\d+) poprawnych odpowiedzi\)$/, '✓ Test passed (at least {1} correct answers required)'),
+  R(/^✗ Test niezdany – wymagane min\. (\d+) poprawnych odpowiedzi$/, '✗ Test failed – at least {1} correct answers required'),
   R(/^([^:]+): (.+)$/, '{1}: {2}')
 ];

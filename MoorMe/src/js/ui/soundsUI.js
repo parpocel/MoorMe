@@ -40,7 +40,7 @@ export class ShipAudio {
   close() {
     this.stop();
     window.removeEventListener(VOL_EVT, this.onVol);
-    if (this.ctx) this.ctx.close();
+    if (this.ctx && this.ctx.state !== 'closed') this.ctx.close().catch(() => {});
   }
   out(pan) {
     const c = this.ctx, g = c.createGain(), lim = c.createDynamicsCompressor();

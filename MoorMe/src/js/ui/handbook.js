@@ -1,7 +1,7 @@
 // Podręczniki („Nauka”): światła i znaki dzienne statków, sygnały dźwiękowe, oznakowanie nawigacyjne IALA.
 // Ilustracje są generowane z tych samych danych, z których korzysta symulacja – podręcznik zawsze zgadza się z treningiem.
 import { h } from './dom.js';
-import { VESSELS, DAY_VESSELS, visibleLights } from '../data/shipLights.js';
+import { VESSELS, DAY_VESSELS, visibleLights, anyVessel, DAY_BY_ID } from '../data/shipLights.js';
 import { SIGNALS, CONTEXTS, notation, notationNode, GONG_SVG, schedule } from '../data/soundSignals.js';
 import { lateralColors, IALA } from '../data/passage.js';
 import { lightSequence, lightAt, LIGHT_COLORS } from '../data/lightChar.js';
@@ -849,6 +849,46 @@ function marksBookRaw() {
       e(L('D.2 – zalecenie trzymania się wskazanego obszaru', 'D.2 – recommendation to keep within the area indicated'), bridgePic(3), [[L('Wygląd', 'Look'), L('Zielono-białe romby na filarach (nocą zielone światła).', 'Green-and-white diamonds on the piers (green lights at night).')], [L('Znaczenie', 'Meaning'), L('Dwie tablice w kształcie rombu (pół zielone, pół białe) wyznaczają zalecane przejście, np. pod mostem lub przez jaz – trzymaj się między nimi.', 'Two diamond-shaped boards (half green, half white) mark the recommended passage, e.g. under a bridge or through a weir – keep between them.')]]),
       e(L('D.3 – zalecenie przejścia w kierunku strzałki', 'D.3 – recommendation to proceed in the direction of the arrow'), board(sg.d3), [[L('Znaczenie', 'Meaning'), L('Płyń w kierunku wskazanym strzałką, a nocą w kierunku białego światła izofazowego.', 'Proceed in the direction of the arrow – at night towards the white isophase light.')]])
     ] }
+  ];
+}
+
+
+// ---------- dla modułu „Test” ----------
+// model 3D jednostki (światła nocą albo znaki dzienne) bez podpisów; bez WebGL – rzuty jak w podręczniku
+export function examVesselView(id) {
+  const v = anyVessel(id), day = !!DAY_BY_ID[id];
+  if (!v) return null;
+  if (day) {
+    const Lm = (v.L[0] + v.L[1]) / 2, shapes = v.shapes(Lm, () => 0.5, { gearSide: 'starboard' });
+    return lightsViewer(v, [], Lm, { day: true, shapes, noGear: true }) || svgEl(300, dayH(v), dayView(v));
+  }
+  const { Lm, lights } = vesselLights(v), sc = vesselScale(v);
+  return lightsViewer(v, lights, Lm, { noGear: true }) || h('div.hb-views', {}, ...VIEWS.map((vw) => h('figure', {}, svgEl(200, 120, lightView(v, vw, 200, 120, sc)), h('figcaption', {}, vw.name))));
+}
+// rysunki znaków nawigacyjnych: [{ scope: 'sea'|'inland', name, look, svg }]
+export function examMarks() {
+  const B = '#16181c', Y = '#f2c230', R = '#d62828', W = '#ffffff', G = '#1f9d55', IG = '#2a9d4a', Bu = '#1f5fd1';
+  const sv = (g) => `<svg xmlns="${NS}" viewBox="0 0 120 170" width="150" height="212">${g}</svg>`;
+  const m = (scope, name, look, g) => ({ scope, name, look, svg: sv(g) });
+  return [
+    m('sea', L('Znak boczny lewy (IALA A)', 'Port-hand lateral mark (IALA A)'), L('Czerwony, kształt beczki, znak szczytowy – czerwony walec', 'Red, can shape, topmark – a red cylinder'), buoy([R], tm.can(R))),
+    m('sea', L('Znak boczny prawy (IALA A)', 'Starboard-hand lateral mark (IALA A)'), L('Zielony, stożek, znak szczytowy – zielony stożek wierzchołkiem do góry', 'Green, conical, topmark – a green cone point up'), buoy([G], tm.cone(G))),
+    m('sea', L('Znak rozwidlenia – główny tor w prawo (IALA A)', 'Preferred channel to starboard (IALA A)'), L('Czerwony z szerokim zielonym pasem, beczka, czerwony walec', 'Red with a broad green band, can shape, red cylinder'), buoy([R, G, R], tm.can(R))),
+    m('sea', L('Znak rozwidlenia – główny tor w lewo (IALA A)', 'Preferred channel to port (IALA A)'), L('Zielony z szerokim czerwonym pasem, stożek, zielony stożek', 'Green with a broad red band, conical, green cone'), buoy([G, R, G], tm.cone(G))),
+    m('sea', L('Znak kardynalny północny', 'North cardinal mark'), L('Czarny nad żółtym, dwa stożki wierzchołkami do góry', 'Black above yellow, two cones pointing up'), buoy([B, Y], tm.cones('N'))),
+    m('sea', L('Znak kardynalny wschodni', 'East cardinal mark'), L('Czarny z szerokim żółtym pasem, stożki podstawami do siebie', 'Black with a broad yellow band, cones base to base'), buoy([B, Y, B], tm.cones('E'))),
+    m('sea', L('Znak kardynalny południowy', 'South cardinal mark'), L('Żółty nad czarnym, dwa stożki wierzchołkami w dół', 'Yellow above black, two cones pointing down'), buoy([Y, B], tm.cones('S'))),
+    m('sea', L('Znak kardynalny zachodni', 'West cardinal mark'), L('Żółty z szerokim czarnym pasem, stożki wierzchołkami do siebie', 'Yellow with a broad black band, cones point to point'), buoy([Y, B, Y], tm.cones('W'))),
+    m('sea', L('Znak odosobnionego niebezpieczeństwa', 'Isolated danger mark'), L('Czarny z szerokim czerwonym pasem, dwie czarne kule', 'Black with a broad red band, two black balls'), buoy([B, R, B], tm.balls(2, B))),
+    m('sea', L('Znak wody bezpiecznej', 'Safe water mark'), L('Czerwono-białe pionowe pasy, czerwona kula', 'Red and white vertical stripes, a red ball'), buoy([R, W, R, W], tm.balls(1, R), { vertical: true })),
+    m('sea', L('Znak specjalny', 'Special mark'), L('Żółty, znak szczytowy – żółty krzyż ukośny (X)', 'Yellow, topmark – a yellow X'), buoy([Y], tm.x)),
+    m('sea', L('Znak nowego niebezpieczeństwa (wrak)', 'Emergency wreck marking buoy'), L('Niebiesko-żółte pionowe pasy, żółty krzyż prosty', 'Blue and yellow vertical stripes, an upright yellow cross'), buoy([Bu, Y, Bu, Y], tm.cross, { vertical: true })),
+    m('inland', L('Prawa strona szlaku', 'Right-hand side of the fairway'), L('Czerwona pława walcowa lub tyczka, czerwony walec', 'A red can buoy or spar, a red cylinder'), buoy([R], tm.can(R))),
+    m('inland', L('Lewa strona szlaku', 'Left-hand side of the fairway'), L('Zielona pława stożkowa lub tyczka, zielony stożek', 'A green conical buoy or spar, a green cone'), buoy([IG], tm.cone(IG))),
+    m('inland', L('Rozwidlenie szlaku', 'Fairway bifurcation'), L('Poziome pasy czerwone i zielone, kula czerwono-zielona', 'Red and green horizontal bands, a red-and-green sphere'), buoy([R, IG, R, IG], tm.rgBall)),
+    m('inland', L('Szlak przy prawym brzegu', 'Fairway near the right bank'), L('Czerwona kwadratowa tablica na brzegu', 'A red square board on the bank'), board(sg.bankR)),
+    m('inland', L('Szlak przy lewym brzegu', 'Fairway near the left bank'), L('Zielona trójkątna tablica wierzchołkiem do góry', 'A green triangular board point up'), board(sg.bankL)),
+    m('inland', L('Przejście szlaku na drugi brzeg', 'Fairway crossing to the other bank'), L('Żółty krzyż ukośny (X) na brzegu', 'A yellow St Andrew’s cross (X) on the bank'), board(sg.crossX))
   ];
 }
 
