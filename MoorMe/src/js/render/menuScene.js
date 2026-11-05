@@ -206,7 +206,7 @@ export class MenuScene {
     const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3d86ad, flatShading: true, roughness: 0.3, metalness: 0.1 }));
     sea.receiveShadow = false; // cień jachtu nie ugina się na falach – pada na płaską płaszczyznę tuż nad grzbietami
     scene.add(sea);
-    const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false }));
+    const shadowPlane = this.shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false }));
     shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.82; shadowPlane.receiveShadow = true;
     scene.add(shadowPlane);
 
@@ -338,6 +338,8 @@ export class MenuScene {
 
     const bt = this.boat;
     bt.position.y = this.wave(0, 0, t) * 0.7 - 0.2;
+    // płaszczyzna cienia na linii wody jachtu (porusza się z nim) – inaczej przy opadaniu jachtu przecinała burtę i cień wchodził na kadłub
+    this.shadowPlane.position.y = bt.position.y + 0.22;
     bt.rotation.z = Math.sin(t * 0.8) * 0.024;
     bt.rotation.x = Math.sin(t * 0.6 + 1) * 0.02;
     this.buoys.forEach((o, i) => { o.position.y = this.wave(o.position.x, o.position.z, t) - 0.3; o.rotation.z = Math.sin(t * 1.3 + i) * 0.12; });
