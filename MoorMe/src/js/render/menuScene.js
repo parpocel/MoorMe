@@ -276,7 +276,8 @@ export class MenuScene {
     boat.traverse((o) => {
       if (!o.isMesh) return;
       o.castShadow = true; o.receiveShadow = true;
-      for (const m of Array.isArray(o.material) ? o.material : [o.material]) Object.assign(m, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
+      // tylko pełne (nieprzezroczyste) części – plama miękkiego cienia pod kadłubem i tabliczka z nazwą nie mogą wycinać cienia
+      for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (!m.transparent) Object.assign(m, { stencilWrite: true, stencilRef: 1, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp });
     });
     boat.rotation.y = -0.35;
     this.scene.add(boat);
