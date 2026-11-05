@@ -156,88 +156,132 @@ export function barographSVG(pts, reveal = false, d3 = 0) {
 }
 
 // ---------- schematy zjawisk ----------
+// wspólny styl: gradientowe niebo, morze z falami, cieniowane chmury, jacht, opisy w „pigułkach”
+let GID = 0;
 const SEA = '#3d86b8', LAND_C = '#d9c79a', SKY_D = '#cfe6f5', SKY_N = '#1d2b45';
-function arrow(x0, y0, x1, y1, col = '#1b2a3a', w = 4) { return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>${arrowHead(x1, y1, Math.atan2(y1 - y0, x1 - x0), 14, col)}`; }
-function cloudShape(x, y, s, col = '#fff') { return `<g fill="${col}"><circle cx="${x}" cy="${y}" r="${18 * s}"/><circle cx="${x + 20 * s}" cy="${y - 10 * s}" r="${22 * s}"/><circle cx="${x + 44 * s}" cy="${y}" r="${17 * s}"/><rect x="${x - 4 * s}" y="${y}" width="${52 * s}" height="${16 * s}" rx="${8 * s}"/></g>`; }
-function boatIcon(x, y, s = 1) { return `<g transform="translate(${x},${y}) scale(${s})"><path d="M-22,0 L22,0 L16,9 L-17,9 Z" fill="#fff" stroke="#2f4468" stroke-width="1.5"/><line x1="0" y1="0" x2="0" y2="-46" stroke="#2f4468" stroke-width="2"/><path d="M2,-44 L2,-4 L20,-4 Z" fill="#f4f1ea" stroke="#2f4468" stroke-width="1"/></g>`; }
+function arrow(x0, y0, x1, y1, col = '#1b2a3a', w = 4) { return `<line x1="${x0}" y1="${y0}" x2="${x1}" y2="${y1}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>${arrowHead(x1, y1, Math.atan2(y1 - y0, x1 - x0), 10 + w * 1.6, col)}`; }
+// strzałka po łuku (przepływ powietrza w komórce cyrkulacji)
+function curveArrow(d, end, ang, col = '#d0453b', w = 4) { return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>${arrowHead(end[0], end[1], ang, 10 + w * 1.6, col)}`; }
+function pill(x, y, txt, col = '#1b2a3a', fs = 13, bg = '#ffffff') { const w = txt.length * fs * 0.56 + 16; return `<g><rect x="${f1(x - w / 2)}" y="${f1(y - fs * 0.9)}" width="${f1(w)}" height="${f1(fs * 1.6)}" rx="${f1(fs * 0.8)}" fill="${bg}" fill-opacity="0.9" stroke="${col}" stroke-opacity="0.55"/><text x="${f1(x)}" y="${f1(y + fs * 0.34)}" font-size="${fs}" font-weight="800" fill="${col}" text-anchor="middle" font-family="Nunito, sans-serif">${txt}</text></g>`; }
+function sky(W, H, top, bot) { const id = `mfS${++GID}`; return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs><rect width="${W}" height="${H}" fill="url(#${id})"/>`; }
+function sea(y, W, H, top = '#4f97c4', bot = '#2a628c', waves = '#ffffff') {
+  const id = `mfW${++GID}`;
+  let w = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${top}"/><stop offset="1" stop-color="${bot}"/></linearGradient></defs><rect x="0" y="${y}" width="${W}" height="${H - y}" fill="url(#${id})"/>`;
+  for (let r = 0; r < 3; r++) { let d = ''; const yy = y + 10 + r * 16; for (let x = (r * 23) % 60; x < W; x += 60) d += `M${x},${yy} q8,-4 16,0 `; w += `<path d="${d}" fill="none" stroke="${waves}" stroke-width="1.4" opacity="${0.5 - r * 0.12}"/>`; }
+  return w;
+}
+function cloud(x, y, s, col = '#ffffff', shade = '#d9e2ea') {
+  return `<g><ellipse cx="${x + 26 * s}" cy="${y + 14 * s}" rx="${40 * s}" ry="${10 * s}" fill="${shade}" opacity="0.8"/><g fill="${col}"><circle cx="${x}" cy="${y}" r="${16 * s}"/><circle cx="${x + 18 * s}" cy="${y - 12 * s}" r="${21 * s}"/><circle cx="${x + 40 * s}" cy="${y - 4 * s}" r="${18 * s}"/><circle cx="${x + 56 * s}" cy="${y + 4 * s}" r="${12 * s}"/><rect x="${x - 6 * s}" y="${y}" width="${66 * s}" height="${14 * s}" rx="${7 * s}"/></g></g>`;
+}
+function boatIcon(x, y, s = 1) { return `<g transform="translate(${x},${y}) scale(${s})"><path d="M-24,0 L24,0 L17,10 L-18,10 Z" fill="#fff" stroke="#2f4468" stroke-width="1.6"/><line x1="0" y1="0" x2="0" y2="-50" stroke="#2f4468" stroke-width="2"/><path d="M2,-48 L2,-4 L22,-4 Z" fill="#f7f4ec" stroke="#2f4468" stroke-width="1"/><path d="M-2,-42 L-2,-4 L-16,-4 Z" fill="#eef1f5" stroke="#2f4468" stroke-width="1"/></g>`; }
+function house(x, y, s = 1) { return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-12" y="-22" width="24" height="22" fill="#f2efe8" stroke="#9a8a6a"/><path d="M-15,-20 L0,-34 L15,-20Z" fill="#c9553e"/><rect x="-4" y="-12" width="8" height="12" fill="#7a5a40"/></g>`; }
+function tree(x, y, s = 1) { return `<g transform="translate(${x},${y}) scale(${s})"><rect x="-1.5" y="-10" width="3" height="10" fill="#6b4a2f"/><path d="M0,-34 L10,-14 L-10,-14Z M0,-26 L12,-6 L-12,-6Z" fill="#4f7d45"/></g>`; }
+function thermo(x, y, warm) { const c = warm ? '#d0453b' : '#2f6fb0'; return `<g transform="translate(${x},${y})"><rect x="-4" y="-26" width="8" height="30" rx="4" fill="#fff" stroke="#5a6672"/><rect x="-2" y="${warm ? -22 : -6}" width="4" height="${warm ? 24 : 8}" fill="${c}"/><circle cx="0" cy="6" r="6" fill="${c}" stroke="#5a6672"/></g>`; }
+
 export function phenSVG(fig, reveal = false) {
   const W = 520, H = 280;
-  let s = `<svg viewBox="0 0 ${W} ${H}" class="mt-fig" xmlns="http://www.w3.org/2000/svg">`;
+  let s = `<svg viewBox="0 0 ${W} ${H}" class="mt-fig" xmlns="http://www.w3.org/2000/svg" font-family="Nunito, sans-serif">`;
   if (fig.type === 'breeze') {
     const day = fig.day;
-    s += `<rect width="${W}" height="${H}" fill="${day ? SKY_D : SKY_N}"/>`;
-    if (day) s += `<circle cx="70" cy="60" r="26" fill="#ffd166"/>`; else { s += `<circle cx="450" cy="55" r="20" fill="#f3f0d8"/><circle cx="460" cy="48" r="18" fill="${SKY_N}"/>`; for (let i = 0; i < 18; i++) s += `<circle cx="${(i * 97) % 500 + 10}" cy="${(i * 53) % 90 + 10}" r="1.4" fill="#fff"/>`; }
-    s += `<rect x="0" y="200" width="270" height="80" fill="${SEA}"/><path d="M270,200 L520,190 L520,280 L270,280 Z" fill="${LAND_C}"/>`;
-    s += `<rect x="350" y="165" width="26" height="26" fill="#f2efe8"/><path d="M346,167 L363,152 L380,167Z" fill="#c9553e"/><rect x="400" y="160" width="22" height="30" fill="#f2efe8"/><path d="M396,162 L411,148 L426,162Z" fill="#c9553e"/>`;
-    s += boatIcon(130, 196, 0.9);
-    s += `<text x="120" y="250" font-size="15" font-weight="700" fill="#fff">${L('morze', 'sea')}</text><text x="410" y="245" font-size="15" font-weight="700" fill="#5a4a2a">${L('ląd', 'land')}</text>`;
-    s += `<text x="150" y="128" font-size="13" fill="${day ? '#2f4468' : '#dfe8f5'}">${day ? L('ląd cieplejszy od wody', 'land warmer than water') : L('ląd chłodniejszy od wody', 'land cooler than water')}</text>`;
+    s += day ? sky(W, H, '#8fc7ec', '#e6f3fb') : sky(W, H, '#0f1b33', '#2b3d5f');
+    if (day) s += `<circle cx="70" cy="58" r="34" fill="#ffd166" opacity="0.35"/><circle cx="70" cy="58" r="24" fill="#ffd166"/>`;
+    else { s += `<circle cx="452" cy="52" r="20" fill="#f3f0d8"/><circle cx="462" cy="45" r="18" fill="#16233f"/>`; for (let i = 0; i < 22; i++) s += `<circle cx="${(i * 97) % 500 + 10}" cy="${(i * 53) % 100 + 10}" r="${i % 3 ? 1.1 : 1.7}" fill="#fff" opacity="0.85"/>`; }
+    s += sea(200, 290, H, day ? '#4f97c4' : '#2a5478', day ? '#2a628c' : '#173550');
+    s += `<path d="M262,200 Q280,196 300,190 L520,178 L520,280 L262,280 Z" fill="${day ? '#cdb986' : '#6f6448'}"/><path d="M262,200 Q280,196 300,190 L520,178" fill="none" stroke="${day ? '#a8945f' : '#55492f'}" stroke-width="2"/>`;
+    s += house(360, 186, 1) + house(410, 183, 1.1) + tree(460, 181, 1.1) + tree(330, 190, 0.9);
+    s += boatIcon(140, 198, 0.95);
+    s += pill(110, 250, L('morze', 'sea'), '#1b3f5f') + pill(420, 248, L('ląd', 'land'), '#5a4a2a');
+    s += thermo(230, 150, !day) + thermo(470, 140, day);
+    s += pill(260, 106, day ? L('w dzień ląd nagrzewa się szybciej', 'by day the land warms faster') : L('nocą ląd stygnie szybciej', 'at night the land cools faster'), day ? '#2f4468' : '#dfe8f5', 13, day ? '#ffffff' : '#1d2b45');
     if (reveal) {
-      const dir = day ? 1 : -1, c = '#d0453b';
-      s += day ? arrow(60, 182, 300, 182, c) + arrow(400, 150, 400, 70, c) + arrow(330, 60, 120, 60, c) + arrow(110, 80, 110, 160, c)
-        : arrow(470, 182, 200, 182, c) + arrow(120, 150, 120, 80, c) + arrow(180, 60, 400, 60, c) + arrow(430, 80, 430, 160, c);
-      s += `<text x="${day ? 120 : 230}" y="176" font-size="14" font-weight="800" fill="${c}">${day ? L('bryza morska', 'sea breeze') : L('bryza lądowa', 'land breeze')}</text>`;
-      void dir;
+      const c = '#d0453b';
+      if (day) {
+        s += arrow(70, 182, 300, 182, c, 5) + curveArrow('M330,176 Q420,170 420,90', [420, 84], -Math.PI / 2, c, 4) + arrow(400, 66, 140, 66, c, 3) + curveArrow('M110,76 Q86,120 96,168', [97, 172], Math.PI / 2 - 0.1, c, 3);
+        s += pill(180, 168, L('bryza morska', 'sea breeze'), c, 14);
+      } else {
+        s += arrow(470, 186, 200, 186, c, 4) + curveArrow('M170,180 Q110,170 116,96', [116, 90], -Math.PI / 2, c, 3) + arrow(150, 70, 410, 70, c, 3) + curveArrow('M440,80 Q460,130 450,170', [449, 174], Math.PI / 2 + 0.1, c, 3);
+        s += pill(300, 168, L('bryza lądowa', 'land breeze'), c, 14);
+      }
     }
   } else if (fig.type === 'thunder') {
-    s += `<rect width="${W}" height="${H}" fill="#9aa7b4"/>` + cloudShape(60, 70, 2.6, '#5e6670') + `<path d="M150,120 L128,170 L148,170 L126,224" fill="none" stroke="#fff6a8" stroke-width="5" stroke-linejoin="round"/>`;
-    s += `<rect x="0" y="220" width="${W}" height="60" fill="${SEA}"/>` + boatIcon(420, 220, 1);
-    for (let i = 1; i <= 3; i++) s += `<path d="M${200 + i * 42},150 a60,60 0 0,1 0,70" fill="none" stroke="#fff" stroke-width="2" opacity="${1 - i * 0.22}"/>`;
-    s += `<circle cx="440" cy="80" r="40" fill="#fff" stroke="#2f4468" stroke-width="3"/><line x1="440" y1="80" x2="${440 + Math.sin(fig.s / 60 * 2 * Math.PI) * 30}" y2="${80 - Math.cos(fig.s / 60 * 2 * Math.PI) * 30}" stroke="#d0453b" stroke-width="3"/><text x="440" y="140" font-size="15" font-weight="800" text-anchor="middle" fill="#1b2a3a">${fig.s} s</text>`;
+    s += sky(W, H, '#5d6874', '#a7b2bd') + cloud(40, 70, 2.8, '#4c5560', '#3c434c') + cloud(150, 52, 1.6, '#5e6773', '#48505a');
+    s += `<path d="M150,122 L128,170 L150,170 L124,226" fill="none" stroke="#fff6a8" stroke-width="5" stroke-linejoin="round"/><path d="M150,122 L128,170 L150,170 L124,226" fill="none" stroke="#fffbd9" stroke-width="2" stroke-linejoin="round"/>`;
+    s += sea(222, W, H, '#56778f', '#34526a') + boatIcon(420, 222, 1);
+    for (let i = 1; i <= 3; i++) s += `<path d="M${210 + i * 40},150 a60,60 0 0,1 0,70" fill="none" stroke="#fff" stroke-width="2.5" opacity="${1 - i * 0.22}"/>`;
+    const a = (fig.s / 60) * 2 * Math.PI;
+    s += `<g transform="translate(440,82)"><circle r="40" fill="#fff" stroke="#2f4468" stroke-width="3"/>${Array.from({ length: 12 }, (_, k) => { const b = (k / 12) * 2 * Math.PI; return `<line x1="${f1(Math.sin(b) * 33)}" y1="${f1(-Math.cos(b) * 33)}" x2="${f1(Math.sin(b) * 37)}" y2="${f1(-Math.cos(b) * 37)}" stroke="#2f4468" stroke-width="2"/>`; }).join('')}<path d="M0,0 L0,-34 A34,34 0 ${a > Math.PI ? 1 : 0},1 ${f1(Math.sin(a) * 34)},${f1(-Math.cos(a) * 34)} Z" fill="#d0453b" opacity="0.25"/><line x1="0" y1="0" x2="${f1(Math.sin(a) * 30)}" y2="${f1(-Math.cos(a) * 30)}" stroke="#d0453b" stroke-width="3" stroke-linecap="round"/><circle r="3" fill="#2f4468"/></g>`;
+    s += pill(440, 146, `${fig.s} s`, '#1b2a3a', 15);
   } else if (fig.type === 'shift' || fig.type === 'buys') {
     const cx = 260, cy = 140, R = 105;
-    s += `<rect width="${W}" height="${H}" fill="#f4f8fb"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="#fff" stroke="#9fb4c6" stroke-width="2"/>`;
-    ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].forEach((d, i) => { const a = (i * 45 * Math.PI) / 180; s += `<text x="${f1(cx + Math.sin(a) * (R + 16))}" y="${f1(cy - Math.cos(a) * (R + 16) + 5)}" font-size="13" font-weight="800" text-anchor="middle" fill="#2f4468">${d}</text>`; });
+    s += sky(W, H, '#f4f8fb', '#e4eef6');
+    s += `<circle cx="${cx}" cy="${cy}" r="${R + 6}" fill="#fff" stroke="#c6d6e4" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="#9fb4c6" stroke-width="1.5"/>`;
+    for (let k = 0; k < 72; k++) { const b = (k * 5 * Math.PI) / 180, l = k % 9 === 0 ? 10 : 5; s += `<line x1="${f1(cx + Math.sin(b) * R)}" y1="${f1(cy - Math.cos(b) * R)}" x2="${f1(cx + Math.sin(b) * (R - l))}" y2="${f1(cy - Math.cos(b) * (R - l))}" stroke="#9fb4c6" stroke-width="1"/>`; }
+    ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'].forEach((d, i) => { const b = (i * 45 * Math.PI) / 180; s += `<text x="${f1(cx + Math.sin(b) * (R + 20))}" y="${f1(cy - Math.cos(b) * (R + 20) + 5)}" font-size="13" font-weight="800" text-anchor="middle" fill="${i === 0 ? '#c62828' : '#2f4468'}">${d}</text>`; });
     if (fig.type === 'shift') {
-      fig.seq.forEach((d, i) => { const a = (d * Math.PI) / 180, r0 = R - 6, r1 = 22; const col = ['#9fb4c6', '#5f86b0', '#1f4f8a'][i];
-        s += arrow(f1(cx + Math.sin(a) * r0), f1(cy - Math.cos(a) * r0), f1(cx + Math.sin(a) * r1), f1(cy - Math.cos(a) * r1), col, 5) + `<text x="${f1(cx + Math.sin(a) * (r0 - 18) + 10)}" y="${f1(cy - Math.cos(a) * (r0 - 18))}" font-size="14" font-weight="800" fill="${col}">${i + 1}</text>`; });
-      if (reveal) { const a0 = fig.seq[0], a2 = fig.seq[2], cw = ((a2 - a0 + 360) % 360) < 180; s += `<path d="M${f1(cx + Math.sin(a0 * Math.PI / 180) * 70)},${f1(cy - Math.cos(a0 * Math.PI / 180) * 70)} A70,70 0 0,${cw ? 1 : 0} ${f1(cx + Math.sin(a2 * Math.PI / 180) * 70)},${f1(cy - Math.cos(a2 * Math.PI / 180) * 70)}" fill="none" stroke="#d0453b" stroke-width="3" stroke-dasharray="6 4"/>`; }
+      fig.seq.forEach((d, i) => { const b = (d * Math.PI) / 180, r0 = R - 10, r1 = 24, col = ['#9fb4c6', '#5f86b0', '#1f4f8a'][i];
+        s += arrow(f1(cx + Math.sin(b) * r0), f1(cy - Math.cos(b) * r0), f1(cx + Math.sin(b) * r1), f1(cy - Math.cos(b) * r1), col, 5) + pill(f1(cx + Math.sin(b) * (r0 + 4) + 0), f1(cy - Math.cos(b) * (r0 + 4)), String(i + 1), col, 12); });
+      s += `<circle cx="${cx}" cy="${cy}" r="8" fill="#2f4468"/>`;
+      if (reveal) { const a0 = fig.seq[0], a2 = fig.seq[2], cw = ((a2 - a0 + 360) % 360) < 180; s += `<path d="M${f1(cx + Math.sin(a0 * Math.PI / 180) * 70)},${f1(cy - Math.cos(a0 * Math.PI / 180) * 70)} A70,70 0 0,${cw ? 1 : 0} ${f1(cx + Math.sin(a2 * Math.PI / 180) * 70)},${f1(cy - Math.cos(a2 * Math.PI / 180) * 70)}" fill="none" stroke="#d0453b" stroke-width="3" stroke-dasharray="6 4"/>` + pill(cx + 150, 40, cw ? L('skręca w prawo', 'veering') : L('cofa się', 'backing'), '#d0453b', 13); }
     } else {
       const a = (fig.from * Math.PI) / 180;
-      s += arrow(f1(cx + Math.sin(a) * (R - 4)), f1(cy - Math.cos(a) * (R - 4)), f1(cx + Math.sin(a) * 26), f1(cy - Math.cos(a) * 26), '#2f6fb0', 6);
-      s += `<circle cx="${cx}" cy="${cy}" r="11" fill="#ffd166" stroke="#1b2a3a" stroke-width="2"/>`;
-      if (reveal) { const b = ((fig.from + 90) * Math.PI) / 180; s += `<text x="${f1(cx + Math.sin(b) * 62)}" y="${f1(cy - Math.cos(b) * 62 + 12)}" font-size="34" font-weight="800" text-anchor="middle" fill="#c62828">${L('N', 'L')}</text>`; }
+      s += arrow(f1(cx + Math.sin(a) * (R - 6)), f1(cy - Math.cos(a) * (R - 6)), f1(cx + Math.sin(a) * 26), f1(cy - Math.cos(a) * 26), '#2f6fb0', 6);
+      s += `<g transform="translate(${cx},${cy}) rotate(${fig.from + 180})"><circle r="12" fill="#ffd166" stroke="#1b2a3a" stroke-width="2"/><path d="M-6,-3 L0,-11 L6,-3" fill="none" stroke="#1b2a3a" stroke-width="2"/></g>`;
+      s += pill(cx, H - 16, L('stoisz plecami do wiatru', 'back to the wind'), '#2f4468', 12);
+      if (reveal) { const b = ((fig.from + 180 - 110) * Math.PI) / 180; s += `<text x="${f1(cx + Math.sin(b) * 64)}" y="${f1(cy - Math.cos(b) * 64 + 12)}" font-size="34" font-weight="800" text-anchor="middle" fill="#c62828" stroke="#fff" stroke-width="4" paint-order="stroke">${L('N', 'L')}</text>`; }
     }
   } else if (fig.type === 'fog') {
     if (fig.adv) {
-      s += `<rect width="${W}" height="${H}" fill="${SKY_D}"/><rect x="0" y="190" width="${W}" height="90" fill="#4a7fa3"/><path d="M380,190 L520,180 L520,280 L380,280Z" fill="${LAND_C}"/>`;
-      s += arrow(500, 120, 330, 140, '#d0453b', 5) + `<text x="380" y="105" font-size="13" font-weight="700" fill="#d0453b">${L('ciepłe, wilgotne powietrze', 'warm, moist air')}</text>`;
-      s += `<text x="40" y="250" font-size="13" font-weight="700" fill="#e6f2fb">${L('zimna woda (wiosna)', 'cold water (spring)')}</text>`;
-      if (reveal) s += `<rect x="0" y="140" width="380" height="60" fill="#fff" opacity="0.8"/><text x="120" y="176" font-size="15" font-weight="800" fill="#5a6672">${L('mgła adwekcyjna', 'advection fog')}</text>`;
+      s += sky(W, H, '#bcd9ee', '#eaf3f9') + sea(190, W, H, '#3f7699', '#24506e');
+      s += `<path d="M380,190 Q400,186 420,182 L520,176 L520,280 L380,280Z" fill="${LAND_C}"/>` + house(450, 178, 1) + tree(490, 176, 1);
+      s += cloud(420, 80, 0.8, '#ffffff', '#e1e8ee');
+      s += arrow(500, 128, 320, 146, '#d0453b', 5) + pill(400, 110, L('ciepłe, wilgotne powietrze', 'warm, moist air'), '#d0453b', 12);
+      s += pill(110, 250, L('zimna woda (wiosna, początek lata)', 'cold water (spring, early summer)'), '#1b3f5f', 12);
+      s += thermo(40, 160, false) + boatIcon(250, 190, 0.8);
+      if (reveal) { const id = `mfF${++GID}`; s += `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.4" stop-color="#fff" stop-opacity="0.85"/><stop offset="1" stop-color="#fff" stop-opacity="0.9"/></linearGradient></defs><rect x="0" y="130" width="390" height="70" fill="url(#${id})"/>` + pill(170, 168, L('mgła adwekcyjna', 'advection fog'), '#5a6672', 14); }
     } else {
-      s += `<rect width="${W}" height="${H}" fill="${SKY_N}"/>`; for (let i = 0; i < 26; i++) s += `<circle cx="${(i * 89) % 510 + 5}" cy="${(i * 37) % 110 + 8}" r="1.3" fill="#fff"/>`;
-      s += `<path d="M0,170 Q120,120 230,190 L330,200 Q420,130 520,150 L520,280 L0,280Z" fill="#3b4a35"/><rect x="230" y="200" width="100" height="80" fill="#2d4a66"/>`;
-      s += `<text x="20" y="150" font-size="13" fill="#dfe8f5">${L('bezchmurna noc, cisza – ląd szybko stygnie', 'clear calm night – the land cools quickly')}</text>`;
-      if (reveal) s += `<ellipse cx="280" cy="205" rx="150" ry="26" fill="#fff" opacity="0.75"/><text x="200" y="210" font-size="14" font-weight="800" fill="#5a6672">${L('mgła radiacyjna', 'radiation fog')}</text>`;
+      s += sky(W, H, '#0f1b33', '#33466a'); for (let i = 0; i < 26; i++) s += `<circle cx="${(i * 89) % 510 + 5}" cy="${(i * 37) % 110 + 8}" r="${i % 4 ? 1.1 : 1.7}" fill="#fff" opacity="0.9"/>`;
+      s += `<circle cx="70" cy="44" r="16" fill="#f3f0d8"/>`;
+      s += `<path d="M0,168 Q120,118 230,190 L330,200 Q420,128 520,148 L520,280 L0,280Z" fill="#33432f"/>` + `<rect x="230" y="196" width="100" height="84" fill="#203a55"/>`;
+      s += tree(80, 150, 1.1) + tree(110, 140, 1) + tree(450, 140, 1.1) + house(400, 150, 0.9);
+      s += pill(260, 108, L('bezchmurna, bezwietrzna noc – ląd szybko stygnie', 'clear, calm night – the land cools quickly'), '#dfe8f5', 12, '#1d2b45');
+      if (reveal) s += `<ellipse cx="280" cy="200" rx="170" ry="30" fill="#fff" opacity="0.72"/><ellipse cx="160" cy="176" rx="80" ry="14" fill="#fff" opacity="0.5"/>` + pill(280, 204, L('mgła radiacyjna', 'radiation fog'), '#5a6672', 14);
     }
   } else if (fig.type === 'apparent') {
     const cx = 200, cy = 170, k = 9;
-    s += `<rect width="${W}" height="${H}" fill="#f4f8fb"/><g transform="translate(${cx},${cy})"><path d="M0,-38 C14,-20 14,20 10,34 L-10,34 C-14,20 -14,-20 0,-38Z" fill="#fff" stroke="#2f4468" stroke-width="2"/></g>`;
-    const ta = fig.down ? Math.PI : (135 * Math.PI) / 180; // kierunek wiatru rzeczywistego (dokąd wieje) względem dziobu (w górę)
+    s += sky(W, H, '#f4f8fb', '#e4eef6');
+    s += `<g transform="translate(${cx},${cy})"><path d="M0,-40 C15,-20 15,20 11,36 L-11,36 C-15,20 -15,-20 0,-40Z" fill="#fff" stroke="#2f4468" stroke-width="2"/><line x1="0" y1="-14" x2="0" y2="26" stroke="#2f4468" stroke-width="1.5"/></g>`;
+    const ta = fig.down ? Math.PI : (135 * Math.PI) / 180;
     const tx = Math.sin(ta) * fig.tw * k, ty = -Math.cos(ta) * fig.tw * k;
-    s += arrow(cx - tx, cy - 60 - ty, cx, cy - 60, '#2f6fb0', 4) + `<text x="${cx - tx - 10}" y="${cy - 66 - ty}" font-size="13" font-weight="700" fill="#2f6fb0">${L('wiatr rzeczywisty', 'true wind')} ${fig.tw} kn</text>`;
-    s += arrow(cx, cy + 50, cx, cy - 2 - 0, '#1b2a3a', 3) + `<text x="${cx + 14}" y="${cy + 46}" font-size="12" fill="#1b2a3a">${L('jacht', 'yacht')} ${fig.bs} kn</text>`;
+    s += arrow(cx - tx, cy - 60 - ty, cx, cy - 60, '#2f6fb0', 4) + pill(cx - tx + 10, cy - 78 - ty, `${L('wiatr rzeczywisty', 'true wind')} ${fig.tw} kn`, '#2f6fb0', 12);
+    s += arrow(cx, cy + 52, cx, cy - 2, '#1b2a3a', 3) + pill(cx + 56, cy + 56, `${L('ruch jachtu', 'boat speed')} ${fig.bs} kn`, '#1b2a3a', 12);
     if (reveal) {
-      const ax = tx, ay = ty + fig.bs * k; // wiatr pozorny = rzeczywisty − ruch jachtu (wektory „dokąd”)
-      s += arrow(cx + 150 - ax, cy - 30 - ay, cx + 150, cy - 30, '#d0453b', 4) + `<text x="${cx + 160}" y="${cy - 36}" font-size="13" font-weight="800" fill="#d0453b">${L('pozorny', 'apparent')} ≈ ${Math.round(Math.hypot(ax, ay) / k)} kn</text>`;
+      const ax = tx, ay = ty + fig.bs * k;
+      s += arrow(cx + 150 - ax, cy - 30 - ay, cx + 150, cy - 30, '#d0453b', 4) + pill(cx + 170, cy - 8, `${L('wiatr pozorny', 'apparent wind')} ≈ ${Math.round(Math.hypot(ax, ay) / k)} kn`, '#d0453b', 12);
     }
   } else if (fig.type === 'circ') {
-    const cx = 260, cy = 140;
-    s += `<rect width="${W}" height="${H}" fill="#eef5fb"/>`;
+    const cx = 260, cy = 140, low = fig.low;
+    const id = `mfC${++GID}`;
+    s += `<defs><radialGradient id="${id}" cx="0.5" cy="0.5" r="0.6"><stop offset="0" stop-color="${low ? '#f4c9c5' : '#c9dbf4'}"/><stop offset="1" stop-color="#f4f8fb"/></radialGradient></defs><rect width="${W}" height="${H}" fill="url(#${id})"/>`;
     for (const r of [40, 75, 110]) s += `<ellipse cx="${cx}" cy="${cy}" rx="${r * 1.5}" ry="${r}" fill="none" stroke="#3f4a56" stroke-width="1.5"/>`;
-    s += `<text x="${cx}" y="${cy + 14}" font-size="38" font-weight="800" text-anchor="middle" fill="${fig.low ? '#c62828' : '#1f5fbf'}">${fig.low ? L('N', 'L') : L('W', 'H')}</text>`;
+    [[40, low ? 1000 : 1028], [75, low ? 1004 : 1024], [110, low ? 1008 : 1020]].forEach(([r, p]) => { s += `<text x="${cx + r * 1.5}" y="${cy + 4}" font-size="11" font-weight="700" fill="#3f4a56" text-anchor="middle" stroke="#f4f8fb" stroke-width="4" paint-order="stroke">${p}</text>`; });
+    s += `<text x="${cx}" y="${cy + 14}" font-size="40" font-weight="800" text-anchor="middle" fill="${low ? '#c62828' : '#1f5fbf'}">${low ? L('N', 'L') : L('W', 'H')}</text>`;
+    s += pill(cx, H - 14, low ? L('niż: powietrze zbiega się i unosi', 'low: air converges and rises') : L('wyż: powietrze osiada i rozbiega się', 'high: air sinks and diverges'), low ? '#c62828' : '#1f5fbf', 12);
     if (reveal) for (let i = 0; i < 8; i++) {
       const a = (i / 8) * Math.PI * 2, r = 92, x = cx + Math.cos(a) * r * 1.5, y = cy + Math.sin(a) * r;
-      const ccw = fig.low ? -1 : 1, inward = fig.low ? -0.35 : 0.35; // kierunek obiegu w SVG (y w dół)
+      const ccw = low ? -1 : 1, inward = low ? -0.35 : 0.35;
       const tx = -Math.sin(a) * ccw * 1.5 + Math.cos(a) * inward * 1.5, ty = Math.cos(a) * ccw + Math.sin(a) * inward;
       const n = Math.hypot(tx, ty); s += arrow(f1(x - tx / n * 16), f1(y - ty / n * 16), f1(x + tx / n * 16), f1(y + ty / n * 16), '#d0453b', 3);
     }
   } else if (fig.type === 'squall') {
-    s += `<rect width="${W}" height="${H}" fill="#aab6c2"/><path d="M0,40 Q140,10 300,30 Q420,40 520,20 L520,120 Q420,130 330,118 Q240,140 160,124 Q80,130 0,118Z" fill="#46505b"/>`;
-    s += `<path d="M120,118 Q200,150 300,124 Q260,160 160,150 Q110,146 120,118Z" fill="#363e47"/>`;
-    for (let i = 0; i < 26; i++) s += `<line x1="${180 + i * 12}" y1="130" x2="${170 + i * 12}" y2="220" stroke="#5d6a78" stroke-width="2" opacity="0.6"/>`;
-    s += `<rect x="0" y="220" width="${W}" height="60" fill="#4b6f8a"/>` + boatIcon(110, 222, 1);
-    s += arrow(470, 200, 360, 200, '#fff', 4) + `<text x="370" y="190" font-size="13" font-weight="800" fill="#fff">${L('szkwał', 'squall')}</text>`;
+    s += sky(W, H, '#69737e', '#b8c3cd');
+    s += `<path d="M0,40 Q140,10 300,30 Q420,40 520,20 L520,124 Q420,132 330,120 Q240,142 160,126 Q80,132 0,120Z" fill="#46505b"/>`;
+    s += `<path d="M90,120 Q200,160 320,126 Q290,168 170,160 Q100,154 90,120Z" fill="#363e47"/><path d="M110,130 Q200,156 300,132" fill="none" stroke="#2b3138" stroke-width="2"/>`;
+    for (let i = 0; i < 30; i++) s += `<line x1="${200 + i * 10}" y1="132" x2="${188 + i * 10}" y2="222" stroke="#5d6a78" stroke-width="2" opacity="0.55"/>`;
+    s += sea(222, W, H, '#5b7d96', '#35546c', '#e8f0f6');
+    for (let i = 0; i < 8; i++) s += `<path d="M${250 + i * 30},${232 + (i % 2) * 8} q6,-5 12,0" fill="none" stroke="#fff" stroke-width="2"/>`;
+    s += boatIcon(110, 222, 1);
+    s += arrow(470, 196, 340, 196, '#fff', 5) + pill(405, 176, L('szkwał – nagły poryw', 'squall – sudden gust'), '#ffffff', 12, '#46505b');
+    s += pill(200, 84, L('wał szkwałowy', 'roll cloud'), '#ffffff', 12, '#46505b');
   }
   return s + '</svg>';
 }

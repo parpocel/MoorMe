@@ -113,7 +113,7 @@ function simpleModel(v, lights, Lm) {
 export function lightsViewer(v, lights0, Lm, opts = {}) {
   const day = !!opts.day;
   // znaki dzienne: przeskalowane (jak przez lornetkę), żeby były czytelne przy długim kadłubie; maszty budowane pod nimi
-  const kS = day ? Math.max(1.6, Math.min(5, Lm / 11)) : 1;
+  const kS = day ? Math.max(1.1, Math.min(3, Lm / 25)) : 1; // proporcjonalnie do kadłuba (mały statek – prawie naturalna wielkość)
   let shapes = [];
   if (day) {
     const sh = opts.shapes || [], own = sh.filter((q) => q.x > -Lm / 2 - 20), base = own.length ? Math.min(...own.map((q) => q.y)) : 0;

@@ -9,7 +9,17 @@ import { getLang } from '../i18n.js';
 const L = (pl, en) => (getLang() === 'en' ? en : pl);
 const svgBox = (html, cls = 'mb-fig') => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; return d; };
 const P = (...t) => h('p', {}, ...t);
-const entry = (title, ...kids) => h('div.hb-entry', {}, title ? h('h3', {}, title) : null, ...kids);
+const isFig = (k) => k && k.classList && (k.classList.contains('mb-fig') || k.classList.contains('mb-row'));
+// lekcja: tytuł, rysunki po prawej (szerokie – nad tekstem), tekst i tabele po lewej
+const entry = (title, ...kids) => {
+  kids = kids.filter(Boolean);
+  const wide = kids.filter((k) => isFig(k) && (k.classList.contains('wide') || k.classList.contains('mb-row') || k.classList.contains('mb-map'))), figs = kids.filter((k) => isFig(k) && !wide.includes(k)), text = kids.filter((k) => !isFig(k));
+  if (!title && !figs.length && !wide.length) return h('section.nb-lesson.mb-lead', {}, ...text);
+  return h('section.nb-lesson', {}, title ? h('h3', {}, title) : null, ...wide,
+    h('div.nb-cols', { class: figs.length ? 'has-fig' : '' }, h('div.nb-text', {}, ...text), figs.length ? h('div.nb-figcol', {}, ...figs) : null));
+};
+const tip = (...t) => h('div.nb-example', {}, h('div.nb-tag', {}, L('W praktyce', 'In practice')), h('p', {}, ...t));
+const warn = (...t) => h('div.nb-note', {}, h('div.nb-tag', {}, L('Uwaga', 'Caution')), h('p', {}, ...t));
 const table = (head, rows) => h('div.hb-ct-wrap', {}, h('table.hb-ctable', {}, h('tr', {}, ...head.map((x) => h('th', {}, x))), ...rows.map((r) => h('tr', {}, ...r.map((c) => h('td', {}, c))))));
 
 // ---------- miniatury 3D (renderowane raz, w tle, kolejno w kolejnych klatkach) ----------
@@ -65,27 +75,46 @@ function open3D(weather, view, caption) {
 const see3D = (weather, view, caption) => h('button.btn.sm.mb-3dbtn', { onclick: () => open3D(weather, view, caption) }, L('▶ Zobacz w 3D', '▶ View in 3D'));
 
 // ---------- przekroje frontów ----------
+let FX = 0;
 function frontCrossSVG(kind) {
-  const W = 620, H = 230;
-  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg"><rect width="${W}" height="${H}" fill="#e9f3fa"/><rect y="200" width="${W}" height="30" fill="#4a86b0"/>`;
-  const cl = (x, y, w, hh, col = '#fff', o = 1) => `<ellipse cx="${x}" cy="${y}" rx="${w}" ry="${hh}" fill="${col}" opacity="${o}"/>`;
+  const W = 680, H = 280, id = `fx${++FX}`;
+  const cl = (x, y, rx, ry, col, o = 1) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" fill="${col}" opacity="${o}"/>`;
+  const lab = (x, y, t, col = '#1b2a3a', fs = 13) => { const w = t.length * fs * 0.56 + 14; return `<g><rect x="${x - w / 2}" y="${y - fs * 0.9}" width="${w}" height="${fs * 1.6}" rx="${fs * 0.8}" fill="#fff" fill-opacity="0.88"/><text x="${x}" y="${y + fs * 0.34}" font-size="${fs}" font-weight="800" fill="${col}" text-anchor="middle">${t}</text></g>`; };
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Nunito, sans-serif"><defs>
+    <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bcd9ee"/><stop offset="1" stop-color="#eef6fb"/></linearGradient>
+    <linearGradient id="${id}w" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f6c7b8" stop-opacity="0.75"/><stop offset="1" stop-color="#fbe3d9" stop-opacity="0.45"/></linearGradient>
+    <linearGradient id="${id}c" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#b9cff0" stop-opacity="0.8"/><stop offset="1" stop-color="#dce8f8" stop-opacity="0.4"/></linearGradient>
+    <linearGradient id="${id}m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f97c4"/><stop offset="1" stop-color="#2a628c"/></linearGradient>
+  </defs><rect width="${W}" height="${H}" fill="url(#${id}s)"/>`;
+  const seaY = 236;
   if (kind === 'warm') {
-    s += `<path d="M150,200 L${W},40 L${W},200Z" fill="#cfe0ee"/><path d="M150,200 L${W},40" stroke="#d6342b" stroke-width="4"/>`;
-    s += `<text x="30" y="80" font-size="14" font-weight="800" fill="#c2410c">${L('ciepłe powietrze', 'warm air')}</text><text x="470" y="185" font-size="14" font-weight="800" fill="#2f5f9a">${L('chłodne powietrze', 'cold air')}</text>`;
-    s += cl(200, 150, 70, 26, '#7d8792') + cl(300, 118, 80, 18, '#a9b2bc') + cl(420, 84, 90, 10, '#dfe5ea') + cl(540, 50, 70, 5, '#f4f7fa');
-    s += `<text x="170" y="155" font-size="13" font-weight="800" fill="#fff">Ns</text><text x="290" y="122" font-size="13" font-weight="800" fill="#2f4468">As</text><text x="412" y="88" font-size="13" font-weight="800" fill="#2f4468">Cs</text><text x="535" y="40" font-size="13" font-weight="800" fill="#2f4468">Ci</text>`;
-    for (let i = 0; i < 16; i++) s += `<line x1="${140 + i * 9}" y1="172" x2="${134 + i * 9}" y2="198" stroke="#5d7fa0" stroke-width="1.6"/>`;
-    s += `<text x="160" y="222" font-size="12" fill="#fff">${L('długotrwały deszcz – pas ok. 300 km', 'prolonged rain – a belt of about 300 km')}</text>`;
+    // klin chłodnego powietrza po prawej, ciepłe wślizguje się po nim w górę
+    s += `<path d="M0,${seaY} L0,0 L${W},0 L${W},40 L160,${seaY}Z" fill="url(#${id}w)"/><path d="M160,${seaY} L${W},40 L${W},${seaY}Z" fill="url(#${id}c)"/>`;
+    s += `<path d="M160,${seaY} L${W},40" stroke="#d6342b" stroke-width="4"/>`;
+    for (let k = 0; k < 7; k++) { const x = 190 + k * 66, y = seaY - (x - 160) * (196 / 520); s += `<path d="M${x - 9},${y + 3} A9,9 0 0 1 ${x + 9},${y - 3}Z" fill="#d6342b"/>`; }
+    s += cl(210, 168, 90, 32, '#6f7984') + cl(260, 150, 70, 24, '#7d8792') + cl(330, 124, 96, 18, '#a9b2bc') + cl(450, 92, 104, 11, '#dfe5ea', 0.95) + cl(580, 58, 84, 6, '#ffffff', 0.9);
+    s += lab(220, 166, 'Ns', '#1b2a3a') + lab(332, 124, 'As') + lab(452, 92, 'Cs') + lab(586, 58, 'Ci');
+    for (let k = 0; k < 22; k++) s += `<line x1="${136 + k * 8}" y1="${190}" x2="${130 + k * 8}" y2="${seaY - 2}" stroke="#5d7fa0" stroke-width="1.6" opacity="0.8"/>`;
+    s += lab(90, 70, L('ciepłe powietrze', 'warm air'), '#c2410c', 14) + lab(560, 200, L('chłodne powietrze', 'cold air'), '#2f5f9a', 14);
+    s += `<rect y="${seaY}" width="${W}" height="${H - seaY}" fill="url(#${id}m)"/>`;
+    s += lab(240, 262, L('pas ciągłych opadów – ok. 300 km', 'belt of continuous rain – about 300 km'), '#1b3f5f', 12) + lab(560, 262, L('Ci widać 800–1000 km przed frontem', 'Ci seen 800–1000 km ahead'), '#1b3f5f', 12);
   } else {
-    s += `<path d="M0,200 L0,60 Q120,70 330,200Z" fill="#cfe0ee"/><path d="M0,60 Q120,70 330,200" fill="none" stroke="#2b5fd6" stroke-width="4"/>`;
-    s += `<text x="30" y="185" font-size="14" font-weight="800" fill="#2f5f9a">${L('chłodne powietrze', 'cold air')}</text><text x="440" y="120" font-size="14" font-weight="800" fill="#c2410c">${L('ciepłe powietrze', 'warm air')}</text>`;
-    s += `<path d="M300,190 Q290,120 330,70 Q340,30 380,26 L470,22 Q420,40 410,70 Q430,130 410,190Z" fill="#7d8792"/><text x="345" y="120" font-size="15" font-weight="800" fill="#fff">Cb</text>`;
-    for (let i = 0; i < 12; i++) s += `<line x1="${306 + i * 9}" y1="190" x2="${300 + i * 9}" y2="200" stroke="#3f5f80" stroke-width="2"/>`;
-    s += cl(120, 120, 34, 16, '#fff') + cl(200, 132, 28, 13, '#fff') + `<text x="108" y="124" font-size="12" font-weight="800" fill="#2f4468">Cu</text>`;
-    s += `<text x="250" y="222" font-size="12" fill="#fff">${L('szkwał i ulewa – wąski pas', 'squall and downpour – a narrow belt')}</text>`;
+    // klin chłodnego powietrza po lewej wciska się pod ciepłe i wypycha je gwałtownie w górę
+    s += `<path d="M0,${seaY} L0,60 Q110,64 310,${seaY}Z" fill="url(#${id}c)"/><path d="M0,60 Q110,64 310,${seaY} L${W},${seaY} L${W},0 L0,0Z" fill="url(#${id}w)"/>`;
+    s += `<path d="M0,60 Q110,64 310,${seaY}" fill="none" stroke="#2b5fd6" stroke-width="4"/>`;
+    for (const t of [0.35, 0.55, 0.75, 0.92]) { const x = t * 310, y = 60 + (seaY - 60) * t * t; s += `<path d="M${x - 8},${y - 6} L${x - 14},${y + 8} L${x + 6},${y + 4}Z" fill="#2b5fd6"/>`; }
+    s += `<path d="M280,${seaY - 4} Q262,150 300,96 Q312,52 352,40 L470,30 Q520,34 540,44 Q470,48 430,66 Q420,120 440,${seaY - 4}Z" fill="#636d78"/><path d="M300,96 Q312,52 352,40 L470,30 Q520,34 540,44 Q470,48 430,66" fill="none" stroke="#4a535d" stroke-width="2"/>`;
+    s += lab(360, 120, 'Cb', '#1b2a3a', 15) + lab(480, 40, L('kowadło', 'anvil'), '#1b2a3a', 11);
+    for (let k = 0; k < 16; k++) s += `<line x1="${292 + k * 9}" y1="${seaY - 46}" x2="${284 + k * 9}" y2="${seaY - 2}" stroke="#3f5f80" stroke-width="2.2"/>`;
+    s += `<path d="M300,150 L286,178 L300,178 L284,208" fill="none" stroke="#fff6a8" stroke-width="3.5" stroke-linejoin="round"/>`;
+    s += cl(110, 132, 34, 15, '#fff') + cl(180, 150, 28, 12, '#fff') + lab(110, 132, 'Cu', '#2f4468', 12);
+    s += lab(70, 200, L('chłodne powietrze', 'cold air'), '#2f5f9a', 14) + lab(560, 130, L('ciepłe powietrze', 'warm air'), '#c2410c', 14);
+    s += `<rect y="${seaY}" width="${W}" height="${H - seaY}" fill="url(#${id}m)"/>`;
+    s += lab(360, 262, L('szkwał, ulewa, grad – wąski pas 30–50 km', 'squall, downpour, hail – a narrow belt of 30–50 km'), '#1b3f5f', 12);
   }
-  s += `<line x1="${kind === 'warm' ? 60 : 420}" y1="22" x2="${kind === 'warm' ? 130 : 520}" y2="22" stroke="#1b2a3a" stroke-width="3"/><path d="M${kind === 'warm' ? 130 : 520},22 l-10,-6 l0,12z" fill="#1b2a3a"/><text x="${kind === 'warm' ? 60 : 420}" y="16" font-size="11" fill="#1b2a3a">${L('ruch frontu', 'front moving')}</text>`;
-  return s + '</svg>';
+  const ax0 = kind === 'warm' ? 40 : 520;
+  s += `<line x1="${ax0}" y1="22" x2="${ax0 + 90}" y2="22" stroke="#1b2a3a" stroke-width="3"/><path d="M${ax0 + 90},22 l-11,-6 l0,12z" fill="#1b2a3a"/><text x="${ax0}" y="14" font-size="11" font-weight="700" fill="#1b2a3a">${L('ruch frontu', 'front moving')}</text>`;
+  return s.replace(/\n\s*/g, '') + '</svg>';
 }
 
 export function meteoBook() {
@@ -148,7 +177,7 @@ export function meteoBook() {
       entry(L('Niż z frontami', 'A frontal low'),
         P(L('Niże nad Bałtykiem przychodzą najczęściej z zachodu lub południowego zachodu i przemieszczają się na wschód z prędkością 15–30 kn. Typowy niż ma front ciepły (przed nim – szeroki pas chmur warstwowych i ciągłych opadów), za nim wycinek ciepły (wilgotno, St, mżawka) i front chłodny (wąski pas Cb ze szkwałami). Front chłodny porusza się szybciej, dogania ciepły i tworzy okluzję.', 'Lows over the Baltic usually come from the west or south-west and move east at 15–30 kn. A typical low has a warm front (ahead of it – a broad belt of layered cloud and continuous rain), then the warm sector (humid, St, drizzle) and the cold front (a narrow belt of Cb with squalls). The cold front moves faster, catches up the warm one and forms an occlusion.')),
         exFig),
-      entry(L('Front ciepły', 'Warm front'), svgBox(frontCrossSVG('warm')),
+      entry(L('Front ciepły', 'Warm front'), svgBox(frontCrossSVG('warm'), 'mb-fig wide'),
         table([L('', ''), L('Przed frontem', 'Ahead'), L('Podczas przejścia', 'Passage'), L('Za frontem', 'Behind')], [
           [L('Ciśnienie', 'Pressure'), L('stopniowo spada', 'falls steadily'), L('przestaje spadać', 'stops falling'), L('stałe lub powoli spada', 'steady or slowly falling')],
           [L('Wiatr', 'Wind'), L('wzmaga się, cofa się (np. na S)', 'increases, backs (e.g. to S)'), L('skręca w prawo', 'veers'), L('stały, np. SW', 'steady, e.g. SW')],
@@ -156,7 +185,7 @@ export function meteoBook() {
           [L('Opady', 'Precipitation'), L('ciągłe, coraz silniejsze', 'continuous, increasing'), L('słabną', 'easing'), L('mżawka lub brak', 'drizzle or none')],
           [L('Widzialność', 'Visibility'), L('pogarsza się', 'deteriorates'), L('słaba', 'poor'), L('słaba, możliwa mgła', 'poor, fog possible')],
           [L('Temperatura', 'Temperature'), L('stała', 'steady'), L('rośnie', 'rises'), L('wyższa', 'higher')]])),
-      entry(L('Front chłodny', 'Cold front'), svgBox(frontCrossSVG('cold')),
+      entry(L('Front chłodny', 'Cold front'), svgBox(frontCrossSVG('cold'), 'mb-fig wide'),
         table([L('', ''), L('Przed frontem', 'Ahead'), L('Podczas przejścia', 'Passage'), L('Za frontem', 'Behind')], [
           [L('Ciśnienie', 'Pressure'), L('spada', 'falls'), L('nagły wzrost', 'sudden rise'), L('szybko rośnie', 'rises quickly')],
           [L('Wiatr', 'Wind'), L('SW, wzmaga się', 'SW, increasing'), L('szkwał, gwałtownie skręca w prawo', 'squall, veers sharply'), L('W–NW, porywisty', 'W–NW, gusty')],
@@ -175,7 +204,7 @@ export function meteoBook() {
         table([L('Odstęp izobar', 'Isobar spacing'), L('Wiatr', 'Wind'), L('Siła', 'Force')], spacing)),
       entry(L('Symbole wiatru', 'Wind symbols'),
         P(L('Trzonek wskazuje, SKĄD wieje wiatr. Długa kreska oznacza 10 kn, krótka 5 kn, chorągiewka (trójkąt) 50 kn; kreski rysuje się na półkuli północnej po stronie niższego ciśnienia. Kółko bez trzonka – cisza.', 'The shaft points to where the wind comes FROM. A long barb means 10 kn, a short one 5 kn, a pennant (triangle) 50 kn; in the northern hemisphere the barbs are drawn on the low-pressure side. A circle without a shaft – calm.')),
-        svgBox(barbFig))
+        svgBox(barbFig, 'mb-fig wide'))
     ] },
     { id: 'baro', name: L('Barometr', 'Barometer'), entries: [
       entry(L('Tendencja ciśnienia', 'Pressure tendency'),
