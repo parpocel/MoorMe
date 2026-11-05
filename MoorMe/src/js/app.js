@@ -255,8 +255,18 @@ function menuScreenTiles({ kicker, items, sel = 0, back, extra = null, settingsB
 // Poprzedni układ (kafle u dołu) to menuScreen – wystarczy w showModeSelect wywołać znów menuScreen zamiast wheelMenu.
 // nazwa z dwóch wyrazów – każdy w osobnym wierszu
 const twoLines = (txt) => { const w = txt.split(' '); return w.length === 2 ? [w[0], h('br'), w[1]] : [txt]; };
+// barwa pastelowa: mniejsze nasycenie, jaśniejszy odcień (ten sam ton)
+function pastel(hex) {
+  const n = parseInt(hex.slice(1), 16), r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+  let hh = 0;
+  if (d) hh = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  return `hsl(${Math.round(hh * 60)} ${Math.round(Math.min(sat, 0.62) * 0.8 * 100)}% ${Math.round(Math.max(l, 0.6) * 100 + 6)}%)`;
+}
 function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settingsBack = null }) {
   app.innerHTML = '';
+  items = items.map((it) => ({ ...it, color: pastel(it.color) }));
   let cur = Math.min(sel, items.length - 1);
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
   // promienie w jednostkach viewBox (–112..112); środkowe koło ma promień 0,48·224/2 ≈ 53,8 –
@@ -288,7 +298,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
     const grad = document.createElementNS(NS, 'linearGradient');
     grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');
-    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.9"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.8"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 75%, #0b1430); stop-opacity: 0.88"/>`;
+    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.9"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.8"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 86%, #0b1430); stop-opacity: 0.88"/>`;
     defs.appendChild(grad);
     const g = document.createElementNS(NS, 'g');
     g.classList.add('wh-g');
