@@ -345,6 +345,7 @@ export class MenuScene {
 
     const bt = this.boat;
     bt.position.y = this.wave(0, 0, t) * 0.7 - 0.2;
+    this.shadowPlane.position.y = bt.position.y + 0.2; // płaszczyzna cienia na linii wodnej jachtu – cień zaczyna się przy samej burcie
     bt.rotation.z = Math.sin(t * 0.8) * 0.024;
     bt.rotation.x = Math.sin(t * 0.6 + 1) * 0.02;
     this.buoys.forEach((o, i) => { o.position.y = this.wave(o.position.x, o.position.z, t) - 0.3; o.rotation.z = Math.sin(t * 1.3 + i) * 0.12; });

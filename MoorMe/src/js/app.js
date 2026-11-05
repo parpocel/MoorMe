@@ -297,11 +297,12 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     const path = mk('wh-seg', { style: `fill: url(#whg${i})` });
     mk('wh-shine', { style: 'fill: url(#whshine)' });
     g.addEventListener('mouseenter', () => select(i));
+    g.addEventListener('mouseleave', () => unmark());
     g.addEventListener('click', () => activate(i));
     svg.appendChild(g);
     // etykieta wycinka (ikona + nazwa) w połowie szerokości pierścienia
     const [lx, ly] = pt((R + R0) / 2, mid);
-    const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onfocus: () => select(i), onclick: () => activate(i) },
+    const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onmouseleave: () => unmark(), onfocus: () => select(i), onblur: () => unmark(), onclick: () => activate(i) },
       h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, ...twoLines(t(it.title))));
     lbl.style.setProperty('--c', it.color);
     labels.push(lbl);
@@ -312,11 +313,13 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     h('div.m3-logo.wh-logo', {}, 'Moor', h('span', {}, 'Me')),
     h('div.wh-kicker', {}, kicker),
     cTitle, cDesc);
-  function select(i) {
+  // powiększenie wycinka tylko pod kursorem (albo przy wyborze klawiaturą); opis w środku zostaje dla ostatnio wybranego
+  function unmark() { segs.forEach((p) => p.parentNode.classList.remove('on')); labels.forEach((l) => l.classList.remove('on')); }
+  function select(i, mark = true) {
     cur = i;
     const it = items[i];
-    segs.forEach((p, k) => p.parentNode.classList.toggle('on', k === i));
-    labels.forEach((l, k) => l.classList.toggle('on', k === i));
+    segs.forEach((p, k) => p.parentNode.classList.toggle('on', mark && k === i));
+    labels.forEach((l, k) => l.classList.toggle('on', mark && k === i));
     cTitle.textContent = t(it.title); cDesc.textContent = t(it.disabled && it.disabledDesc ? it.disabledDesc : it.desc);
     center.classList.remove('swap'); void center.offsetWidth; center.classList.add('swap');
   }
@@ -338,7 +341,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
       quit ? h('button.m3-chip.quit', { onclick: () => window.moorme.quit(), title: 'Wyjdź z gry' }, raw(glyph('power', 18)), h('span', {}, 'Wyjdź')) : null),
     h('div.wh-stage', {}, h('div.wh-wheel', {}, svg, ...labels, center, extra ? h('div.wh-extra', {}, extra) : null)));
   app.appendChild(scr);
-  select(cur);
+  select(cur, false);
   return scr;
 }
 
