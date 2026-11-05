@@ -20,13 +20,13 @@ export function showSafety(app, { onExit }) {
   const close = () => { if (modal) { modal.remove(); modal = null; } };
 
   // pasek górny: widoki i powrót
-  const views = [['table', 'Stół'], ['nav', 'Stacja nawigacyjna'], ['saloon', 'Mesa'], ['raft', 'Tratwa']];
+  const views = [['table', 'Stół'], ['nav', 'Stacja nawigacyjna'], ['saloon', 'Mesa'], ['raft', 'Tratwa'], ['hatch', 'Zejściówka']];
   root.appendChild(h('div.sf-bar', {},
     h('div.logo', {}, 'Moor', h('span', {}, 'Me')), h('div.sf-sub', {}, 'bezpieczeństwo'),
     h('div.sf-views', {}, ...views.map(([k, n]) => h('button.btn.sm', { onclick: () => view.flyTo(SaloonView.VIEWS[k]) }, n))),
     h('button.btn.sm', { onclick: () => openRadio() }, '📻 Radio VHF'),
     h('button.btn.sm', { onclick: () => { close(); view.destroy(); onExit(); } }, '← Tryby')));
-  root.appendChild(h('div.sf-hint', {}, 'Najedź na urządzenie, aby zobaczyć informacje; kliknij, aby otworzyć szczegóły. Przeciągnij – obrót, kółko / szczypanie – przybliżenie.'));
+  root.appendChild(h('div.sf-hint', {}, 'Wybierz widok na górze. Najedź na urządzenie, aby zobaczyć informacje; kliknij, aby otworzyć szczegóły.'));
 
   // okienko po najechaniu
   view.onHover = (id, p) => {

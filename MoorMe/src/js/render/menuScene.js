@@ -204,8 +204,11 @@ export class MenuScene {
     seaGeo.rotateX(-Math.PI / 2);
     this.seaBase = Float32Array.from(seaGeo.attributes.position.array);
     const sea = this.sea = new THREE.Mesh(seaGeo, new THREE.MeshStandardMaterial({ color: 0x3d86ad, flatShading: true, roughness: 0.3, metalness: 0.1 }));
-    sea.receiveShadow = true;
+    sea.receiveShadow = false; // cień jachtu nie ugina się na falach – pada na płaską płaszczyznę tuż nad grzbietami
     scene.add(sea);
+    const shadowPlane = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.ShadowMaterial({ opacity: 0.32, depthWrite: false }));
+    shadowPlane.rotation.x = -Math.PI / 2; shadowPlane.position.y = 0.82; shadowPlane.receiveShadow = true;
+    scene.add(shadowPlane);
 
     // jacht
     const spec = BOATS.C46;

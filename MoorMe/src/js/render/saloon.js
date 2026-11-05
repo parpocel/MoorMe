@@ -271,15 +271,18 @@ function vhfRadio() {
 }
 
 function liferaft() {
+  // tratwa ratunkowa w białym, sztywnym kontenerze (prostopadłościan) z pasami mocującymi, tabliczką i fangą
   const g = new THREE.Group();
-  const bag = box(0.62, 0.26, 0.38, std(0xf07c1e, { rough: 0.85 }), 0, 0.13, 0, g);
-  bag.geometry = new THREE.BoxGeometry(0.62, 0.26, 0.38, 3, 2, 2);
-  for (const x of [-0.18, 0.18]) box(0.04, 0.265, 0.385, std(0x22252b, { rough: 0.9 }), x, 0.13, 0, g);
-  const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.12), label(0.26, 0.12, 'LIFERAFT', '#ffffff', '#c8201b', 'ISO 9650 · 6 PERS.'));
-  lab.position.set(0, 0.14, 0.191); g.add(lab);
-  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.01, 6, 16, Math.PI), std(0x22252b)); handle.position.set(0, 0.26, 0); g.add(handle);
-  // fanga (czerwona linka) wychodząca z torby
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.31, 0.1, 0.1), new THREE.Vector3(0.38, 0.03, 0.14), new THREE.Vector3(0.45, 0.005, 0.05), new THREE.Vector3(0.5, 0.005, -0.08)]), 30, 0.006, 6), std(0xd02020)));
+  const shell = new THREE.Mesh(new THREE.ExtrudeGeometry(roundedRect(0.62, 0.38, 0.05), { depth: 0.28, bevelEnabled: true, bevelThickness: 0.012, bevelSize: 0.012, bevelSegments: 3, curveSegments: 6 }), std(0xf4f5f2, { rough: 0.45 }));
+  shell.rotation.x = -Math.PI / 2; shell.position.y = 0.012; shell.castShadow = true; g.add(shell);
+  box(0.64, 0.012, 0.4, std(0xd9dcd8, { rough: 0.6 }), 0, 0.15, 0, g); // łączenie dwóch połówek
+  for (const x of [-0.19, 0.19]) box(0.035, 0.31, 0.405, std(0x23262c, { rough: 0.9 }), x, 0.15, 0, g); // pasy mocujące
+  for (const x of [-0.19, 0.19]) box(0.05, 0.03, 0.02, std(ALU, { metal: 0.9, rough: 0.2 }), x, 0.06, 0.205, g); // klamry
+  const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.11), label(0.24, 0.11, 'LIFERAFT', '#ffffff', '#c8201b', 'ISO 9650 · 6 PERS.'));
+  lab.position.set(0, 0.2, 0.207); g.add(lab);
+  box(0.14, 0.05, 0.004, std(0xffffff, { emissive: 0x888888, ei: 0.3 }), 0, 0.08, 0.207, g); // tabliczka serwisowa
+  // fanga (czerwona linka) wychodząca z kontenera
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(0.32, 0.12, 0.1), new THREE.Vector3(0.38, 0.05, 0.14), new THREE.Vector3(0.45, 0.005, 0.05), new THREE.Vector3(0.5, 0.005, -0.08)]), 30, 0.006, 6), std(0xd02020)));
   return g;
 }
 
@@ -322,8 +325,9 @@ function harnessJacket() {
     g.add(new THREE.Mesh(new THREE.TubeGeometry(c, 28, 0.007, 6), web));
     hook(c.getPoint(1), 0.4);
   };
-  leg([[0, -0.41, 0.06], [0.04, -0.58, 0.07], [0.07, -0.78, 0.06], [0.06, -0.95, 0.05]]);
-  leg([[0, -0.41, 0.06], [-0.05, -0.6, 0.08], [-0.12, -0.85, 0.07], [-0.1, -1.1, 0.05], [-0.04, -1.25, 0.05]]);
+  // obie odnogi zwinięte w pętle i zapięte karabińczykami na taśmach szelek (tak przechowuje się lifelinę – nie zwisa do kadłuba)
+  leg([[0, -0.41, 0.06], [0.07, -0.5, 0.075], [0.15, -0.44, 0.075], [0.13, -0.3, 0.07], [0.11, -0.22, 0.06]]);
+  leg([[0, -0.41, 0.06], [-0.08, -0.52, 0.08], [-0.18, -0.46, 0.08], [-0.17, -0.3, 0.075], [-0.11, -0.16, 0.06]]);
   hook(new THREE.Vector3(0, -0.43, 0.065), 0); // szybkozłączka przy kamizelce
   return g;
 }
@@ -468,11 +472,13 @@ export class SaloonView {
 
   // płynny przelot kamery do ustawienia
   flyTo(v) { this.want = { ...this.cam, ...v }; }
+  // stałe widoki – razem obejmują całe wyposażenie, które można kliknąć
   static VIEWS = {
     table: { tx: 0.3, ty: 0.78, tz: 0, az: Math.PI * 0.86, el: 0.62, dist: 1.6 },
     nav: { tx: -1.5, ty: 1.02, tz: 1.25, az: -Math.PI * 0.62, el: 0.28, dist: 1.1 },
-    saloon: { tx: 0.1, ty: 0.9, tz: 0, az: Math.PI * 0.98, el: 0.32, dist: 1.85 },
-    raft: { tx: -1.25, ty: 0.25, tz: 0.05, az: 0.25, el: 0.55, dist: 1.4 }
+    saloon: { tx: 0.6, ty: 0.75, tz: 0, az: Math.PI * 0.98, el: 0.32, dist: 1.85 },
+    raft: { tx: -1.25, ty: 0.25, tz: 0.05, az: 0.25, el: 0.55, dist: 1.4 },
+    hatch: { tx: -1.6, ty: 1.12, tz: 0.15, az: 0.12, el: 0.02, dist: 1.75 }
   };
 
   initControls() {
@@ -480,23 +486,11 @@ export class SaloonView {
     let drag = null;
     const wheelKind = wheelClassifier();
     el.addEventListener('contextmenu', (e) => e.preventDefault());
-    el.addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY, moved: false }; el.setPointerCapture(e.pointerId); });
-    el.addEventListener('pointermove', (e) => {
-      this.setMouse(e);
-      if (!drag) return;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
-      drag.x = e.clientX; drag.y = e.clientY;
-      if (drag.moved) this.orbit(dx, dy);
-    });
-    el.addEventListener('pointerup', (e) => { if (drag && !drag.moved && this.onClick) { this.setMouse(e); this.onClick(this.pick()); } drag = null; });
+    // kamera tylko w stałych widokach (przyciski na górze); mysz służy do najeżdżania i klikania wyposażenia
+    el.addEventListener('pointermove', (e) => { this.setMouse(e); });
+    el.addEventListener('pointerup', (e) => { if (this.onClick && (!this.freeCam || !drag || !drag.moved)) { this.setMouse(e); this.onClick(this.pick()); } drag = null; });
     el.addEventListener('pointerleave', () => { this.mouseIn = false; });
-    el.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      const dx = e.deltaX, dy = e.deltaY;
-      if (wheelKind(e) === 'pad') this.orbit(-dx * 0.9, -dy * 0.9);
-      else this.zoom(dy * (e.ctrlKey ? 0.012 : 0.0012));
-    }, { passive: false });
+    void wheelKind;
   }
   orbit(dx, dy) { this.want = null; this.cam.az += dx * 0.005; this.cam.el = Math.max(0.05, Math.min(1.45, this.cam.el + dy * 0.004)); }
   zoom(k) { this.want = null; this.cam.dist = Math.max(0.35, Math.min(2.6, this.cam.dist * Math.exp(Math.max(-0.5, Math.min(0.5, k))))); }

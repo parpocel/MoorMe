@@ -283,7 +283,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     // wycinek 3D: bok bryły (ciemniejszy, przesunięty w dół), wierzch z gradientem światła, połysk i jasna krawędź
     const grad = document.createElementNS(NS, 'linearGradient');
     grad.id = `whg${i}`; grad.setAttribute('x1', '0'); grad.setAttribute('y1', '0'); grad.setAttribute('x2', '0.35'); grad.setAttribute('y2', '1');
-    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.78"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.6"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 75%, #0b1430); stop-opacity: 0.74"/>`;
+    grad.innerHTML = `<stop offset="0" style="stop-color: color-mix(in srgb, ${it.color} 55%, #fff); stop-opacity: 0.9"/><stop offset="0.5" style="stop-color: ${it.color}; stop-opacity: 0.8"/><stop offset="1" style="stop-color: color-mix(in srgb, ${it.color} 75%, #0b1430); stop-opacity: 0.88"/>`;
     defs.appendChild(grad);
     const g = document.createElementNS(NS, 'g');
     g.classList.add('wh-g');

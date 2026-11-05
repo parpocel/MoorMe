@@ -842,7 +842,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .wh-g .wh-seg, .wh-g:hover .wh-seg { stroke: rgba(255, 255, 255, 0.55); stroke-width: 0.7; }
 .wh-g.on .wh-seg { stroke: rgba(255, 255, 255, 0.95); stroke-width: 1; }
 .wh-rim { fill: none; stroke: rgba(255, 255, 255, 0.55); stroke-width: 1.3; stroke-linecap: round; pointer-events: none; }
-.wh-g:not(.on):not(:hover) .wh-seg { opacity: 0.86; }
+.wh-g:not(.on):not(:hover) .wh-seg { opacity: 0.95; }
 .wh-lbl.on { transform: translate(-50%, -50%); }
 .wh-gem { width: 58px; height: 58px; margin-bottom: 2px; transition: transform 0.3s cubic-bezier(.3, 1.6, .5, 1); }
 .wh-lbl.on .wh-gem, .wh-lbl:hover .wh-gem { transform: translateY(-6px) rotate(-8deg) scale(1.1); }
