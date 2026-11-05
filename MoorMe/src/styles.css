@@ -1078,3 +1078,7 @@ select, input[type=number], input[type=text] { background: #0a1e31; color: var(-
 .handbook .hb-card-grid .hb-card:has(> .lv-wrap) { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 6px; align-content: start; }
 .handbook .hb-card-grid .hb-card:has(> .lv-wrap) > h3 { align-self: end; margin: 0; }
 .handbook .hb-card-grid .hb-card:has(> .lv-wrap) > .lv-wrap { margin: 0; }
+/* lekcje bez rysunku: tekst na całą szerokość karty (bez pustej ramki z boku) */
+.handbook .nb-cols:not(.has-fig) .nb-text, .handbook .nb-cols:not(.has-fig) .nb-example, .handbook .nb-cols:not(.has-fig) .nb-note { max-width: none; }
+/* wzory: czcionka 1,25× */
+.handbook .nb-lesson .nb-formula { font-size: 22.5px; width: fit-content; max-width: 100%; padding: 12px 18px; }

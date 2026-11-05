@@ -43,57 +43,103 @@ function chainSVG() {
 
 // kierunki północy: rzeczywista, magnetyczna, kompasowa i poprawki między nimi
 function northsSVG() {
-  const cx = 120, cy = 250, R = 210;
+  // kursy od trzech północy: KK od Nk, KM od Nm, KR od Nr; dalej dryf β (KDw) i prąd (KDd)
+  const W = 760, H = 360, cx = 150, cy = 330, R = 285;
   const pt = (deg, r) => [cx + Math.sin((deg * Math.PI) / 180) * r, cy - Math.cos((deg * Math.PI) / 180) * r];
-  const ray = (deg, col, lbl, dash = '', rr = R) => { const [x, y] = pt(deg, rr); return `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="${col}" stroke-width="3" ${dash}/><text x="${x}" y="${y - 8}" fill="${col}" font-size="16" font-weight="800" text-anchor="middle">${lbl}</text>`; };
-  const arc = (a0, a1, r, col, lbl) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r), [lx, ly] = pt((a0 + a1) / 2, r + 14); return `<path d="M${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1}" fill="none" stroke="${col}" stroke-width="2.5"/><text x="${lx}" y="${ly + 5}" fill="${col}" font-size="16" font-weight="800" text-anchor="middle">${lbl}</text>`; };
-  let g = `<rect width="560" height="270" rx="12" fill="#f6f1e1"/>`;
-  g += ray(0, '#1b1f24', 'Nr') + ray(14, '#2563eb', 'Nm') + ray(28, '#c2410c', 'Nk') + ray(58, '#2f4468', L('dziób', 'bow'), 'stroke-dasharray="7 5"', 175);
-  g += arc(0, 14, 150, '#2563eb', 'd') + arc(14, 28, 115, '#c2410c', 'δ');
-  const leg = [['#1b1f24', L('Nr – północ rzeczywista', 'Nt – true north')], ['#2563eb', L('Nm – północ magnetyczna', 'Nm – magnetic north')], ['#c2410c', L('Nk – północ kompasowa', 'Nc – compass north')], null,
-    ['#2563eb', L('d – deklinacja (od Nr do Nm)', 'd – variation (Nt to Nm)')], ['#c2410c', L('δ – dewiacja (od Nm do Nk)', 'δ – deviation (Nm to Nc)')], null,
-    ['#2f4468', L('E / w prawo = dodatnie (+)', 'E / to the right = positive (+)')], ['#2f4468', L('W / w lewo = ujemne (−)', 'W / to the left = negative (−)')]];
-  let y = 46;
-  for (const it of leg) { if (!it) { y += 12; continue; } g += `<text x="318" y="${y}" fill="${it[0]}" font-size="15">${it[1]}</text>`; y += 24; }
-  return svgBox(560, 270, g);
+  const f = (v) => v.toFixed(1);
+  const NR = 0, NM = 10, NK = 20, HD = 40, KDW = 55, KDD = 70;
+  const ray = (deg, col, lbl, o = {}) => { const [x, y] = pt(deg, o.r || R); return `<line x1="${cx}" y1="${cy}" x2="${f(x)}" y2="${f(y)}" stroke="${col}" stroke-width="${o.w || 2.5}" ${o.dash ? `stroke-dasharray="${o.dash}"` : ''} stroke-linecap="round" marker-end="url(#nbA${o.m || 'k'})"/><text x="${f(x + (o.dx || 0))}" y="${f(y - 9)}" fill="${col}" font-size="15" font-weight="800" text-anchor="middle">${lbl}</text>`; };
+  const arc = (a0, a1, r, col, lbl, dy = 0) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r), [lx, ly] = pt((a0 + a1) / 2, r + 13); return `<path d="M${f(x0)} ${f(y0)} A${r} ${r} 0 0 1 ${f(x1)} ${f(y1)}" fill="none" stroke="${col}" stroke-width="2.2"/><text x="${f(lx)}" y="${f(ly + 5 + dy)}" fill="${col}" font-size="13" font-weight="800" text-anchor="middle">${lbl}</text>`; };
+  const mk = (id, c) => `<marker id="nbA${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${c}"/></marker>`;
+  let g = `<defs>${mk('k', '#1b1f24')}${mk('b', '#2563eb')}${mk('o', '#c2410c')}${mk('n', '#2f4468')}${mk('g', '#0f8a5f')}${mk('p', '#9333ea')}<linearGradient id="nbSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef6fb"/><stop offset="1" stop-color="#d7eaf5"/></linearGradient></defs>`;
+  g += `<rect width="${W}" height="${H}" rx="14" fill="url(#nbSea)"/>`;
+  // północe
+  g += ray(NR, '#1b1f24', 'Nr', { w: 2.2, dx: -8 }) + ray(NM, '#2563eb', 'Nm', { w: 2.2, m: 'b' }) + ray(NK, '#c2410c', 'Nk', { w: 2.2, m: 'o', dx: 6 });
+  // oś jachtu (KK/KM/KR), droga po wodzie (KDw) i nad dnem (KDd)
+  g += ray(HD, '#2f4468', L('dziób', 'bow'), { r: 250, w: 3, m: 'n' }) + ray(KDW, '#0f8a5f', 'KDw', { r: 255, dash: '9 5', m: 'g' }) + ray(KDD, '#9333ea', 'KDd', { r: 262, dash: '3 5', w: 3, m: 'p', dx: 22 });
+  // jacht na osi
+  { const [x, y] = pt(HD, 120); g += `<g transform="translate(${f(x)} ${f(y)}) rotate(${HD})"><path d="M0 -22 C8 -10 8 8 6 18 L-6 18 C-8 8 -8 -10 0 -22 Z" fill="#fff" stroke="#2f4468" stroke-width="2"/><line x1="0" y1="-8" x2="0" y2="10" stroke="#2f4468" stroke-width="1.5"/></g>`; }
+  // łuki kursów i poprawek
+  g += arc(NK, HD, 205, '#c2410c', 'KK') + arc(NM, HD, 170, '#2563eb', 'KM') + arc(NR, HD, 135, '#1b1f24', 'KR');
+  g += arc(HD, KDW, 228, '#0f8a5f', 'β', -2) + arc(KDW, KDD, 236, '#9333ea', L('prąd', 'current'), -14);
+  g += arc(NR, NM, 70, '#2563eb', 'd') + arc(NM, NK, 92, '#c2410c', 'δ');
+  // legenda
+  const leg = [['#c2410c', 'KK', L('kurs kompasowy – od Nk', 'compass course – from Nc')], ['#2563eb', 'KM', L('kurs magnetyczny – od Nm', 'magnetic course – from Nm')], ['#1b1f24', 'KR', L('kurs rzeczywisty – od Nr', 'true course – from Nt')],
+    ['#0f8a5f', 'KDw', L('kurs drogi nad wodą (KR + β)', 'course through water (TC + β)')], ['#9333ea', 'KDd', L('kurs drogi nad dnem (z prądem)', 'course over ground (with current)')], ['#2563eb', 'd', L('deklinacja Nr→Nm', 'variation Nt→Nm')], ['#c2410c', 'δ', L('dewiacja Nm→Nk', 'deviation Nm→Nc')]];
+  let y = 40;
+  g += `<rect x="500" y="18" width="244" height="${leg.length * 30 + 14}" rx="10" fill="#ffffff" fill-opacity="0.82" stroke="#cfdbe6"/>`;
+  for (const [c, k, txt] of leg) { g += `<text x="514" y="${y + 6}" fill="${c}" font-size="15" font-weight="800">${k}</text><text x="560" y="${y + 6}" fill="#2f4468" font-size="13">${txt}</text>`; y += 30; }
+  return svgBox(W, H, g, true);
 }
+
+
+// wspólne elementy rysunków: morze, strzałka północy, etykieta w „pigułce”, groty strzałek
+const SEA = (W, H) => `<defs><linearGradient id="nbSea2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef6fb"/><stop offset="1" stop-color="#d4e8f4"/></linearGradient><pattern id="nbGrid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#b9d3e4" stroke-width="0.6"/></pattern></defs><rect width="${W}" height="${H}" rx="14" fill="url(#nbSea2)"/><rect width="${W}" height="${H}" rx="14" fill="url(#nbGrid)" opacity="0.6"/>`;
+const NORTH = (x, y) => `<g transform="translate(${x} ${y})"><path d="M0 -18 L7 6 L0 1 L-7 6 Z" fill="#2f4468"/><text x="0" y="22" font-size="12" font-weight="800" fill="#2f4468" text-anchor="middle">N</text></g>`;
+const PILL = (x, y, txt, col, fs = 13) => { const w = txt.length * fs * 0.56 + 14; return `<g><rect x="${(x - w / 2).toFixed(1)}" y="${(y - fs * 0.85).toFixed(1)}" width="${w.toFixed(1)}" height="${(fs * 1.5).toFixed(1)}" rx="${(fs * 0.75).toFixed(1)}" fill="#fff" fill-opacity="0.92" stroke="${col}" stroke-width="1.2"/><text x="${x}" y="${(y + fs * 0.32).toFixed(1)}" font-size="${fs}" font-weight="800" fill="${col}" text-anchor="middle">${txt}</text></g>`; };
+const HEADS = (cols) => `<defs>${cols.map((c) => `<marker id="nbH${c.slice(1)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${c}"/></marker>`).join('')}</defs>`;
+const VEC = (p, q, c, w = 3, dash = '') => `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${c}" stroke-width="${w}" stroke-linecap="round" ${dash ? `stroke-dasharray="${dash}"` : ''} marker-end="url(#nbH${c.slice(1)})"/>`;
+const LIGHTHOUSE = (x, y, lbl) => `<g transform="translate(${x} ${y})"><path d="M-5 0 L-3 -16 L3 -16 L5 0 Z" fill="#2f4468"/><rect x="-4" y="-20" width="8" height="4" fill="#d2695f"/><path d="M4 -18 L22 -24 L22 -12 Z" fill="#b0288c" opacity="0.55"/><circle cx="0" cy="0" r="2.5" fill="#1b1f24"/>${lbl ? `<text x="0" y="16" font-size="13" font-weight="800" fill="#2f4468" text-anchor="middle">${lbl}</text>` : ''}</g>`;
+const YACHT = (x, y, rot, s = 1) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})"><path d="M0 -14 C6 -6 6 6 4 12 L-4 12 C-6 6 -6 -6 0 -14 Z" fill="#fff" stroke="#2f4468" stroke-width="1.8"/><line x1="0" y1="-4" x2="0" y2="7" stroke="#2f4468" stroke-width="1.3"/></g>`;
+const LAND = (d) => `<path d="${d}" fill="#f2e2b0" stroke="#8a7346" stroke-width="1.6"/><path d="${d}" fill="none" stroke="#bcd8c0" stroke-width="7" opacity="0.35"/>`;
 
 // trójkąt prędkości: KR/V po wodzie + prąd = KDd/SOG nad dnem
 function currentSVG() {
-  const A = [50, 220], Bp = [250, 60], C = [330, 120];
-  const arrow = (p, q, col, w = 3) => `<line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${col}" stroke-width="${w}" marker-end="url(#nbC${col.slice(1)})"/>`;
-  const mk = (col) => `<marker id="nbC${col.slice(1)}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="${col}"/></marker>`;
-  let g = `<defs>${mk('#2f4468')}${mk('#2563eb')}${mk('#c2410c')}</defs><rect width="420" height="250" rx="12" fill="#f6f1e1"/>`;
-  g += arrow(A, Bp, '#2f4468') + arrow(Bp, C, '#2563eb') + arrow(A, C, '#c2410c', 3.5);
-  g += `<text x="${(A[0] + Bp[0]) / 2 - 14}" y="${(A[1] + Bp[1]) / 2 - 6}" fill="#2f4468" font-size="13" font-weight="800" text-anchor="end">${L('KDw, V (po wodzie)', 'CTW, STW (through water)')}</text>`;
-  g += `<text x="${Bp[0] - 10}" y="${Bp[1] - 16}" fill="#2563eb" font-size="13" font-weight="800">${L('prąd: kierunek, prędkość', 'current: set, rate')}</text>`;
-  g += `<text x="${(A[0] + C[0]) / 2 + 10}" y="${(A[1] + C[1]) / 2 + 30}" fill="#c2410c" font-size="13" font-weight="800">${L('KDd, SOG (nad dnem)', 'COG, SOG (over ground)')}</text>`;
-  g += `<circle cx="${A[0]}" cy="${A[1]}" r="4" fill="#1b1f24"/><text x="${A[0] - 6}" y="${A[1] + 20}" font-size="12">${L('pozycja wyjściowa', 'start')}</text>`;
-  return svgBox(420, 250, g);
+  // trójkąt prędkości: KDw/V (po wodzie, 1 h) + prąd = KDd/SOG (nad dnem)
+  const W = 520, H = 300, A = [70, 250], Bp = [300, 70], C = [410, 150];
+  let g = SEA(W, H) + HEADS(['#2f4468', '#2563eb', '#9333ea']) + NORTH(W - 30, 40);
+  g += `<path d="M${A[0]} ${A[1]} L${Bp[0]} ${Bp[1]} L${C[0]} ${C[1]} Z" fill="#9333ea" fill-opacity="0.06"/>`;
+  g += VEC(A, Bp, '#2f4468', 3.5) + VEC(Bp, C, '#2563eb', 3.5, '8 5') + VEC(A, C, '#9333ea', 4);
+  // kąt poprawki na prąd między KDw a KDd
+  const ang = (p) => Math.atan2(p[1] - A[1], p[0] - A[0]), a1 = ang(Bp), a2 = ang(C), r = 70;
+  g += `<path d="M${A[0] + Math.cos(a1) * r} ${A[1] + Math.sin(a1) * r} A${r} ${r} 0 0 1 ${A[0] + Math.cos(a2) * r} ${A[1] + Math.sin(a2) * r}" fill="none" stroke="#c2410c" stroke-width="2"/>`;
+  g += PILL(A[0] + Math.cos((a1 + a2) / 2) * (r + 26), A[1] + Math.sin((a1 + a2) / 2) * (r + 26), L('poprawka', 'correction'), '#c2410c', 12);
+  g += YACHT(A[0], A[1], 52, 1.1) + `<circle cx="${A[0]}" cy="${A[1]}" r="4" fill="#1b1f24"/>`;
+  g += PILL((A[0] + Bp[0]) / 2 - 62, (A[1] + Bp[1]) / 2 - 6, L('KDw, V – po wodzie', 'CTW, STW – through water'), '#2f4468');
+  g += PILL((Bp[0] + C[0]) / 2 + 66, (Bp[1] + C[1]) / 2 - 12, L('prąd: kierunek, prędkość', 'current: set, rate'), '#2563eb');
+  g += PILL((A[0] + C[0]) / 2 + 40, (A[1] + C[1]) / 2 + 30, L('KDd, SOG – nad dnem', 'COG, SOG – over ground'), '#9333ea');
+  g += `<text x="${A[0] - 4}" y="${A[1] + 30}" font-size="12" fill="#2f4468" text-anchor="middle">${L('pozycja wyjściowa', 'start')}</text>`;
+  return svgBox(W, H, g);
 }
 
 // pozycja z dwóch namiarów
 function fixSVG() {
-  let g = `<rect width="420" height="250" rx="12" fill="#eef5fa"/>`;
-  g += `<path d="M20 30 Q60 20 90 50 T140 40 L150 0 L0 0 L0 60 Z" fill="#f2e2b0" stroke="#5b4a2c"/><path d="M300 0 L420 0 L420 90 Q380 70 350 80 T300 40 Z" fill="#f2e2b0" stroke="#5b4a2c"/>`;
-  g += `<g fill="#1b1f24"><path d="M96 46 l5 -12 l5 12 z"/></g><text x="90" y="64" font-size="12" text-anchor="end">${L('latarnia A', 'light A')}</text>`;
-  g += `<g fill="#1b1f24"><path d="M344 70 l5 -12 l5 12 z"/></g><text x="362" y="100" font-size="12">${L('cypel B', 'point B')}</text>`;
-  g += `<line x1="101" y1="44" x2="250" y2="236" stroke="#2f4468" stroke-width="2"/><line x1="349" y1="68" x2="160" y2="236" stroke="#2f4468" stroke-width="2"/>`;
-  g += `<circle cx="214" cy="190" r="6" fill="none" stroke="#c2410c" stroke-width="2.5"/><circle cx="214" cy="190" r="2" fill="#c2410c"/><text x="226" y="194" fill="#c2410c" font-size="13" font-weight="800">${L('pozycja obserwowana', 'observed fix')}</text>`;
-  g += `<text x="20" y="150" fill="#2f4468" font-size="12">${L('NR na A = 145°', 'TB of A = 145°')}</text><text x="300" y="160" fill="#2f4468" font-size="12">${L('NR na B = 222°', 'TB of B = 222°')}</text>`;
-  return svgBox(420, 250, g);
+  // pozycja z dwóch namiarów: linie pozycyjne z latarni A i cypla B przecinają się w pozycji obserwowanej
+  const W = 520, H = 300, A = [110, 60], B = [430, 92], P = [262, 222];
+  let g = SEA(W, H) + NORTH(W - 28, H - 40);
+  g += LAND('M0 0 H190 Q170 40 128 52 Q96 60 84 40 Q70 22 40 34 Q18 44 0 40 Z') + LAND('M330 0 H520 V150 Q486 126 458 118 Q432 108 418 84 Q404 54 372 46 Q344 38 330 0 Z');
+  const ext = (S, k) => [S[0] + (P[0] - S[0]) * k, S[1] + (P[1] - S[1]) * k];
+  for (const S of [A, B]) { const e = ext(S, 1.32); g += `<line x1="${S[0]}" y1="${S[1]}" x2="${e[0].toFixed(1)}" y2="${e[1].toFixed(1)}" stroke="#2f4468" stroke-width="2.4" stroke-linecap="round"/>`; }
+  // kąt przecięcia
+  const an = (S) => Math.atan2(S[1] - P[1], S[0] - P[0]), a1 = an(A), a2 = an(B), r = 30;
+  g += `<path d="M${P[0] + Math.cos(a1) * r} ${P[1] + Math.sin(a1) * r} A${r} ${r} 0 0 1 ${P[0] + Math.cos(a2) * r} ${P[1] + Math.sin(a2) * r}" fill="none" stroke="#0f8a5f" stroke-width="2"/>`;
+  g += PILL(P[0] - 120, P[1] + 2, L('kąt przecięcia 30°–150°', 'angle of cut 30°–150°'), '#0f8a5f', 11);
+  g += LIGHTHOUSE(A[0], A[1], L('latarnia A', 'light A')) + `<g transform="translate(${B[0]} ${B[1]})"><circle r="6" fill="none" stroke="#2f4468" stroke-width="2"/><circle r="1.8" fill="#2f4468"/><text x="0" y="20" font-size="13" font-weight="800" fill="#2f4468" text-anchor="middle">${L('cypel B', 'point B')}</text></g>`;
+  g += PILL(150, 150, L('NR na A = 145°', 'TB of A = 145°'), '#2f4468', 12) + PILL(380, 172, L('NR na B = 222°', 'TB of B = 222°'), '#2f4468', 12);
+  g += `<circle cx="${P[0]}" cy="${P[1]}" r="9" fill="none" stroke="#c2410c" stroke-width="2.5"/><circle cx="${P[0]}" cy="${P[1]}" r="2.4" fill="#c2410c"/>`;
+  g += PILL(P[0] + 4, P[1] + 34, L('pozycja obserwowana 10:42', 'observed fix 10:42'), '#c2410c', 13);
+  return svgBox(W, H, g);
 }
 
 // namiar podwójny: kąt kursowy 45° i 90° (namiar czteropunktowy)
 function doubleSVG() {
-  let g = `<rect width="420" height="220" rx="12" fill="#eef5fa"/>`;
-  g += `<line x1="30" y1="180" x2="390" y2="180" stroke="#2f4468" stroke-width="2.5" stroke-dasharray="8 5"/><text x="392" y="170" fill="#2f4468" font-size="12" text-anchor="end">${L('kurs', 'course')}</text>`;
-  g += `<g fill="#1b1f24"><path d="M255 50 l6 -14 l6 14 z"/></g><text x="272" y="46" font-size="12">${L('obiekt', 'object')}</text>`;
-  g += `<line x1="131" y1="180" x2="261" y2="50" stroke="#c2410c" stroke-width="2"/><line x1="261" y1="180" x2="261" y2="50" stroke="#c2410c" stroke-width="2"/>`;
-  g += `<circle cx="131" cy="180" r="5" fill="#1b1f24"/><circle cx="261" cy="180" r="5" fill="#1b1f24"/>`;
-  g += `<text x="100" y="205" font-size="12">${L('1: kąt kursowy 45°', '1: relative bearing 45°')}</text><text x="230" y="205" font-size="12">${L('2: kąt kursowy 90°', '2: relative bearing 90°')}</text>`;
-  g += `<text x="150" y="172" fill="#2563eb" font-size="13" font-weight="800">${L('droga s', 'run s')}</text><text x="268" y="120" fill="#2563eb" font-size="13" font-weight="800">${L('odległość = s', 'distance = s')}</text>`;
-  return svgBox(420, 220, g);
+  // namiar podwójny (czteropunktowy): kąt kursowy 45° w punkcie 1 i 90° w punkcie 2 – droga s = odległość od obiektu
+  const W = 520, H = 300, y = 216, x1 = 140, x2 = 330, O = [330, 30];
+  let g = SEA(W, H) + HEADS(['#2f4468', '#c2410c']) + NORTH(W - 28, 40);
+  g += LAND('M250 0 H420 Q410 26 380 30 Q352 34 340 14 Q322 -2 290 12 Q266 20 250 0 Z');
+  g += `<line x1="30" y1="${y}" x2="${W - 40}" y2="${y}" stroke="#2f4468" stroke-width="2.5" stroke-dasharray="10 6" marker-end="url(#nbH2f4468)"/>`;
+  g += PILL(W - 70, y + 26, L('kurs', 'course'), '#2f4468', 12);
+  g += `<line x1="${x1}" y1="${y}" x2="${O[0]}" y2="${O[1] + 14}" stroke="#c2410c" stroke-width="2.2"/><line x1="${x2}" y1="${y}" x2="${O[0]}" y2="${O[1] + 14}" stroke="#c2410c" stroke-width="2.2"/>`;
+  // kąty kursowe
+  const a45 = Math.atan2(O[1] + 14 - y, O[0] - x1);
+  g += `<path d="M${x1 + 42} ${y} A42 42 0 0 0 ${x1 + Math.cos(a45) * 42} ${y + Math.sin(a45) * 42}" fill="none" stroke="#c2410c" stroke-width="2"/>` + PILL(x1 + 68, y - 22, '45°', '#c2410c', 12);
+  g += `<path d="M${x2} ${y - 22} h22 v22" fill="none" stroke="#c2410c" stroke-width="2"/>` + PILL(x2 + 40, y - 34, '90°', '#c2410c', 12);
+  // równe odcinki s
+  g += `<line x1="${x1}" y1="${y + 18}" x2="${x2}" y2="${y + 18}" stroke="#2563eb" stroke-width="2"/><line x1="${x1}" y1="${y + 12}" x2="${x1}" y2="${y + 24}" stroke="#2563eb" stroke-width="2"/><line x1="${x2}" y1="${y + 12}" x2="${x2}" y2="${y + 24}" stroke="#2563eb" stroke-width="2"/>`;
+  g += PILL((x1 + x2) / 2, y + 34, L('droga s', 'run s'), '#2563eb', 12) + PILL(x2 - 64, (y + O[1]) / 2 + 10, L('odległość = s', 'distance = s'), '#2563eb', 12);
+  g += YACHT(x1, y, 90, 0.95) + YACHT(x2, y, 90, 0.95) + PILL(x1, y + 62, L('1: kąt 45°', '1: 45°'), '#2f4468', 11) + PILL(x2, y + 62, L('2: kąt 90° (trawers)', '2: 90° (abeam)'), '#2f4468', 11);
+  g += LIGHTHOUSE(O[0], O[1] + 14, '');
+  return svgBox(W, H, g);
 }
 
 export function navBook() {
