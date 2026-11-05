@@ -461,8 +461,8 @@ function showExamIntro() {
   menuScreen({
     kicker: 'Test', sel: examSel, back: { label: 'Tryby', go: () => showModeSelect() }, settingsBack: () => showExamIntro(),
     items: [
-      { glyph: 'wave', color: '#2f7fb3', title: 'Morze', desc: '75 losowych pytań (60 min): prawo drogi MPZZM, światła i znaki dzienne, sygnały dźwiękowe, oznakowanie IALA, mapa morska, nawigacja, meteorologia, bezpieczeństwo i łączność. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).', go: keep(0, () => run('sea')) },
-      { glyph: 'river', color: '#3f9a6a', title: 'Śródlądzie', desc: '75 losowych pytań (60 min): przepisy żeglugowe na śródlądowych drogach wodnych, znaki żeglugowe, światła i znaki dzienne, sygnały dźwiękowe, budowa jachtu, meteorologia i bezpieczeństwo. Zaliczenie od 65 poprawnych odpowiedzi, potem zadanie nawigacyjne (30 min).', go: keep(1, () => run('inland')) }
+      { glyph: 'wave', color: '#2f7fb3', title: 'Morze', desc: '75 pytań z żeglugi morskiej w 60 min. Zaliczenie od 65 poprawnych, potem zadanie nawigacyjne (30 min).', go: keep(0, () => run('sea')) },
+      { glyph: 'river', color: '#3f9a6a', title: 'Śródlądzie', desc: '75 pytań z żeglugi śródlądowej w 60 min. Zaliczenie od 65 poprawnych, potem zadanie nawigacyjne (30 min).', go: keep(1, () => run('inland')) }
     ]
   });
 }
