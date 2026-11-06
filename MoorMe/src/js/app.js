@@ -266,7 +266,7 @@ function pastel(hex) {
 }
 function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settingsBack = null }) {
   app.innerHTML = '';
-  items = items.map((it) => ({ ...it, color: pastel(it.color) }));
+  items = items.map((it) => ({ ...it, color: pastel(it.color), base: it.color }));
   let cur = Math.min(sel, items.length - 1);
   const NS = 'http://www.w3.org/2000/svg', n = items.length;
   // promienie w jednostkach viewBox (–112..112); środkowe koło ma promień 0,48·224/2 ≈ 53,8 –
@@ -315,7 +315,7 @@ function wheelMenu({ kicker, items, sel = 0, back = null, extra = null, settings
     const [lx, ly] = pt((R + R0) / 2, mid);
     const lbl = h('button.wh-lbl', { style: { left: `${50 + lx / 2.24}%`, top: `${50 + ly / 2.24}%` }, onmouseenter: () => select(i), onmouseleave: () => unmark(), onfocus: () => select(i), onblur: () => unmark(), onclick: () => activate(i) },
       h('div.m3-gem.wh-gem', {}, raw(gemHTML(it.glyph))), h('span.wh-tt', {}, ...twoLines(t(it.title))));
-    lbl.style.setProperty('--c', it.color);
+    lbl.style.setProperty('--c', `color-mix(in srgb, ${it.base} 65%, ${it.color})`); // ikona bardziej nasycona niż wycinek
     labels.push(lbl);
     return path;
   });
